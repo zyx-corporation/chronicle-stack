@@ -3,9 +3,14 @@
 from datetime import datetime, timezone
 from pathlib import Path
 
-from chronicle.errors import ArtifactNotFoundError, VersionNotFoundError
+from chronicle.errors import ArtifactNotFoundError, EmptyArtifactContentError
 from chronicle.ids import generate_id
-from chronicle.models.artifact import Artifact, ArtifactStatus, ArtifactType, ArtifactVersion
+from chronicle.models.artifact import (
+    Artifact,
+    ArtifactStatus,
+    ArtifactType,
+    ArtifactVersion,
+)
 from chronicle.models.event import Actor, EventType
 from chronicle.services.chronicle_service import ChronicleService
 
@@ -27,6 +32,7 @@ class ArtifactService:
         now = datetime.now(timezone.utc).astimezone()
         artifact_id = generate_id("artifact")
         version_id = generate_id("version")
+        event_id = generate_id("event")
 
         artifact = Artifact(
             artifact_id=artifact_id,
@@ -45,7 +51,7 @@ class ArtifactService:
             artifact_id=artifact_id,
             created_at=now,
             created_by=actor.value,
-            source_event_id="",
+            source_event_id=event_id,
             path=f"artifacts/{artifact_id}/versions/{version_id}.md",
             change_summary="created",
         )
@@ -54,18 +60,17 @@ class ArtifactService:
             artifact, version, source_file=source_file, content=content
         )
 
-        event = self.chronicle.record_event(
+        self.chronicle.record_event(
             event_type=EventType.ARTIFACT_CREATED,
             actor=actor,
             summary=f"Artifact created: {title}",
+            event_id=event_id,
             payload={
                 "artifact": artifact.model_dump(mode="json"),
                 "version": version.model_dump(mode="json"),
             },
             artifact_id=artifact_id,
         )
-        # record_event generates its own event_id; re-read from returned event
-        version = version.model_copy(update={"source_event_id": event.event_id})
         self.chronicle.rebuild_indexes()
         return artifact, version
 
@@ -77,14 +82,18 @@ class ArtifactService:
         summary: str = "",
         actor: Actor = Actor.ASSISTANT,
     ) -> tuple[Artifact, ArtifactVersion]:
-        metadata = self.chronicle.require_initialized()
-        artifacts, versions = self.chronicle.index.load_artifacts()
+        if source_file is None and content is None:
+            raise EmptyArtifactContentError(artifact_id)
+
+        self.chronicle.require_initialized()
+        artifacts, _ = self.chronicle.index.load_artifacts()
         if artifact_id not in artifacts:
             raise ArtifactNotFoundError(artifact_id)
 
         artifact = artifacts[artifact_id]
         now = datetime.now(timezone.utc).astimezone()
         version_id = generate_id("version")
+        event_id = generate_id("event")
         parent_version_id = artifact.current_version_id
 
         version = ArtifactVersion(
@@ -92,7 +101,7 @@ class ArtifactService:
             artifact_id=artifact_id,
             created_at=now,
             created_by=actor.value,
-            source_event_id="",
+            source_event_id=event_id,
             parent_version_id=parent_version_id,
             path=f"artifacts/{artifact_id}/versions/{version_id}.md",
             change_summary=summary or "updated",
@@ -106,21 +115,23 @@ class ArtifactService:
             artifact_id, version, source_file=source_file, content=content
         )
 
-        event = self.chronicle.record_event(
+        self.chronicle.record_event(
             event_type=EventType.ARTIFACT_VERSIONED,
             actor=actor,
             summary=f"Artifact updated: {artifact.title}",
+            event_id=event_id,
             payload={
                 "artifact": updated_artifact.model_dump(mode="json"),
                 "version": version.model_dump(mode="json"),
             },
             artifact_id=artifact_id,
         )
-        version = version.model_copy(update={"source_event_id": event.event_id})
         self.chronicle.rebuild_indexes()
         return updated_artifact, version
 
-    def history(self, artifact_id: str) -> tuple[Artifact, list[ArtifactVersion]]:
+    def history(
+        self, artifact_id: str
+    ) -> tuple[Artifact, list[ArtifactVersion]]:
         artifacts, versions = self.chronicle.index.load_artifacts()
         if artifact_id not in artifacts:
             raise ArtifactNotFoundError(artifact_id)

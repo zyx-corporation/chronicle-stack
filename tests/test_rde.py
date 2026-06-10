@@ -41,7 +41,9 @@ def test_rde_record(rde_service, tmp_path):
     )
 
     assert record.rde_record_id.startswith("rde_")
-    report_path = rde_service.chronicle.paths.rde_report_path(record.rde_record_id)
+    report_path = rde_service.chronicle.paths.rde_report_path(
+        record.rde_record_id
+    )
     assert report_path.exists()
     assert "Preserved" in report_path.read_text(encoding="utf-8")
 
@@ -62,3 +64,41 @@ def test_rde_version_not_found(rde_service, tmp_path):
             from_version_id=v1.version_id,
             to_version_id="ver_nonexistent",
         )
+
+
+# --- ADR-001 T-RDE: empty sections must show (none), not imply reviewed ---
+
+def test_rde_empty_sections_show_none(rde_service, tmp_path):
+    """Empty RDE fields must render as '(none)', not as reviewed."""
+    artifacts = ArtifactService(tmp_path)
+    src1 = tmp_path / "v1.md"
+    src1.write_text("v1", encoding="utf-8")
+    artifact, v1 = artifacts.create(
+        title="Doc",
+        artifact_type=ArtifactType.DOCUMENT,
+        source_file=src1,
+    )
+    src2 = tmp_path / "v2.md"
+    src2.write_text("v2", encoding="utf-8")
+    _, v2 = artifacts.update(
+        artifact_id=artifact.artifact_id,
+        source_file=src2,
+        summary="updated",
+    )
+
+    record = rde_service.record(
+        artifact_id=artifact.artifact_id,
+        from_version_id=v1.version_id,
+        to_version_id=v2.version_id,
+        summary="minor update",
+        # No preserved / transformed / etc. provided
+    )
+
+    report_path = rde_service.chronicle.paths.rde_report_path(
+        record.rde_record_id
+    )
+    report_text = report_path.read_text(encoding="utf-8")
+    # Empty sections must show "(none)" — not imply completeness
+    assert "(none)" in report_text
+    # Must not claim complete validation
+    assert "RDE complete" not in report_text

@@ -75,7 +75,22 @@ pytest
 
 ## ドキュメント
 
+### 仕様書
+
 - [基本仕様書](docs/specs/chronicle-stack-basic-spec-v0.1.md)
+- [Chronicle Event Model 仕様書](docs/specs/chronicle-event-model-spec-v0.1.md)
+- [Artifact Model 仕様書](docs/specs/artifact-model-spec-v0.1.md)
+- [Decision Model 仕様書](docs/specs/decision-model-spec-v0.1.md)
+- [RDE Diff Record 仕様書](docs/specs/rde-diff-record-spec-v0.1.md)
+- [Roadmap Linkage](docs/specs/roadmap-linkage-v0.1.md)
+
+### ADR
+
+- [ADR-001: T-RDE, TDD, and Design-Pattern Principles](docs/adr/ADR-001-t-rde-tdd-and-design-patterns.md)
+- [ADR-002: i18n and Language Selection](docs/adr/ADR-002-i18n-and-language-selection.md)
+
+### 実装ガイド
+
 - [データモデル](docs/data-model.md)
 - [CLI リファレンス](docs/cli-reference.md)
 - [ストレージ形式](docs/storage-format.md)

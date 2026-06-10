@@ -33,10 +33,12 @@ class DecisionService:
                 raise DecisionTargetNotFoundError(artifact_id) from exc
 
         now = datetime.now(timezone.utc).astimezone()
+        event_id = generate_id("event")
         decision = Decision(
             decision_id=generate_id("decision"),
             chronicle_id=metadata.chronicle_id,
             artifact_id=artifact_id,
+            event_id=event_id,
             decision_type=decision_type,
             decided_by=decided_by,
             decided_at=now,
@@ -45,14 +47,14 @@ class DecisionService:
             notes=notes,
         )
 
-        event = self.chronicle.record_event(
+        self.chronicle.record_event(
             event_type=EventType.DECISION_RECORDED,
             actor=Actor.USER,
             summary=f"Decision recorded: {decision_type.value}",
+            event_id=event_id,
             payload={"decision": decision.model_dump(mode="json")},
             artifact_id=artifact_id,
             decision_id=decision.decision_id,
         )
-        decision = decision.model_copy(update={"event_id": event.event_id})
         self.chronicle.rebuild_indexes()
         return decision

@@ -72,7 +72,9 @@ class ChronicleService:
         return metadata
 
     def load_metadata(self) -> ChronicleMetadata:
-        raw = yaml.safe_load(self.paths.metadata_file.read_text(encoding="utf-8"))
+        raw = yaml.safe_load(
+            self.paths.metadata_file.read_text(encoding="utf-8")
+        )
         return ChronicleMetadata.model_validate(raw)
 
     def record_event(
@@ -81,12 +83,13 @@ class ChronicleService:
         actor: Actor,
         summary: str,
         payload: dict | None = None,
+        event_id: str | None = None,
         **kwargs,
     ) -> ChronicleEvent:
         metadata = self.require_initialized()
         now = datetime.now(timezone.utc).astimezone()
         event = ChronicleEvent(
-            event_id=generate_id("event"),
+            event_id=event_id or generate_id("event"),
             chronicle_id=metadata.chronicle_id,
             timestamp=now,
             event_type=event_type,
@@ -124,10 +127,16 @@ class ChronicleService:
 
         for event in events:
             payload = event.payload
-            if event.event_type == EventType.CONTEXT_ADDED and "context" in payload:
+            if (
+                event.event_type == EventType.CONTEXT_ADDED
+                and "context" in payload
+            ):
                 ctx_data = payload["context"]
                 contexts[ctx_data["context_id"]] = ctx_data
-            elif event.event_type == EventType.ARTIFACT_CREATED and "artifact" in payload:
+            elif (
+                event.event_type == EventType.ARTIFACT_CREATED
+                and "artifact" in payload
+            ):
                 art_data = payload["artifact"]
                 artifacts[art_data["artifact_id"]] = art_data
                 if "version" in payload:
@@ -144,7 +153,10 @@ class ChronicleService:
                 if "artifact" in payload:
                     art_data = payload["artifact"]
                     artifacts[art_data["artifact_id"]] = art_data
-            elif event.event_type == EventType.DECISION_RECORDED and "decision" in payload:
+            elif (
+                event.event_type == EventType.DECISION_RECORDED
+                and "decision" in payload
+            ):
                 dec_data = payload["decision"]
                 decisions[dec_data["decision_id"]] = dec_data
 

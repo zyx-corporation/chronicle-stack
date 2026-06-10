@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from chronicle.errors import ArtifactNotFoundError, RdeVersionNotFoundError
+from chronicle.exporters.rde_report import format_rde_report
 from chronicle.ids import generate_id
 from chronicle.models.event import Actor, EventType
 from chronicle.models.rde import RdeDiffRecord
@@ -62,7 +63,7 @@ class RdeService:
 
         report_path = self.chronicle.paths.rde_report_path(rde_id)
         report_path.parent.mkdir(parents=True, exist_ok=True)
-        report_path.write_text(self._format_report(record), encoding="utf-8")
+        report_path.write_text(format_rde_report(record), encoding="utf-8")
 
         try:
             actor = Actor(created_by)
@@ -78,33 +79,3 @@ class RdeService:
             rde_record_id=rde_id,
         )
         return record
-
-    @staticmethod
-    def _format_report(record: RdeDiffRecord) -> str:
-        sections = [
-            ("Summary", [record.summary] if record.summary else []),
-            ("Preserved", record.preserved),
-            ("Transformed", record.transformed),
-            ("Supplemented", record.supplemented),
-            ("Unresolved", record.unresolved),
-            ("Deviation Risks", record.deviation_risks),
-            ("Next Update Policy", record.next_update_policy),
-        ]
-        lines = [
-            f"# RDE Diff Record: {record.rde_record_id}",
-            "",
-            f"- Artifact: {record.artifact_id}",
-            f"- From: {record.from_version_id}",
-            f"- To: {record.to_version_id}",
-            f"- Created: {record.created_at.isoformat()}",
-            "",
-        ]
-        for title, items in sections:
-            lines.append(f"## {title}")
-            lines.append("")
-            if items:
-                lines.extend(f"- {item}" for item in items)
-            else:
-                lines.append("(none)")
-            lines.append("")
-        return "\n".join(lines)

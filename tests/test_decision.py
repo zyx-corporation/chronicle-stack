@@ -44,3 +44,48 @@ def test_decision_target_not_found(decision_service):
             decision_type=DecisionType.REJECTED,
             artifact_id="art_missing",
         )
+
+
+# --- ADR-001 P0 regression: event_id integrity ---
+
+def test_decision_event_id_is_populated(decision_service):
+    """Decision.event_id must be a valid evt_ ID immediately after record."""
+    decision = decision_service.record(
+        decision_type=DecisionType.DEFERRED,
+        reason="Policy decision",
+    )
+    assert decision.event_id is not None
+    assert decision.event_id.startswith("evt_")
+
+
+def test_decision_event_id_survives_rebuild(decision_service):
+    """event_id stored in JSONL must survive index rebuild."""
+    decision = decision_service.record(
+        decision_type=DecisionType.ACCEPTED,
+        reason="Approved",
+    )
+    original_event_id = decision.event_id
+
+    decision_service.chronicle.rebuild_indexes()
+    decisions = decision_service.chronicle.index.load_decisions()
+    rebuilt = decisions[decision.decision_id]
+    assert rebuilt.event_id == original_event_id
+
+
+# --- ADR-001 §7 / P1: alternatives and notes ---
+
+def test_decision_record_with_alternatives_and_notes(decision_service):
+    """decision record must accept and persist alternatives and notes."""
+    decision = decision_service.record(
+        decision_type=DecisionType.ACCEPTED,
+        reason="Best option",
+        alternatives=["Option B", "Option C"],
+        notes="Revisit after v0.2",
+    )
+    assert decision.alternatives == ["Option B", "Option C"]
+    assert decision.notes == "Revisit after v0.2"
+
+    decisions = decision_service.chronicle.index.load_decisions()
+    rebuilt = decisions[decision.decision_id]
+    assert rebuilt.alternatives == ["Option B", "Option C"]
+    assert rebuilt.notes == "Revisit after v0.2"
