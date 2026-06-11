@@ -1,3 +1,5 @@
+import json
+
 import pytest
 
 from chronicle.errors import DecisionTargetNotFoundError
@@ -58,18 +60,46 @@ def test_decision_event_id_is_populated(decision_service):
     assert decision.event_id.startswith("evt_")
 
 
-def test_decision_event_id_survives_rebuild(decision_service):
-    """event_id stored in JSONL must survive index rebuild."""
+def test_decision_event_id_is_persisted(decision_service, tmp_path):
+    artifacts = ArtifactService(tmp_path)
+    source = tmp_path / "doc.md"
+    source.write_text("Content", encoding="utf-8")
+    artifact, _ = artifacts.create(
+        title="Decision Event Link",
+        artifact_type=ArtifactType.SPECIFICATION,
+        source_file=source,
+    )
+
     decision = decision_service.record(
         decision_type=DecisionType.ACCEPTED,
-        reason="Approved",
+        reason="Looks good for v0.1",
+        artifact_id=artifact.artifact_id,
     )
-    original_event_id = decision.event_id
 
+    assert decision.event_id is not None
+    assert decision.event_id.startswith("evt_")
+
+    # Rebuild indexes and check
     decision_service.chronicle.rebuild_indexes()
     decisions = decision_service.chronicle.index.load_decisions()
-    rebuilt = decisions[decision.decision_id]
-    assert rebuilt.event_id == original_event_id
+    loaded = decisions[decision.decision_id]
+    assert loaded.event_id is not None
+    assert loaded.event_id == decision.event_id
+
+    # Verify chronicle.jsonl
+    events_file = decision_service.chronicle.paths.events_file
+    found = False
+    with events_file.open(encoding="utf-8") as f:
+        for line in f:
+            stripped = line.strip()
+            if not stripped:
+                continue
+            data = json.loads(stripped)
+            if data.get("event_type") == "decision_recorded":
+                payload_decision = data.get("payload", {}).get("decision", {})
+                assert payload_decision.get("event_id") == data["event_id"]
+                found = True
+    assert found, "decision_recorded event not found in chronicle.jsonl"
 
 
 # --- ADR-001 §7 / P1: alternatives and notes ---

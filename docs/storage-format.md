@@ -27,6 +27,7 @@ default_timezone: "Asia/Tokyo"
 | artifact_index.json | Artifact と Version |
 | context_index.json | Context |
 | decision_index.json | Decision |
+| rde_index.json | RDE Diff Record |
 
 `chronicle index rebuild` で `chronicle.jsonl` から再生成可能。
 

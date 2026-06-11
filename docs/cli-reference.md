@@ -35,9 +35,11 @@ chronicle record --type user_input --actor user --summary "Summary"
 | サブコマンド | 説明 |
 |-------------|------|
 | `create` | `--title`, `--type`, `--file` |
-| `update` | `--artifact`, `--file`, `--summary` |
+| `update` | `--artifact`, `--file`（必須）, `--summary` |
 | `history` | `--artifact` |
 | `list` | 全 Artifact 一覧 |
+
+`update` では `--file` の指定が必須です。指定しない場合 `ARTIFACT_CONTENT_MISSING` エラーが発生します。
 
 ## chronicle decision record
 
@@ -48,8 +50,16 @@ chronicle decision record --artifact art_xxx --type accepted --reason "Reason"
 ## chronicle rde record
 
 ```bash
-chronicle rde record --artifact art_xxx --from ver_aaa --to ver_bbb --summary "Summary"
+chronicle rde record --artifact art_xxx --from ver_aaa --to ver_bbb --summary "Summary" \
+  --preserved "元の意図" --preserved "基本構造" \
+  --transformed "詳細セクション追加" \
+  --supplemented "新しい例" \
+  --unresolved "用語の統一" \
+  --deviation-risk "スコープ拡大の可能性" \
+  --next-update-policy "四半期レビュー"
 ```
+
+6 つの RDE フィールド（`--preserved`, `--transformed`, `--supplemented`, `--unresolved`, `--deviation-risk`, `--next-update-policy`）は繰り返し指定可能。
 
 ## chronicle show
 

@@ -63,7 +63,11 @@ class ArtifactStore:
     @staticmethod
     def _read_content(source_file: Path | None, content: str | None) -> str:
         if source_file is not None:
-            return source_file.read_text(encoding="utf-8")
+            try:
+                return source_file.read_text(encoding="utf-8")
+            except FileNotFoundError:
+                from chronicle.errors import SourceFileNotFoundError
+                raise SourceFileNotFoundError(str(source_file)) from None
         if content is not None:
             return content
         return ""

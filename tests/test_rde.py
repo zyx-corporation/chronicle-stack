@@ -5,6 +5,7 @@ from chronicle.models.artifact import ArtifactType
 from chronicle.services.artifact_service import ArtifactService
 from chronicle.services.chronicle_service import ChronicleService
 from chronicle.services.rde_service import RdeService
+from chronicle.services.search_service import SearchService
 
 
 @pytest.fixture
@@ -102,3 +103,71 @@ def test_rde_empty_sections_show_none(rde_service, tmp_path):
     assert "(none)" in report_text
     # Must not claim complete validation
     assert "RDE complete" not in report_text
+
+
+def test_rde_record_links_to_target_version(rde_service, tmp_path):
+    artifacts = ArtifactService(tmp_path)
+    source_v1 = tmp_path / "v1.md"
+    source_v1.write_text("Original", encoding="utf-8")
+    artifact, v1 = artifacts.create(
+        title="RDE Link Test",
+        artifact_type=ArtifactType.SPECIFICATION,
+        source_file=source_v1,
+    )
+
+    source_v2 = tmp_path / "v2.md"
+    source_v2.write_text("Updated", encoding="utf-8")
+    _, v2 = artifacts.update(
+        artifact_id=artifact.artifact_id,
+        source_file=source_v2,
+        summary="Updated spec",
+    )
+
+    record = rde_service.record(
+        artifact_id=artifact.artifact_id,
+        from_version_id=v1.version_id,
+        to_version_id=v2.version_id,
+        summary="Test RDE linkage",
+        preserved=["Original intent"],
+    )
+
+    # Rebuild indexes to trigger rde_record_id enrichment
+    rde_service.chronicle.rebuild_indexes()
+
+    # Load artifact history and verify rde_record_id on target version
+    art, versions = artifacts.history(artifact.artifact_id)
+    v2_from_history = [v for v in versions if v.version_id == v2.version_id][0]
+    assert v2_from_history.rde_record_id == record.rde_record_id
+
+
+def test_rde_record_is_searchable(rde_service, tmp_path):
+    artifacts = ArtifactService(tmp_path)
+    source_v1 = tmp_path / "v1.md"
+    source_v1.write_text("Original", encoding="utf-8")
+    artifact, v1 = artifacts.create(
+        title="RDE Search Test",
+        artifact_type=ArtifactType.SPECIFICATION,
+        source_file=source_v1,
+    )
+
+    source_v2 = tmp_path / "v2.md"
+    source_v2.write_text("Updated", encoding="utf-8")
+    _, v2 = artifacts.update(
+        artifact_id=artifact.artifact_id,
+        source_file=source_v2,
+        summary="Updated spec",
+    )
+
+    rde_service.record(
+        artifact_id=artifact.artifact_id,
+        from_version_id=v1.version_id,
+        to_version_id=v2.version_id,
+        summary="Searchable RDE",
+        preserved=["UniqueSearchTermXYZ"],
+    )
+
+    search = SearchService(tmp_path)
+    results = search.search("UniqueSearchTermXYZ")
+    assert len(results) >= 1
+    kinds = {r.kind for r in results}
+    assert "rde" in kinds or "event" in kinds

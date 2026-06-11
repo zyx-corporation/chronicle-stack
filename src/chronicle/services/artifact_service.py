@@ -3,15 +3,10 @@
 from datetime import datetime, timezone
 from pathlib import Path
 
-from chronicle.errors import ArtifactNotFoundError, EmptyArtifactContentError
+from chronicle.errors import ArtifactContentMissingError, ArtifactNotFoundError
 from chronicle.ids import generate_id
-from chronicle.models.artifact import (
-    Artifact,
-    ArtifactStatus,
-    ArtifactType,
-    ArtifactVersion,
-)
-from chronicle.models.event import Actor, EventType
+from chronicle.models.artifact import Artifact, ArtifactStatus, ArtifactType, ArtifactVersion
+from chronicle.models.event import Actor, ChronicleEvent, EventType
 from chronicle.services.chronicle_service import ChronicleService
 
 
@@ -60,17 +55,20 @@ class ArtifactService:
             artifact, version, source_file=source_file, content=content
         )
 
-        self.chronicle.record_event(
+        event = ChronicleEvent(
+            event_id=event_id,
+            chronicle_id=metadata.chronicle_id,
+            timestamp=now,
             event_type=EventType.ARTIFACT_CREATED,
             actor=actor,
             summary=f"Artifact created: {title}",
-            event_id=event_id,
             payload={
                 "artifact": artifact.model_dump(mode="json"),
                 "version": version.model_dump(mode="json"),
             },
             artifact_id=artifact_id,
         )
+        self.chronicle.append_event(event)
         self.chronicle.rebuild_indexes()
         return artifact, version
 
@@ -83,10 +81,10 @@ class ArtifactService:
         actor: Actor = Actor.ASSISTANT,
     ) -> tuple[Artifact, ArtifactVersion]:
         if source_file is None and content is None:
-            raise EmptyArtifactContentError(artifact_id)
+            raise ArtifactContentMissingError()
 
-        self.chronicle.require_initialized()
-        artifacts, _ = self.chronicle.index.load_artifacts()
+        metadata = self.chronicle.require_initialized()
+        artifacts, _versions = self.chronicle.index.load_artifacts()
         if artifact_id not in artifacts:
             raise ArtifactNotFoundError(artifact_id)
 
@@ -115,17 +113,20 @@ class ArtifactService:
             artifact_id, version, source_file=source_file, content=content
         )
 
-        self.chronicle.record_event(
+        event = ChronicleEvent(
+            event_id=event_id,
+            chronicle_id=metadata.chronicle_id,
+            timestamp=now,
             event_type=EventType.ARTIFACT_VERSIONED,
             actor=actor,
             summary=f"Artifact updated: {artifact.title}",
-            event_id=event_id,
             payload={
                 "artifact": updated_artifact.model_dump(mode="json"),
                 "version": version.model_dump(mode="json"),
             },
             artifact_id=artifact_id,
         )
+        self.chronicle.append_event(event)
         self.chronicle.rebuild_indexes()
         return updated_artifact, version
 

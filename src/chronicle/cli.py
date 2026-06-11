@@ -318,6 +318,12 @@ def rde_record_cmd(
     from_version: Annotated[str, typer.Option("--from")],
     to_version: Annotated[str, typer.Option("--to")],
     summary: Annotated[str, typer.Option("--summary")] = "",
+    preserved: Annotated[Optional[list[str]], typer.Option("--preserved")] = None,
+    transformed: Annotated[Optional[list[str]], typer.Option("--transformed")] = None,
+    supplemented: Annotated[Optional[list[str]], typer.Option("--supplemented")] = None,
+    unresolved: Annotated[Optional[list[str]], typer.Option("--unresolved")] = None,
+    deviation_risk: Annotated[Optional[list[str]], typer.Option("--deviation-risk")] = None,
+    next_update_policy: Annotated[Optional[list[str]], typer.Option("--next-update-policy")] = None,
     json_output: Annotated[bool, typer.Option("--json")] = False,
 ) -> None:
     """Create an RDE Diff Record."""
@@ -328,6 +334,12 @@ def rde_record_cmd(
             from_version_id=from_version,
             to_version_id=to_version,
             summary=summary,
+            preserved=preserved or [],
+            transformed=transformed or [],
+            supplemented=supplemented or [],
+            unresolved=unresolved or [],
+            deviation_risks=deviation_risk or [],
+            next_update_policy=next_update_policy or [],
         )
         if json_output:
             typer.echo(

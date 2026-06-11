@@ -1,6 +1,12 @@
+import json
+
 import pytest
 
-from chronicle.errors import ArtifactNotFoundError, EmptyArtifactContentError
+from chronicle.errors import (
+    ArtifactContentMissingError,
+    ArtifactNotFoundError,
+    SourceFileNotFoundError,
+)
 from chronicle.models.artifact import ArtifactType
 from chronicle.services.artifact_service import ArtifactService
 from chronicle.services.chronicle_service import ChronicleService
@@ -108,32 +114,117 @@ def test_update_source_event_id_is_populated(artifact_service, tmp_path):
     assert v2.source_event_id.startswith("evt_")
 
 
-def test_source_event_id_survives_rebuild(artifact_service, tmp_path):
-    """source_event_id stored in JSONL must survive index rebuild."""
+def test_create_artifact_source_event_id_is_persisted(artifact_service, tmp_path):
     source = tmp_path / "spec.md"
-    source.write_text("Content", encoding="utf-8")
-    _, version = artifact_service.create(
-        title="Test",
+    source.write_text("# Spec\n\nContent here.", encoding="utf-8")
+
+    artifact, version = artifact_service.create(
+        title="Event Link Test",
         artifact_type=ArtifactType.SPECIFICATION,
         source_file=source,
     )
-    original_id = version.source_event_id
 
+    # The returned version should have source_event_id populated
+    assert version.source_event_id.startswith("evt_")
+
+    # Rebuild indexes and check the persisted version
     artifact_service.chronicle.rebuild_indexes()
-    _, versions = artifact_service.history(version.artifact_id)
-    assert versions[0].source_event_id == original_id
+    _, versions = artifact_service.history(artifact.artifact_id)
+    assert len(versions) == 1
+    assert versions[0].source_event_id.startswith("evt_")
+    assert versions[0].source_event_id == version.source_event_id
+
+    # Verify chronicle.jsonl payload contains the correct source_event_id
+    events_file = artifact_service.chronicle.paths.events_file
+    found = False
+    with events_file.open(encoding="utf-8") as f:
+        for line in f:
+            stripped = line.strip()
+            if not stripped:
+                continue
+            data = json.loads(stripped)
+            if data.get("event_type") == "artifact_created":
+                payload_version = data.get("payload", {}).get("version", {})
+                assert payload_version.get("source_event_id") == data["event_id"]
+                found = True
+    assert found, "artifact_created event not found in chronicle.jsonl"
+
+
+def test_update_artifact_source_event_id_is_persisted(artifact_service, tmp_path):
+    source_v1 = tmp_path / "v1.md"
+    source_v1.write_text("Version 1", encoding="utf-8")
+    artifact, v1 = artifact_service.create(
+        title="Update Link Test",
+        artifact_type=ArtifactType.DOCUMENT,
+        source_file=source_v1,
+    )
+
+    source_v2 = tmp_path / "v2.md"
+    source_v2.write_text("Version 2", encoding="utf-8")
+    _, v2 = artifact_service.update(
+        artifact_id=artifact.artifact_id,
+        source_file=source_v2,
+        summary="Second version",
+    )
+
+    assert v2.source_event_id.startswith("evt_")
+
+    # Rebuild indexes and check
+    artifact_service.chronicle.rebuild_indexes()
+    _, versions = artifact_service.history(artifact.artifact_id)
+    assert len(versions) == 2
+    v2_from_index = [v for v in versions if v.version_id == v2.version_id][0]
+    assert v2_from_index.source_event_id.startswith("evt_")
+    assert v2_from_index.source_event_id == v2.source_event_id
+
+    # Verify chronicle.jsonl
+    events_file = artifact_service.chronicle.paths.events_file
+    found = False
+    with events_file.open(encoding="utf-8") as f:
+        for line in f:
+            stripped = line.strip()
+            if not stripped:
+                continue
+            data = json.loads(stripped)
+            if data.get("event_type") == "artifact_versioned":
+                payload_version = data.get("payload", {}).get("version", {})
+                assert payload_version.get("source_event_id") == data["event_id"]
+                found = True
+    assert found, "artifact_versioned event not found in chronicle.jsonl"
 
 
 # --- ADR-001 §4: empty body guard ---
 
-def test_update_with_no_content_raises_error(artifact_service, tmp_path):
-    """Artifact update without file or content must raise an error."""
+def test_update_artifact_requires_content(artifact_service, tmp_path):
     source = tmp_path / "doc.md"
-    source.write_text("Content", encoding="utf-8")
+    source.write_text("Hello", encoding="utf-8")
     artifact, _ = artifact_service.create(
-        title="Doc",
+        title="Content Test",
         artifact_type=ArtifactType.DOCUMENT,
         source_file=source,
     )
-    with pytest.raises(EmptyArtifactContentError):
-        artifact_service.update(artifact_id=artifact.artifact_id)
+
+    with pytest.raises(ArtifactContentMissingError):
+        artifact_service.update(
+            artifact_id=artifact.artifact_id,
+            source_file=None,
+            content=None,
+        )
+
+
+def test_update_artifact_missing_file_returns_chronicle_error(artifact_service, tmp_path):
+    source = tmp_path / "doc.md"
+    source.write_text("Hello", encoding="utf-8")
+    artifact, _ = artifact_service.create(
+        title="Missing File Test",
+        artifact_type=ArtifactType.DOCUMENT,
+        source_file=source,
+    )
+
+    nonexistent = tmp_path / "nonexistent.md"
+
+    with pytest.raises(SourceFileNotFoundError):
+        artifact_service.update(
+            artifact_id=artifact.artifact_id,
+            source_file=nonexistent,
+        )

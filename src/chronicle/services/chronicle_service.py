@@ -24,6 +24,7 @@ class ChronicleService:
             self.paths.artifact_index_file,
             self.paths.context_index_file,
             self.paths.decision_index_file,
+            self.paths.rde_index_file,
         )
         self.artifact_store = ArtifactStore(self.paths.artifacts_dir)
 
@@ -101,6 +102,16 @@ class ChronicleService:
         self.jsonl.append(event)
         return event
 
+    def append_event(self, event: ChronicleEvent) -> None:
+        """Append a pre-built ChronicleEvent to the JSONL store.
+
+        Use this when the payload must reference the event_id (e.g.
+        ArtifactVersion.source_event_id or Decision.event_id) so that
+        the event_id is known before the payload is serialised.
+        """
+        self.require_initialized()
+        self.jsonl.append(event)
+
     def show(self) -> dict:
         metadata = self.require_initialized()
         events = self.jsonl.read_all()
@@ -124,6 +135,7 @@ class ChronicleService:
         versions: dict = {}
         contexts: dict = {}
         decisions: dict = {}
+        rde_records: dict = {}
 
         for event in events:
             payload = event.payload
@@ -159,21 +171,41 @@ class ChronicleService:
             ):
                 dec_data = payload["decision"]
                 decisions[dec_data["decision_id"]] = dec_data
+            elif event.event_type == EventType.RDE_DIFF_RECORDED and "rde" in payload:
+                rde_data = payload["rde"]
+                rde_records[rde_data["rde_record_id"]] = rde_data
 
         from chronicle.models.artifact import Artifact, ArtifactVersion
         from chronicle.models.context import Context
         from chronicle.models.decision import Decision
+        from chronicle.models.rde import RdeDiffRecord
+
+        # Enrich ArtifactVersion with rde_record_id from RDE records
+        parsed_versions: dict[str, list[ArtifactVersion]] = {}
+        for aid, vlist in versions.items():
+            parsed_vlist = [ArtifactVersion.model_validate(v) for v in vlist]
+            parsed_versions[aid] = parsed_vlist
+
+        for rde_data in rde_records.values():
+            to_version_id = rde_data.get("to_version_id")
+            rde_id = rde_data["rde_record_id"]
+            if to_version_id:
+                for vlist in parsed_versions.values():
+                    for ver in vlist:
+                        if ver.version_id == to_version_id:
+                            ver.rde_record_id = rde_id
+                            break
 
         self.index.save_artifacts(
             {k: Artifact.model_validate(v) for k, v in artifacts.items()},
-            {
-                aid: [ArtifactVersion.model_validate(v) for v in vlist]
-                for aid, vlist in versions.items()
-            },
+            parsed_versions,
         )
         self.index.save_contexts(
             {k: Context.model_validate(v) for k, v in contexts.items()}
         )
         self.index.save_decisions(
             {k: Decision.model_validate(v) for k, v in decisions.items()}
+        )
+        self.index.save_rde_records(
+            {k: RdeDiffRecord.model_validate(v) for k, v in rde_records.items()}
         )

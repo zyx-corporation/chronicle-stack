@@ -73,4 +73,22 @@ class SearchService:
                     )
                 )
 
+        rde_records = self.chronicle.index.load_rde_records()
+        for rde in rde_records.values():
+            haystack = (
+                f"{rde.summary} {' '.join(rde.preserved)} "
+                f"{' '.join(rde.transformed)} {' '.join(rde.supplemented)} "
+                f"{' '.join(rde.unresolved)} {' '.join(rde.deviation_risks)} "
+                f"{' '.join(rde.next_update_policy)}"
+            ).lower()
+            if query_lower in haystack:
+                results.append(
+                    SearchResult(
+                        kind="rde",
+                        identifier=rde.rde_record_id,
+                        summary=rde.summary or f"RDE: {rde.from_version_id} -> {rde.to_version_id}",
+                        detail=f"RDE diff record for {rde.artifact_id}",
+                    )
+                )
+
         return results

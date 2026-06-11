@@ -54,6 +54,15 @@ class ArtifactNotFoundError(ChronicleError):
         )
 
 
+class ArtifactContentMissingError(ChronicleError):
+    def __init__(self) -> None:
+        super().__init__(
+            code="ARTIFACT_CONTENT_MISSING",
+            message="Artifact update requires either --file or --content.",
+            hint="Pass --file <path> to a source file, or --content <string> to update.",
+        )
+
+
 class VersionNotFoundError(ChronicleError):
     def __init__(self, version_id: str) -> None:
         super().__init__(
@@ -116,4 +125,13 @@ class JsonlParseError(ChronicleError):
                 "Repair or remove the corrupted line;"
                 " other events remain readable."
             ),
+        )
+
+
+class SourceFileNotFoundError(ChronicleError):
+    def __init__(self, path: str) -> None:
+        super().__init__(
+            code="SOURCE_FILE_NOT_FOUND",
+            message=f"Source file not found: {path}",
+            hint="Check the file path and try again.",
         )

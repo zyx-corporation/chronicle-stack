@@ -22,6 +22,7 @@ class ChroniclePaths:
         self.artifact_index_file = self.indexes_dir / "artifact_index.json"
         self.context_index_file = self.indexes_dir / "context_index.json"
         self.decision_index_file = self.indexes_dir / "decision_index.json"
+        self.rde_index_file = self.indexes_dir / "rde_index.json"
 
     def is_initialized(self) -> bool:
         return self.events_file.exists() and self.metadata_file.exists()

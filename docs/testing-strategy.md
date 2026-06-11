@@ -21,6 +21,7 @@ Chronicle Core v0.1 のテスト方針。
 | 検索 | test_search.py |
 | Index 再生成 | test_search.py |
 | Export | test_search.py |
+| CLI 統合テスト | test_cli.py |
 
 ## 実行
 
@@ -31,5 +32,4 @@ pytest
 
 ## 今後
 
-- CLI 統合テスト（Typer CliRunner）
 - 最小デモシナリオの E2E テスト

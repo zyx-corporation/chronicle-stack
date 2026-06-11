@@ -32,14 +32,20 @@ chronicle record --type user_input --actor user --summary "仕様書を作成す
 # Artifact を作成
 chronicle artifact create --title "Basic Spec" --type specification --file docs/spec.md
 
-# Artifact を更新
+# Artifact を更新（--file は必須）
 chronicle artifact update --artifact art_xxx --file docs/spec-v2.md --summary "Decision Model を追加"
 
 # 判断を記録
 chronicle decision record --artifact art_xxx --type accepted --reason "v0.1 として採用"
 
-# RDE Diff を記録
-chronicle rde record --artifact art_xxx --from ver_aaa --to ver_bbb --summary "詳細化"
+# RDE Diff を記録（6つのRDEフィールドを繰り返し指定可能）
+chronicle rde record --artifact art_xxx --from ver_aaa --to ver_bbb --summary "詳細化" \
+  --preserved "元の意図" --preserved "基本構造" \
+  --transformed "詳細セクション追加" \
+  --supplemented "新しい例" \
+  --unresolved "用語の統一" \
+  --deviation-risk "スコープ拡大の可能性" \
+  --next-update-policy "四半期レビュー"
 
 # 検索
 chronicle search "Decision Model"
@@ -51,6 +57,24 @@ chronicle export --format markdown -o chronicle-export.md
 # 概要表示
 chronicle show
 ```
+
+## 重要な動作仕様
+
+### イベント連携の永続化
+
+- **ArtifactVersion.source_event_id**: 各バージョンは、それを記録したイベントの `event_id` を `source_event_id` として永続化します。`chronicle.jsonl` のペイロードにも正しい `source_event_id` が含まれます。
+- **Decision.event_id**: 各 Decision は、それを記録したイベントの `event_id` を永続化します。インデックス再構築後も `event_id` は保持されます。
+
+### Artifact 更新のガード
+
+- Artifact の更新には `--file` または `--content` の指定が必須です。どちらも指定しない場合、`ARTIFACT_CONTENT_MISSING` エラーが発生します。これにより、誤って `current.md` が空になることを防止します。
+- 存在しないファイルを指定した場合、`SOURCE_FILE_NOT_FOUND` エラー（`ChronicleError` サブクラス）が発生します。
+
+### RDE-to-Version リンク
+
+- RDE Diff Record を作成すると、`from_version_id` → `to_version_id` のリンクが記録されます。
+- インデックス再構築時に、対応する `ArtifactVersion.rde_record_id` が自動的に設定されます。
+- RDE レコードは `rde_index.json` に保存され、検索対象になります。
 
 ## ディレクトリ構成
 
@@ -64,6 +88,10 @@ chronicle show
       versions/
         <version_id>.md
   indexes/                 # 再生成可能な派生データ
+    artifact_index.json
+    context_index.json
+    decision_index.json
+    rde_index.json
   reports/rde/
 ```
 
@@ -71,7 +99,10 @@ chronicle show
 
 ```bash
 pytest
+ruff check src/ tests/
 ```
+
+CI は GitHub Actions で実行されます（`.github/workflows/ci.yml`）。
 
 ## ドキュメント
 
