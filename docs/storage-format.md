@@ -9,6 +9,8 @@ Chronicle Core v0.1 の永続化形式。
 - Git 差分管理に適する
 - 破損行があっても他行は読み取り可能（`skip_corrupt=True`）
 
+**重要**: `chronicle.jsonl` が唯一の一次記録です。`indexes/` 以下のファイルはすべて派生データであり、`chronicle index rebuild` で再生成可能です。
+
 ## メタデータ: metadata.yaml
 
 ```yaml
@@ -24,12 +26,19 @@ default_timezone: "Asia/Tokyo"
 
 | ファイル | 内容 |
 |---------|------|
-| artifact_index.json | Artifact と Version |
+| artifact_index.json | Artifact と Version（RDE リンク付与済み） |
 | context_index.json | Context |
 | decision_index.json | Decision |
 | rde_index.json | RDE Diff Record |
 
 `chronicle index rebuild` で `chronicle.jsonl` から再生成可能。
+
+### RDE → Version リンクの派生付与
+
+`chronicle.jsonl` の RDE_DIFF_RECORDED event は変更しません。
+index rebuild 時に、RDE payload の `to_version_id` と一致する `ArtifactVersion` に `rde_record_id` を派生付与します。
+
+複数の RDE が同一 Version を指す場合、v0.1 では JSONL 上で **後に現れた RDE が優先** されます。
 
 ## Artifact ファイル
 
@@ -45,4 +54,4 @@ artifacts/<artifact_id>/
 reports/rde/<rde_record_id>.md
 ```
 
-Markdown 形式の人間可読レポート。
+Markdown 形式の人間可読レポート。6 つの RDE フィールド（Preserved / Transformed / Supplemented / Unresolved / Deviation Risks / Next Update Policy）を含む。

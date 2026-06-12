@@ -6,6 +6,11 @@ Chronicle Core v0.1 CLI コマンド一覧。
 
 すべてのコマンドで `--json` オプションにより JSON 出力が可能。
 
+例:
+```bash
+chronicle artifact history --artifact art_xxx --json
+```
+
 ## chronicle init
 
 ```bash
@@ -40,12 +45,21 @@ chronicle record --type user_input --actor user --summary "Summary"
 | `list` | 全 Artifact 一覧 |
 
 `update` では `--file` の指定が必須です。指定しない場合 `ARTIFACT_CONTENT_MISSING` エラーが発生します。
+存在しないファイルを指定した場合、`SOURCE_FILE_NOT_FOUND` エラーが発生します。
 
 ## chronicle decision record
 
 ```bash
-chronicle decision record --artifact art_xxx --type accepted --reason "Reason"
+chronicle decision record \
+  --artifact art_xxx \
+  --type accepted \
+  --reason "v0.1 として採用" \
+  --alternative "Option B" \
+  --alternative "Option C" \
+  --notes "Revisit after v0.2"
 ```
+
+`--alternative` は繰り返し指定可能。`--notes` で補足メモを記録できる。
 
 ## chronicle rde record
 
@@ -71,7 +85,7 @@ Chronicle 概要（イベント数、Artifact 数など）を表示。
 chronicle search "keyword"
 ```
 
-イベント・Artifact・Decision・Context をキーワード検索。
+イベント・Artifact・Decision・Context・RDE をキーワード検索。
 
 ## chronicle export
 
@@ -86,4 +100,5 @@ chronicle export --format markdown -o output.md
 chronicle index rebuild
 ```
 
-`chronicle.jsonl` から派生インデックスを再生成。
+`chronicle.jsonl` から派生インデックスを再生成する。
+再生成時に RDE レコードの `to_version_id` をもとに、対応する `ArtifactVersion.rde_record_id` が自動的に設定される。

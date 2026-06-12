@@ -126,6 +126,13 @@ CI は GitHub Actions で実行されます（`.github/workflows/ci.yml`）。
 - [CLI リファレンス](docs/cli-reference.md)
 - [ストレージ形式](docs/storage-format.md)
 - [テスト戦略](docs/testing-strategy.md)
+- [スモークテスト手順](docs/smoke-test-v0.1.md)
+- [リリース判定](docs/release-readiness-v0.1.md)
+- [v0.2 バックログ](docs/backlog-v0.2.md)
+
+## 変更履歴
+
+- [CHANGELOG.md](CHANGELOG.md)
 
 ## ライセンス
 
