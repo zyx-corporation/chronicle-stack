@@ -43,4 +43,6 @@ target-version = "py311"
 select = ["E", "F", "I", "UP", "B"]
 
 [tool.ruff.lint.per-file-ignores]
-"src/chronicle/cli.py" = ["E501", "I001"]
+"src/chronicle/cli.py" = ["E501", "I001", "B008"]
+"src/chronicle/services/doctor_service.py" = ["E501", "I001", "B904"]
+"tests/test_doctor.py" = ["E501", "I001"]
