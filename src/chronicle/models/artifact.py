@@ -5,6 +5,8 @@ from enum import StrEnum
 
 from pydantic import BaseModel, Field
 
+from chronicle.models.visibility import VisibilityHint
+
 
 class ArtifactType(StrEnum):
     DOCUMENT = "document"
@@ -41,6 +43,7 @@ class Artifact(BaseModel):
     updated_at: datetime
     status: ArtifactStatus = ArtifactStatus.DRAFT
     path: str
+    visibility_hint: VisibilityHint = VisibilityHint.UNKNOWN
     tags: list[str] = Field(default_factory=list)
 
 

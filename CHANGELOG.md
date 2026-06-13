@@ -5,6 +5,8 @@
 ### Added
 - Formal Context Scope Model (`ContextScope`) for Context records.
 - Backward-compatible loading from v0.1 `scope_hint`.
+- `VisibilityHint` for Context and Artifact records.
+- CLI support for setting Context / Artifact visibility (`--visibility`).
 
 ## v0.1.0 - 2026-06-13
 

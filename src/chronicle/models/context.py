@@ -6,6 +6,8 @@ from typing import Any
 
 from pydantic import BaseModel, Field, model_validator
 
+from chronicle.models.visibility import VisibilityHint
+
 
 class ContextScope(StrEnum):
     """Formal scope of a Context (v0.2).
@@ -55,6 +57,7 @@ class Context(BaseModel):
     source_ref: str = ""
     scope: ContextScope = ContextScope.UNKNOWN
     scope_hint: ScopeHint | None = None
+    visibility_hint: VisibilityHint = VisibilityHint.UNKNOWN
     confidence: Confidence = Confidence.MEDIUM
     created_at: datetime
     tags: list[str] = Field(default_factory=list)

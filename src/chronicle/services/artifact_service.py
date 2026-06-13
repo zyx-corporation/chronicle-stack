@@ -7,6 +7,7 @@ from chronicle.errors import ArtifactContentMissingError, ArtifactNotFoundError
 from chronicle.ids import generate_id
 from chronicle.models.artifact import Artifact, ArtifactStatus, ArtifactType, ArtifactVersion
 from chronicle.models.event import Actor, ChronicleEvent, EventType
+from chronicle.models.visibility import VisibilityHint
 from chronicle.services.chronicle_service import ChronicleService
 
 
@@ -21,6 +22,7 @@ class ArtifactService:
         source_file: Path | None = None,
         content: str | None = None,
         tags: list[str] | None = None,
+        visibility_hint: VisibilityHint = VisibilityHint.UNKNOWN,
         actor: Actor = Actor.ASSISTANT,
     ) -> tuple[Artifact, ArtifactVersion]:
         metadata = self.chronicle.require_initialized()
@@ -39,6 +41,7 @@ class ArtifactService:
             updated_at=now,
             status=ArtifactStatus.DRAFT,
             path=f"artifacts/{artifact_id}/current.md",
+            visibility_hint=visibility_hint,
             tags=tags or [],
         )
         version = ArtifactVersion(

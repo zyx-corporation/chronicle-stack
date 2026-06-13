@@ -24,7 +24,7 @@ Chronicle Core v0.2 の候補課題。Issue 化しやすい粒度で記述。
 - 注入時に boundary check が実行される
 - 違反時に警告が出力される
 
-## 3. visibility_hint の追加
+## 3. visibility_hint の追加（ → 実装中 #12）
 
 **目的**: Context や Artifact の可視性を制御する。
 
