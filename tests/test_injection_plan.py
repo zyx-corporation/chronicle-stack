@@ -103,8 +103,11 @@ def test_cli_injection_plan_json(tmp_path):
     result = runner.invoke(app, ["injection", "plan", "--task", "Test task", "--json"])
     assert result.exit_code == 0
     data = json.loads(result.stdout)
-    assert data["plan_id"].startswith("ip_")
-    assert len(data["selected"]) >= 1
+    plan = data["plan"]
+    assert plan["plan_id"].startswith("ip_")
+    assert len(plan["selected"]) >= 1
+    assert data["recorded"] is False
+    assert data["event_id"] is None
 
 
 def test_cli_injection_plan_markdown(tmp_path):
@@ -143,5 +146,113 @@ def test_cli_injection_plan_with_warning_rule(tmp_path):
     result = runner.invoke(app, ["injection", "plan", "--task", "Test warnings", "--json"])
     assert result.exit_code == 0
     data = json.loads(result.stdout)
-    assert len(data["warned"]) >= 1
-    assert data["warned"][0]["warnings"] == ["Review sensitive"]
+    plan = data["plan"]
+    assert len(plan["warned"]) >= 1
+    assert plan["warned"][0]["warnings"] == ["Review sensitive"]
+
+
+def test_injection_plan_default_non_persistent(tmp_path):
+    """injection plan without --record must not change JSONL event count."""
+    import os
+    from typer.testing import CliRunner
+    from chronicle.cli import app
+
+    os.chdir(str(tmp_path))
+    runner = CliRunner()
+    runner.invoke(app, ["init", "--title", "Non-Persist"])
+    runner.invoke(app, ["add-context", "--title", "ctx", "--scope", "project"])
+
+    before = len(list((tmp_path / ".chronicle" / "chronicle.jsonl").read_text().splitlines()))
+    runner.invoke(app, ["injection", "plan", "--task", "No record"])
+    after = len(list((tmp_path / ".chronicle" / "chronicle.jsonl").read_text().splitlines()))
+    assert after == before, "Plan generation without --record must not add events"
+
+
+def test_injection_plan_record_persists_to_jsonl(tmp_path):
+    """injection plan --record adds an event to JSONL."""
+    import os
+    from typer.testing import CliRunner
+    from chronicle.cli import app
+
+    os.chdir(str(tmp_path))
+    runner = CliRunner()
+    runner.invoke(app, ["init", "--title", "Persist Plan"])
+    runner.invoke(app, ["add-context", "--title", "ctx", "--scope", "project"])
+
+    before = len(list((tmp_path / ".chronicle" / "chronicle.jsonl").read_text().splitlines()))
+    result = runner.invoke(app, ["injection", "plan", "--task", "Record me", "--record", "--json"])
+    assert result.exit_code == 0
+    after = len(list((tmp_path / ".chronicle" / "chronicle.jsonl").read_text().splitlines()))
+    assert after > before, "--record must add an event to JSONL"
+
+    data = json.loads(result.stdout)
+    assert data["recorded"] is True
+    assert data["event_id"] is not None
+    assert data["event_id"].startswith("evt_")
+
+
+def test_injection_plan_record_event_type(tmp_path):
+    """Recorded plan event must have event_type injection_plan_recorded."""
+    import os
+    from typer.testing import CliRunner
+    from chronicle.cli import app
+
+    os.chdir(str(tmp_path))
+    runner = CliRunner()
+    runner.invoke(app, ["init", "--title", "EventType Check"])
+    runner.invoke(app, ["add-context", "--title", "ctx", "--scope", "project"])
+    runner.invoke(app, ["injection", "plan", "--task", "Type check", "--record"])
+
+    from chronicle.services.chronicle_service import ChronicleService
+    svc = ChronicleService(tmp_path)
+    events = svc.jsonl.read_all()
+    plan_events = [e for e in events if e.event_type.value == "injection_plan_recorded"]
+    assert len(plan_events) >= 1
+    payload = plan_events[-1].payload
+    assert "injection_plan" in payload
+    plan_data = payload["injection_plan"]
+    assert "plan_id" in plan_data
+    assert "selected" in plan_data
+    assert "warned" in plan_data
+    assert "excluded" in plan_data
+    assert "notes" in plan_data
+
+
+def test_injection_plan_recorded_searchable(tmp_path):
+    """Recorded plan must be searchable by task text."""
+    import os
+    from typer.testing import CliRunner
+    from chronicle.cli import app
+
+    os.chdir(str(tmp_path))
+    runner = CliRunner()
+    runner.invoke(app, ["init", "--title", "Search Plan"])
+    runner.invoke(app, ["add-context", "--title", "ctx", "--scope", "project"])
+    runner.invoke(app, ["injection", "plan", "--task", "UniqueSearchTask999", "--record"])
+
+    result = runner.invoke(app, ["search", "UniqueSearchTask999", "--json"])
+    assert result.exit_code == 0
+    data = json.loads(result.stdout)
+    assert len(data) >= 1
+    kinds = {r["kind"] for r in data}
+    assert "event" in kinds
+
+
+def test_injection_plan_recorded_survives_rebuild(tmp_path):
+    """Recorded plan must survive index rebuild."""
+    import os
+    from typer.testing import CliRunner
+    from chronicle.cli import app
+
+    os.chdir(str(tmp_path))
+    runner = CliRunner()
+    runner.invoke(app, ["init", "--title", "Rebuild Plan"])
+    runner.invoke(app, ["add-context", "--title", "ctx", "--scope", "project"])
+    runner.invoke(app, ["injection", "plan", "--task", "Rebuild target", "--record"])
+
+    from chronicle.services.chronicle_service import ChronicleService
+    svc = ChronicleService(tmp_path)
+    event_count_before = len(svc.jsonl.read_all())
+    svc.rebuild_indexes()
+    event_count_after = len(svc.jsonl.read_all())
+    assert event_count_after == event_count_before

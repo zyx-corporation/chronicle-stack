@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from chronicle.ids import generate_id
+from chronicle.models.event import Actor, ChronicleEvent, EventType
 from chronicle.models.injection import InjectionPlan, InjectionPlanContextRef
 from chronicle.services.boundary_service import BoundaryService
 from chronicle.services.chronicle_service import ChronicleService
@@ -70,3 +71,14 @@ class InjectionPlanService:
             "It does NOT persist to chronicle.jsonl by default."
         )
         return plan
+
+    def record_plan(self, plan: InjectionPlan) -> ChronicleEvent:
+        """Record an InjectionPlan as a persisted event in chronicle.jsonl."""
+        self.chronicle.require_initialized()
+        event = self.chronicle.record_event(
+            event_type=EventType.INJECTION_PLAN_RECORDED,
+            actor=Actor.SYSTEM,
+            summary=f"Injection plan recorded: {plan.task}",
+            payload={"injection_plan": plan.model_dump(mode="json")},
+        )
+        return event
