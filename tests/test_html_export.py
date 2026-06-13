@@ -152,11 +152,11 @@ def test_html_export_does_not_redact_sensitive(populated_chronicle):
     assert "private" in html
 
 
-def test_html_export_html_escapes(populated_chronicle):
-    """User-provided strings containing HTML must be escaped."""
+def test_html_export_html_escapes_user_content(populated_chronicle):
+    """User-provided HTML-like strings must be escaped even though dashboard has inline JS."""
     html = populated_chronicle.export()
-    assert "<script>" not in html
-    assert "&lt;script&gt;" in html
+    assert "Secret &lt;script&gt;alert(1)&lt;/script&gt;" in html
+    assert "Secret <script>alert(1)</script>" not in html
 
 
 def test_html_export_does_not_mutate_jsonl(populated_chronicle):
