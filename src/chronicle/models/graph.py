@@ -9,6 +9,8 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
+from chronicle.models.export_manifest import ExportManifest
+
 
 class GraphNode(BaseModel):
     node_id: str
@@ -31,5 +33,6 @@ class GraphExport(BaseModel):
     schema_version: str = "0.3"
     generated_at: datetime
     chronicle_id: str
+    export_manifest: ExportManifest | None = None
     nodes: list[GraphNode] = Field(default_factory=list)
     edges: list[GraphEdge] = Field(default_factory=list)
