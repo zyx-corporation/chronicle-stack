@@ -1,6 +1,6 @@
 # Chronicle Stack CLI Reference
 
-Chronicle Stack v0.3 の CLI コマンド一覧です。
+Chronicle Stack v0.4 の CLI コマンド一覧です。
 
 CLIの通常出力は人間向けです。機械処理を行う場合は、利用可能なコマンドでは `--json` を使用してください。CLI JSON出力の安定性については [インターフェース契約](interface-contracts.md) を参照してください。
 
@@ -22,6 +22,39 @@ chronicle init --title "Project Title"
 `.chronicle/` ディレクトリ、`chronicle.jsonl`、`metadata.yaml` を作成します。
 
 `chronicle.jsonl` が唯一の一次記録です。`indexes/` は再構築可能な派生データです。
+
+## chronicle doctor
+
+```bash
+chronicle doctor
+chronicle doctor --json
+```
+
+現在のChronicle projectをread-onlyで診断します。
+
+主な確認項目:
+
+- `.chronicle/` の存在
+- `chronicle.jsonl` の存在とparse可否
+- `metadata.yaml` の存在とparse可否
+- known EventType
+- derived index の存在
+- Artifact file の存在
+- recorded InjectionPlanが参照するContext
+- graph-json export生成可否
+- HTML dashboard export生成可否
+
+`doctor` はJSONLやindexを変更しません。indexが欠損していても自動rebuildは行わず、`chronicle index rebuild` を推奨するwarningを返します。
+
+Exit code:
+
+| status | exit code |
+|---|---|
+| `ok` | 0 |
+| `warning` | 0 |
+| `error` | non-zero |
+
+`doctor --json` は `status`, `chronicle_id`, `checks` を含むJSONを返します。
 
 ## chronicle record
 
