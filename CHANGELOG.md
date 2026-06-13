@@ -1,5 +1,38 @@
 # Changelog
 
+## v0.4.0 - Unreleased
+
+### Added
+- Operational readiness layer for local Chronicle projects.
+- `chronicle doctor` and `chronicle doctor --json` for read-only health checks.
+- Doctor checks for `.chronicle/`, `chronicle.jsonl`, metadata, JSONL parseability, derived indexes, artifact files, InjectionPlan references, graph export availability, and HTML export availability.
+- Export Manifest model and service.
+- Export Manifest metadata in YAML export, graph-json export, and HTML dashboard export.
+- Redaction-aware export options for YAML and HTML:
+  - `--redact-sensitive`
+  - `--exclude-sensitive`
+- Static HTML dashboard section navigation and stable local anchors.
+- Static HTML dashboard local row filtering.
+- `chronicle-graph` auxiliary console command for read-only graph export inspection.
+- `chronicle-graph summary`, `chronicle-graph nodes`, and `chronicle-graph edges` commands.
+- Graph inspection JSON output and node/edge type filtering.
+
+### Changed
+- v0.4 focuses on operational reliability rather than new memory semantics.
+- Ruff configuration aligned with the current codebase style.
+- HTML dashboard remains a single-file, static, read-only derived view while becoming easier to inspect.
+- Export outputs now carry stronger provenance metadata where supported.
+
+### Notes
+- `chronicle.jsonl` remains the primary record.
+- All indexes, exports, dashboards, graph-json outputs, and graph inspection outputs remain derived views.
+- `chronicle doctor` is read-only and does not repair or mutate records.
+- Export Manifest is provenance metadata, not cryptographic proof.
+- Redaction-aware export is explicit opt-in and is not access control.
+- Dashboard filtering is local display filtering, not a live dashboard server.
+- `chronicle-graph` inspects graph-json-derived structure; it is not a GraphRAG engine.
+- GraphRAG query engine, embeddings, vector database integration, graph database integration, live dashboard, editing UI, authentication, cloud sync, and automatic LLM injection remain out of scope.
+
 ## v0.3.0 - 2026-06-13
 
 ### Added
