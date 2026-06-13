@@ -60,10 +60,13 @@ def test_doctor_missing_chronicle_errors(tmp_path):
 
 
 def test_doctor_corrupt_jsonl_errors(tmp_path):
-    """doctor should report corrupt JSONL lines as errors."""
+    """doctor should report invalid JSONL lines as errors."""
     assert _run(tmp_path, "init", "--title", "Corrupt").exit_code == 0
     events_file = tmp_path / ".chronicle" / "chronicle.jsonl"
-    events_file.write_text(events_file.read_text(encoding="utf-8") + "{bad json\n", encoding="utf-8")
+    events_file.write_text(
+        events_file.read_text(encoding="utf-8") + "not-json-line\n",
+        encoding="utf-8",
+    )
 
     result = _run(tmp_path, "doctor", "--json")
     payload = json.loads(result.stdout)
@@ -135,5 +138,6 @@ def test_doctor_recorded_injection_plan_missing_context_warning(tmp_path):
     assert result.exit_code == 0
     assert payload["status"] == "warning"
     checks = {check["check_id"]: check for check in payload["checks"]}
-    assert checks["recorded_injection_plan_context_refs"]["severity"] == "warning"
-    assert "ctx_missing" in checks["recorded_injection_plan_context_refs"]["detail"]
+    check = checks["recorded_injection_plan_context_refs"]
+    assert check["severity"] == "warning"
+    assert "ctx_missing" in check["detail"]
