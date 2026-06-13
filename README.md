@@ -118,6 +118,7 @@ chronicle show
 - [ライセンス方針](docs/licensing.md)
 - [AGPL遵守ガイド](docs/agpl-compliance-guide.md)
 - [商標・名称利用ポリシー](docs/trademark-policy.md)
+- [商用サポート・Enterprise契約範囲](docs/commercial-support-scope.md)
 - [CLI リファレンス](docs/cli-reference.md)
 - [データモデル](docs/data-model.md)
 - [ストレージ形式](docs/storage-format.md)
