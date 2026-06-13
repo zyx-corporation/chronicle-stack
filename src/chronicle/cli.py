@@ -1,7 +1,8 @@
-"""Chronicle CLI — primary interface for Chronicle Core v0.1."""
+"""Chronicle CLI — primary interface for Chronicle Core."""
 
 import json
 from enum import StrEnum
+from importlib.metadata import PackageNotFoundError, version as _package_version
 from pathlib import Path
 from typing import Annotated, Optional
 
@@ -29,11 +30,22 @@ from chronicle.exporters.injection_plan_report import format_injection_plan
 from chronicle.services.graph_export_service import GraphExportService
 from chronicle.exporters.html_exporter import HtmlDashboardExporter
 
+
+def _version_callback(value: bool) -> None:
+    if value:
+        try:
+            v = _package_version("chronicle-stack")
+        except PackageNotFoundError:
+            v = "0.0.0+unknown"
+        typer.echo(f"chronicle {v}")
+        raise typer.Exit()
+
+
 app = typer.Typer(
     name="chronicle",
     help=(
-        "Chronicle Core v0.1 —"
-        " record context, artifacts, decisions, and diffs."
+        "Chronicle Stack — local-first record of context, artifacts,"
+        " decisions, diffs, provenance, and boundary rules."
     ),
     no_args_is_help=True,
 )
@@ -49,6 +61,15 @@ app.add_typer(rde_app, name="rde")
 app.add_typer(index_app, name="index")
 app.add_typer(boundary_app, name="boundary")
 app.add_typer(injection_app, name="injection")
+
+
+@app.callback()
+def _root_callback(
+    version: Annotated[
+        bool, typer.Option("--version", callback=_version_callback, is_eager=True, help="Show version and exit.")
+    ] = False,
+) -> None:
+    pass
 
 
 class ExportFormat(StrEnum):
