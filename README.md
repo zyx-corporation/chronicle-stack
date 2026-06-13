@@ -115,6 +115,7 @@ chronicle show
 最初に読む文書:
 
 - [アーキテクチャ](docs/architecture.md)
+- [インターフェース契約](docs/interface-contracts.md)
 - [ライセンス方針](docs/licensing.md)
 - [AGPL遵守ガイド](docs/agpl-compliance-guide.md)
 - [商標・名称利用ポリシー](docs/trademark-policy.md)
