@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.5.0 - Unreleased
+
+### Added
+- Planning placeholder for the next Chronicle Stack development cycle.
+
+### Changed
+- Development version bumped to `0.5.0.dev0` after the v0.4.0 release.
+
+### Notes
+- v0.5 scope is not finalized yet.
+- v0.4.0 remains the latest stable release.
+
 ## v0.4.0 - 2026-06-14
 
 ### Added
