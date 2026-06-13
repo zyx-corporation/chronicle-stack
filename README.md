@@ -116,6 +116,8 @@ chronicle show
 
 - [アーキテクチャ](docs/architecture.md)
 - [ライセンス方針](docs/licensing.md)
+- [AGPL遵守ガイド](docs/agpl-compliance-guide.md)
+- [商標・名称利用ポリシー](docs/trademark-policy.md)
 - [CLI リファレンス](docs/cli-reference.md)
 - [データモデル](docs/data-model.md)
 - [ストレージ形式](docs/storage-format.md)
@@ -131,6 +133,10 @@ chronicle show
 - [Artifact Model 仕様書](docs/specs/artifact-model-spec-v0.1.md)
 - [Decision Model 仕様書](docs/specs/decision-model-spec-v0.1.md)
 - [RDE Diff Record 仕様書](docs/specs/rde-diff-record-spec-v0.1.md)
+
+## 貢献
+
+- [CONTRIBUTING.md](CONTRIBUTING.md)
 
 ## 開発
 
