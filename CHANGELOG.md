@@ -14,6 +14,10 @@
 - Rule-based Context Injection Plan generation.
 - `chronicle injection plan` CLI command.
 
+### Changed
+- License changed to AGPL-3.0-or-later for v0.2.0 and later, with commercial licensing available separately from ZYX Corp株式会社.
+- Earlier releases that were published under different license terms are not retroactively changed by this transition.
+
 ## v0.1.0 - 2026-06-13
 
 ### Added
