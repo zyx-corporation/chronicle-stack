@@ -90,7 +90,11 @@ flowchart TD
 | Graph-ready Export | v0.3実装済み |
 | Static HTML Dashboard Export | v0.3実装済み |
 | CLI UX / `--version` | v0.3実装済み |
-| Chronicle Doctor | v0.4実装中 |
+| Chronicle Doctor | v0.4実装済み |
+| Export Manifest | v0.4実装済み |
+| Redaction-aware Export | v0.4実装済み |
+| Dashboard Navigation / Filtering | v0.4実装済み |
+| Graph Export Inspection | v0.4実装済み |
 | GraphRAG query engine | 将来構想 |
 | Live Dashboard / editing UI | 将来構想 |
 
@@ -114,6 +118,7 @@ chronicle injection plan --task "Draft v0.3 release notes" --record
 chronicle export --format yaml
 chronicle export --format graph-json -o graph.json
 chronicle export --format html -o chronicle-dashboard.html
+chronicle-graph summary
 chronicle show
 ```
 
@@ -187,8 +192,8 @@ ruff check src/ tests/
 
 ## リリース
 
-- Latest release: **v0.3.0**
-- GitHub Release: https://github.com/zyx-corporation/chronicle-stack/releases/tag/v0.3.0
+- Latest release: **v0.4.0**
+- GitHub Release: https://github.com/zyx-corporation/chronicle-stack/releases/tag/v0.4.0
 
 ## ライセンス
 

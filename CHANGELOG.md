@@ -1,6 +1,6 @@
 # Changelog
 
-## v0.4.0 - Unreleased
+## v0.4.0 - 2026-06-14
 
 ### Added
 - Operational readiness layer for local Chronicle projects.
