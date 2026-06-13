@@ -142,6 +142,7 @@ chronicle show
 - [テスト戦略](docs/testing-strategy.md)
 - [v0.3 スモークテスト](docs/smoke-test-v0.3.md)
 - [v0.3 リリース判定](docs/release-readiness-v0.3.md)
+- [v0.4 ロードマップ](docs/roadmap-v0.4.md)
 
 契約・運用関連:
 
