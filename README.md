@@ -90,6 +90,7 @@ flowchart TD
 | Graph-ready Export | v0.3実装済み |
 | Static HTML Dashboard Export | v0.3実装済み |
 | CLI UX / `--version` | v0.3実装済み |
+| Chronicle Doctor | v0.4実装中 |
 | GraphRAG query engine | 将来構想 |
 | Live Dashboard / editing UI | 将来構想 |
 
@@ -104,6 +105,7 @@ pip install -e ".[dev]"
 ```bash
 chronicle --version
 chronicle init --title "My Project"
+chronicle doctor
 chronicle record --type user_input --actor user --summary "仕様書を作成する"
 chronicle add-context --title "Task Context" --summary "このタスクだけで使う文脈" --scope task --visibility private
 chronicle artifact create --title "Basic Spec" --type specification --file docs/spec.md --visibility private
@@ -143,6 +145,8 @@ chronicle show
 - [v0.3 スモークテスト](docs/smoke-test-v0.3.md)
 - [v0.3 リリース判定](docs/release-readiness-v0.3.md)
 - [v0.4 ロードマップ](docs/roadmap-v0.4.md)
+- [v0.4 スモークテスト](docs/smoke-test-v0.4.md)
+- [v0.4 リリース判定](docs/release-readiness-v0.4.md)
 
 契約・運用関連:
 
