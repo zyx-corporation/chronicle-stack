@@ -15,6 +15,7 @@ class MarkdownExporter:
         artifacts, versions = self.chronicle.index.load_artifacts()
         contexts = self.chronicle.index.load_contexts()
         decisions = self.chronicle.index.load_decisions()
+        boundary_rules = self.chronicle.index.load_boundary_rules()
 
         lines = [
             f"# Chronicle: {metadata.title}",
@@ -63,6 +64,18 @@ class MarkdownExporter:
                 lines.append(
                     f"- **{dec.decision_type.value}** (`{dec.decision_id}`): {dec.reason}"
                 )
+            lines.append("")
+
+        if boundary_rules:
+            lines.extend(["## Boundary Rules", ""])
+            for rule in boundary_rules.values():
+                val = rule.value if isinstance(rule.value, str) else ", ".join(rule.value)
+                lines.append(
+                    f"- `{rule.rule_id}` **{rule.rule_type.value}** "
+                    f"{rule.field.value} {rule.operator.value} `{val}`"
+                )
+                if rule.reason:
+                    lines.append(f"  - {rule.reason}")
             lines.append("")
 
         content = "\n".join(lines)

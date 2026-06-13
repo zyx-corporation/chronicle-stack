@@ -25,6 +25,7 @@ class ChronicleService:
             self.paths.context_index_file,
             self.paths.decision_index_file,
             self.paths.rde_index_file,
+            self.paths.boundary_rule_index_file,
         )
         self.artifact_store = ArtifactStore(self.paths.artifacts_dir)
 
@@ -136,6 +137,7 @@ class ChronicleService:
         contexts: dict = {}
         decisions: dict = {}
         rde_records: dict = {}
+        boundary_rules: dict = {}
 
         for event in events:
             payload = event.payload
@@ -174,8 +176,12 @@ class ChronicleService:
             elif event.event_type == EventType.RDE_DIFF_RECORDED and "rde" in payload:
                 rde_data = payload["rde"]
                 rde_records[rde_data["rde_record_id"]] = rde_data
+            elif event.event_type == EventType.BOUNDARY_RULE_ADDED and "boundary_rule" in payload:
+                br_data = payload["boundary_rule"]
+                boundary_rules[br_data["rule_id"]] = br_data
 
         from chronicle.models.artifact import Artifact, ArtifactVersion
+        from chronicle.models.boundary import BoundaryRule
         from chronicle.models.context import Context
         from chronicle.models.decision import Decision
         from chronicle.models.rde import RdeDiffRecord
@@ -208,4 +214,7 @@ class ChronicleService:
         )
         self.index.save_rde_records(
             {k: RdeDiffRecord.model_validate(v) for k, v in rde_records.items()}
+        )
+        self.index.save_boundary_rules(
+            {k: BoundaryRule.model_validate(v) for k, v in boundary_rules.items()}
         )
