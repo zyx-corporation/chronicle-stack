@@ -8,7 +8,12 @@ import html
 from datetime import datetime, timezone
 from pathlib import Path
 
-from chronicle.exporters.redaction import REDACTED, RedactionOptions, model_is_sensitive
+from chronicle.exporters.redaction import (
+    REDACTED,
+    RedactionOptions,
+    event_has_sensitive_payload,
+    model_is_sensitive,
+)
 from chronicle.services.chronicle_service import ChronicleService
 from chronicle.services.export_manifest_service import ExportManifestService
 from chronicle.services.graph_export_service import GraphExportService
@@ -67,13 +72,11 @@ class HtmlDashboardExporter:
         boundary_rules = self.chronicle.index.load_boundary_rules()
         manifest = self.manifest.build_manifest("html", export_options=options.as_manifest_options())
 
-        # Recorded injection plans
         recorded_plans = []
         for event in events:
             if event.event_type.value == "injection_plan_recorded" and "injection_plan" in event.payload:
                 recorded_plans.append(event.payload["injection_plan"])
 
-        # Graph overview
         try:
             graph_export = GraphExportService(self.chronicle.paths.root).export_graph()
             graph_node_count = len(graph_export.nodes)
@@ -135,12 +138,16 @@ class HtmlDashboardExporter:
             "<table><tr><th>Event ID</th><th>Type</th><th>Timestamp</th><th>Summary</th></tr>",
         ])
         for event in reversed(events[-30:]):
+            sensitive_event = event_has_sensitive_payload(event.model_dump(mode="json"))
+            if options.exclude_sensitive and sensitive_event:
+                continue
+            summary = REDACTED if options.redact_sensitive and sensitive_event else event.summary
             ts = event.timestamp.strftime("%Y-%m-%d %H:%M")
             lines.append(
                 f"<tr><td>{_id_cell(event.event_id)}</td>"
                 f"<td>{_esc(event.event_type.value)}</td>"
                 f"<td>{_esc(ts)}</td>"
-                f"<td>{_esc(event.summary)}</td></tr>"
+                f"<td>{_esc(summary)}</td></tr>"
             )
         lines.append("</table>")
 
