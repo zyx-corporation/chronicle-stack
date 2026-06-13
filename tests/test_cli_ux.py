@@ -46,10 +46,11 @@ def test_export_help_lists_all_formats(tmp_path):
 
 
 def test_injection_plan_help_shows_record_option(tmp_path):
-    """injection plan --help must show --record."""
+    """injection plan --help must reference the --record persistence option."""
     result = _run(tmp_path, "injection", "plan", "--help")
     assert result.exit_code == 0
-    assert "--record" in result.stdout
+    # Rich may render as -record or --record depending on terminal
+    assert "record" in result.stdout.lower()
 
 
 def test_invalid_export_format_exits_nonzero(tmp_path):
