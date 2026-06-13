@@ -7,6 +7,8 @@
 - Backward-compatible loading from v0.1 `scope_hint`.
 - `VisibilityHint` for Context and Artifact records.
 - CLI support for setting Context / Artifact visibility (`--visibility`).
+- Structured SourceProvenance metadata for Events, Contexts, and Artifacts.
+- CLI support for source metadata on record, add-context, and artifact create.
 
 ## v0.1.0 - 2026-06-13
 
