@@ -1,6 +1,6 @@
 # Chronicle Stack Storage Format
 
-Chronicle Stack v0.3 の永続化形式と派生データ形式を説明します。
+Chronicle Stack v0.4 の永続化形式と派生データ形式を説明します。
 
 ## 一次記録: chronicle.jsonl
 
@@ -118,10 +118,24 @@ Exportは派生ビューです。JSONLを変更しません。
 
 | format | 出力 | 契約レベル |
 |---|---|---|
-| `yaml` | YAML snapshot | Semi-public |
+| `yaml` | YAML snapshot with `export_manifest` | Semi-public |
 | `markdown` | Markdown report | Human-facing |
-| `graph-json` | node/edge graph-ready JSON | Semi-public / derived |
-| `html` | static read-only dashboard | Human-facing |
+| `graph-json` | node/edge graph-ready JSON with `export_manifest` | Semi-public / derived |
+| `html` | static read-only dashboard with manifest section | Human-facing |
+
+## Export Manifest
+
+Export Manifestは、export成果物に付与される来歴メタデータです。
+
+対応形式:
+
+- `yaml`: top-level `export_manifest`
+- `graph-json`: top-level `export_manifest`
+- `html`: `Export Manifest` section
+
+Markdown exportは人間向けreportであり、この段階ではmanifest埋め込み対象外です。
+
+Export Manifestは暗号署名やtamper-proof保証ではありません。JSONLを変更せず、出力がどのChronicle状態から生成されたかを追跡しやすくするための派生メタデータです。
 
 ### graph-json
 
