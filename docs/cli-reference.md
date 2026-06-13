@@ -106,3 +106,41 @@ chronicle index rebuild
 
 `chronicle.jsonl` から派生インデックスを再生成する。
 再生成時に RDE レコードの `to_version_id` をもとに、対応する `ArtifactVersion.rde_record_id` が自動的に設定される。
+
+## chronicle boundary add
+
+```bash
+chronicle boundary add \
+  --type warn \
+  --field visibility \
+  --operator equals \
+  --value sensitive \
+  --reason "Sensitive context should be reviewed"
+```
+
+## chronicle boundary list
+
+```bash
+chronicle boundary list
+chronicle boundary list --json
+```
+
+登録済み Boundary Rule を一覧表示。
+
+## chronicle boundary check
+
+```bash
+chronicle boundary check --context ctx_xxx
+chronicle boundary check --context ctx_xxx --json
+```
+
+指定した Context に対して Boundary Rule を評価する。
+
+## chronicle injection plan
+
+```bash
+chronicle injection plan --task "Draft v0.2 release notes"
+chronicle injection plan --task "Draft v0.2 release notes" --json
+```
+
+Boundary Rule 評価に基づいて Context を selected / warned / excluded に分類する文脈選択案を生成する。LLM への自動注入は行わない。デフォルトでは chronicle.jsonl に永続化しない。

@@ -114,8 +114,9 @@ v0.2では、Contextを単なるメモではなく、選択可能で確認可能
 - Visibility Hint: 可視性に関する軽量ヒント
 - Source Provenance: 出所記録
 - Boundary Rule: include / exclude / warn の判断材料
+- Context Injection Plan: 文脈選択案の生成（人間確認用）
 
-これらは、次段階の Context Injection Plan に接続されます。
+v0.2では、Boundary Rule 評価に基づいて Context Injection Plan を生成できます。Plan は Context を selected / warned / excluded に分類し、LLM への自動注入は行いません。デフォルトでは慢性化されません。
 
 ## 今後の拡張
 

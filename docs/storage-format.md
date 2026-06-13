@@ -30,6 +30,7 @@ default_timezone: "Asia/Tokyo"
 | context_index.json | Context |
 | decision_index.json | Decision |
 | rde_index.json | RDE Diff Record |
+| boundary_rule_index.json | Boundary Rule |
 
 `chronicle index rebuild` で `chronicle.jsonl` から再生成可能。
 
@@ -64,3 +65,7 @@ v0.2 では正式な `ContextScope` （`scope` フィールド）を追加し、
 - v0.1 形式（`scope_hint` のみ）のデータは v0.2 でそのまま読み込めます。`scope` が補完されます。
 - v0.2 で作成された Context は `scope` と `scope_hint` の両方を持ちます。
 - 将来のバージョンで `scope_hint` を削除する可能性があります。
+
+## InjectionPlan の永続化
+
+v0.2 の Context Injection Plan はデフォルトでは永続化しません。Plan は boundary rule 評価に基づいて都度生成される文脈選択案であり、Context や Boundary Rule のレコードを変更しません。
