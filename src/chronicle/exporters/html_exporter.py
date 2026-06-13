@@ -66,7 +66,7 @@ class HtmlDashboardExporter:
         options = redaction or RedactionOptions()
         metadata = self.chronicle.require_initialized()
         events = self.chronicle.jsonl.read_all()
-        artifacts, versions = self.chronicle.index.load_artifacts()
+        artifacts, _ = self.chronicle.index.load_artifacts()
         contexts = self.chronicle.index.load_contexts()
         decisions = self.chronicle.index.load_decisions()
         boundary_rules = self.chronicle.index.load_boundary_rules()
