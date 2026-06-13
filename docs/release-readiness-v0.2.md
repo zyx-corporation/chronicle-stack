@@ -52,6 +52,14 @@ v0.2 第一波 Context Sovereignty Layer のリリース判定。
 - `source` なし → `None` として読み込み
 - Boundary Rule や Injection Plan は Context を変更しない
 
+## License
+
+Chronicle Stack v0.2.0 and later are licensed under AGPL-3.0-or-later.
+
+Earlier releases that were published under different license terms remain available under the license terms published with those releases. This transition does not retroactively change previously released versions.
+
+Commercial licensing may be available separately from ZYX Corp株式会社 for use cases requiring different terms, including closed-source embedding, proprietary SaaS deployment, or other commercial arrangements.
+
 ## CLI Coverage
 
 | コマンド | v0.2 |
@@ -96,6 +104,7 @@ v0.2 第一波 Context Sovereignty Layer のリリース判定。
 | docs/cli-reference.md | ✅ updated |
 | docs/storage-format.md | ✅ updated |
 | docs/smoke-test-v0.2.md | ✅ created |
+| docs/licensing.md | ✅ created |
 | CHANGELOG.md | ✅ updated |
 
 ## Known Limitations
@@ -108,6 +117,7 @@ v0.2 第一波 Context Sovereignty Layer のリリース判定。
 - RDE は正しさを証明しない
 - Source Provenance は出所の記録であり、真実性の証明ではない
 - 同一 Version への複数 RDE は JSONL 上の最後の RDE が優先
+- 商用ライセンス条件はこのリポジトリでは定義しない
 
 ## Release Decision
 
@@ -118,3 +128,4 @@ v0.2 第一波 Context Sovereignty Layer のリリース判定。
 2. ruff pass ✅
 3. pytest 87 passed ✅
 4. Smoke test pass ✅
+5. License transition documented ✅

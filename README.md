@@ -58,7 +58,7 @@ flowchart TD
     I --> Export[Export]
     I --> History[Artifact History]
     I --> Check[Boundary Check]
-    Check --> Plan[次段階: Context Injection Plan]
+    Check --> Plan[Context Injection Plan]
 ```
 
 `chronicle.jsonl` が一次記録です。派生Indexは、検索、エクスポート、履歴表示、Boundary Check のために再構築される補助データです。
@@ -115,6 +115,7 @@ chronicle show
 最初に読む文書:
 
 - [アーキテクチャ](docs/architecture.md)
+- [ライセンス方針](docs/licensing.md)
 - [CLI リファレンス](docs/cli-reference.md)
 - [データモデル](docs/data-model.md)
 - [ストレージ形式](docs/storage-format.md)
@@ -149,4 +150,10 @@ ruff check src/ tests/
 
 ## ライセンス
 
-MIT
+Chronicle Stack v0.2.0 以降は GNU Affero General Public License v3.0 or later（AGPL-3.0-or-later）で提供します。
+
+過去に異なる条件で公開されたリリースの利用条件は、この変更によって遡及的に変更されません。
+
+AGPL版では、Chronicle Stackを改変してネットワークサービスとして提供する場合にも、利用者が対応するソースコードへアクセスできるようにすることを重視します。
+
+商用利用、閉源組み込み、SaaS提供、または別条件での利用については、ZYX Corp株式会社との個別契約により商用ライセンスを提供する場合があります。
