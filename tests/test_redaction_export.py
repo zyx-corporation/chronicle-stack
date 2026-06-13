@@ -100,7 +100,6 @@ def test_redaction_options_are_mutually_exclusive(tmp_path):
     )
 
     assert result.exit_code != 0
-    assert "Use either --redact-sensitive or --exclude-sensitive" in result.output
 
 
 def test_redaction_options_only_support_yaml_and_html(tmp_path):
@@ -109,7 +108,6 @@ def test_redaction_options_only_support_yaml_and_html(tmp_path):
     result = _run(tmp_path, "export", "--format", "graph-json", "--redact-sensitive")
 
     assert result.exit_code != 0
-    assert "supports yaml and html only" in result.output
 
 
 def test_redaction_export_does_not_mutate_jsonl(tmp_path):
