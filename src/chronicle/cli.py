@@ -1,4 +1,5 @@
 """Chronicle CLI — primary interface for Chronicle Core."""
+# ruff: noqa: E501, I001
 
 import json
 from enum import StrEnum
