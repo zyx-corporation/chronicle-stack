@@ -1,5 +1,33 @@
 # Changelog
 
+## v0.3.0 - Unreleased
+
+### Added
+- Interface stability and serialization contracts (`docs/interface-contracts.md`).
+- Contract tests for JSONL primary records, EventType payload shapes, model compatibility, CLI JSON output, rebuild, and export behavior.
+- Explicit Injection Plan persistence via `chronicle injection plan --record`.
+- `injection_plan_recorded` Chronicle Event type.
+- Graph-ready export boundary and deterministic `graph-json` export.
+- Graph candidate models for nodes, edges, and graph export snapshots.
+- Static read-only HTML dashboard export via `chronicle export --format html`.
+- `chronicle --version` CLI option.
+- CLI UX tests for version, help, and invalid-input behavior.
+
+### Changed
+- Project metadata updated for v0.3 development (`0.3.0.dev0`).
+- CLI help text updated for the Chronicle Stack v0.3 feature set.
+- Documentation expanded for GraphRAG boundary, interface contracts, commercial support scope, and contributor license policy.
+- Injection Plans remain non-persistent by default; persistence is now available only by explicit `--record`.
+- Export surface now includes `yaml`, `markdown`, `graph-json`, and `html`.
+
+### Notes
+- `chronicle.jsonl` remains the primary record.
+- `graph-json` and HTML dashboard exports are derived views.
+- GraphRAG query engine, embeddings, vector database integration, graph database integration, live dashboard, authentication, editing UI, and redaction are out of scope for v0.3.
+- Visibility hints are not access control or redaction.
+- Boundary Rules are advisory.
+- Injection Plans do not inject anything into LLMs.
+
 ## v0.2.0 - 2026-06-13
 
 ### Added
