@@ -1,71 +1,183 @@
-# Storage Format
+# Chronicle Stack Storage Format
 
-Chronicle Core v0.1 の永続化形式。
+Chronicle Stack v0.3 の永続化形式と派生データ形式を説明します。
 
 ## 一次記録: chronicle.jsonl
 
-- 形式: JSONL（1 行 1 JSON オブジェクト）
-- 全 Chronicle Event を追記
-- Git 差分管理に適する
-- 破損行があっても他行は読み取り可能（`skip_corrupt=True`）
+`.chronicle/chronicle.jsonl` が唯一の一次記録です。
 
-**重要**: `chronicle.jsonl` が唯一の一次記録です。`indexes/` 以下のファイルはすべて派生データであり、`chronicle index rebuild` で再生成可能です。
+- 形式: JSONL（1行1 JSON object）
+- 内容: Chronicle Eventを追記
+- Git差分管理に適する
+- 派生Index、export、dashboard、graph-jsonは原則としてJSONLから再構成可能
+
+重要:
+
+`indexes/` 以下のファイル、export結果、HTML dashboard、graph-jsonは一次記録ではありません。
+
+## ChronicleEvent JSONL
+
+各行はChronicleEventです。
+
+基本形:
+
+```json
+{
+  "event_id": "evt_...",
+  "chronicle_id": "chr_...",
+  "timestamp": "2026-06-13T00:00:00+09:00",
+  "event_type": "context_added",
+  "actor": "user",
+  "summary": "Add context",
+  "payload": {}
+}
+```
+
+EventTypeごとのpayload contractは [インターフェース契約](interface-contracts.md) と [データモデル](data-model.md) を参照してください。
 
 ## メタデータ: metadata.yaml
 
 ```yaml
 chronicle_id: chr_...
 title: Project Title
-created_at: "2026-06-09T12:00:00+09:00"
-version: "0.1"
-schema_version: "chronicle-core-0.1"
+created_at: "2026-06-13T12:00:00+09:00"
+version: "0.3"
+schema_version: "chronicle-stack-0.3"
 default_timezone: "Asia/Tokyo"
 ```
 
+既存データとの互換性のため、過去のschema_versionを持つmetadataも読み取り対象です。
+
 ## 派生データ: indexes/
 
-| ファイル | 内容 |
-|---------|------|
-| artifact_index.json | Artifact と Version（RDE リンク付与済み） |
-| context_index.json | Context |
-| decision_index.json | Decision |
-| rde_index.json | RDE Diff Record |
-| boundary_rule_index.json | Boundary Rule |
+| ファイル | 内容 | 一次記録か |
+|---|---|---|
+| `artifact_index.json` | ArtifactとVersion | いいえ |
+| `context_index.json` | Context | いいえ |
+| `decision_index.json` | Decision | いいえ |
+| `rde_index.json` | RDE Diff Record | いいえ |
+| `boundary_rule_index.json` | Boundary Rule | いいえ |
 
-`chronicle index rebuild` で `chronicle.jsonl` から再生成可能。
+`chronicle index rebuild` で `chronicle.jsonl` から再生成可能です。
 
-### RDE → Version リンクの派生付与
+将来InjectionPlan専用indexを追加する場合も、一次記録ではなく派生Indexとして扱います。
 
-`chronicle.jsonl` の RDE_DIFF_RECORDED event は変更しません。
-index rebuild 時に、RDE payload の `to_version_id` と一致する `ArtifactVersion` に `rde_record_id` を派生付与します。
+## Artifact files
 
-複数の RDE が同一 Version を指す場合、v0.1 では JSONL 上で **後に現れた RDE が優先** されます。
-
-## Artifact ファイル
-
-```
+```text
 artifacts/<artifact_id>/
-  current.md              # 最新版
-  versions/<version_id>.md  # スナップショット
+  current.md
+  versions/<version_id>.md
 ```
 
-## RDE レポート
+Artifact本文はファイルとして保存されます。Artifact metadataとVersion metadataはEvent payloadおよび派生Indexから再構成されます。
 
-```
+## RDE reports
+
+```text
 reports/rde/<rde_record_id>.md
 ```
 
-Markdown 形式の人間可読レポート。6 つの RDE フィールド（Preserved / Transformed / Supplemented / Unresolved / Deviation Risks / Next Update Policy）を含む。
+Markdown形式の人間可読reportです。一次記録ではありません。
 
-## v0.1 → v0.2 Context 互換性
+## InjectionPlan persistence
 
-v0.1 の Context は `scope_hint` フィールドのみを持ちます。
-v0.2 では正式な `ContextScope` （`scope` フィールド）を追加し、`scope_hint` は互換用に残されています。
+Context Injection Planはデフォルトでは永続化されません。
 
-- v0.1 形式（`scope_hint` のみ）のデータは v0.2 でそのまま読み込めます。`scope` が補完されます。
-- v0.2 で作成された Context は `scope` と `scope_hint` の両方を持ちます。
-- 将来のバージョンで `scope_hint` を削除する可能性があります。
+```bash
+chronicle injection plan --task "Draft"
+```
 
-## InjectionPlan の永続化
+上記はJSONLを変更しません。
 
-v0.2 の Context Injection Plan はデフォルトでは永続化しません。Plan は boundary rule 評価に基づいて都度生成される文脈選択案であり、Context や Boundary Rule のレコードを変更しません。
+明示的に `--record` を指定した場合のみ、`injection_plan_recorded` EventとしてJSONLへ記録されます。
+
+```bash
+chronicle injection plan --task "Draft" --record
+```
+
+payload形状:
+
+```json
+{
+  "injection_plan": {
+    "plan_id": "ip_...",
+    "task": "Draft",
+    "created_at": "...",
+    "selected": [],
+    "warned": [],
+    "excluded": [],
+    "notes": []
+  }
+}
+```
+
+## Export outputs
+
+Exportは派生ビューです。JSONLを変更しません。
+
+| format | 出力 | 契約レベル |
+|---|---|---|
+| `yaml` | YAML snapshot | Semi-public |
+| `markdown` | Markdown report | Human-facing |
+| `graph-json` | node/edge graph-ready JSON | Semi-public / derived |
+| `html` | static read-only dashboard | Human-facing |
+
+### graph-json
+
+```bash
+chronicle export --format graph-json -o graph.json
+```
+
+`graph-json` はGraphRAG接続準備用の派生exportです。GraphRAGエンジン、graph DB、vector DB、embedding、LLM APIは含みません。
+
+### html
+
+```bash
+chronicle export --format html -o chronicle-dashboard.html
+```
+
+HTML dashboardは静的・読み取り専用の人間向けreportです。HTML layoutは機械処理の安定契約ではありません。
+
+## Visibility and redaction
+
+`visibility_hint` はredactionではありません。
+
+- `public`
+- `private`
+- `sensitive`
+- `unknown`
+
+exportやHTML dashboardでは、visibility hintは表示上の注意喚起として扱われます。デフォルトでは機密情報を自動除外しません。
+
+将来redactionを導入する場合は、`--exclude-sensitive` などの明示オプションとして追加します。
+
+## v0.1 → v0.2 → v0.3 compatibility
+
+### Context scope compatibility
+
+v0.1のContextは `scope_hint` のみを持つ場合があります。
+
+v0.2以降では正式な `scope` フィールドを使います。`scope_hint` は互換用に残され、読み込み時に `scope` へ補完されます。
+
+### Visibility compatibility
+
+`visibility_hint` が欠損している旧データは `unknown` として扱います。
+
+### Source compatibility
+
+`source` が欠損している旧データは `None` として扱います。Source系Boundary Ruleはsource欠損Contextでも例外を投げません。
+
+### InjectionPlan compatibility
+
+v0.2のInjectionPlanは非永続のみでした。
+
+v0.3では、明示的な `--record` 指定時のみ `injection_plan_recorded` Eventとして永続化できます。
+
+## Rebuild contract
+
+`chronicle index rebuild` はJSONLを一次記録として、派生Indexを再生成します。
+
+rebuildはJSONLを変更してはなりません。
+
+RDE → ArtifactVersion などの派生リンクはIndex上で付与されます。一次Event payloadは書き換えません。
