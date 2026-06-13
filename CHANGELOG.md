@@ -11,6 +11,8 @@
 - CLI support for source metadata on record, add-context, and artifact create.
 - Context Boundary Rule model and CLI (boundary add/list/check).
 - Boundary rule index rebuild support.
+- Rule-based Context Injection Plan generation.
+- `chronicle injection plan` CLI command.
 
 ## v0.1.0 - 2026-06-13
 
