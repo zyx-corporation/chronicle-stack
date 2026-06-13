@@ -7,9 +7,12 @@ name = "chronicle-stack"
 version = "0.1.0"
 description = "Chronicle Core v0.1 — local-first record of context, artifacts, decisions, and diffs"
 readme = "README.md"
-license = "MIT"
+license = "AGPL-3.0-or-later"
 requires-python = ">=3.11"
 authors = [{ name = "Tomoyuki Kano" }]
+classifiers = [
+    "License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)",
+]
 dependencies = [
     "typer>=0.12",
     "pydantic>=2.0",
