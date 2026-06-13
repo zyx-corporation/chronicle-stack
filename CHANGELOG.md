@@ -1,6 +1,6 @@
 # Changelog
 
-## v0.3.0 - Unreleased
+## v0.3.0 - 2026-06-13
 
 ### Added
 - Interface stability and serialization contracts (`docs/interface-contracts.md`).

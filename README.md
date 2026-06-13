@@ -182,9 +182,8 @@ ruff check src/ tests/
 
 ## リリース
 
-- Latest release: **v0.2.0**
-- GitHub Release: https://github.com/zyx-corporation/chronicle-stack/releases/tag/v0.2.0
-- Current development version: **0.3.0.dev0**
+- Latest release: **v0.3.0**
+- GitHub Release: https://github.com/zyx-corporation/chronicle-stack/releases/tag/v0.3.0
 
 ## ライセンス
 
