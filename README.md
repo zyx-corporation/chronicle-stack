@@ -77,7 +77,7 @@ flowchart TD
 | Visibility Hint | v0.2実装済み |
 | Source Provenance | v0.2実装済み |
 | Boundary Rules | v0.2実装済み |
-| Context Injection Plan | 次段階 |
+| Context Injection Plan | v0.2実装済み |
 | GraphRAG | 将来構想 |
 | Dashboard | 将来構想 |
 
@@ -95,6 +95,7 @@ chronicle record --type user_input --actor user --summary "仕様書を作成す
 chronicle add-context --title "Task Context" --summary "このタスクだけで使う文脈" --scope task --visibility private
 chronicle artifact create --title "Basic Spec" --type specification --file docs/spec.md --visibility private
 chronicle search "Decision Model"
+chronicle injection plan --task "Draft v0.2 release notes"
 chronicle export --format yaml
 chronicle show
 ```

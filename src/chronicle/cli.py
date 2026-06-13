@@ -24,6 +24,8 @@ from chronicle.services.decision_service import DecisionService
 from chronicle.services.rde_service import RdeService
 from chronicle.services.search_service import SearchService
 from chronicle.services.boundary_service import BoundaryService
+from chronicle.services.injection_service import InjectionPlanService
+from chronicle.exporters.injection_plan_report import format_injection_plan
 
 app = typer.Typer(
     name="chronicle",
@@ -38,11 +40,13 @@ decision_app = typer.Typer(help="Decision operations.")
 rde_app = typer.Typer(help="RDE Diff Record operations.")
 index_app = typer.Typer(help="Index operations.")
 boundary_app = typer.Typer(help="Boundary rule operations.")
+injection_app = typer.Typer(help="Context injection planning operations.")
 app.add_typer(artifact_app, name="artifact")
 app.add_typer(decision_app, name="decision")
 app.add_typer(rde_app, name="rde")
 app.add_typer(index_app, name="index")
 app.add_typer(boundary_app, name="boundary")
+app.add_typer(injection_app, name="injection")
 
 
 class ExportFormat(StrEnum):
@@ -626,6 +630,23 @@ def boundary_check_cmd(
                 return
             for r in matched:
                 typer.echo(f"[{r.rule_type.value}] {r.rule_id}: {r.reason}")
+    except ChronicleError as exc:
+        _handle_error(exc, json_output)
+
+
+@injection_app.command("plan")
+def injection_plan_cmd(
+    task: Annotated[str, typer.Option("--task", help="Task description for context selection.")],
+    json_output: Annotated[bool, typer.Option("--json")] = False,
+) -> None:
+    """Generate a Context Injection Plan for a task."""
+    try:
+        service = InjectionPlanService()
+        plan = service.generate_plan(task)
+        if json_output:
+            typer.echo(json.dumps(plan.model_dump(mode="json"), ensure_ascii=False, indent=2))
+        else:
+            typer.echo(format_injection_plan(plan))
     except ChronicleError as exc:
         _handle_error(exc, json_output)
 

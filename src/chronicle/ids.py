@@ -11,6 +11,7 @@ PREFIXES = {
     "decision": "dec_",
     "rde": "rde_",
     "boundary_rule": "br_",
+    "injection_plan": "ip_",
     "source": "src_",
 }
 
