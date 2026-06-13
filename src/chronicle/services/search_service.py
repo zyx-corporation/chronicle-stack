@@ -36,7 +36,7 @@ class SearchService:
 
         artifacts, _ = self.chronicle.index.load_artifacts()
         for artifact in artifacts.values():
-            haystack = f"{artifact.title} {artifact.artifact_type} {' '.join(artifact.tags)}".lower()
+            haystack = f"{artifact.title} {artifact.artifact_type} {' '.join(artifact.tags)} {artifact.source}".lower()
             if query_lower in haystack:
                 results.append(
                     SearchResult(
@@ -62,7 +62,7 @@ class SearchService:
 
         contexts = self.chronicle.index.load_contexts()
         for context in contexts.values():
-            haystack = f"{context.title} {context.summary} {' '.join(context.tags)}".lower()
+            haystack = f"{context.title} {context.summary} {' '.join(context.tags)} {context.source}".lower()
             if query_lower in haystack:
                 results.append(
                     SearchResult(

@@ -19,6 +19,7 @@ v0.2 では以下を開発中です。
 - Context Scope Model の正式化
 - Context の有効範囲（global / project / session / task / artifact / temporary）の明示的指定
 - Context と Artifact への visibility_hint （public / private / sensitive / unknown）追加
+- Source Provenance Metadata（source_tool / source_session / source_model / source_file / source_url）追加
 
 ## インストール
 

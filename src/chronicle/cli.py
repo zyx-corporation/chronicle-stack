@@ -14,6 +14,7 @@ from chronicle.models.artifact import ArtifactType
 from chronicle.models.context import ContextScope
 from chronicle.models.decision import DecisionType
 from chronicle.models.event import Actor, EventType
+from chronicle.models.source import SourceProvenance
 from chronicle.models.visibility import VisibilityHint
 from chronicle.services.artifact_service import ArtifactService
 from chronicle.services.chronicle_service import ChronicleService
@@ -91,17 +92,36 @@ def add_context_cmd(
     visibility: Annotated[
         VisibilityHint, typer.Option("--visibility", help="Visibility hint: public, private, sensitive, unknown.")
     ] = VisibilityHint.UNKNOWN,
+    source_ref: Annotated[Optional[str], typer.Option("--source-ref")] = None,
+    source_tool: Annotated[Optional[str], typer.Option("--source-tool")] = None,
+    source_session: Annotated[Optional[str], typer.Option("--source-session")] = None,
+    source_model: Annotated[Optional[str], typer.Option("--source-model")] = None,
+    source_file: Annotated[Optional[str], typer.Option("--source-file")] = None,
+    source_url: Annotated[Optional[str], typer.Option("--source-url")] = None,
     json_output: Annotated[bool, typer.Option("--json")] = False,
 ) -> None:
     """Add a Context to the Chronicle."""
     try:
+        src = None
+        if any([source_ref, source_tool, source_session, source_model, source_file, source_url]):
+            src = SourceProvenance(
+                source_type=source_type,
+                source_ref=source_ref or "",
+                source_tool=source_tool,
+                source_session=source_session,
+                source_model=source_model,
+                source_file=source_file,
+                source_url=source_url,
+            )
         service = ContextService()
         context = service.add_context(
             title=title,
             summary=summary,
             source_type=source_type,
+            source_ref=source_ref or "",
             scope=scope,
             visibility_hint=visibility,
+            source=src,
         )
         if json_output:
             typer.echo(
@@ -124,13 +144,31 @@ def record_cmd(
     type: Annotated[EventType, typer.Option("--type")],
     actor: Annotated[Actor, typer.Option("--actor")],
     summary: Annotated[str, typer.Option("--summary")],
+    source_type: Annotated[Optional[str], typer.Option("--source-type")] = None,
+    source_ref: Annotated[Optional[str], typer.Option("--source-ref")] = None,
+    source_tool: Annotated[Optional[str], typer.Option("--source-tool")] = None,
+    source_session: Annotated[Optional[str], typer.Option("--source-session")] = None,
+    source_model: Annotated[Optional[str], typer.Option("--source-model")] = None,
+    source_file: Annotated[Optional[str], typer.Option("--source-file")] = None,
+    source_url: Annotated[Optional[str], typer.Option("--source-url")] = None,
     json_output: Annotated[bool, typer.Option("--json")] = False,
 ) -> None:
     """Record an arbitrary Chronicle Event."""
     try:
+        source = None
+        if any([source_type, source_ref, source_tool, source_session, source_model, source_file, source_url]):
+            source = SourceProvenance(
+                source_type=source_type or "unknown",
+                source_ref=source_ref or "",
+                source_tool=source_tool,
+                source_session=source_session,
+                source_model=source_model,
+                source_file=source_file,
+                source_url=source_url,
+            )
         service = ChronicleService()
         event = service.record_event(
-            event_type=type, actor=actor, summary=summary
+            event_type=type, actor=actor, summary=summary, source=source
         )
         if json_output:
             typer.echo(
@@ -157,13 +195,29 @@ def artifact_create_cmd(
     visibility: Annotated[
         VisibilityHint, typer.Option("--visibility", help="Visibility hint: public, private, sensitive, unknown.")
     ] = VisibilityHint.UNKNOWN,
+    source_type: Annotated[Optional[str], typer.Option("--source-type")] = None,
+    source_ref: Annotated[Optional[str], typer.Option("--source-ref")] = None,
+    source_tool: Annotated[Optional[str], typer.Option("--source-tool")] = None,
+    source_session: Annotated[Optional[str], typer.Option("--source-session")] = None,
+    source_model: Annotated[Optional[str], typer.Option("--source-model")] = None,
+    source_url: Annotated[Optional[str], typer.Option("--source-url")] = None,
     json_output: Annotated[bool, typer.Option("--json")] = False,
 ) -> None:
     """Create a new Artifact."""
     try:
+        src = None
+        if any([source_type, source_ref, source_tool, source_session, source_model, source_url]):
+            src = SourceProvenance(
+                source_type=source_type or "unknown",
+                source_ref=source_ref or "",
+                source_tool=source_tool,
+                source_session=source_session,
+                source_model=source_model,
+                source_url=source_url,
+            )
         service = ArtifactService()
         artifact, version = service.create(
-            title=title, artifact_type=type, source_file=file, visibility_hint=visibility
+            title=title, artifact_type=type, source_file=file, visibility_hint=visibility, source=src
         )
         if json_output:
             typer.echo(

@@ -4,6 +4,7 @@ from chronicle.models.decision import Decision
 from chronicle.models.event import ChronicleEvent
 from chronicle.models.metadata import ChronicleMetadata
 from chronicle.models.rde import RdeDiffRecord
+from chronicle.models.source import SourceProvenance
 from chronicle.models.visibility import VisibilityHint
 
 __all__ = [
@@ -15,5 +16,6 @@ __all__ = [
     "ContextScope",
     "Decision",
     "RdeDiffRecord",
+    "SourceProvenance",
     "VisibilityHint",
 ]

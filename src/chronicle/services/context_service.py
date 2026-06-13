@@ -6,6 +6,7 @@ from pathlib import Path
 from chronicle.ids import generate_id
 from chronicle.models.context import Confidence, Context, ContextScope, ScopeHint
 from chronicle.models.event import Actor, EventType
+from chronicle.models.source import SourceProvenance
 from chronicle.models.visibility import VisibilityHint
 from chronicle.services.chronicle_service import ChronicleService
 
@@ -24,6 +25,7 @@ class ContextService:
         visibility_hint: VisibilityHint = VisibilityHint.UNKNOWN,
         confidence: Confidence = Confidence.MEDIUM,
         tags: list[str] | None = None,
+        source: SourceProvenance | None = None,
     ) -> Context:
         self.chronicle.require_initialized()
         now = datetime.now(timezone.utc).astimezone()
@@ -36,6 +38,7 @@ class ContextService:
             scope=scope,
             scope_hint=ScopeHint(scope.value),
             visibility_hint=visibility_hint,
+            source=source,
             confidence=confidence,
             created_at=now,
             tags=tags or [],

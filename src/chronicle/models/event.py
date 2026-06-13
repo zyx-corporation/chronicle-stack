@@ -6,6 +6,8 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
+from chronicle.models.source import SourceProvenance
+
 
 class EventType(StrEnum):
     CHRONICLE_CREATED = "chronicle_created"
@@ -44,9 +46,8 @@ class ReviewStatus(StrEnum):
     NEEDS_REVIEW = "needs_review"
 
 
-class SourceRef(BaseModel):
-    source_type: str
-    source_ref: str
+# Backward-compatible alias for v0.1 consumers.
+SourceRef = SourceProvenance
 
 
 class ChronicleEvent(BaseModel):
@@ -62,7 +63,7 @@ class ChronicleEvent(BaseModel):
     context_ids: list[str] = Field(default_factory=list)
     decision_id: str | None = None
     rde_record_id: str | None = None
-    source: SourceRef | None = None
+    source: SourceProvenance | None = None
     confidence: Confidence | None = None
     review_status: ReviewStatus | None = None
     tags: list[str] = Field(default_factory=list)
