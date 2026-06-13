@@ -1,6 +1,6 @@
 # Changelog
 
-## v0.2.0 - Unreleased
+## v0.2.0 - 2026-06-13
 
 ### Added
 - Formal Context Scope Model (`ContextScope`) for Context records.
