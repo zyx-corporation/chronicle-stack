@@ -28,6 +28,9 @@ dev = [
 [project.scripts]
 chronicle = "chronicle.cli:app"
 
+[tool.hatch.build.targets.wheel]
+packages = ["src/chronicle"]
+
 [tool.pytest.ini_options]
 pythonpath = ["src"]
 testpaths = ["tests"]
