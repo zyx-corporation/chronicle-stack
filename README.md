@@ -120,6 +120,8 @@ chronicle show
 - [ストレージ形式](docs/storage-format.md)
 - [テスト戦略](docs/testing-strategy.md)
 - [v0.2 バックログ](docs/backlog-v0.2.md)
+- [v0.2 スモークテスト](docs/smoke-test-v0.2.md)
+- [v0.2 リリース判定](docs/release-readiness-v0.2.md)
 
 仕様書:
 
