@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.2.0 - Unreleased
+
+### Added
+- Formal Context Scope Model (`ContextScope`) for Context records.
+- Backward-compatible loading from v0.1 `scope_hint`.
+
 ## v0.1.0 - 2026-06-13
 
 ### Added

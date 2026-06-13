@@ -1,5 +1,5 @@
 from chronicle.models.artifact import Artifact, ArtifactVersion
-from chronicle.models.context import Context
+from chronicle.models.context import Context, ContextScope
 from chronicle.models.decision import Decision
 from chronicle.models.event import ChronicleEvent
 from chronicle.models.metadata import ChronicleMetadata
@@ -11,6 +11,7 @@ __all__ = [
     "ChronicleEvent",
     "ChronicleMetadata",
     "Context",
+    "ContextScope",
     "Decision",
     "RdeDiffRecord",
 ]

@@ -69,7 +69,7 @@ class SearchService:
                         kind="context",
                         identifier=context.context_id,
                         summary=context.title,
-                        detail=context.summary,
+                        detail=f"{context.scope.value}: {context.summary}",
                     )
                 )
 

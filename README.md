@@ -14,6 +14,11 @@ v0.1 では以下を提供します。
 - RDE Diff Record による簡易意味変化監査
 - CLI による init / record / search / export
 
+v0.2 では以下を開発中です。
+
+- Context Scope Model の正式化
+- Context の有効範囲（global / project / session / task / artifact / temporary）の明示的指定
+
 ## インストール
 
 ```bash
