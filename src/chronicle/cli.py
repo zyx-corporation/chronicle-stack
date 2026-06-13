@@ -16,12 +16,14 @@ from chronicle.models.decision import DecisionType
 from chronicle.models.event import Actor, EventType
 from chronicle.models.source import SourceProvenance
 from chronicle.models.visibility import VisibilityHint
+from chronicle.models.boundary import BoundaryRuleType, BoundaryConditionField, BoundaryOperator
 from chronicle.services.artifact_service import ArtifactService
 from chronicle.services.chronicle_service import ChronicleService
 from chronicle.services.context_service import ContextService
 from chronicle.services.decision_service import DecisionService
 from chronicle.services.rde_service import RdeService
 from chronicle.services.search_service import SearchService
+from chronicle.services.boundary_service import BoundaryService
 
 app = typer.Typer(
     name="chronicle",
@@ -35,10 +37,12 @@ artifact_app = typer.Typer(help="Artifact operations.")
 decision_app = typer.Typer(help="Decision operations.")
 rde_app = typer.Typer(help="RDE Diff Record operations.")
 index_app = typer.Typer(help="Index operations.")
+boundary_app = typer.Typer(help="Boundary rule operations.")
 app.add_typer(artifact_app, name="artifact")
 app.add_typer(decision_app, name="decision")
 app.add_typer(rde_app, name="rde")
 app.add_typer(index_app, name="index")
+app.add_typer(boundary_app, name="boundary")
 
 
 class ExportFormat(StrEnum):
@@ -544,6 +548,84 @@ def index_rebuild_cmd(
             )
         else:
             typer.echo("Indexes rebuilt successfully.")
+    except ChronicleError as exc:
+        _handle_error(exc, json_output)
+
+
+@boundary_app.command("add")
+def boundary_add_cmd(
+    type: Annotated[BoundaryRuleType, typer.Option("--type", help="Rule type: include, exclude, warn.")],
+    field: Annotated[BoundaryConditionField, typer.Option("--field", help="Field to evaluate.")],
+    operator: Annotated[BoundaryOperator, typer.Option("--operator", help="Operator: equals, not_equals, in, contains.")],
+    value: Annotated[list[str], typer.Option("--value", help="Value(s) to match (repeat for multiple).")],
+    reason: Annotated[str, typer.Option("--reason")] = "",
+    json_output: Annotated[bool, typer.Option("--json")] = False,
+) -> None:
+    """Add a Context Boundary Rule."""
+    try:
+        service = BoundaryService()
+        val = value[0] if len(value) == 1 else value
+        rule = service.add_rule(
+            rule_type=type,
+            field=field,
+            operator=operator,
+            value=val,
+            reason=reason,
+        )
+        if json_output:
+            typer.echo(json.dumps(rule.model_dump(mode="json"), ensure_ascii=False, indent=2))
+        else:
+            typer.echo(f"Boundary rule added: {rule.rule_id} ({rule.rule_type.value})")
+    except ChronicleError as exc:
+        _handle_error(exc, json_output)
+
+
+@boundary_app.command("list")
+def boundary_list_cmd(
+    json_output: Annotated[bool, typer.Option("--json")] = False,
+) -> None:
+    """List all Boundary Rules."""
+    try:
+        service = BoundaryService()
+        rules = service.list_rules()
+        if json_output:
+            typer.echo(json.dumps([r.model_dump(mode="json") for r in rules], ensure_ascii=False, indent=2))
+        else:
+            if not rules:
+                typer.echo("No boundary rules found.")
+                return
+            for rule in rules:
+                val = rule.value if isinstance(rule.value, str) else ", ".join(rule.value)
+                typer.echo(f"{rule.rule_id}  {rule.rule_type.value}  {rule.field.value} {rule.operator.value} {val}")
+    except ChronicleError as exc:
+        _handle_error(exc, json_output)
+
+
+@boundary_app.command("check")
+def boundary_check_cmd(
+    context: Annotated[str, typer.Option("--context", help="Context ID to evaluate.")],
+    json_output: Annotated[bool, typer.Option("--json")] = False,
+) -> None:
+    """Evaluate Boundary Rules against a Context."""
+    try:
+        chronicle = ChronicleService()
+        chronicle.require_initialized()
+        contexts = chronicle.index.load_contexts()
+        if context not in contexts:
+            typer.echo(f"Context not found: {context}", err=True)
+            raise typer.Exit(code=1)
+        ctx = contexts[context]
+        service = BoundaryService()
+        results = service.evaluate_context(ctx)
+        if json_output:
+            typer.echo(json.dumps([r.model_dump(mode="json") for r in results], ensure_ascii=False, indent=2))
+        else:
+            matched = [r for r in results if r.matched]
+            if not matched:
+                typer.echo("No boundary rules matched.")
+                return
+            for r in matched:
+                typer.echo(f"[{r.rule_type.value}] {r.rule_id}: {r.reason}")
     except ChronicleError as exc:
         _handle_error(exc, json_output)
 

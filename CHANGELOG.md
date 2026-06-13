@@ -9,6 +9,8 @@
 - CLI support for setting Context / Artifact visibility (`--visibility`).
 - Structured SourceProvenance metadata for Events, Contexts, and Artifacts.
 - CLI support for source metadata on record, add-context, and artifact create.
+- Context Boundary Rule model and CLI (boundary add/list/check).
+- Boundary rule index rebuild support.
 
 ## v0.1.0 - 2026-06-13
 

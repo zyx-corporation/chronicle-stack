@@ -7,6 +7,7 @@ from chronicle.models.artifact import Artifact, ArtifactVersion
 from chronicle.models.context import Context
 from chronicle.models.decision import Decision
 from chronicle.models.rde import RdeDiffRecord
+from chronicle.models.boundary import BoundaryRule
 
 
 class IndexStore:
@@ -17,12 +18,14 @@ class IndexStore:
         context_index_file: Path,
         decision_index_file: Path,
         rde_index_file: Path,
+        boundary_rule_index_file: Path,
     ) -> None:
         self.indexes_dir = indexes_dir
         self.artifact_index_file = artifact_index_file
         self.context_index_file = context_index_file
         self.decision_index_file = decision_index_file
         self.rde_index_file = rde_index_file
+        self.boundary_rule_index_file = boundary_rule_index_file
 
     def save_artifacts(
         self,
@@ -99,3 +102,17 @@ class IndexStore:
             return {}
         raw = json.loads(self.rde_index_file.read_text(encoding="utf-8"))
         return {k: RdeDiffRecord.model_validate(v) for k, v in raw.items()}
+
+    def save_boundary_rules(self, rules: dict[str, BoundaryRule]) -> None:
+        self.indexes_dir.mkdir(parents=True, exist_ok=True)
+        data = {k: v.model_dump(mode="json") for k, v in rules.items()}
+        self.boundary_rule_index_file.write_text(
+            json.dumps(data, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+
+    def load_boundary_rules(self) -> dict[str, BoundaryRule]:
+        if not self.boundary_rule_index_file.exists():
+            return {}
+        raw = json.loads(self.boundary_rule_index_file.read_text(encoding="utf-8"))
+        return {k: BoundaryRule.model_validate(v) for k, v in raw.items()}

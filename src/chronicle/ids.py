@@ -10,6 +10,7 @@ PREFIXES = {
     "version": "ver_",
     "decision": "dec_",
     "rde": "rde_",
+    "boundary_rule": "br_",
     "source": "src_",
 }
 

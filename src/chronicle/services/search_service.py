@@ -91,4 +91,18 @@ class SearchService:
                     )
                 )
 
+        boundary_rules = self.chronicle.index.load_boundary_rules()
+        for rule in boundary_rules.values():
+            value_str = rule.value if isinstance(rule.value, str) else " ".join(rule.value)
+            haystack = f"{rule.reason} {rule.field} {rule.rule_type} {value_str}".lower()
+            if query_lower in haystack:
+                results.append(
+                    SearchResult(
+                        kind="boundary_rule",
+                        identifier=rule.rule_id,
+                        summary=rule.reason or f"{rule.rule_type.value} on {rule.field.value}",
+                        detail=f"{rule.rule_type.value} {rule.field.value} {rule.operator.value}",
+                    )
+                )
+
         return results

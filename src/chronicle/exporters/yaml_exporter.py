@@ -17,6 +17,7 @@ class YamlExporter:
         artifacts, versions = self.chronicle.index.load_artifacts()
         contexts = self.chronicle.index.load_contexts()
         decisions = self.chronicle.index.load_decisions()
+        boundary_rules = self.chronicle.index.load_boundary_rules()
 
         data = {
             "metadata": metadata.model_dump(mode="json"),
@@ -28,6 +29,7 @@ class YamlExporter:
             },
             "contexts": {k: v.model_dump(mode="json") for k, v in contexts.items()},
             "decisions": {k: v.model_dump(mode="json") for k, v in decisions.items()},
+            "boundary_rules": {k: v.model_dump(mode="json") for k, v in boundary_rules.items()},
         }
 
         content = yaml.dump(data, allow_unicode=True, default_flow_style=False, sort_keys=False)
