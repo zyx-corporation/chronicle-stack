@@ -235,15 +235,16 @@ chronicle export --format html -o chronicle-dashboard.html
 
 | format | 契約レベル | 説明 |
 |---|---|---|
-| `yaml` | Semi-public | 機械可読snapshot |
-| `markdown` | Human-facing | 人間向けreport |
-| `graph-json` | Semi-public / derived | GraphRAG接続準備用のnode/edge export |
-| `html` | Human-facing | 静的・読み取り専用Dashboard |
+| `yaml` | Semi-public | 機械可読snapshot。top-level `export_manifest` を含む |
+| `markdown` | Human-facing | 人間向けreport。manifest埋め込み対象外 |
+| `graph-json` | Semi-public / derived | GraphRAG接続準備用のnode/edge export。top-level `export_manifest` を含む |
+| `html` | Human-facing | 静的・読み取り専用Dashboard。Export Manifest sectionを含む |
 
 注意:
 
 - exportは派生ビューです。
 - JSONLを変更しません。
+- Export Manifestは来歴メタデータであり、暗号学的証明ではありません。
 - `graph-json` はGraphRAGエンジンではありません。
 - `html` はWebアプリケーションではありません。
 - visibility hintはredactionではないため、デフォルトでは隠蔽されません。

@@ -9,6 +9,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from chronicle.services.chronicle_service import ChronicleService
+from chronicle.services.export_manifest_service import ExportManifestService
 from chronicle.services.graph_export_service import GraphExportService
 
 
@@ -49,6 +50,7 @@ def _id_cell(value: str) -> str:
 class HtmlDashboardExporter:
     def __init__(self, root: Path | None = None) -> None:
         self.chronicle = ChronicleService(root)
+        self.manifest = ExportManifestService(root)
 
     def export(self) -> str:
         metadata = self.chronicle.require_initialized()
@@ -57,6 +59,7 @@ class HtmlDashboardExporter:
         contexts = self.chronicle.index.load_contexts()
         decisions = self.chronicle.index.load_decisions()
         boundary_rules = self.chronicle.index.load_boundary_rules()
+        manifest = self.manifest.build_manifest("html")
 
         # Recorded injection plans
         recorded_plans = []
@@ -91,6 +94,14 @@ class HtmlDashboardExporter:
             "<h1>Chronicle Stack Dashboard</h1>",
             f"<p>Chronicle: <strong>{_esc(metadata.title)}</strong> — ID: {_id_cell(cid)}</p>",
             f"<p>Generated: {_esc(now)}</p>",
+            "",
+            "<h2>Export Manifest</h2>",
+            "<table><tr><th>Field</th><th>Value</th></tr>",
+            f"<tr><td>Format</td><td>{_esc(manifest.export_format)}</td></tr>",
+            f"<tr><td>Generated at</td><td>{_esc(manifest.generated_at.isoformat())}</td></tr>",
+            f"<tr><td>Tool version</td><td>{_esc(manifest.tool_version)}</td></tr>",
+            f"<tr><td>Event count</td><td>{manifest.event_count}</td></tr>",
+            "</table>",
             "",
             "<h2>Summary</h2>",
             '<div class="cards">',
@@ -227,6 +238,7 @@ class HtmlDashboardExporter:
             "<p>Boundary Rules は助言的な分類であり、強制的な保護機構ではありません。</p>",
             "<p>Injection Plan はLLMへの自動注入ではありません。</p>",
             "<p>graph-json export はGraphRAG接続準備であり、GraphRAGエンジンではありません。</p>",
+            "<p>Export Manifest は出力の来歴メタデータであり、暗号学的証明ではありません。</p>",
             "</div>",
             '<div class="footer">',
             f"<p>Chronicle Stack — {_esc(metadata.schema_version)} — Generated: {_esc(now)}</p>",

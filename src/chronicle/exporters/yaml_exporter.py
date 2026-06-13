@@ -5,11 +5,13 @@ from pathlib import Path
 import yaml
 
 from chronicle.services.chronicle_service import ChronicleService
+from chronicle.services.export_manifest_service import ExportManifestService
 
 
 class YamlExporter:
     def __init__(self, root: Path | None = None) -> None:
         self.chronicle = ChronicleService(root)
+        self.manifest = ExportManifestService(root)
 
     def export(self, output: Path | None = None) -> str:
         metadata = self.chronicle.require_initialized()
@@ -18,8 +20,10 @@ class YamlExporter:
         contexts = self.chronicle.index.load_contexts()
         decisions = self.chronicle.index.load_decisions()
         boundary_rules = self.chronicle.index.load_boundary_rules()
+        manifest = self.manifest.build_manifest("yaml")
 
         data = {
+            "export_manifest": manifest.model_dump(mode="json"),
             "metadata": metadata.model_dump(mode="json"),
             "events": [e.model_dump(mode="json") for e in events],
             "artifacts": {k: v.model_dump(mode="json") for k, v in artifacts.items()},
