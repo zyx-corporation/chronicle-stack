@@ -1,7 +1,7 @@
-"""Static HTML dashboard exporter (v0.3).
+"""Static HTML dashboard exporter (v0.4).
 
 Produces a single-file, read-only HTML report from Chronicle records.
-No web server, no JavaScript, no external dependencies.
+No web server, no external dependencies.
 """
 
 import html
@@ -23,6 +23,11 @@ CSS = """
 body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; max-width: 960px; margin: 0 auto; padding: 20px; color: #333; background: #fff; }
 h1 { border-bottom: 2px solid #2563eb; padding-bottom: 8px; }
 h2 { border-bottom: 1px solid #e5e7eb; padding-bottom: 4px; margin-top: 24px; }
+.nav { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0; padding: 12px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; }
+.nav a { color: #2563eb; text-decoration: none; font-size: 0.9em; }
+.nav a:hover { text-decoration: underline; }
+.filter { margin: 16px 0; padding: 12px; background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 8px; }
+.filter input { width: 100%; max-width: 420px; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; }
 .cards { display: flex; flex-wrap: wrap; gap: 12px; }
 .card { border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; min-width: 120px; text-align: center; }
 .card .count { font-size: 2em; font-weight: bold; color: #2563eb; }
@@ -40,6 +45,18 @@ th { background: #f9fafb; font-weight: 600; }
 .footer { margin-top: 32px; padding-top: 16px; border-top: 1px solid #e5e7eb; font-size: 0.8em; color: #9ca3af; }
 """
 
+FILTER_SCRIPT = """
+<script>
+function filterChronicleRows() {
+  const query = document.getElementById('chronicle-filter').value.toLowerCase();
+  document.querySelectorAll('[data-filter-row="true"]').forEach(function(row) {
+    const text = row.getAttribute('data-filter-text').toLowerCase();
+    row.style.display = text.indexOf(query) >= 0 ? '' : 'none';
+  });
+}
+</script>
+"""
+
 
 def _esc(text: str) -> str:
     return html.escape(str(text))
@@ -55,6 +72,11 @@ def _id_cell(value: str) -> str:
 
 def _display_sensitive(value: str, options: RedactionOptions) -> str:
     return REDACTED if options.redact_sensitive else value
+
+
+def _filter_attrs(*values: object) -> str:
+    text = " ".join(str(value) for value in values)
+    return f'data-filter-row="true" data-filter-text="{_esc(text)}"'
 
 
 class HtmlDashboardExporter:
@@ -101,13 +123,30 @@ class HtmlDashboardExporter:
             '<meta name="viewport" content="width=device-width, initial-scale=1">',
             f"<title>Chronicle Dashboard — {_esc(metadata.title)}</title>",
             f"<style>{CSS}</style>",
+            FILTER_SCRIPT,
             "</head>",
             "<body>",
             "<h1>Chronicle Stack Dashboard</h1>",
             f"<p>Chronicle: <strong>{_esc(metadata.title)}</strong> — ID: {_id_cell(cid)}</p>",
             f"<p>Generated: {_esc(now)}</p>",
+            '<nav class="nav" aria-label="Dashboard sections">',
+            '<a href="#manifest">Manifest</a>',
+            '<a href="#summary">Summary</a>',
+            '<a href="#events">Events</a>',
+            '<a href="#contexts">Contexts</a>',
+            '<a href="#artifacts">Artifacts</a>',
+            '<a href="#decisions">Decisions</a>',
+            '<a href="#rde-records">RDE</a>',
+            '<a href="#boundary-rules">Boundary Rules</a>',
+            '<a href="#injection-plans">Injection Plans</a>',
+            '<a href="#notes">Notes</a>',
+            '</nav>',
+            '<div class="filter">',
+            '<label for="chronicle-filter"><strong>Filter rows</strong></label><br>',
+            '<input id="chronicle-filter" type="search" oninput="filterChronicleRows()" placeholder="Filter events, contexts, artifacts, decisions...">',
+            '</div>',
             "",
-            "<h2>Export Manifest</h2>",
+            '<h2 id="manifest">Export Manifest</h2>',
             "<table><tr><th>Field</th><th>Value</th></tr>",
             f"<tr><td>Format</td><td>{_esc(manifest.export_format)}</td></tr>",
             f"<tr><td>Generated at</td><td>{_esc(manifest.generated_at.isoformat())}</td></tr>",
@@ -117,7 +156,7 @@ class HtmlDashboardExporter:
             f"<tr><td>Exclude sensitive</td><td>{str(options.exclude_sensitive).lower()}</td></tr>",
             "</table>",
             "",
-            "<h2>Summary</h2>",
+            '<h2 id="summary">Summary</h2>',
             '<div class="cards">',
             self._card("Events", len(events)),
             self._card("Contexts", len(visible_contexts)),
@@ -134,7 +173,7 @@ class HtmlDashboardExporter:
         lines.extend([
             "</div>",
             "",
-            "<h2>Recent Events</h2>",
+            '<h2 id="events">Recent Events</h2>',
             "<table><tr><th>Event ID</th><th>Type</th><th>Timestamp</th><th>Summary</th></tr>",
         ])
         for event in reversed(events[-30:]):
@@ -144,7 +183,7 @@ class HtmlDashboardExporter:
             summary = REDACTED if options.redact_sensitive and sensitive_event else event.summary
             ts = event.timestamp.strftime("%Y-%m-%d %H:%M")
             lines.append(
-                f"<tr><td>{_id_cell(event.event_id)}</td>"
+                f"<tr {_filter_attrs(event.event_id, event.event_type.value, ts, summary)}><td>{_id_cell(event.event_id)}</td>"
                 f"<td>{_esc(event.event_type.value)}</td>"
                 f"<td>{_esc(ts)}</td>"
                 f"<td>{_esc(summary)}</td></tr>"
@@ -152,7 +191,7 @@ class HtmlDashboardExporter:
         lines.append("</table>")
 
         lines.extend([
-            "", "<h2>Contexts</h2>",
+            "", '<h2 id="contexts">Contexts</h2>',
             "<table><tr><th>ID</th><th>Title</th><th>Scope</th><th>Visibility</th><th>Summary</th></tr>",
         ])
         for ctx in sorted(visible_contexts, key=lambda c: c.created_at):
@@ -160,7 +199,7 @@ class HtmlDashboardExporter:
             title = _display_sensitive(ctx.title, options) if sensitive else ctx.title
             summary = _display_sensitive(ctx.summary, options) if sensitive else ctx.summary
             lines.append(
-                f"<tr><td>{_id_cell(ctx.context_id)}</td>"
+                f"<tr {_filter_attrs(ctx.context_id, title, ctx.scope.value, ctx.visibility_hint.value, summary)}><td>{_id_cell(ctx.context_id)}</td>"
                 f"<td>{_esc(title)}</td>"
                 f"<td>{_esc(ctx.scope.value)}</td>"
                 f"<td>{_badge(ctx.visibility_hint.value)}</td>"
@@ -169,14 +208,14 @@ class HtmlDashboardExporter:
         lines.append("</table>")
 
         lines.extend([
-            "", "<h2>Artifacts</h2>",
+            "", '<h2 id="artifacts">Artifacts</h2>',
             "<table><tr><th>ID</th><th>Title</th><th>Type</th><th>Status</th><th>Visibility</th></tr>",
         ])
         for art in sorted(visible_artifacts, key=lambda a: a.created_at):
             sensitive = model_is_sensitive(art)
             title = _display_sensitive(art.title, options) if sensitive else art.title
             lines.append(
-                f"<tr><td>{_id_cell(art.artifact_id)}</td>"
+                f"<tr {_filter_attrs(art.artifact_id, title, art.artifact_type.value, art.status.value, art.visibility_hint.value)}><td>{_id_cell(art.artifact_id)}</td>"
                 f"<td>{_esc(title)}</td>"
                 f"<td>{_esc(art.artifact_type.value)}</td>"
                 f"<td>{_esc(art.status.value)}</td>"
@@ -184,37 +223,50 @@ class HtmlDashboardExporter:
             )
         lines.append("</table>")
 
+        lines.append('<h2 id="decisions">Decisions</h2>')
         if decisions:
-            lines.extend(["", "<h2>Decisions</h2>", "<table><tr><th>ID</th><th>Type</th><th>Reason</th></tr>"])
+            lines.append("<table><tr><th>ID</th><th>Type</th><th>Reason</th></tr>")
             for dec in sorted(decisions.values(), key=lambda d: d.decided_at):
-                lines.append(f"<tr><td>{_id_cell(dec.decision_id)}</td><td>{_esc(dec.decision_type.value)}</td><td>{_esc(dec.reason)}</td></tr>")
+                lines.append(f"<tr {_filter_attrs(dec.decision_id, dec.decision_type.value, dec.reason)}><td>{_id_cell(dec.decision_id)}</td><td>{_esc(dec.decision_type.value)}</td><td>{_esc(dec.reason)}</td></tr>")
             lines.append("</table>")
+        else:
+            lines.append("<p>No decisions recorded.</p>")
 
         rdes = self.chronicle.index.load_rde_records()
+        lines.append('<h2 id="rde-records">RDE Diff Records</h2>')
         if rdes:
-            lines.extend(["", "<h2>RDE Diff Records</h2>", "<table><tr><th>ID</th><th>Artifact</th><th>From</th><th>To</th><th>Summary</th></tr>"])
+            lines.append("<table><tr><th>ID</th><th>Artifact</th><th>From</th><th>To</th><th>Summary</th></tr>")
             for rde in sorted(rdes.values(), key=lambda r: r.created_at):
-                lines.append(f"<tr><td>{_id_cell(rde.rde_record_id)}</td><td>{_esc(rde.artifact_id)}</td><td>{_id_cell(rde.from_version_id)}</td><td>{_id_cell(rde.to_version_id)}</td><td>{_esc(rde.summary)}</td></tr>")
+                lines.append(f"<tr {_filter_attrs(rde.rde_record_id, rde.artifact_id, rde.from_version_id, rde.to_version_id, rde.summary)}><td>{_id_cell(rde.rde_record_id)}</td><td>{_esc(rde.artifact_id)}</td><td>{_id_cell(rde.from_version_id)}</td><td>{_id_cell(rde.to_version_id)}</td><td>{_esc(rde.summary)}</td></tr>")
             lines.append("</table>")
+        else:
+            lines.append("<p>No RDE records found.</p>")
 
+        lines.append('<h2 id="boundary-rules">Boundary Rules</h2>')
         if boundary_rules:
-            lines.extend(["", "<h2>Boundary Rules</h2>", "<table><tr><th>ID</th><th>Type</th><th>Field</th><th>Operator</th><th>Value</th><th>Reason</th></tr>"])
+            lines.append("<table><tr><th>ID</th><th>Type</th><th>Field</th><th>Operator</th><th>Value</th><th>Reason</th></tr>")
             for rule in sorted(boundary_rules.values(), key=lambda r: r.created_at):
                 val = rule.value if isinstance(rule.value, str) else ", ".join(rule.value)
-                lines.append(f"<tr><td>{_id_cell(rule.rule_id)}</td><td>{_esc(rule.rule_type.value)}</td><td>{_esc(rule.field.value)}</td><td>{_esc(rule.operator.value)}</td><td>{_esc(val)}</td><td>{_esc(rule.reason)}</td></tr>")
+                lines.append(f"<tr {_filter_attrs(rule.rule_id, rule.rule_type.value, rule.field.value, rule.operator.value, val, rule.reason)}><td>{_id_cell(rule.rule_id)}</td><td>{_esc(rule.rule_type.value)}</td><td>{_esc(rule.field.value)}</td><td>{_esc(rule.operator.value)}</td><td>{_esc(val)}</td><td>{_esc(rule.reason)}</td></tr>")
             lines.append("</table>")
+        else:
+            lines.append("<p>No boundary rules found.</p>")
 
+        lines.append('<h2 id="injection-plans">Recorded Injection Plans</h2>')
         if recorded_plans:
-            lines.extend(["", "<h2>Recorded Injection Plans</h2>", "<table><tr><th>ID</th><th>Task</th><th>Selected</th><th>Warned</th><th>Excluded</th></tr>"])
+            lines.append("<table><tr><th>ID</th><th>Task</th><th>Selected</th><th>Warned</th><th>Excluded</th></tr>")
             for plan in recorded_plans:
                 task = REDACTED if options.redact_sensitive else plan["task"]
-                lines.append(f"<tr><td>{_id_cell(plan['plan_id'])}</td><td>{_esc(task)}</td><td>{len(plan.get('selected', []))}</td><td>{len(plan.get('warned', []))}</td><td>{len(plan.get('excluded', []))}</td></tr>")
+                lines.append(f"<tr {_filter_attrs(plan['plan_id'], task)}><td>{_id_cell(plan['plan_id'])}</td><td>{_esc(task)}</td><td>{len(plan.get('selected', []))}</td><td>{len(plan.get('warned', []))}</td><td>{len(plan.get('excluded', []))}</td></tr>")
             lines.append("</table>")
+        else:
+            lines.append("<p>No recorded injection plans found.</p>")
 
         lines.extend([
-            "", "<h2>Notes</h2>",
+            "", '<h2 id="notes">Notes</h2>',
             '<div class="warning">',
             "<p>このDashboardは<strong>読み取り専用の派生ビュー</strong>です。</p>",
+            "<p>このDashboardは単一HTMLファイルであり、ローカルのアンカー移動と行フィルタだけを提供します。</p>",
             "<p>一次記録は <code>.chronicle/chronicle.jsonl</code> です。</p>",
             "<p>Visibility Hint はアクセス制御やredactionではありません。</p>",
             "<p>Redaction-aware export は明示オプションによる派生export制御であり、access controlではありません。</p>",
