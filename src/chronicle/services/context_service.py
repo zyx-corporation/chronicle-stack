@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from chronicle.ids import generate_id
-from chronicle.models.context import Confidence, Context, ScopeHint
+from chronicle.models.context import Confidence, Context, ContextScope, ScopeHint
 from chronicle.models.event import Actor, EventType
 from chronicle.services.chronicle_service import ChronicleService
 
@@ -19,7 +19,7 @@ class ContextService:
         summary: str = "",
         source_type: str = "conversation",
         source_ref: str = "",
-        scope: ScopeHint = ScopeHint.PROJECT,
+        scope: ContextScope = ContextScope.PROJECT,
         confidence: Confidence = Confidence.MEDIUM,
         tags: list[str] | None = None,
     ) -> Context:
@@ -31,7 +31,8 @@ class ContextService:
             summary=summary,
             source_type=source_type,
             source_ref=source_ref,
-            scope_hint=scope,
+            scope=scope,
+            scope_hint=ScopeHint(scope.value),
             confidence=confidence,
             created_at=now,
             tags=tags or [],

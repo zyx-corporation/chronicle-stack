@@ -55,3 +55,12 @@ reports/rde/<rde_record_id>.md
 ```
 
 Markdown 形式の人間可読レポート。6 つの RDE フィールド（Preserved / Transformed / Supplemented / Unresolved / Deviation Risks / Next Update Policy）を含む。
+
+## v0.1 → v0.2 Context 互換性
+
+v0.1 の Context は `scope_hint` フィールドのみを持ちます。
+v0.2 では正式な `ContextScope` （`scope` フィールド）を追加し、`scope_hint` は互換用に残されています。
+
+- v0.1 形式（`scope_hint` のみ）のデータは v0.2 でそのまま読み込めます。`scope` が補完されます。
+- v0.2 で作成された Context は `scope` と `scope_hint` の両方を持ちます。
+- 将来のバージョンで `scope_hint` を削除する可能性があります。

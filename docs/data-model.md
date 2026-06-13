@@ -20,6 +20,31 @@ Chronicle Core v0.1 のデータモデル概要。詳細は [基本仕様書](sp
 
 生成物・判断の背景情報。`context_added` イベントの payload に格納。
 
+| フィールド | 必須 | 説明 |
+|-----------|------|------|
+| context_id | ✓ | `ctx_` プレフィックス |
+| title | ✓ | 人間可読タイトル |
+| summary | | 要約 |
+| scope | ✓ | 正式な有効範囲（v0.2 で導入） |
+| scope_hint | | 非推奨（v0.1互換用） |
+| source_type | | conversation / document / ... |
+| confidence | | high / medium / low / unknown |
+
+### ContextScope（v0.2）
+
+| 値 | 意味 |
+|----|------|
+| `global` | プロジェクトをまたぐ長期文脈 |
+| `project` | 現在のChronicleまたはプロジェクト単位 |
+| `session` | 特定セッション内 |
+| `task` | 特定タスク内 |
+| `artifact` | 特定Artifactに紐づく |
+| `temporary` | 一時的文脈 |
+| `unknown` | 未分類または移行互換 |
+
+`scope_hint` は v0.1 互換用に残されており、新規コードでは `scope` を使用する。
+v0.1 形式（`scope_hint` のみ）のデータも読み込み時に `scope` として補完される。
+
 ## Artifact
 
 成果物とそのスナップショット履歴。`artifacts/<id>/current.md` が最新、`versions/` に履歴。

@@ -2,7 +2,7 @@
 
 Chronicle Core v0.2 の候補課題。Issue 化しやすい粒度で記述。
 
-## 1. Context Scope Model の正式化
+## 1. Context Scope Model の正式化（ → 実装中 #10）
 
 **目的**: Context に明示的な Scope と Boundary を持たせ、注入計画を生成可能にする。
 

@@ -23,11 +23,13 @@ chronicle init --title "Project Title"
 
 ```bash
 chronicle add-context \
-  --title "Context Title" \
+  --title "Task Context" \
   --source-type conversation \
-  --scope project \
-  --summary "Summary text"
+  --scope task \
+  --summary "Only for this task"
 ```
+
+`--scope` は正式な ContextScope（global / project / session / task / artifact / temporary）を受け付ける。デフォルトは `project`。明示指定を推奨。
 
 ## chronicle record
 

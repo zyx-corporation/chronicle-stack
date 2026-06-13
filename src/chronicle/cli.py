@@ -11,7 +11,7 @@ from chronicle.errors import ChronicleError
 from chronicle.exporters.markdown_exporter import MarkdownExporter
 from chronicle.exporters.yaml_exporter import YamlExporter
 from chronicle.models.artifact import ArtifactType
-from chronicle.models.context import ScopeHint
+from chronicle.models.context import ContextScope
 from chronicle.models.decision import DecisionType
 from chronicle.models.event import Actor, EventType
 from chronicle.services.artifact_service import ArtifactService
@@ -85,8 +85,8 @@ def add_context_cmd(
         str, typer.Option("--source-type")
     ] = "conversation",
     scope: Annotated[
-        ScopeHint, typer.Option("--scope")
-    ] = ScopeHint.PROJECT,
+        ContextScope, typer.Option("--scope", help="Context scope: global, project, session, task, artifact, temporary.")
+    ] = ContextScope.PROJECT,
     json_output: Annotated[bool, typer.Option("--json")] = False,
 ) -> None:
     """Add a Context to the Chronicle."""
