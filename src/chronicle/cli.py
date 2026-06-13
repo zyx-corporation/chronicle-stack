@@ -26,6 +26,7 @@ from chronicle.services.search_service import SearchService
 from chronicle.services.boundary_service import BoundaryService
 from chronicle.services.injection_service import InjectionPlanService
 from chronicle.exporters.injection_plan_report import format_injection_plan
+from chronicle.services.graph_export_service import GraphExportService
 
 app = typer.Typer(
     name="chronicle",
@@ -52,6 +53,7 @@ app.add_typer(injection_app, name="injection")
 class ExportFormat(StrEnum):
     YAML = "yaml"
     MARKDOWN = "markdown"
+    GRAPH_JSON = "graph-json"
 
 
 def _handle_error(exc: ChronicleError, json_output: bool) -> None:
@@ -515,10 +517,15 @@ def export_cmd(
     ] = None,
     json_output: Annotated[bool, typer.Option("--json")] = False,
 ) -> None:
-    """Export Chronicle to YAML or Markdown."""
+    """Export Chronicle to YAML, Markdown, or Graph JSON."""
     try:
         if format == ExportFormat.YAML:
             content = YamlExporter().export(output=output)
+        elif format == ExportFormat.GRAPH_JSON:
+            graph = GraphExportService().export_graph()
+            content = json.dumps(graph.model_dump(mode="json"), ensure_ascii=False, indent=2)
+            if output:
+                output.write_text(content, encoding="utf-8")
         else:
             content = MarkdownExporter().export(output=output)
 
