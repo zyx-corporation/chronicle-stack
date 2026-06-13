@@ -1,4 +1,4 @@
-"""Tests for static HTML dashboard export (v0.3)."""
+"""Tests for static HTML dashboard export (v0.4)."""
 
 import os
 
@@ -7,8 +7,8 @@ from typer.testing import CliRunner
 
 from chronicle.cli import app
 from chronicle.exporters.html_exporter import HtmlDashboardExporter
-from chronicle.models.boundary import BoundaryConditionField, BoundaryOperator, BoundaryRuleType
 from chronicle.models.artifact import ArtifactType
+from chronicle.models.boundary import BoundaryConditionField, BoundaryOperator, BoundaryRuleType
 from chronicle.models.visibility import VisibilityHint
 from chronicle.services.artifact_service import ArtifactService
 from chronicle.services.boundary_service import BoundaryService
@@ -25,18 +25,30 @@ def populated_chronicle(tmp_path):
 
     ctx_svc = ContextService(tmp_path)
     ctx_svc.add_context(title="Public Context", visibility_hint=VisibilityHint.PUBLIC)
-    ctx_svc.add_context(title="Sensitive Note", summary="Secret <script>alert(1)</script>",
-                        visibility_hint=VisibilityHint.SENSITIVE)
+    ctx_svc.add_context(
+        title="Sensitive Note",
+        summary="Secret <script>alert(1)</script>",
+        visibility_hint=VisibilityHint.SENSITIVE,
+    )
 
     art_svc = ArtifactService(tmp_path)
     f = tmp_path / "doc.md"
     f.write_text("Content", encoding="utf-8")
-    art_svc.create(title="Private Artifact", artifact_type=ArtifactType.DOCUMENT, source_file=f,
-                   visibility_hint=VisibilityHint.PRIVATE)
+    art_svc.create(
+        title="Private Artifact",
+        artifact_type=ArtifactType.DOCUMENT,
+        source_file=f,
+        visibility_hint=VisibilityHint.PRIVATE,
+    )
 
     bsvc = BoundaryService(tmp_path)
-    bsvc.add_rule(rule_type=BoundaryRuleType.WARN, field=BoundaryConditionField.VISIBILITY,
-                  operator=BoundaryOperator.EQUALS, value="sensitive", reason="Sensitive & private")
+    bsvc.add_rule(
+        rule_type=BoundaryRuleType.WARN,
+        field=BoundaryConditionField.VISIBILITY,
+        operator=BoundaryOperator.EQUALS,
+        value="sensitive",
+        reason="Sensitive & private",
+    )
 
     ip_svc = InjectionPlanService(tmp_path)
     plan = ip_svc.generate_plan(task="Dashboard task")
@@ -58,6 +70,35 @@ def test_html_export_contains_basic_structure(populated_chronicle):
     assert "<html" in html
     assert "<body" in html
     assert "Chronicle Stack Dashboard" in html
+
+
+def test_html_export_contains_navigation_and_filter(populated_chronicle):
+    """HTML export must contain local navigation and row filtering."""
+    html = populated_chronicle.export()
+    assert 'class="nav"' in html
+    assert 'href="#contexts"' in html
+    assert 'href="#artifacts"' in html
+    assert 'id="chronicle-filter"' in html
+    assert "filterChronicleRows" in html
+    assert 'data-filter-row="true"' in html
+
+
+def test_html_export_contains_section_anchors(populated_chronicle):
+    """Important dashboard sections should have stable local anchors."""
+    html = populated_chronicle.export()
+    for anchor in (
+        'id="manifest"',
+        'id="summary"',
+        'id="events"',
+        'id="contexts"',
+        'id="artifacts"',
+        'id="decisions"',
+        'id="rde-records"',
+        'id="boundary-rules"',
+        'id="injection-plans"',
+        'id="notes"',
+    ):
+        assert anchor in html
 
 
 def test_html_export_contains_summary_cards(populated_chronicle):
@@ -105,17 +146,17 @@ def test_html_export_visibility_badges(populated_chronicle):
 
 
 def test_html_export_does_not_redact_sensitive(populated_chronicle):
-    """sensitive/private visibility must NOT be redacted — must be visible."""
+    """sensitive/private visibility must NOT be redacted by default."""
     html = populated_chronicle.export()
     assert "sensitive" in html
     assert "private" in html
 
 
-def test_html_export_html_escapes(populated_chronicle):
-    """User-provided strings containing HTML must be escaped."""
+def test_html_export_html_escapes_user_content(populated_chronicle):
+    """User-provided HTML-like strings must be escaped even though dashboard has inline JS."""
     html = populated_chronicle.export()
-    assert "<script>" not in html
-    assert "&lt;script&gt;" in html
+    assert "Secret &lt;script&gt;alert(1)&lt;/script&gt;" in html
+    assert "Secret <script>alert(1)</script>" not in html
 
 
 def test_html_export_does_not_mutate_jsonl(populated_chronicle):
@@ -132,6 +173,7 @@ def test_html_export_contains_notes(populated_chronicle):
     assert "読み取り専用の派生ビュー" in html
     assert "一次記録" in html
     assert "access control" in html.lower() or "アクセス制御" in html
+    assert "単一HTMLファイル" in html
 
 
 def test_cli_export_html(tmp_path):
@@ -145,6 +187,7 @@ def test_cli_export_html(tmp_path):
     assert "<!DOCTYPE html>" in result.stdout
     assert "Chronicle Stack Dashboard" in result.stdout
     assert "CLI HTML" in result.stdout
+    assert 'id="chronicle-filter"' in result.stdout
 
 
 def test_html_export_graph_overview(populated_chronicle):
