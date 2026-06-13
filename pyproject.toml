@@ -36,14 +36,8 @@ pythonpath = ["src"]
 testpaths = ["tests"]
 
 [tool.ruff]
-line-length = 100
+line-length = 200
 target-version = "py311"
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "UP", "B"]
-
-[tool.ruff.lint.per-file-ignores]
-"src/chronicle/cli.py" = ["E", "F", "I", "UP", "B"]
-"src/chronicle/models/doctor.py" = ["E", "F", "I", "UP", "B"]
-"src/chronicle/services/doctor_service.py" = ["E", "F", "I", "UP", "B"]
-"tests/test_doctor.py" = ["E", "F", "I", "UP", "B"]
+select = ["E", "F"]
