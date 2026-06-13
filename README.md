@@ -152,6 +152,7 @@ chronicle show
 - [v0.4 ロードマップ](docs/roadmap-v0.4.md)
 - [v0.4 スモークテスト](docs/smoke-test-v0.4.md)
 - [v0.4 リリース判定](docs/release-readiness-v0.4.md)
+- [v0.5 ロードマップ](docs/roadmap-v0.5.md)
 
 契約・運用関連:
 
