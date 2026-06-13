@@ -8,6 +8,7 @@ import html
 from datetime import datetime, timezone
 from pathlib import Path
 
+from chronicle.exporters.redaction import REDACTED, RedactionOptions, model_is_sensitive
 from chronicle.services.chronicle_service import ChronicleService
 from chronicle.services.export_manifest_service import ExportManifestService
 from chronicle.services.graph_export_service import GraphExportService
@@ -47,19 +48,24 @@ def _id_cell(value: str) -> str:
     return f'<span class="id">{_esc(value)}</span>'
 
 
+def _display_sensitive(value: str, options: RedactionOptions) -> str:
+    return REDACTED if options.redact_sensitive else value
+
+
 class HtmlDashboardExporter:
     def __init__(self, root: Path | None = None) -> None:
         self.chronicle = ChronicleService(root)
         self.manifest = ExportManifestService(root)
 
-    def export(self) -> str:
+    def export(self, redaction: RedactionOptions | None = None) -> str:
+        options = redaction or RedactionOptions()
         metadata = self.chronicle.require_initialized()
         events = self.chronicle.jsonl.read_all()
         artifacts, versions = self.chronicle.index.load_artifacts()
         contexts = self.chronicle.index.load_contexts()
         decisions = self.chronicle.index.load_decisions()
         boundary_rules = self.chronicle.index.load_boundary_rules()
-        manifest = self.manifest.build_manifest("html")
+        manifest = self.manifest.build_manifest("html", export_options=options.as_manifest_options())
 
         # Recorded injection plans
         recorded_plans = []
@@ -77,6 +83,9 @@ class HtmlDashboardExporter:
             graph_node_count = 0
             graph_edge_count = 0
             graph_available = False
+
+        visible_contexts = [c for c in contexts.values() if not (options.exclude_sensitive and model_is_sensitive(c))]
+        visible_artifacts = [a for a in artifacts.values() if not (options.exclude_sensitive and model_is_sensitive(a))]
 
         now = datetime.now(timezone.utc).astimezone().strftime("%Y-%m-%d %H:%M:%S %Z")
         cid = metadata.chronicle_id
@@ -101,13 +110,15 @@ class HtmlDashboardExporter:
             f"<tr><td>Generated at</td><td>{_esc(manifest.generated_at.isoformat())}</td></tr>",
             f"<tr><td>Tool version</td><td>{_esc(manifest.tool_version)}</td></tr>",
             f"<tr><td>Event count</td><td>{manifest.event_count}</td></tr>",
+            f"<tr><td>Redact sensitive</td><td>{str(options.redact_sensitive).lower()}</td></tr>",
+            f"<tr><td>Exclude sensitive</td><td>{str(options.exclude_sensitive).lower()}</td></tr>",
             "</table>",
             "",
             "<h2>Summary</h2>",
             '<div class="cards">',
             self._card("Events", len(events)),
-            self._card("Contexts", len(contexts)),
-            self._card("Artifacts", len(artifacts)),
+            self._card("Contexts", len(visible_contexts)),
+            self._card("Artifacts", len(visible_artifacts)),
             self._card("Decisions", len(decisions)),
             self._card("RDE Records", sum(1 for e in events if e.event_type.value == "rde_diff_recorded")),
             self._card("Boundary Rules", len(boundary_rules)),
@@ -133,108 +144,73 @@ class HtmlDashboardExporter:
             )
         lines.append("</table>")
 
-        # Contexts
         lines.extend([
             "", "<h2>Contexts</h2>",
             "<table><tr><th>ID</th><th>Title</th><th>Scope</th><th>Visibility</th><th>Summary</th></tr>",
         ])
-        for ctx in sorted(contexts.values(), key=lambda c: c.created_at):
+        for ctx in sorted(visible_contexts, key=lambda c: c.created_at):
+            sensitive = model_is_sensitive(ctx)
+            title = _display_sensitive(ctx.title, options) if sensitive else ctx.title
+            summary = _display_sensitive(ctx.summary, options) if sensitive else ctx.summary
             lines.append(
                 f"<tr><td>{_id_cell(ctx.context_id)}</td>"
-                f"<td>{_esc(ctx.title)}</td>"
+                f"<td>{_esc(title)}</td>"
                 f"<td>{_esc(ctx.scope.value)}</td>"
                 f"<td>{_badge(ctx.visibility_hint.value)}</td>"
-                f"<td>{_esc(ctx.summary)}</td></tr>"
+                f"<td>{_esc(summary)}</td></tr>"
             )
         lines.append("</table>")
 
-        # Artifacts
         lines.extend([
             "", "<h2>Artifacts</h2>",
             "<table><tr><th>ID</th><th>Title</th><th>Type</th><th>Status</th><th>Visibility</th></tr>",
         ])
-        for art in sorted(artifacts.values(), key=lambda a: a.created_at):
+        for art in sorted(visible_artifacts, key=lambda a: a.created_at):
+            sensitive = model_is_sensitive(art)
+            title = _display_sensitive(art.title, options) if sensitive else art.title
             lines.append(
                 f"<tr><td>{_id_cell(art.artifact_id)}</td>"
-                f"<td>{_esc(art.title)}</td>"
+                f"<td>{_esc(title)}</td>"
                 f"<td>{_esc(art.artifact_type.value)}</td>"
                 f"<td>{_esc(art.status.value)}</td>"
                 f"<td>{_badge(art.visibility_hint.value)}</td></tr>"
             )
         lines.append("</table>")
 
-        # Decisions
         if decisions:
-            lines.extend([
-                "", "<h2>Decisions</h2>",
-                "<table><tr><th>ID</th><th>Type</th><th>Reason</th></tr>",
-            ])
+            lines.extend(["", "<h2>Decisions</h2>", "<table><tr><th>ID</th><th>Type</th><th>Reason</th></tr>"])
             for dec in sorted(decisions.values(), key=lambda d: d.decided_at):
-                lines.append(
-                    f"<tr><td>{_id_cell(dec.decision_id)}</td>"
-                    f"<td>{_esc(dec.decision_type.value)}</td>"
-                    f"<td>{_esc(dec.reason)}</td></tr>"
-                )
+                lines.append(f"<tr><td>{_id_cell(dec.decision_id)}</td><td>{_esc(dec.decision_type.value)}</td><td>{_esc(dec.reason)}</td></tr>")
             lines.append("</table>")
 
-        # RDE Diff Records
         rdes = self.chronicle.index.load_rde_records()
         if rdes:
-            lines.extend([
-                "", "<h2>RDE Diff Records</h2>",
-                "<table><tr><th>ID</th><th>Artifact</th><th>From</th><th>To</th><th>Summary</th></tr>",
-            ])
+            lines.extend(["", "<h2>RDE Diff Records</h2>", "<table><tr><th>ID</th><th>Artifact</th><th>From</th><th>To</th><th>Summary</th></tr>"])
             for rde in sorted(rdes.values(), key=lambda r: r.created_at):
-                lines.append(
-                    f"<tr><td>{_id_cell(rde.rde_record_id)}</td>"
-                    f"<td>{_esc(rde.artifact_id)}</td>"
-                    f"<td>{_id_cell(rde.from_version_id)}</td>"
-                    f"<td>{_id_cell(rde.to_version_id)}</td>"
-                    f"<td>{_esc(rde.summary)}</td></tr>"
-                )
+                lines.append(f"<tr><td>{_id_cell(rde.rde_record_id)}</td><td>{_esc(rde.artifact_id)}</td><td>{_id_cell(rde.from_version_id)}</td><td>{_id_cell(rde.to_version_id)}</td><td>{_esc(rde.summary)}</td></tr>")
             lines.append("</table>")
 
-        # Boundary Rules
         if boundary_rules:
-            lines.extend([
-                "", "<h2>Boundary Rules</h2>",
-                "<table><tr><th>ID</th><th>Type</th><th>Field</th><th>Operator</th><th>Value</th><th>Reason</th></tr>",
-            ])
+            lines.extend(["", "<h2>Boundary Rules</h2>", "<table><tr><th>ID</th><th>Type</th><th>Field</th><th>Operator</th><th>Value</th><th>Reason</th></tr>"])
             for rule in sorted(boundary_rules.values(), key=lambda r: r.created_at):
                 val = rule.value if isinstance(rule.value, str) else ", ".join(rule.value)
-                lines.append(
-                    f"<tr><td>{_id_cell(rule.rule_id)}</td>"
-                    f"<td>{_esc(rule.rule_type.value)}</td>"
-                    f"<td>{_esc(rule.field.value)}</td>"
-                    f"<td>{_esc(rule.operator.value)}</td>"
-                    f"<td>{_esc(val)}</td>"
-                    f"<td>{_esc(rule.reason)}</td></tr>"
-                )
+                lines.append(f"<tr><td>{_id_cell(rule.rule_id)}</td><td>{_esc(rule.rule_type.value)}</td><td>{_esc(rule.field.value)}</td><td>{_esc(rule.operator.value)}</td><td>{_esc(val)}</td><td>{_esc(rule.reason)}</td></tr>")
             lines.append("</table>")
 
-        # Recorded Injection Plans
         if recorded_plans:
-            lines.extend([
-                "", "<h2>Recorded Injection Plans</h2>",
-                "<table><tr><th>ID</th><th>Task</th><th>Selected</th><th>Warned</th><th>Excluded</th></tr>",
-            ])
+            lines.extend(["", "<h2>Recorded Injection Plans</h2>", "<table><tr><th>ID</th><th>Task</th><th>Selected</th><th>Warned</th><th>Excluded</th></tr>"])
             for plan in recorded_plans:
-                lines.append(
-                    f"<tr><td>{_id_cell(plan['plan_id'])}</td>"
-                    f"<td>{_esc(plan['task'])}</td>"
-                    f"<td>{len(plan.get('selected', []))}</td>"
-                    f"<td>{len(plan.get('warned', []))}</td>"
-                    f"<td>{len(plan.get('excluded', []))}</td></tr>"
-                )
+                task = REDACTED if options.redact_sensitive else plan["task"]
+                lines.append(f"<tr><td>{_id_cell(plan['plan_id'])}</td><td>{_esc(task)}</td><td>{len(plan.get('selected', []))}</td><td>{len(plan.get('warned', []))}</td><td>{len(plan.get('excluded', []))}</td></tr>")
             lines.append("</table>")
 
-        # Notes / warnings
         lines.extend([
             "", "<h2>Notes</h2>",
             '<div class="warning">',
             "<p>このDashboardは<strong>読み取り専用の派生ビュー</strong>です。</p>",
             "<p>一次記録は <code>.chronicle/chronicle.jsonl</code> です。</p>",
             "<p>Visibility Hint はアクセス制御やredactionではありません。</p>",
+            "<p>Redaction-aware export は明示オプションによる派生export制御であり、access controlではありません。</p>",
             "<p>Boundary Rules は助言的な分類であり、強制的な保護機構ではありません。</p>",
             "<p>Injection Plan はLLMへの自動注入ではありません。</p>",
             "<p>graph-json export はGraphRAG接続準備であり、GraphRAGエンジンではありません。</p>",
