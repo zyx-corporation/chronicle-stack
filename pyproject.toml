@@ -27,6 +27,7 @@ dev = [
 
 [project.scripts]
 chronicle = "chronicle.cli:app"
+chronicle-graph = "chronicle.cli_graph:graph_app"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/chronicle"]
