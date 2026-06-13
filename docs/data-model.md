@@ -1,40 +1,78 @@
-# Chronicle Data Model
+# Chronicle Stack Data Model
 
-Chronicle Core v0.1 のデータモデル概要。詳細は [基本仕様書](specs/chronicle-stack-basic-spec-v0.1.md) を参照。
+Chronicle Stack v0.3 のデータモデル概要です。詳細な安定性方針は [インターフェース契約](interface-contracts.md) を参照してください。
+
+## 基本原則
+
+Chronicle Stack の一次記録は `.chronicle/chronicle.jsonl` です。
+
+すべての派生Index、検索結果、export、HTML dashboard、graph-json exportは、原則としてJSONLから再構成可能な派生ビューです。
 
 ## Chronicle Event
 
-最小記録単位。`chronicle.jsonl` に 1 行 1 イベントで追記される。
+最小記録単位です。`chronicle.jsonl` に 1 行 1 Event として追記されます。
 
 | フィールド | 必須 | 説明 |
-|-----------|------|------|
-| event_id | ✓ | `evt_` プレフィックス |
-| chronicle_id | ✓ | 所属 Chronicle |
-| timestamp | ✓ | ISO 8601 |
-| event_type | ✓ | イベント種別 |
-| actor | ✓ | 記録主体 |
-| summary | ✓ | 人間可読要約 |
-| payload | ✓ | 種別固有データ |
+|---|---|---|
+| `event_id` | ✓ | `evt_` prefix |
+| `chronicle_id` | ✓ | 所属Chronicle |
+| `timestamp` | ✓ | ISO 8601 |
+| `event_type` | ✓ | Event種別 |
+| `actor` | ✓ | 記録主体 |
+| `summary` | ✓ | 人間可読要約 |
+| `payload` | ✓ | EventType固有payload |
+| `parent_event_id` | | 親Event |
+| `artifact_id` | | 関連Artifact |
+| `context_ids` | | 関連Context ID一覧 |
+| `decision_id` | | 関連Decision |
+| `rde_record_id` | | 関連RDE record |
+| `source` | | SourceProvenance |
+| `confidence` | | confidence hint |
+| `review_status` | | review status |
+| `tags` | | tag一覧 |
+
+## EventType payload contract
+
+| EventType | payload |
+|---|---|
+| `chronicle_created` | Chronicle作成情報 |
+| `context_added` | `{ "context": Context }` |
+| `user_input` | 任意の入力記録 |
+| `assistant_output` | 任意の出力記録 |
+| `artifact_created` | `{ "artifact": Artifact, "version": ArtifactVersion? }` |
+| `artifact_updated` | `{ "artifact": Artifact, "version": ArtifactVersion? }` |
+| `artifact_versioned` | `{ "artifact_id": str, "version": ArtifactVersion }` |
+| `decision_recorded` | `{ "decision": Decision }` |
+| `rde_diff_recorded` | `{ "rde": RdeDiffRecord }` |
+| `boundary_rule_added` | `{ "boundary_rule": BoundaryRule }` |
+| `injection_plan_recorded` | `{ "injection_plan": InjectionPlan }` |
+| `note_added` | note payload |
+| `tag_updated` | tag変更payload |
+| `metadata_updated` | metadata変更payload |
 
 ## Context
 
-生成物・判断の背景情報。`context_added` イベントの payload に格納。
+生成物・判断の背景情報です。`context_added` Eventのpayloadに格納されます。
 
 | フィールド | 必須 | 説明 |
-|-----------|------|------|
-| context_id | ✓ | `ctx_` プレフィックス |
-| title | ✓ | 人間可読タイトル |
-| summary | | 要約 |
-| scope | ✓ | 正式な有効範囲（v0.2 で導入） |
-| scope_hint | | 非推奨（v0.1互換用） |
-| visibility_hint | | 可視性ヒント（public / private / sensitive / unknown）。権限管理ではない。 |
-| source_type | | conversation / document / ... |
-| confidence | | high / medium / low / unknown |
+|---|---|---|
+| `context_id` | ✓ | `ctx_` prefix |
+| `title` | ✓ | 人間可読タイトル |
+| `summary` | | 要約 |
+| `source_type` | | v0.1互換source分類 |
+| `source_ref` | | v0.1互換source参照 |
+| `scope` | ✓ | 正式な有効範囲 |
+| `scope_hint` | | 非推奨。v0.1互換用 |
+| `visibility_hint` | | public / private / sensitive / unknown |
+| `source` | | SourceProvenance |
+| `confidence` | | high / medium / low / unknown |
+| `created_at` | ✓ | 作成時刻 |
+| `tags` | | tag一覧 |
 
-### ContextScope（v0.2）
+### ContextScope
 
 | 値 | 意味 |
-|----|------|
+|---|---|
 | `global` | プロジェクトをまたぐ長期文脈 |
 | `project` | 現在のChronicleまたはプロジェクト単位 |
 | `session` | 特定セッション内 |
@@ -43,102 +81,178 @@ Chronicle Core v0.1 のデータモデル概要。詳細は [基本仕様書](sp
 | `temporary` | 一時的文脈 |
 | `unknown` | 未分類または移行互換 |
 
-`scope_hint` は v0.1 互換用に残されており、新規コードでは `scope` を使用する。
-v0.1 形式（`scope_hint` のみ）のデータも読み込み時に `scope` として補完される。
+`scope_hint` はv0.1互換用に残されています。新規コードでは `scope` を使用します。v1.0までは読み取り互換を維持する方針です。
 
-## Artifact
+## SourceProvenance
 
-成果物とそのスナップショット履歴。`artifacts/<id>/current.md` が最新、`versions/` に履歴。
+SourceProvenanceは出所記録です。真実性や完全性の暗号学的証明ではありません。
 
-`ArtifactVersion` は成果物の各スナップショットを表す。
+主なフィールド:
 
-| フィールド | 必須 | 説明 |
-|-----------|------|------|
-| artifact_id | ✓ | `art_` プレフィックス |
-| title | ✓ | 人間可読タイトル |
-| artifact_type | ✓ | document / specification / ... |
-| status | | draft / reviewing / accepted / ... |
-| visibility_hint | | 可視性ヒント（public / private / sensitive / unknown）。権限管理ではない。 |
+| フィールド | 説明 |
+|---|---|
+| `source_type` | source分類 |
+| `source_ref` | source参照 |
+| `source_tool` | 取得・生成に使ったtool |
+| `source_session` | session識別子 |
+| `source_model` | model識別子 |
+| `source_file` | file参照 |
+| `source_url` | URL参照 |
+| `captured_at` | 取得時刻 |
+| `imported_at` | import時刻 |
 
-### VisibilityHint（v0.2）
+## VisibilityHint
+
+VisibilityHintは分類・注意喚起のhintです。アクセス制御やredactionではありません。
 
 | 値 | 意味 |
-|----|------|
-| `public` | 公開候補。将来のexportや共有時に警告は低い |
+|---|---|
+| `public` | 公開候補 |
 | `private` | 個人・プロジェクト内部向け |
-| `sensitive` | 機微情報を含む可能性。将来のexport/injection時に警告対象 |
+| `sensitive` | 機微情報を含む可能性 |
 | `unknown` | 未分類または移行互換 |
+
+## Artifact / ArtifactVersion
+
+Artifactは成果物です。ArtifactVersionは成果物の各スナップショットを表します。
+
+| フィールド | 必須 | 説明 |
+|---|---|---|
+| `artifact_id` | ✓ | `art_` prefix |
+| `title` | ✓ | 人間可読タイトル |
+| `artifact_type` | ✓ | document / specification / ... |
+| `status` | | draft / reviewing / accepted / ... |
+| `visibility_hint` | | public / private / sensitive / unknown |
+
+ArtifactVersionは `source_event_id` により、それを作成したEventへ接続されます。
 
 ## Decision
 
-採用・棄却・保留などの判断記録。`decision_recorded` イベントに格納。
+採用・棄却・保留などの判断記録です。`decision_recorded` Eventに格納されます。
+
+Decisionは `event_id` により、それを記録したEventへ接続されます。
 
 ## RDE Diff Record
 
-成果物更新における意味変化の簡易監査。6 固定項目:
+成果物更新における意味変化の簡易監査です。
 
-- preserved / transformed / supplemented
-- unresolved / deviation_risks / next_update_policy
+固定項目:
 
-## Chronicle Metadata
+- preserved
+- transformed
+- supplemented
+- unresolved
+- deviation_risks
+- next_update_policy
 
-Chronicle 全体のメタ情報。`metadata.yaml` として永続化。
+RDEは正しさを証明するものではありません。意味変化を構造化して記録するための枠組みです。
 
-## Boundary Rule（v0.2）
+## Boundary Rule
 
-Boundary Rule は文脈使用に関する助言的なルールです。include / exclude / warn の3種類があり、Context の scope / visibility / source / tags を評価できます。
+Boundary Rule は文脈使用に関する助言的なルールです。
 
-`boundary_rule_added` イベントとして `chronicle.jsonl` に記録され、`boundary_rule_index.json` として派生 Index 化されます。アクセス制御や強制削除の仕組みではありません。
+| rule_type | 意味 |
+|---|---|
+| `include` | 選択理由を補強する |
+| `exclude` | plan候補から除外する |
+| `warn` | 注意喚起する |
 
-## Context Injection Plan（v0.2）
+評価優先順位:
 
-Context Injection Plan は、Boundary Rule 評価に基づいて Context を selected / warned / excluded に分類する文脈選択案です。
+```text
+exclude > warn > include > default candidate
+```
 
-- **selected**: 利用候補として提案される Context
-- **warned**: 注意が必要な Context（selected にも含まれる）
-- **excluded**: 候補から除外された Context
+Boundary Ruleは `boundary_rule_added` Eventとして記録され、`boundary_rule_index.json` として派生Index化されます。アクセス制御や強制削除の仕組みではありません。
 
-重要: Plan は LLM への自動注入を行いません。人間確認用の文脈選択案です。デフォルトでは `chronicle.jsonl` に永続化しません。Context や Boundary Rule のレコードを変更することもありません。
+## Context Injection Plan
+
+Context Injection Plan は、Boundary Rule評価に基づいてContextを `selected` / `warned` / `excluded` に分類する文脈選択案です。
+
+| section | 意味 |
+|---|---|
+| `selected` | 利用候補として提案されるContext |
+| `warned` | 注意が必要なContext。selectedと重複可能 |
+| `excluded` | 候補から除外されたContext。selectedとは重複しない |
+| `notes` | 人間向け注記 |
+
+重要:
+
+- LLMへの自動注入は行いません。
+- デフォルトでは永続化しません。
+- `chronicle injection plan --record` を指定した場合のみ `injection_plan_recorded` EventとしてJSONLに記録します。
+- ContextやBoundary Ruleのレコードを変更しません。
+
+## Graph Export Model
+
+v0.3ではGraphRAG接続準備として、Chronicle記録をnode/edgeへ写像する派生exportを追加しました。
+
+| Model | 説明 |
+|---|---|
+| `GraphNode` | graph node候補 |
+| `GraphEdge` | graph edge候補 |
+| `GraphExport` | graph-json export snapshot |
+
+Graph exportは `chronicle export --format graph-json` で生成します。
+
+重要:
+
+- GraphRAGエンジンではありません。
+- graph DB / vector DB / embedding / LLM 依存はありません。
+- JSONLからdeterministicに再構成される派生ビューです。
+
+## HTML Dashboard Export
+
+v0.3では静的・読み取り専用HTML dashboard exportを追加しました。
+
+```bash
+chronicle export --format html -o chronicle-dashboard.html
+```
+
+HTML dashboardは人間向けの派生reportです。機械処理の安定契約ではありません。
 
 ## モデル間の参照関係
 
 ### Event → Version
 
-```
+```text
 ArtifactVersion.source_event_id → ChronicleEvent.event_id
 ```
 
-`source_event_id` はバージョンが作成されたイベントを直接参照する。この値は `chronicle.jsonl` に永続化され、index rebuild 後も保持される。
-
 ### Event → Decision
 
-```
+```text
 Decision.event_id → ChronicleEvent.event_id
 ```
 
-各 Decision は、それを記録したイベントの `event_id` を保持する。`chronicle.jsonl` に永続化される。
-
 ### RDE → Artifact / Version
 
-```
+```text
 RdeDiffRecord.artifact_id → Artifact.artifact_id
 RdeDiffRecord.from_version_id → ArtifactVersion.version_id
 RdeDiffRecord.to_version_id → ArtifactVersion.version_id
 ```
 
-RDE Diff Record は、特定の Artifact の 2 つのバージョン間の差分を記録する。
-
 ### Version → RDE（派生リンク）
 
-```
+```text
 ArtifactVersion.rde_record_id → RdeDiffRecord.rde_record_id
 ```
 
-このリンクは **一次 Event payload を直接書き換えるものではなく**、`chronicle index rebuild` 時に派生的に付与される。
+このリンクは一次Event payloadを直接書き換えるものではなく、`chronicle index rebuild` 時に派生的に付与されます。
 
-- RDE event (RDE_DIFF_RECORDED) の `to_version_id` と一致する `ArtifactVersion.version_id` に対して、`rde_record_id` が設定される。
-- 複数の RDE が同一 Version を指す場合、v0.1 では JSONL 上で **後に現れた RDE が優先** される。
+### InjectionPlan → Context
 
-## ID プレフィックス
+```text
+InjectionPlan.selected[].context_id → Context.context_id
+InjectionPlan.warned[].context_id → Context.context_id
+InjectionPlan.excluded[].context_id → Context.context_id
+```
 
-`chr_` `evt_` `ctx_` `art_` `ver_` `dec_` `rde_` `src_`
+## ID prefixes
+
+```text
+chr_ evt_ ctx_ art_ ver_ dec_ rde_ src_ br_ ip_
+```
+
+Graph exportのnode/edge IDは派生IDであり、JSONL上の一次IDではありません。
