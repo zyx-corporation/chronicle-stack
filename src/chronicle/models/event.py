@@ -23,6 +23,7 @@ class EventType(StrEnum):
     TAG_UPDATED = "tag_updated"
     METADATA_UPDATED = "metadata_updated"
     BOUNDARY_RULE_ADDED = "boundary_rule_added"
+    INJECTION_PLAN_RECORDED = "injection_plan_recorded"
 
 
 class Actor(StrEnum):

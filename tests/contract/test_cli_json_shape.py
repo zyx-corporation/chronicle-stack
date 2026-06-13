@@ -102,9 +102,13 @@ def test_injection_plan_json_shape(tmp_path):
     result = runner.invoke(app, ["injection", "plan", "--task", "Shape test", "--json"])
     assert result.exit_code == 0
     data = json.loads(result.stdout)
+    assert "plan" in data
+    assert "recorded" in data
+    assert "event_id" in data
+    plan = data["plan"]
     for key in ["plan_id", "task", "selected", "warned", "excluded"]:
-        assert key in data, f"Missing key '{key}' in injection plan"
-    assert data["plan_id"].startswith("ip_")
+        assert key in plan, f"Missing key '{key}' in injection plan"
+    assert plan["plan_id"].startswith("ip_")
 
 
 def test_cli_invalid_enum_exits_nonzero(tmp_path):

@@ -638,15 +638,23 @@ def boundary_check_cmd(
 def injection_plan_cmd(
     task: Annotated[str, typer.Option("--task", help="Task description for context selection.")],
     json_output: Annotated[bool, typer.Option("--json")] = False,
+    record: Annotated[bool, typer.Option("--record", help="Persist the plan to chronicle.jsonl.")] = False,
 ) -> None:
     """Generate a Context Injection Plan for a task."""
     try:
         service = InjectionPlanService()
         plan = service.generate_plan(task)
+        event_id = None
+        if record:
+            event = service.record_plan(plan)
+            event_id = event.event_id
         if json_output:
-            typer.echo(json.dumps(plan.model_dump(mode="json"), ensure_ascii=False, indent=2))
+            output = {"plan": plan.model_dump(mode="json"), "recorded": record, "event_id": event_id}
+            typer.echo(json.dumps(output, ensure_ascii=False, indent=2))
         else:
             typer.echo(format_injection_plan(plan))
+            if record:
+                typer.echo(f"\nRecorded as event: {event_id}")
     except ChronicleError as exc:
         _handle_error(exc, json_output)
 
