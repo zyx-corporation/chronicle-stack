@@ -73,21 +73,33 @@ def transform_model_dump(model: Any, options: RedactionOptions) -> dict[str, Any
     return data
 
 
+def event_has_sensitive_payload(event_dump: dict[str, Any]) -> bool:
+    payload = event_dump.get("payload")
+    if not isinstance(payload, dict):
+        return False
+    for key in ("context", "artifact"):
+        value = payload.get(key)
+        if isinstance(value, dict) and dict_is_sensitive(value):
+            return True
+    return False
+
+
 def transform_event_dump(event: Any, options: RedactionOptions) -> dict[str, Any] | None:
     data = event.model_dump(mode="json")
     payload = data.get("payload")
     if not isinstance(payload, dict):
         return data
 
-    sensitive_payload = False
-    for key in ("context", "artifact"):
-        value = payload.get(key)
-        if isinstance(value, dict) and dict_is_sensitive(value):
-            sensitive_payload = True
-            if options.redact_sensitive:
-                payload[key] = redact_sensitive_dict(value)
-
+    sensitive_payload = event_has_sensitive_payload(data)
     if sensitive_payload and options.exclude_sensitive:
         return None
+
+    if sensitive_payload and options.redact_sensitive:
+        data["summary"] = REDACTED
+        for key in ("context", "artifact"):
+            value = payload.get(key)
+            if isinstance(value, dict) and dict_is_sensitive(value):
+                payload[key] = redact_sensitive_dict(value)
+
     data["payload"] = payload
     return data
