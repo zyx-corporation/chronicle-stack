@@ -1,6 +1,6 @@
 # Changelog
 
-## v0.1.0 - Unreleased
+## v0.1.0 - 2026-06-13
 
 ### Added
 - Chronicle Event JSONL primary store (`chronicle.jsonl`)

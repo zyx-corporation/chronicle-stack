@@ -134,6 +134,11 @@ CI は GitHub Actions で実行されます（`.github/workflows/ci.yml`）。
 
 - [CHANGELOG.md](CHANGELOG.md)
 
+## リリース
+
+- Latest release: **v0.1.0**
+- GitHub Release: https://github.com/zyx-corporation/chronicle-stack/releases/tag/v0.1.0
+
 ## ライセンス
 
 MIT
