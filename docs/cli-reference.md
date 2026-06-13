@@ -23,13 +23,15 @@ chronicle init --title "Project Title"
 
 ```bash
 chronicle add-context \
-  --title "Task Context" \
+  --title "Private Task Context" \
   --source-type conversation \
   --scope task \
+  --visibility private \
   --summary "Only for this task"
 ```
 
 `--scope` は正式な ContextScope（global / project / session / task / artifact / temporary）を受け付ける。デフォルトは `project`。明示指定を推奨。
+`--visibility` は可視性ヒント（public / private / sensitive / unknown）を指定する。デフォルトは `unknown`。権限管理ではない。
 
 ## chronicle record
 

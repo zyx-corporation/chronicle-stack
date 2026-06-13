@@ -43,7 +43,7 @@ class SearchService:
                         kind="artifact",
                         identifier=artifact.artifact_id,
                         summary=artifact.title,
-                        detail=artifact.artifact_type.value,
+                        detail=f"{artifact.artifact_type.value},visibility={artifact.visibility_hint.value}",
                     )
                 )
 
@@ -69,7 +69,7 @@ class SearchService:
                         kind="context",
                         identifier=context.context_id,
                         summary=context.title,
-                        detail=f"{context.scope.value}: {context.summary}",
+                        detail=f"{context.scope.value},visibility={context.visibility_hint.value}: {context.summary}",
                     )
                 )
 

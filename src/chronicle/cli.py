@@ -14,6 +14,7 @@ from chronicle.models.artifact import ArtifactType
 from chronicle.models.context import ContextScope
 from chronicle.models.decision import DecisionType
 from chronicle.models.event import Actor, EventType
+from chronicle.models.visibility import VisibilityHint
 from chronicle.services.artifact_service import ArtifactService
 from chronicle.services.chronicle_service import ChronicleService
 from chronicle.services.context_service import ContextService
@@ -87,6 +88,9 @@ def add_context_cmd(
     scope: Annotated[
         ContextScope, typer.Option("--scope", help="Context scope: global, project, session, task, artifact, temporary.")
     ] = ContextScope.PROJECT,
+    visibility: Annotated[
+        VisibilityHint, typer.Option("--visibility", help="Visibility hint: public, private, sensitive, unknown.")
+    ] = VisibilityHint.UNKNOWN,
     json_output: Annotated[bool, typer.Option("--json")] = False,
 ) -> None:
     """Add a Context to the Chronicle."""
@@ -97,6 +101,7 @@ def add_context_cmd(
             summary=summary,
             source_type=source_type,
             scope=scope,
+            visibility_hint=visibility,
         )
         if json_output:
             typer.echo(
@@ -149,13 +154,16 @@ def artifact_create_cmd(
     title: Annotated[str, typer.Option("--title")],
     type: Annotated[ArtifactType, typer.Option("--type")],
     file: Annotated[Optional[Path], typer.Option("--file")] = None,
+    visibility: Annotated[
+        VisibilityHint, typer.Option("--visibility", help="Visibility hint: public, private, sensitive, unknown.")
+    ] = VisibilityHint.UNKNOWN,
     json_output: Annotated[bool, typer.Option("--json")] = False,
 ) -> None:
     """Create a new Artifact."""
     try:
         service = ArtifactService()
         artifact, version = service.create(
-            title=title, artifact_type=type, source_file=file
+            title=title, artifact_type=type, source_file=file, visibility_hint=visibility
         )
         if json_output:
             typer.echo(
