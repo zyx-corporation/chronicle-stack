@@ -9,6 +9,7 @@ from pathlib import Path
 
 from chronicle.models.graph import GraphEdge, GraphExport, GraphNode
 from chronicle.services.chronicle_service import ChronicleService
+from chronicle.services.export_manifest_service import ExportManifestService
 
 
 def _nid(prefix: str, source_id: str) -> str:
@@ -22,6 +23,7 @@ def _eid(prefix: str, from_id: str, to_id: str) -> str:
 class GraphExportService:
     def __init__(self, root: Path | None = None) -> None:
         self.chronicle = ChronicleService(root)
+        self.manifest = ExportManifestService(root)
 
     def export_graph(self) -> GraphExport:
         metadata = self.chronicle.require_initialized()
@@ -190,10 +192,12 @@ class GraphExportService:
         # Deterministic sort
         nodes.sort(key=lambda n: (n.node_type, n.source_id))
         edges.sort(key=lambda e: (e.edge_type, e.from_node_id, e.to_node_id))
+        manifest = self.manifest.build_manifest("graph-json")
 
         return GraphExport(
             generated_at=datetime.now(timezone.utc).astimezone(),
             chronicle_id=cid,
+            export_manifest=manifest,
             nodes=nodes,
             edges=edges,
         )
