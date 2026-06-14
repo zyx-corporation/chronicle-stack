@@ -29,6 +29,7 @@ dev = [
 chronicle = "chronicle.cli:app"
 chronicle-graph = "chronicle.cli_graph:graph_app"
 chronicle-context = "chronicle.cli_context:context_app"
+chronicle-export = "chronicle.cli_export:export_app"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/chronicle"]
