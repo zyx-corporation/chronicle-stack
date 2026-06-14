@@ -1,11 +1,7 @@
 """Tests for controlled integration package contracts."""
 
-import json
 from datetime import datetime, timezone
 
-from typer.testing import CliRunner
-
-from chronicle.cli_package import package_app
 from chronicle.models.classification import AllowedOperation, ClassificationLayer, ClassificationMetadata, LlmPolicy, Sensitivity
 from chronicle.models.context import Context, ContextScope
 from chronicle.models.event import Actor, ChronicleEvent, EventType
@@ -132,23 +128,34 @@ def test_prompt_marker_warning_is_carried_into_package(tmp_path):
     assert any(warning.startswith("prompt_marker:") for warning in package.records[0].warnings)
 
 
-def test_chronicle_package_context_cli_outputs_json(tmp_path, monkeypatch):
-    monkeypatch.chdir(tmp_path)
-    ChronicleService(tmp_path).init("Package CLI")
+def test_context_package_can_filter_selected_contexts(tmp_path):
+    ChronicleService(tmp_path).init("Package Test")
     _append_context(
         tmp_path,
         Context(
-            context_id="ctx_cli",
-            title="CLI Context",
-            summary="CLI summary",
+            context_id="ctx_keep",
+            title="Keep",
+            summary="Keep summary",
+            scope=ContextScope.TASK,
+            created_at=datetime(2026, 6, 14, tzinfo=timezone.utc),
+        ),
+    )
+    _append_context(
+        tmp_path,
+        Context(
+            context_id="ctx_skip",
+            title="Skip",
+            summary="Skip summary",
             scope=ContextScope.TASK,
             created_at=datetime(2026, 6, 14, tzinfo=timezone.utc),
         ),
     )
 
-    result = CliRunner().invoke(package_app, ["context", "--purpose", "review", "--target", "local"])
-    payload = json.loads(result.stdout)
+    package = IntegrationPackageService(tmp_path).build_context_package(
+        purpose="Review",
+        context_ids=["ctx_keep"],
+    )
 
-    assert result.exit_code == 0
-    assert payload["manifest"]["package_id"].startswith("pkg_")
-    assert payload["records"][0]["record_id"] == "ctx_cli"
+    assert package.manifest.referenced_records == ["ctx_keep"]
+    assert len(package.records) == 1
+    assert package.records[0].record_id == "ctx_keep"
