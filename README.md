@@ -153,6 +153,8 @@ chronicle show
 - [v0.4 スモークテスト](docs/smoke-test-v0.4.md)
 - [v0.4 リリース判定](docs/release-readiness-v0.4.md)
 - [v0.5 ロードマップ](docs/roadmap-v0.5.md)
+- [セキュリティ方針 v0.1](docs/security-policy-v0.1.md)
+- [ADR Index](docs/adr/README.md)
 
 契約・運用関連:
 
