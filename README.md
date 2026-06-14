@@ -148,6 +148,7 @@ chronicle show
 - [データモデル](docs/data-model.md)
 - [ストレージ形式](docs/storage-format.md)
 - [テスト戦略](docs/testing-strategy.md)
+- [Doctor Security Checks](docs/doctor-security-checks.md)
 - [v0.3 スモークテスト](docs/smoke-test-v0.3.md)
 - [v0.3 リリース判定](docs/release-readiness-v0.3.md)
 - [v0.4 ロードマップ](docs/roadmap-v0.4.md)
