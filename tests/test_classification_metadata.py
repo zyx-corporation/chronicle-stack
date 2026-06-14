@@ -4,6 +4,10 @@ from datetime import datetime, timezone
 
 from chronicle.models.artifact import Artifact, ArtifactType
 from chronicle.models.classification import (
+    DISCLOSURE_LIKE_OPERATIONS,
+    DERIVED_MEANING_OPERATIONS,
+    MUTATION_LIKE_OPERATIONS,
+    READ_LIKE_OPERATIONS,
     AllowedOperation,
     ClassificationLayer,
     ClassificationMetadata,
@@ -36,6 +40,71 @@ def test_classification_metadata_serializes_layer_and_policy():
         "masking_required": True,
     }
     assert dumped["retention"]["mode"] == "keep"
+
+
+def test_allowed_operation_serializes_full_v0_5_operation_set():
+    operations = [
+        AllowedOperation.VIEW,
+        AllowedOperation.CREATE,
+        AllowedOperation.EDIT,
+        AllowedOperation.APPEND,
+        AllowedOperation.SUMMARIZE,
+        AllowedOperation.REINTERPRET,
+        AllowedOperation.REDACT,
+        AllowedOperation.SEAL,
+        AllowedOperation.EXPORT,
+        AllowedOperation.INJECT,
+        AllowedOperation.PUBLISH,
+    ]
+
+    assert [operation.value for operation in operations] == [
+        "view",
+        "create",
+        "edit",
+        "append",
+        "summarize",
+        "reinterpret",
+        "redact",
+        "seal",
+        "export",
+        "inject",
+        "publish",
+    ]
+
+
+def test_operation_category_sets_are_disjoint_and_explicit():
+    assert READ_LIKE_OPERATIONS == {AllowedOperation.VIEW, AllowedOperation.SUMMARIZE}
+    assert MUTATION_LIKE_OPERATIONS == {
+        AllowedOperation.CREATE,
+        AllowedOperation.EDIT,
+        AllowedOperation.APPEND,
+        AllowedOperation.REDACT,
+        AllowedOperation.SEAL,
+    }
+    assert DISCLOSURE_LIKE_OPERATIONS == {
+        AllowedOperation.EXPORT,
+        AllowedOperation.INJECT,
+        AllowedOperation.PUBLISH,
+    }
+    assert DERIVED_MEANING_OPERATIONS == {AllowedOperation.REINTERPRET}
+
+    combined = READ_LIKE_OPERATIONS | MUTATION_LIKE_OPERATIONS | DISCLOSURE_LIKE_OPERATIONS | DERIVED_MEANING_OPERATIONS
+    assert combined == set(AllowedOperation)
+
+
+def test_operation_metadata_distinguishes_view_export_inject_publish():
+    classification = ClassificationMetadata(
+        allowed_operations=[
+            AllowedOperation.VIEW,
+            AllowedOperation.EXPORT,
+            AllowedOperation.INJECT,
+            AllowedOperation.PUBLISH,
+        ],
+    )
+
+    dumped = classification.model_dump(mode="json")
+
+    assert dumped["allowed_operations"] == ["view", "export", "inject", "publish"]
 
 
 def test_restricted_secret_defaults_to_view_only_and_no_model_context():

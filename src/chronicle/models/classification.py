@@ -32,14 +32,47 @@ class Sensitivity(StrEnum):
 
 
 class AllowedOperation(StrEnum):
-    """Operation categories used for advisory policy checks."""
+    """Operation categories used for advisory policy checks.
+
+    These values describe what a caller intends to do with a record. They are
+    not access-control enforcement by themselves.
+    """
 
     VIEW = "view"
+    CREATE = "create"
+    EDIT = "edit"
+    APPEND = "append"
     SUMMARIZE = "summarize"
     REINTERPRET = "reinterpret"
+    REDACT = "redact"
+    SEAL = "seal"
     EXPORT = "export"
     INJECT = "inject"
     PUBLISH = "publish"
+
+
+READ_LIKE_OPERATIONS = frozenset({
+    AllowedOperation.VIEW,
+    AllowedOperation.SUMMARIZE,
+})
+
+MUTATION_LIKE_OPERATIONS = frozenset({
+    AllowedOperation.CREATE,
+    AllowedOperation.EDIT,
+    AllowedOperation.APPEND,
+    AllowedOperation.REDACT,
+    AllowedOperation.SEAL,
+})
+
+DISCLOSURE_LIKE_OPERATIONS = frozenset({
+    AllowedOperation.EXPORT,
+    AllowedOperation.INJECT,
+    AllowedOperation.PUBLISH,
+})
+
+DERIVED_MEANING_OPERATIONS = frozenset({
+    AllowedOperation.REINTERPRET,
+})
 
 
 class RetentionMode(StrEnum):
