@@ -119,6 +119,7 @@ chronicle export --format yaml
 chronicle export --format graph-json -o graph.json
 chronicle export --format html -o chronicle-dashboard.html
 chronicle-graph summary
+chronicle-context check --target local --purpose "internal review"
 chronicle show
 ```
 
@@ -154,6 +155,7 @@ chronicle show
 - [v0.4 リリース判定](docs/release-readiness-v0.4.md)
 - [v0.5 ロードマップ](docs/roadmap-v0.5.md)
 - [セキュリティ方針 v0.1](docs/security-policy-v0.1.md)
+- [Model Context Use Policy](docs/model-context-use-policy.md)
 - [ADR Index](docs/adr/README.md)
 
 契約・運用関連:
