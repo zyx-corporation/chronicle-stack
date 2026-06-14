@@ -20,6 +20,11 @@ export_app = typer.Typer(
 )
 
 
+@export_app.callback()
+def export_root() -> None:
+    """Inspect and run security-aware export helpers."""
+
+
 class ProfileExportFormat(StrEnum):
     YAML = "yaml"
     HTML = "html"
