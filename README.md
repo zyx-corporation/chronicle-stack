@@ -117,6 +117,7 @@ chronicle boundary add --type warn --field visibility --operator equals --value 
 chronicle injection plan --task "Draft v0.3 release notes" --record
 chronicle export --format yaml
 chronicle-export profile --format yaml --profile public-review
+chronicle-package context --purpose "Sayane review" --target local
 chronicle export --format graph-json -o graph.json
 chronicle export --format html -o chronicle-dashboard.html
 chronicle-graph summary
@@ -164,6 +165,7 @@ chronicle show
 - [Encrypted Store Contract](docs/encrypted-store-contract.md)
 - [Prompt Injection Sanitizer Boundary](docs/prompt-injection-sanitizer-boundary.md)
 - [Security-aware Export Profiles](docs/security-aware-export-profiles.md)
+- [Controlled Integration Packages](docs/controlled-integration-packages.md)
 - [ADR Index](docs/adr/README.md)
 
 契約・運用関連:
