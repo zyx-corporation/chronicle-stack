@@ -4,12 +4,12 @@ import json
 
 import pytest
 
+from chronicle.models.boundary import BoundaryConditionField, BoundaryOperator, BoundaryRuleType
 from chronicle.models.context import ContextScope
 from chronicle.models.visibility import VisibilityHint
+from chronicle.services.boundary_service import BoundaryService
 from chronicle.services.chronicle_service import ChronicleService
 from chronicle.services.context_service import ContextService
-from chronicle.services.boundary_service import BoundaryService
-from chronicle.models.boundary import BoundaryRuleType, BoundaryConditionField, BoundaryOperator
 
 
 @pytest.fixture
@@ -74,6 +74,79 @@ def test_context_legacy_missing_visibility_defaults_unknown(chronicle_svc):
     contexts = chronicle_svc.index.load_contexts()
     ctx = contexts["ctx_novis"]
     assert ctx.visibility_hint == VisibilityHint.UNKNOWN
+
+
+def test_context_legacy_missing_classification_defaults_none(chronicle_svc):
+    """Context without v0.5 classification metadata must still load."""
+    legacy_payload = {
+        "context_id": "ctx_noclass",
+        "title": "No Classification",
+        "summary": "",
+        "source_type": "conversation",
+        "source_ref": "",
+        "scope": "task",
+        "visibility_hint": "unknown",
+        "confidence": "medium",
+        "created_at": "2026-06-13T12:00:00+09:00",
+        "tags": [],
+    }
+    event = {
+        "event_id": "evt_noclass", "chronicle_id": "chr_test",
+        "timestamp": "2026-06-13T12:00:00+09:00",
+        "event_type": "context_added", "actor": "user",
+        "summary": "No classification",
+        "payload": {"context": legacy_payload},
+    }
+    with chronicle_svc.paths.events_file.open("a", encoding="utf-8") as f:
+        f.write(json.dumps(event) + "\n")
+
+    chronicle_svc.rebuild_indexes()
+    contexts = chronicle_svc.index.load_contexts()
+    ctx = contexts["ctx_noclass"]
+    assert ctx.classification is None
+
+
+def test_context_with_classification_metadata_round_trips(chronicle_svc):
+    payload = {
+        "context_id": "ctx_classified",
+        "title": "Classified",
+        "summary": "",
+        "source_type": "conversation",
+        "source_ref": "",
+        "scope": "task",
+        "visibility_hint": "sensitive",
+        "classification": {
+            "layer": 3,
+            "sensitivity": "sensitive",
+            "owner": "owner@example.test",
+            "allowed_operations": ["view", "reinterpret"],
+            "llm_policy": {
+                "local_allowed": True,
+                "external_allowed": False,
+                "masking_required": True,
+            },
+        },
+        "confidence": "medium",
+        "created_at": "2026-06-13T12:00:00+09:00",
+        "tags": [],
+    }
+    event = {
+        "event_id": "evt_classified", "chronicle_id": "chr_test",
+        "timestamp": "2026-06-13T12:00:00+09:00",
+        "event_type": "context_added", "actor": "user",
+        "summary": "Classified context",
+        "payload": {"context": payload},
+    }
+    with chronicle_svc.paths.events_file.open("a", encoding="utf-8") as f:
+        f.write(json.dumps(event) + "\n")
+
+    chronicle_svc.rebuild_indexes()
+    contexts = chronicle_svc.index.load_contexts()
+    ctx = contexts["ctx_classified"]
+    assert ctx.classification is not None
+    assert ctx.classification.layer == 3
+    assert ctx.classification.sensitivity == "sensitive"
+    assert ctx.classification.llm_policy.external_allowed is False
 
 
 def test_context_missing_source_defaults_none(chronicle_svc):
