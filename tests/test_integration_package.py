@@ -1,7 +1,6 @@
 """Tests for controlled integration package contracts."""
 
 import json
-import os
 from datetime import datetime, timezone
 
 from typer.testing import CliRunner
