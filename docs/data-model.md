@@ -1,6 +1,6 @@
 # Chronicle Stack Data Model
 
-Chronicle Stack v0.3 のデータモデル概要です。詳細な安定性方針は [インターフェース契約](interface-contracts.md) を参照してください。
+Chronicle Stack v0.5 development data model overview. For stability policy, see [Interface Contracts](interface-contracts.md).
 
 ## 基本原則
 
@@ -27,6 +27,7 @@ Chronicle Stack の一次記録は `.chronicle/chronicle.jsonl` です。
 | `decision_id` | | 関連Decision |
 | `rde_record_id` | | 関連RDE record |
 | `source` | | SourceProvenance |
+| `classification` | | ClassificationMetadata |
 | `confidence` | | confidence hint |
 | `review_status` | | review status |
 | `tags` | | tag一覧 |
@@ -64,6 +65,7 @@ Chronicle Stack の一次記録は `.chronicle/chronicle.jsonl` です。
 | `scope` | ✓ | 正式な有効範囲 |
 | `scope_hint` | | 非推奨。v0.1互換用 |
 | `visibility_hint` | | public / private / sensitive / unknown |
+| `classification` | | ClassificationMetadata |
 | `source` | | SourceProvenance |
 | `confidence` | | high / medium / low / unknown |
 | `created_at` | ✓ | 作成時刻 |
@@ -82,6 +84,53 @@ Chronicle Stack の一次記録は `.chronicle/chronicle.jsonl` です。
 | `unknown` | 未分類または移行互換 |
 
 `scope_hint` はv0.1互換用に残されています。新規コードでは `scope` を使用します。v1.0までは読み取り互換を維持する方針です。
+
+## ClassificationMetadata
+
+ClassificationMetadata は、Chronicle records を context assets として扱うための v0.5 advisory metadata です。
+
+重要:
+
+- ClassificationMetadata は access control ではありません。
+- ClassificationMetadata は encryption / authentication / authorization を提供しません。
+- `visibility_hint` を置き換えるものではありません。
+- 既存recordとの互換性のため optional です。
+- v0.5では security-aware doctor / export / context-use policy の基礎として扱います。
+
+| フィールド | 説明 |
+|---|---|
+| `layer` | 0〜4 の分類レイヤー |
+| `sensitivity` | public / shareable / internal / sensitive / restricted / unknown |
+| `owner` | 所有者または管理主体 |
+| `created_at` | 分類メタデータ作成時刻 |
+| `source_type` | 分類の出所種別 |
+| `source_refs` | 分類判断に関係する参照 |
+| `allowed_operations` | view / summarize / reinterpret / export / inject / publish |
+| `llm_policy` | local / external / masking 方針 |
+| `retention` | keep / review / expire / seal |
+| `integrity` | hash等の将来の改ざん検知準備metadata |
+
+### ClassificationLayer
+
+| 値 | 名前 | 意味 |
+|---|---|---|
+| `0` | Public | 公開済み成果物、公開記事、公開資料 |
+| `1` | Shareable | 外部共有可能な要約、営業資料、公開可能な説明 |
+| `2` | Internal | 内部議論、判断過程、反論、保留、会議記録 |
+| `3` | Sensitive Context | 個人文脈、思想形成、未公開仮説、戦略 |
+| `4` | Restricted Secret | 契約、個人情報、認証情報、秘密鍵、法務・財務・人事上の高機密情報 |
+
+Layer 4 は原則として Chronicle本文に直接保存しない方針です。必要な場合は参照のみとし、秘密情報そのものは外部の専用管理に分離します。
+
+### LlmPolicy
+
+| フィールド | 説明 |
+|---|---|
+| `local_allowed` | local model context use を許可するか |
+| `external_allowed` | external model context use を許可するか |
+| `masking_required` | context use 前にmaskingを必要とするか |
+
+LlmPolicy は advisory metadata です。実際のcheck / warning / block動作は後続issueで定義します。
 
 ## SourceProvenance
 
@@ -123,6 +172,7 @@ Artifactは成果物です。ArtifactVersionは成果物の各スナップショ
 | `artifact_type` | ✓ | document / specification / ... |
 | `status` | | draft / reviewing / accepted / ... |
 | `visibility_hint` | | public / private / sensitive / unknown |
+| `classification` | | ClassificationMetadata |
 
 ArtifactVersionは `source_event_id` により、それを作成したEventへ接続されます。
 
@@ -211,6 +261,41 @@ chronicle export --format html -o chronicle-dashboard.html
 
 HTML dashboardは人間向けの派生reportです。機械処理の安定契約ではありません。
 
+## RDE Review
+
+### Preserved
+
+- JSONL remains primary.
+- Existing records may omit `classification`.
+- `VisibilityHint` remains available and backward-compatible.
+- Derived views remain derived.
+
+### Transformed
+
+- Chronicle records can now carry advisory context-asset classification metadata.
+
+### Added
+
+- ClassificationLayer 0-4.
+- Sensitivity labels.
+- AllowedOperation list.
+- LlmPolicy.
+- RetentionPolicy.
+- IntegrityMetadata preparation.
+
+### Unresolved
+
+- Enforcement vs advisory boundary.
+- Existing record migration policy.
+- Doctor security checks.
+- Security-aware export profiles.
+
+### Deviation Risks
+
+- Treating classification metadata as access control.
+- Storing Layer 4 secrets directly in Chronicle body.
+- Assuming integrity metadata is proof.
+
 ## モデル間の参照関係
 
 ### Event → Version
@@ -218,41 +303,3 @@ HTML dashboardは人間向けの派生reportです。機械処理の安定契約
 ```text
 ArtifactVersion.source_event_id → ChronicleEvent.event_id
 ```
-
-### Event → Decision
-
-```text
-Decision.event_id → ChronicleEvent.event_id
-```
-
-### RDE → Artifact / Version
-
-```text
-RdeDiffRecord.artifact_id → Artifact.artifact_id
-RdeDiffRecord.from_version_id → ArtifactVersion.version_id
-RdeDiffRecord.to_version_id → ArtifactVersion.version_id
-```
-
-### Version → RDE（派生リンク）
-
-```text
-ArtifactVersion.rde_record_id → RdeDiffRecord.rde_record_id
-```
-
-このリンクは一次Event payloadを直接書き換えるものではなく、`chronicle index rebuild` 時に派生的に付与されます。
-
-### InjectionPlan → Context
-
-```text
-InjectionPlan.selected[].context_id → Context.context_id
-InjectionPlan.warned[].context_id → Context.context_id
-InjectionPlan.excluded[].context_id → Context.context_id
-```
-
-## ID prefixes
-
-```text
-chr_ evt_ ctx_ art_ ver_ dec_ rde_ src_ br_ ip_
-```
-
-Graph exportのnode/edge IDは派生IDであり、JSONL上の一次IDではありません。

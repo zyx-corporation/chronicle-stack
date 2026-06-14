@@ -5,6 +5,7 @@ from enum import StrEnum
 
 from pydantic import BaseModel, Field
 
+from chronicle.models.classification import ClassificationMetadata
 from chronicle.models.source import SourceProvenance
 from chronicle.models.visibility import VisibilityHint
 
@@ -45,6 +46,7 @@ class Artifact(BaseModel):
     status: ArtifactStatus = ArtifactStatus.DRAFT
     path: str
     visibility_hint: VisibilityHint = VisibilityHint.UNKNOWN
+    classification: ClassificationMetadata | None = None
     source: SourceProvenance | None = None
     tags: list[str] = Field(default_factory=list)
 
