@@ -3,14 +3,71 @@
 ## v0.5.0 - Unreleased
 
 ### Added
-- Planning placeholder for the next Chronicle Stack development cycle.
+- Security-aware foundation layer for Chronicle context assets.
+- ADR series for v0.5 security architecture:
+  - ADR-0001: Treat Chronicle Records as Context Assets
+  - ADR-0002: CI as T-RDE Execution and Phase Gate
+  - ADR-0003: Encrypted Store Abstraction Boundary
+  - ADR-0004: Prompt Injection Sanitizer Boundary
+  - ADR-0005: Audit Log for Derived Operations
+  - ADR-0006: Lifecycle Model for Redact / Seal / Tombstone
+  - ADR-0007: Integrity Metadata Preparation
+  - ADR-0008: Doctor Security Checks
+  - ADR-0009: Security-aware Export Profiles
+  - ADR-0010: Controlled CSG-RAG / Sayane Integration Packages
+- `ClassificationMetadata` for Chronicle context assets.
+- Classification layers 0-4 and sensitivity labels.
+- Operation permission vocabulary for view / create / edit / append / summarize / reinterpret / redact / seal / export / inject / publish.
+- Model-context dry-run models and `ContextUseService`.
+- `chronicle-context check` auxiliary CLI.
+- Prompt-injection boundary helpers:
+  - `scan_text_for_prompt_injection(...)`
+  - `format_as_chronicle_data_block(...)`
+- Audit log surface:
+  - `.chronicle/audit.jsonl`
+  - `AuditEvent`
+  - `AuditLogStore`
+  - `AuditService`
+- Lifecycle log surface:
+  - `.chronicle/lifecycle.jsonl`
+  - `LifecycleEvent`
+  - `LifecycleStore`
+  - `LifecycleService`
+- Integrity metadata preparation helpers:
+  - `canonical_json_bytes(...)`
+  - `sha256_digest(...)`
+  - `build_integrity_metadata(...)`
+  - `verify_integrity_metadata(...)`
+- Doctor security-readiness checks.
+- Security-aware export profiles:
+  - `public-review`
+  - `internal-review`
+  - `local-analysis`
+  - `restricted-summary`
+- `chronicle-export profile` auxiliary CLI.
+- Encrypted store abstraction:
+  - `EncryptedStore`
+  - `EncryptionEnvelope`
+- Controlled integration package contract for future CSG-RAG / Sayane workflows.
+- `chronicle-package context` auxiliary CLI.
+- v0.5 release readiness and smoke test documentation.
 
 ### Changed
-- Development version bumped to `0.5.0.dev0` after the v0.4.0 release.
+- `chronicle doctor` now reports security-readiness warnings. A newly initialized Chronicle may report `warning` even when structurally valid.
+- Export manifest options now include an optional profile value when using security-aware export profiles.
+- README quickstart includes v0.5 auxiliary commands.
+- Development version remains `0.5.0.dev0` until final release/tag preparation.
 
 ### Notes
-- v0.5 scope is not finalized yet.
-- v0.4.0 remains the latest stable release.
+- `chronicle.jsonl` remains the primary record.
+- Classification metadata, operation permissions, doctor warnings, export profiles, and packages are advisory and do not provide access control.
+- Context-use checks are dry-runs and do not submit records to model services.
+- Prompt-injection scanning is lightweight and incomplete by design.
+- Audit and lifecycle logs are JSONL surfaces, not tamper-proof logs.
+- Integrity hashes are drift-detection helpers, not proof.
+- Encrypted store abstraction does not provide encryption by itself.
+- Controlled integration packages are transport contracts, not GraphRAG engines, model runtimes, or permission grants.
+- GraphRAG engine, vector DB, graph DB, external model API calls, real encryption backend, key management, authentication, authorization, tenant isolation, and lifecycle enforcement remain out of scope.
 
 ## v0.4.0 - 2026-06-14
 
