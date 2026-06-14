@@ -20,3 +20,4 @@ ADRs capture decisions that affect architecture, security boundaries, data contr
 - [ADR-0012: Audit Insertion Points for Derived Operations](0012-audit-insertion-points.md)
 - [ADR-0013: Lifecycle-aware Export Filtering](0013-lifecycle-aware-export.md)
 - [ADR-0014: Package Persistence Model](0014-package-persistence-model.md)
+- [ADR-0015: Python Code Splitting and Complexity Management Criteria](0015-python-code-complexity-management.md)
