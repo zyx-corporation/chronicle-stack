@@ -14,6 +14,7 @@ PREFIXES = {
     "injection_plan": "ip_",
     "source": "src_",
     "audit": "aud_",
+    "lifecycle": "lc_",
 }
 
 
