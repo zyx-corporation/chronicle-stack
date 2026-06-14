@@ -1,19 +1,13 @@
 """Tests for model-context use dry-run checks."""
 
-import json
 from datetime import datetime, timezone
 
-from typer.testing import CliRunner
-
-from chronicle.cli_context import context_app
 from chronicle.models.classification import AllowedOperation, ClassificationLayer, ClassificationMetadata, LlmPolicy, Sensitivity
 from chronicle.models.context import Context, ContextScope
 from chronicle.models.context_use import ContextUseSeverity, ContextUseTarget
 from chronicle.models.event import Actor, ChronicleEvent, EventType
 from chronicle.services.chronicle_service import ChronicleService
 from chronicle.services.context_use_service import ContextUseService
-
-runner = CliRunner()
 
 
 def _append_context(root, context: Context) -> None:
@@ -113,9 +107,22 @@ def test_context_use_external_warns_when_not_explicitly_allowed(tmp_path):
     assert any("External model-context use" in summary for summary in summaries)
 
 
-def test_chronicle_context_check_json_cli(tmp_path, monkeypatch):
-    monkeypatch.chdir(tmp_path)
+def test_context_use_can_filter_to_selected_context_ids(tmp_path):
     ChronicleService(tmp_path).init("Context Use")
+    _append_context(
+        tmp_path,
+        Context(
+            context_id="ctx_local",
+            title="Local OK",
+            scope=ContextScope.TASK,
+            created_at=datetime(2026, 6, 14, tzinfo=timezone.utc),
+            classification=ClassificationMetadata(
+                layer=ClassificationLayer.INTERNAL,
+                allowed_operations=[AllowedOperation.VIEW, AllowedOperation.INJECT],
+                llm_policy=LlmPolicy(local_allowed=True, external_allowed=False, masking_required=True),
+            ),
+        ),
+    )
     _append_context(
         tmp_path,
         Context(
@@ -126,10 +133,8 @@ def test_chronicle_context_check_json_cli(tmp_path, monkeypatch):
         ),
     )
 
-    result = runner.invoke(context_app, ["check", "--target", "external", "--purpose", "public summary", "--json"])
+    report = ContextUseService(tmp_path).check(target=ContextUseTarget.LOCAL, purpose="internal review", context_ids=["ctx_local"])
 
-    assert result.exit_code == 0
-    data = json.loads(result.stdout)
-    assert data["status"] == "warning"
-    assert data["target"] == "external"
-    assert data["context_count"] == 1
+    assert report.status == ContextUseSeverity.OK
+    assert report.context_count == 1
+    assert report.findings[0].context_id == "ctx_local"
