@@ -19,3 +19,4 @@ ADRs capture decisions that affect architecture, security boundaries, data contr
 - [ADR-0011: Observation E2E as Separate Surface Gate](0011-observation-e2e-surface-gate.md)
 - [ADR-0012: Audit Insertion Points for Derived Operations](0012-audit-insertion-points.md)
 - [ADR-0013: Lifecycle-aware Export Filtering](0013-lifecycle-aware-export.md)
+- [ADR-0014: Package Persistence Model](0014-package-persistence-model.md)
