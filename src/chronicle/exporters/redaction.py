@@ -1,11 +1,25 @@
 """Opt-in redaction helpers for derived exports."""
 
 from dataclasses import dataclass
+from enum import StrEnum
 from typing import Any
 
 from chronicle.models.visibility import VisibilityHint
 
 REDACTED = "[REDACTED:sensitive]"
+
+
+class ExportProfile(StrEnum):
+    """Security-aware export profiles.
+
+    Profiles are disclosure controls for derived exports. They are not access
+    control and do not mutate the primary Chronicle record.
+    """
+
+    PUBLIC_REVIEW = "public-review"
+    INTERNAL_REVIEW = "internal-review"
+    LOCAL_ANALYSIS = "local-analysis"
+    RESTRICTED_SUMMARY = "restricted-summary"
 
 
 @dataclass(frozen=True)
@@ -17,11 +31,23 @@ class RedactionOptions:
 
     redact_sensitive: bool = False
     exclude_sensitive: bool = False
+    profile: ExportProfile | None = None
 
-    def as_manifest_options(self) -> dict[str, bool]:
+    @classmethod
+    def from_profile(cls, profile: ExportProfile | None) -> "RedactionOptions":
+        if profile is None:
+            return cls()
+        if profile == ExportProfile.PUBLIC_REVIEW:
+            return cls(redact_sensitive=True, profile=profile)
+        if profile == ExportProfile.RESTRICTED_SUMMARY:
+            return cls(exclude_sensitive=True, profile=profile)
+        return cls(profile=profile)
+
+    def as_manifest_options(self) -> dict[str, bool | str | None]:
         return {
             "redact_sensitive": self.redact_sensitive,
             "exclude_sensitive": self.exclude_sensitive,
+            "profile": self.profile.value if self.profile else None,
         }
 
     @property
