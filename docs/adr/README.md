@@ -9,3 +9,4 @@ ADRs capture decisions that affect architecture, security boundaries, data contr
 - [ADR-0001: Treat Chronicle Records as Context Assets](0001-context-assets-security.md)
 - [ADR-0002: CI as T-RDE Execution and Phase Gate](0002-ci-as-trde-phase-gate.md)
 - [ADR-0003: Encrypted Store Abstraction Boundary](0003-encrypted-store-abstraction.md)
+- [ADR-0004: Prompt Injection Sanitizer Boundary](0004-prompt-injection-sanitizer-boundary.md)

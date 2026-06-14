@@ -157,6 +157,7 @@ chronicle show
 - [セキュリティ方針 v0.1](docs/security-policy-v0.1.md)
 - [Model Context Use Policy](docs/model-context-use-policy.md)
 - [Encrypted Store Contract](docs/encrypted-store-contract.md)
+- [Prompt Injection Sanitizer Boundary](docs/prompt-injection-sanitizer-boundary.md)
 - [ADR Index](docs/adr/README.md)
 
 契約・運用関連:
