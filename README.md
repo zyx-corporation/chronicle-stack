@@ -157,6 +157,7 @@ chronicle show
 - [セキュリティ方針 v0.1](docs/security-policy-v0.1.md)
 - [Audit Log Model](docs/audit-log-model.md)
 - [Lifecycle Model](docs/lifecycle-model.md)
+- [Integrity Metadata](docs/integrity-metadata.md)
 - [Model Context Use Policy](docs/model-context-use-policy.md)
 - [Encrypted Store Contract](docs/encrypted-store-contract.md)
 - [Prompt Injection Sanitizer Boundary](docs/prompt-injection-sanitizer-boundary.md)
