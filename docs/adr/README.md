@@ -15,3 +15,4 @@ ADRs capture decisions that affect architecture, security boundaries, data contr
 - [ADR-0007: Integrity Metadata Preparation](0007-integrity-metadata-preparation.md)
 - [ADR-0008: Doctor Security Checks](0008-doctor-security-checks.md)
 - [ADR-0009: Security-aware Export Profiles](0009-security-aware-export-profiles.md)
+- [ADR-0010: Controlled CSG-RAG / Sayane Integration Packages](0010-controlled-integration-packages.md)
