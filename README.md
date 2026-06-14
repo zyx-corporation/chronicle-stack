@@ -156,6 +156,7 @@ chronicle show
 - [v0.5 ロードマップ](docs/roadmap-v0.5.md)
 - [セキュリティ方針 v0.1](docs/security-policy-v0.1.md)
 - [Model Context Use Policy](docs/model-context-use-policy.md)
+- [Encrypted Store Contract](docs/encrypted-store-contract.md)
 - [ADR Index](docs/adr/README.md)
 
 契約・運用関連:
