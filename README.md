@@ -162,6 +162,7 @@ chronicle show
 - [v0.5 リリース判定](docs/release-readiness-v0.5.md)
 - [セキュリティ方針 v0.1](docs/security-policy-v0.1.md)
 - [Audit Log Model](docs/audit-log-model.md)
+- [Audit Insertion Points](docs/audit-insertion-points.md)
 - [Lifecycle Model](docs/lifecycle-model.md)
 - [Integrity Metadata](docs/integrity-metadata.md)
 - [Model Context Use Policy](docs/model-context-use-policy.md)
