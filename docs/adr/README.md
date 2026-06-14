@@ -12,3 +12,4 @@ ADRs capture decisions that affect architecture, security boundaries, data contr
 - [ADR-0004: Prompt Injection Sanitizer Boundary](0004-prompt-injection-sanitizer-boundary.md)
 - [ADR-0005: Audit Log for Derived Operations](0005-audit-log-for-derived-operations.md)
 - [ADR-0006: Lifecycle Model for Redact / Seal / Tombstone](0006-lifecycle-redact-seal-tombstone.md)
+- [ADR-0007: Integrity Metadata Preparation](0007-integrity-metadata-preparation.md)
