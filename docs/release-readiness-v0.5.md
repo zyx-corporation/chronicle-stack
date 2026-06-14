@@ -1,6 +1,6 @@
 # Chronicle Stack v0.5 Release Readiness
 
-Status: Ready for release candidate review  
+Status: Final release ready  
 Target: v0.5.0  
 Theme: Security-aware Foundation Layer
 
@@ -33,7 +33,7 @@ v0.5 does not claim complete security, access control, encryption guarantees, pr
 
 | Criterion | Status | Notes |
 |---|---|---|
-| Core CI pass | Ready | All implementation PRs merged after CI success |
+| Core CI pass | Ready | All implementation PRs merged after CI success; final release PR requires Core CI confirmation before merge |
 | Issue close records CI status | Ready | PR descriptions and merge commits record CI / warning classification |
 | ADR coverage | Ready | ADR-0001 through ADR-0010 cover core security decisions |
 | Classification metadata optional and backward-compatible | Ready | Existing records can omit classification |
@@ -312,4 +312,4 @@ Core CI is the primary phase gate. CI pass is not correctness certification or s
 
 ## Release Decision
 
-v0.5 is ready to proceed to smoke testing and final version/tag preparation once `docs/smoke-test-v0.5.md`, this readiness document, and the changelog update are merged with Core CI success.
+v0.5.0 is ready for final release PR review. Merge is appropriate once the final release PR records Core CI success and warning classification according to ADR-0002. After merge, create tag `v0.5.0` and publish GitHub Release notes derived from `CHANGELOG.md` and this readiness document.
