@@ -6,6 +6,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field, model_validator
 
+from chronicle.models.classification import ClassificationMetadata
 from chronicle.models.source import SourceProvenance
 from chronicle.models.visibility import VisibilityHint
 
@@ -59,6 +60,7 @@ class Context(BaseModel):
     scope: ContextScope = ContextScope.UNKNOWN
     scope_hint: ScopeHint | None = None
     visibility_hint: VisibilityHint = VisibilityHint.UNKNOWN
+    classification: ClassificationMetadata | None = None
     source: SourceProvenance | None = None
     confidence: Confidence = Confidence.MEDIUM
     created_at: datetime
