@@ -165,6 +165,7 @@ chronicle show
 - [Audit Insertion Points](docs/audit-insertion-points.md)
 - [Lifecycle Model](docs/lifecycle-model.md)
 - [Lifecycle-aware Export Filtering](docs/lifecycle-aware-export.md)
+- [Package Persistence Model](docs/package-persistence-model.md)
 - [Integrity Metadata](docs/integrity-metadata.md)
 - [Model Context Use Policy](docs/model-context-use-policy.md)
 - [Encrypted Store Contract](docs/encrypted-store-contract.md)
