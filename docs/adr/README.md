@@ -18,3 +18,4 @@ ADRs capture decisions that affect architecture, security boundaries, data contr
 - [ADR-0010: Controlled CSG-RAG / Sayane Integration Packages](0010-controlled-integration-packages.md)
 - [ADR-0011: Observation E2E as Separate Surface Gate](0011-observation-e2e-surface-gate.md)
 - [ADR-0012: Audit Insertion Points for Derived Operations](0012-audit-insertion-points.md)
+- [ADR-0013: Lifecycle-aware Export Filtering](0013-lifecycle-aware-export.md)
