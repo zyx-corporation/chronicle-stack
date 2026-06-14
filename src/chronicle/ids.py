@@ -15,6 +15,7 @@ PREFIXES = {
     "source": "src_",
     "audit": "aud_",
     "lifecycle": "lc_",
+    "package": "pkg_",
 }
 
 
