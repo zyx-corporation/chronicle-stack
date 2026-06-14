@@ -13,7 +13,7 @@ from chronicle.errors import ChronicleError
 from chronicle.exporters.html_exporter import HtmlDashboardExporter
 from chronicle.exporters.injection_plan_report import format_injection_plan
 from chronicle.exporters.markdown_exporter import MarkdownExporter
-from chronicle.exporters.redaction import RedactionOptions
+from chronicle.exporters.redaction import ExportProfile, RedactionOptions
 from chronicle.exporters.yaml_exporter import YamlExporter
 from chronicle.models.artifact import ArtifactType
 from chronicle.models.boundary import BoundaryConditionField, BoundaryOperator, BoundaryRuleType
@@ -512,18 +512,25 @@ def export_cmd(
     json_output: Annotated[bool, typer.Option("--json")] = False,
     redact_sensitive: Annotated[bool, typer.Option("--redact-sensitive")] = False,
     exclude_sensitive: Annotated[bool, typer.Option("--exclude-sensitive")] = False,
+    profile: Annotated[ExportProfile | None, typer.Option("--profile", help="Security-aware export profile.")] = None,
 ) -> None:
     """Export Chronicle to YAML, Markdown, Graph JSON, or HTML."""
     if redact_sensitive and exclude_sensitive:
         typer.echo("Use either --redact-sensitive or --exclude-sensitive, not both.", err=True)
         raise typer.Exit(code=1)
+    if profile is not None and (redact_sensitive or exclude_sensitive):
+        typer.echo("Use either --profile or explicit redaction options, not both.", err=True)
+        raise typer.Exit(code=1)
 
-    redaction = RedactionOptions(
+    redaction = RedactionOptions.from_profile(profile) if profile else RedactionOptions(
         redact_sensitive=redact_sensitive,
         exclude_sensitive=exclude_sensitive,
     )
     if redaction.enabled and format not in (ExportFormat.YAML, ExportFormat.HTML):
         typer.echo("Redaction-aware export currently supports yaml and html only.", err=True)
+        raise typer.Exit(code=1)
+    if profile is not None and format not in (ExportFormat.YAML, ExportFormat.HTML):
+        typer.echo("Security-aware export profiles currently support yaml and html only.", err=True)
         raise typer.Exit(code=1)
 
     try:
@@ -546,8 +553,9 @@ def export_cmd(
                 typer.echo(json.dumps({
                     "output": str(output),
                     "format": format.value,
-                    "redact_sensitive": redact_sensitive,
-                    "exclude_sensitive": exclude_sensitive,
+                    "redact_sensitive": redaction.redact_sensitive,
+                    "exclude_sensitive": redaction.exclude_sensitive,
+                    "profile": redaction.profile.value if redaction.profile else None,
                 }))
             else:
                 typer.echo(f"Exported to {output}")
@@ -600,83 +608,3 @@ def boundary_add_cmd(
             typer.echo(f"Boundary rule added: {rule.rule_id} ({rule.rule_type.value})")
     except ChronicleError as exc:
         _handle_error(exc, json_output)
-
-
-@boundary_app.command("list")
-def boundary_list_cmd(json_output: Annotated[bool, typer.Option("--json")] = False) -> None:
-    """List all Boundary Rules."""
-    try:
-        rules = BoundaryService().list_rules()
-        if json_output:
-            typer.echo(json.dumps([r.model_dump(mode="json") for r in rules], ensure_ascii=False, indent=2))
-        else:
-            if not rules:
-                typer.echo("No boundary rules found.")
-                return
-            for rule in rules:
-                val = rule.value if isinstance(rule.value, str) else ", ".join(rule.value)
-                typer.echo(
-                    f"{rule.rule_id}  {rule.rule_type.value}  "
-                    f"{rule.field.value} {rule.operator.value} {val}"
-                )
-    except ChronicleError as exc:
-        _handle_error(exc, json_output)
-
-
-@boundary_app.command("check")
-def boundary_check_cmd(
-    context: Annotated[str, typer.Option("--context", help="Context ID to evaluate.")],
-    json_output: Annotated[bool, typer.Option("--json")] = False,
-) -> None:
-    """Evaluate Boundary Rules against a Context."""
-    try:
-        chronicle = ChronicleService()
-        chronicle.require_initialized()
-        contexts = chronicle.index.load_contexts()
-        if context not in contexts:
-            typer.echo(f"Context not found: {context}", err=True)
-            raise typer.Exit(code=1)
-        results = BoundaryService().evaluate_context(contexts[context])
-        if json_output:
-            typer.echo(json.dumps([r.model_dump(mode="json") for r in results], ensure_ascii=False, indent=2))
-        else:
-            matched = [r for r in results if r.matched]
-            if not matched:
-                typer.echo("No boundary rules matched.")
-                return
-            for result in matched:
-                typer.echo(f"[{result.rule_type.value}] {result.rule_id}: {result.reason}")
-    except ChronicleError as exc:
-        _handle_error(exc, json_output)
-
-
-@injection_app.command("plan")
-def injection_plan_cmd(
-    task: Annotated[str, typer.Option("--task", help="Task description for context selection.")],
-    json_output: Annotated[bool, typer.Option("--json")] = False,
-    record: Annotated[
-        bool,
-        typer.Option("--record", help="Persist the plan to chronicle.jsonl."),
-    ] = False,
-) -> None:
-    """Generate a Context Injection Plan for a task."""
-    try:
-        service = InjectionPlanService()
-        plan = service.generate_plan(task)
-        event_id = None
-        if record:
-            event = service.record_plan(plan)
-            event_id = event.event_id
-        if json_output:
-            output = {"plan": plan.model_dump(mode="json"), "recorded": record, "event_id": event_id}
-            typer.echo(json.dumps(output, ensure_ascii=False, indent=2))
-        else:
-            typer.echo(format_injection_plan(plan))
-            if record:
-                typer.echo(f"\nRecorded as event: {event_id}")
-    except ChronicleError as exc:
-        _handle_error(exc, json_output)
-
-
-if __name__ == "__main__":
-    app()
