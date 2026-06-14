@@ -1,6 +1,6 @@
 # Changelog
 
-## v0.5.0 - Unreleased
+## v0.5.0 - 2026-06-14
 
 ### Added
 - Security-aware foundation layer for Chronicle context assets.
@@ -56,7 +56,7 @@
 - `chronicle doctor` now reports security-readiness warnings. A newly initialized Chronicle may report `warning` even when structurally valid.
 - Export manifest options now include an optional profile value when using security-aware export profiles.
 - README quickstart includes v0.5 auxiliary commands.
-- Development version remains `0.5.0.dev0` until final release/tag preparation.
+- Project version is finalized as `0.5.0` for release/tag preparation.
 
 ### Notes
 - `chronicle.jsonl` remains the primary record.
