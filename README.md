@@ -155,6 +155,7 @@ chronicle show
 - [v0.4 リリース判定](docs/release-readiness-v0.4.md)
 - [v0.5 ロードマップ](docs/roadmap-v0.5.md)
 - [セキュリティ方針 v0.1](docs/security-policy-v0.1.md)
+- [Audit Log Model](docs/audit-log-model.md)
 - [Model Context Use Policy](docs/model-context-use-policy.md)
 - [Encrypted Store Contract](docs/encrypted-store-contract.md)
 - [Prompt Injection Sanitizer Boundary](docs/prompt-injection-sanitizer-boundary.md)

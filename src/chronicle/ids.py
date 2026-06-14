@@ -13,6 +13,7 @@ PREFIXES = {
     "boundary_rule": "br_",
     "injection_plan": "ip_",
     "source": "src_",
+    "audit": "aud_",
 }
 
 
