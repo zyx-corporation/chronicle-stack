@@ -5,6 +5,7 @@ from pathlib import Path
 CHRONICLE_DIR = ".chronicle"
 EVENTS_FILE = "chronicle.jsonl"
 AUDIT_FILE = "audit.jsonl"
+LIFECYCLE_FILE = "lifecycle.jsonl"
 METADATA_FILE = "metadata.yaml"
 ARTIFACTS_DIR = "artifacts"
 INDEXES_DIR = "indexes"
@@ -17,6 +18,7 @@ class ChroniclePaths:
         self.chronicle_dir = self.root / CHRONICLE_DIR
         self.events_file = self.chronicle_dir / EVENTS_FILE
         self.audit_file = self.chronicle_dir / AUDIT_FILE
+        self.lifecycle_file = self.chronicle_dir / LIFECYCLE_FILE
         self.metadata_file = self.chronicle_dir / METADATA_FILE
         self.artifacts_dir = self.chronicle_dir / ARTIFACTS_DIR
         self.indexes_dir = self.chronicle_dir / INDEXES_DIR
