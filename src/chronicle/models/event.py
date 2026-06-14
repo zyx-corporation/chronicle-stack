@@ -6,6 +6,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
+from chronicle.models.classification import ClassificationMetadata
 from chronicle.models.source import SourceProvenance
 
 
@@ -66,6 +67,7 @@ class ChronicleEvent(BaseModel):
     decision_id: str | None = None
     rde_record_id: str | None = None
     source: SourceProvenance | None = None
+    classification: ClassificationMetadata | None = None
     confidence: Confidence | None = None
     review_status: ReviewStatus | None = None
     tags: list[str] = Field(default_factory=list)
