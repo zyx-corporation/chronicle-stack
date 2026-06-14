@@ -16,3 +16,4 @@ ADRs capture decisions that affect architecture, security boundaries, data contr
 - [ADR-0008: Doctor Security Checks](0008-doctor-security-checks.md)
 - [ADR-0009: Security-aware Export Profiles](0009-security-aware-export-profiles.md)
 - [ADR-0010: Controlled CSG-RAG / Sayane Integration Packages](0010-controlled-integration-packages.md)
+- [ADR-0011: Observation E2E as Separate Surface Gate](0011-observation-e2e-surface-gate.md)
