@@ -1,413 +1,384 @@
-# ADR-0015: Python Code Splitting and Complexity Management Criteria
+# ADR-0015: Pythonコード巨大化を防ぐための分割・複雑度管理基準
 
-Status: Proposed  
-Date: 2026-06-15  
-Scope: Chronicle Stack Python implementation and future Python-adjacent tooling  
-Related: ADR-0001, ADR-0002, ADR-0011, ADR-0012
+## Status
+
+Proposed
+
+## Date
+
+2026-06-15
 
 ## Context
 
-Python is easy to start writing and is excellent for early development speed. As a codebase grows, however, multiple responsibilities can accumulate inside a single file, function, or class.
+Pythonは記述開始が容易であり、初期開発速度に優れる一方、コードベースが成長すると、単一ファイル・単一関数・単一クラスに複数の責務が混在しやすい。
 
-This risk is especially high when files with broad names become central dumping grounds.
+特に以下のような状態になると、変更影響の把握、テスト、レビュー、リファクタリングが困難になる。
 
-Examples:
+- `main.py`, `app.py`, `service.py`, `manager.py`, `utils.py` が肥大化する
+- CLI処理、設定読み込み、DB接続、外部API呼び出し、業務ロジック、ログ、例外処理が同一モジュールに混在する
+- `dict` ベースの曖昧なデータ構造が複数箇所に広がる
+- 副作用を持つ処理と純粋な業務判断が分離されていない
+- テストのために大量の mock や fixture が必要になる
+- 変更理由が異なる処理が同じファイル・関数・クラスに閉じ込められている
 
-```text
-main.py
-app.py
-service.py
-manager.py
-utils.py
-```
+この状態は単なる可読性低下ではなく、変更によって生じる意味変化、すなわち ΔM の観測不能化を招く。
 
-The following conditions make change impact, testing, review, and refactoring difficult:
-
-- CLI handling, configuration loading, database connection, external API calls, domain logic, logging, and exception handling coexist in the same module.
-- Ambiguous `dict`-based data structures spread across multiple modules.
-- Side-effecting operations and pure business decisions are not separated.
-- Tests require excessive mocks or large fixtures.
-- Code that changes for different reasons is locked into the same file, function, or class.
-- A function or class becomes the only place where the whole system can be understood.
-
-This is not merely a readability problem.
-
-For Chronicle Stack, such growth can hide semantic change and make ΔM difficult to observe. If responsibilities are fused, a small edit can simultaneously change interface behavior, domain meaning, persistence behavior, audit semantics, and export behavior. That makes review and T-RDE interpretation unreliable.
-
-Therefore this project needs explicit criteria for Python code splitting, dependency direction, complexity, and testability.
+したがって、本プロジェクトでは Python コードの巨大化を防ぐため、責務分離、依存方向、複雑度、テスト容易性に関する基準を定める。
 
 ## Decision
 
-Python code must be split and managed by responsibility, dependency direction, and testability rather than by line count alone.
+Pythonコードの分割・整理は、単純な行数ではなく、以下の基準に基づいて判断する。
 
-Line count is a useful smell, but it is not the primary rule. The primary rule is whether the code still has one coherent reason to change.
+### 1. 変更理由による分割を最優先する
 
-## 1. Split by reason for change
+同じ理由で変更されるものは近くに置き、異なる理由で変更されるものは分離する。
 
-Code that changes for the same reason may stay close.
+以下は原則として別責務とみなす。
 
-Code that changes for different reasons should be separated.
+- 設定読み込み
+- CLI / Web API などの入力インターフェース
+- 業務ロジック
+- ユースケース制御
+- DB / ファイル / 外部API などの I/O
+- ログ設定
+- 例外定義
+- データ構造定義
+- テスト用補助処理
 
-The following are separate responsibilities by default:
+### 2. I/O と業務ロジックを分離する
 
-- configuration loading
-- CLI / Web API / external input interface
-- domain logic
-- use-case orchestration
-- database / file / external API I/O
-- logging setup
-- exception definitions
-- data structure definitions
-- test helpers
-- export / serialization formatting
-- audit / lifecycle / integrity side surfaces
-
-A module may coordinate multiple responsibilities only if it does not own their internal decisions.
-
-For example, a CLI module may parse options and call a service, but it should not also contain domain policy, persistence details, and output serialization rules.
-
-## 2. Separate I/O from domain logic
-
-Domain logic must not directly mix with volatile side effects unless there is a small and explicit reason.
-
-Avoid direct use of the following inside domain logic:
+業務ロジック内に以下を直接混在させない。
 
 - `requests`
-- `sqlite3`, SQLAlchemy sessions, or DB connections
-- `boto3` or cloud SDK clients
+- `sqlite3`, SQLAlchemy などのDB接続
+- `boto3` などのクラウドSDK
 - `os.environ`
-- `pathlib` / file I/O
+- `pathlib` / ファイルI/O
 - `print`
-- current-time acquisition
-- random number generation
-- process execution
-- network calls
+- 現在時刻取得
+- 乱数生成
 
-Side-effecting operations should live near the outer adapter / infrastructure layer.
+副作用を持つ処理は外側の adapter / infrastructure 層に置き、中心部には純粋関数または副作用の少ない domain logic を置く。
 
-The center should contain pure functions or low-side-effect domain services.
+### 3. import 方向を固定する
 
-Preferred shape:
-
-```text
-outer adapters
-  parse input, read files, call network, write output
-
-usecases / services
-  coordinate workflow and policy
-
-domain
-  make business decisions with explicit inputs
-```
-
-Current time, random values, and environment-derived configuration should be passed in or provided through small injectable boundaries when they affect test outcomes.
-
-## 3. Fix import direction
-
-The default dependency direction is:
+基本的な依存方向は以下とする。
 
 ```text
 interfaces / cli / api
   ↓
-usecases / services
+usecases
   ↓
 domain
-  ↓
-models / value objects
 ```
 
-Infrastructure may be used through narrow boundaries:
+外部接続は adapter として外側に置く。
 
 ```text
-interfaces / cli / api
-  ↓
-usecases / services
-  ↓
-ports / protocols
-  ↑
-infrastructure adapters
+adapters / infrastructure
+  → domain の型・インターフェースに合わせる
+
+domain
+  → adapters / infrastructure を知らない
 ```
 
-The domain layer must not import CLI modules.
+domain 層が DB、HTTP、ファイルシステム、クラウドSDKに依存し始めた場合は設計劣化とみなす。
 
-The domain layer must not import concrete infrastructure modules such as database clients, cloud SDKs, external API clients, or process-level CLI utilities.
+### 4. テスト容易性を分割基準にする
 
-A lower layer should not know which upper layer called it.
+以下の状態になった場合、その関数・クラス・モジュールは責務過多の可能性が高い。
 
-When this rule is inconvenient, define an explicit port / protocol or move the orchestration upward.
+- 単体テストのためにネットワーク接続が必要
+- 単体テストのためにDBが必要
+- 現在時刻や環境変数に強く依存する
+- mock が多すぎる
+- fixture が巨大化する
+- 1つの変更に対して広範囲のテストが壊れる
 
-## 4. Avoid ambiguous `utils.py` growth
-
-A generic `utils.py` file is allowed only for tiny, stable, project-wide helpers.
-
-If a helper starts to represent a domain concept, it must move to a named module.
-
-Prefer specific names:
+目標は以下のテスト構造とする。
 
 ```text
-integrity.py
-redaction.py
-prompt_injection.py
-export_manifest_service.py
-audit_log_store.py
-lifecycle_service.py
+unit test:
+  純粋関数・domain logic を入力値と出力値で確認する
+
+usecase test:
+  repository / gateway を fake に差し替えて確認する
+
+integration test:
+  実DB・実APIに近い構成で確認する
 ```
 
-Avoid vague names:
+### 5. 型とデータ構造を明示する
+
+同じ dict 構造を3箇所以上で参照する場合、以下のいずれかを検討する。
+
+- dataclass
+- TypedDict
+- Pydantic model
+- domain model class
+
+外部入力の検証が必要な場合は Pydantic を優先する。
+
+内部の不変データ構造には `dataclass(frozen=True)` を優先する。
+
+### 6. クラス化は状態と依存を持つ場合に限定する
+
+以下の場合はクラス化を検討する。
+
+- 状態を持つ
+- 複数メソッドで同じ依存を共有する
+- repository / gateway / service などを差し替えたい
+- ライフサイクル管理が必要
+- 抽象インターフェースを実装したい
+
+単なる関数の集合にはクラスを使わない。
+
+避けるべき例:
+
+```python
+class TextUtils:
+    def normalize(self, text: str) -> str:
+        return text.strip()
+```
+
+この場合は通常の関数でよい。
+
+### 7. 複雑度の警戒値を定める
+
+以下を警戒値とする。
+
+- 1ファイル: 300〜500行を超えたら分割検討
+- 1関数: 30〜50行を超えたら分割検討
+- 1クラス: 200行を超えたら分割検討
+- 関数引数: 5個を超えたら dataclass / command object を検討
+- ネスト: 3段を超えたら早期 return / 関数分割を検討
+- Cyclomatic Complexity: 10超で注意、20超で原則リファクタ対象
+
+これらは絶対的禁止値ではなく、設計確認を促す警報値とする。
+
+### 8. 神ファイルを禁止する
+
+以下の名前のモジュールが肥大化した場合、責務が曖昧になっている可能性が高いため、具体的な名前へ分割する。
+
+- `utils.py`
+- `common.py`
+- `helper.py`
+- `service.py`
+- `manager.py`
+- `main.py`
+- `app.py`
+
+例:
 
 ```text
 utils.py
-helpers.py
-common.py
-manager.py
-processor.py
-misc.py
+  ↓
+text_normalizer.py
+date_range.py
+retry_policy.py
+json_codec.py
 ```
 
-A utility module should be split when:
+### 9. 推奨プロジェクト構成
 
-- it has more than one conceptual theme
-- tests need unrelated fixtures
-- it imports high-level project modules
-- new helpers are added simply because the file already exists
-- naming the helper requires explaining its hidden domain context
-
-## 5. Prefer explicit data structures
-
-Do not allow large `dict` payloads to become implicit domain models.
-
-Use explicit structures when data crosses module boundaries or appears in more than one place:
-
-- dataclasses
-- Pydantic models
-- typed dictionaries for simple transitional structures
-- enums for bounded vocabularies
-- value objects for identifiers, classifications, policies, and decisions where appropriate
-
-A raw `dict` is acceptable for:
-
-- direct serialization output
-- short local transformations
-- tests with intentionally minimal payloads
-- metadata maps whose keys are genuinely open-ended
-
-A raw `dict` is a smell when:
-
-- the same keys are repeated across multiple modules
-- tests rely on stringly typed keys
-- validation is duplicated
-- missing keys cause late failures
-- reviewers must infer the schema from scattered usage
-
-## 6. Complexity thresholds and refactoring triggers
-
-These are not hard legal limits, but crossing them requires deliberate review.
-
-### Function triggers
-
-Consider splitting or refactoring a function when:
-
-- it exceeds about 40-60 lines
-- it has more than 3 levels of nesting
-- it has more than 4 meaningful branches
-- it mixes validation, business decision, I/O, and formatting
-- its tests require several unrelated setup steps
-- it cannot be named without using `and`
-
-### Class triggers
-
-Consider splitting or refactoring a class when:
-
-- it has more than one reason to change
-- it coordinates workflow and owns persistence details
-- it has unrelated public methods
-- it requires many optional constructor arguments
-- tests need heavy mocking to isolate one method
-- it becomes a hidden service locator
-
-### Module triggers
-
-Consider splitting or refactoring a module when:
-
-- it exceeds about 300-500 lines and continues to grow
-- it has multiple conceptual sections separated by comments
-- it imports both high-level interface modules and low-level infrastructure modules
-- it has unrelated tests in the same test file
-- a small change frequently causes broad review uncertainty
-
-### Test triggers
-
-Consider refactoring production code when:
-
-- testing a small decision requires constructing the whole application
-- tests rely on many mocks for ordinary behavior
-- fixtures become larger than the behavior under test
-- test names describe setup more than behavior
-- snapshot tests hide meaningful semantic change
-
-## 7. Keep orchestration thin
-
-Use-case or service code may orchestrate several collaborators, but it should avoid owning too much policy.
-
-A use case may:
-
-- validate inputs
-- call domain policy
-- call repositories or stores through explicit boundaries
-- coordinate audit / lifecycle / export surfaces
-- return a typed result
-
-A use case should not also:
-
-- parse CLI arguments
-- format terminal output
-- embed raw SQL or low-level file details
-- construct large untyped payloads
-- make hidden external calls
-
-## 8. Keep CLI and API layers thin
-
-CLI and API modules are interface adapters.
-
-They may:
-
-- parse user input
-- call services
-- translate service results into user-facing output
-- map exceptions to exit codes or API responses
-
-They should not:
-
-- contain domain policy
-- directly perform persistence logic
-- construct complex package/export/audit semantics
-- call external models or network services without service-level boundaries
-
-When CLI code begins to require extensive tests for business meaning, that meaning should move into a service or domain function.
-
-## 9. Make side effects visible
-
-Functions or services that perform side effects should make them obvious in naming, return values, or boundaries.
-
-Examples:
+一定以上の規模になることが予想される場合、以下のような `src/` レイアウトを採用する。
 
 ```text
-record_export_audit(...)
-write_package(...)
-load_contexts(...)
-build_export_manifest(...)
+project/
+  pyproject.toml
+  README.md
+  src/
+    myapp/
+      __init__.py
+      config.py
+      domain/
+        __init__.py
+        models.py
+        rules.py
+        errors.py
+      usecases/
+        __init__.py
+        register_user.py
+      adapters/
+        __init__.py
+        repository_sqlite.py
+        external_api.py
+      interfaces/
+        __init__.py
+        cli.py
+        web.py
+      logging_config.py
+  tests/
+    unit/
+    usecase/
+    integration/
 ```
 
-Avoid hiding side effects behind names such as:
+小規模スクリプトではこの構成を強制しない。ただし、以下の条件を満たした場合はレイヤー分割を開始する。
+
+- CLI以外の入口が増えた
+- Web API 化する可能性が出た
+- 保存先を変更する可能性が出た
+- 外部APIが2種類以上になった
+- テストが書きにくくなった
+- `utils.py` が増え始めた
+- 同じ処理をコピーし始めた
+
+### 10. CIで複雑度を監視する
+
+以下のツールの利用を推奨する。
 
 ```text
-prepare(...)
-process(...)
-handle(...)
-run(...)
+ruff      # lint / format
+mypy      # 型検査
+pyright   # 型検査の代替または補完
+pytest    # テスト
+radon     # cyclomatic complexity
+vulture   # 未使用コード検出
+deptry    # 依存関係チェック
 ```
 
-unless the surrounding layer clearly defines the side-effect boundary.
+CIでは最低限、以下を確認する。
 
-## 10. Treat warnings and audit as first-class surfaces
-
-For Chronicle Stack, audit, lifecycle, integrity, export, and Observation E2E surfaces are not incidental.
-
-When code touches these surfaces, it should be structured so reviewers can see:
-
-- what primary data is preserved
-- what derived surface is written
-- what warnings are surfaced
-- what is advisory rather than enforced
-- what is not proof, certification, or consent
-
-This is especially important for code that writes:
-
-```text
-.chronicle/audit.jsonl
-.chronicle/lifecycle.jsonl
-.chronicle/packages/*
-export manifests
-```
-
-## 11. Review checklist
-
-When reviewing Python changes, ask:
-
-```text
-Does this code have one reason to change?
-Are side effects separated from domain decisions?
-Is the import direction preserved?
-Are data structures explicit enough?
-Can the core behavior be tested without heavy mocks?
-Are warnings and boundary claims visible?
-Could a future reader reconstruct the semantic change?
-```
-
-If the answer is no, split the code or record a follow-up issue with warning classification.
+- lint が通ること
+- format が揃っていること
+- unit test が通ること
+- 型検査が通ること
+- 複雑度が警戒値を超えていないこと
 
 ## Consequences
 
 ### Positive
 
-- Changes become easier to review.
-- Tests become smaller and more meaningful.
-- Domain policy is less likely to be hidden inside interface code.
-- ΔM becomes easier to observe because semantic changes are localized.
-- Audit, lifecycle, export, and package behavior remain easier to reason about.
+この基準により、以下が期待できる。
 
-### Negative / Cost
+- 変更影響範囲を限定しやすくなる
+- テストが書きやすくなる
+- domain logic が副作用から守られる
+- レビュー時に責務混在を発見しやすくなる
+- `utils.py` や `service.py` の肥大化を防ぎやすくなる
+- 将来的な CLI / Web API / batch / worker 化に対応しやすくなる
+- 変更による意味変化 ΔM をテストで観測しやすくなる
 
-- More modules may be created earlier than in small scripts.
-- Some changes require naming boundaries before implementation feels strictly necessary.
-- Over-splitting can create indirection if not guided by responsibility.
-- Review may reject otherwise working code when responsibility boundaries are unclear.
+### Negative
 
-## Non-goals
+一方で、以下のコストが発生する。
 
-This ADR does not require:
+- 初期実装時のファイル数が増える
+- 小規模コードでは分割が過剰に見える場合がある
+- レイヤー設計を理解していない開発者には学習コストがある
+- 過度に抽象化すると、逆に追跡しにくくなる
+- 型定義や interface 定義が増えることで、短期的な開発速度が落ちる場合がある
 
-- strict line-count enforcement
-- microservice-style fragmentation
-- over-engineered abstractions
-- dependency injection frameworks
-- complete domain-driven design formalism
-- banning small scripts or simple local helpers
+## Alternatives Considered
 
-This ADR also does not replace tests, type checking, or CI.
+### Alternative 1: 単一スクリプト中心で運用する
+
+小規模・短命なスクリプトでは有効である。
+
+しかし、長期保守、テスト、自動化、複数入口、外部連携が発生すると急速に破綻しやすい。
+
+本プロジェクトでは、短命な実験コードを除き、採用しない。
+
+### Alternative 2: 最初から厳密な Clean Architecture を採用する
+
+依存方向と責務分離は明確になる。
+
+しかし、Pythonプロジェクトでは過剰設計になりやすく、初期開発速度を損なう可能性がある。
+
+本プロジェクトでは、Clean Architecture の考え方を参考にしつつ、軽量なレイヤー分割に留める。
+
+### Alternative 3: 行数だけで分割判断する
+
+単純で運用しやすい。
+
+しかし、行数が少なくても複雑な関数は存在し、逆に行数が多くても単純なデータ定義ファイルは問題にならない。
+
+したがって、行数は警戒値として扱い、最終判断は変更理由・依存方向・テスト容易性・複雑度で行う。
 
 ## RDE Review
 
-### Preserved
+### 保存された要素
 
-- Python remains the primary implementation language for Chronicle Stack.
-- Fast iteration remains important.
-- Simple functions and modules remain acceptable when their responsibility is clear.
+- Pythonの開発速度を損なわない
+- 初期段階での過剰設計を避ける
+- テスト容易性を重視する
+- 副作用を外側へ寄せる
+- 変更理由によって分割する
+- 意味変化 ΔM を追跡可能にする
 
-### Transformed
+### 変換された要素
 
-- Code organization becomes part of Chronicle Stack governance rather than personal style.
-- Large-code smells are interpreted as risks to semantic observability, not only readability.
+元の「巨大化防止」という実装上の問題を、ADRでは以下の設計判断へ変換した。
 
-### Added
+```text
+コード量の問題
+↓
+責務境界の問題
+↓
+依存方向の問題
+↓
+テスト可能性の問題
+↓
+意味変化 ΔM の観測可能性の問題
+```
 
-- Responsibility-based splitting criteria.
-- I/O and domain separation rule.
-- Import direction guidance.
-- Complexity and refactoring triggers.
-- Review checklist connected to ΔM observability.
+### 補完された要素
 
-### Unresolved
+ADRとして運用可能にするため、以下を補完した。
 
-- Whether CI should enforce specific complexity metrics later.
-- Whether `ruff`, `radon`, or similar tools should become advisory checks.
-- Exact package layout for future v0.6+ implementation surfaces.
-- How strictly this ADR should apply to one-off migration scripts.
+- Status
+- Context
+- Decision
+- Consequences
+- Alternatives Considered
+- CIでの監視基準
+- 推奨ディレクトリ構成
+- 警戒メトリクス
+- RDE Review
 
-### Deviation Risks
+### 未解決の要素
 
-- Treating line count as the only complexity signal.
-- Over-splitting code into meaningless abstractions.
-- Creating generic managers and utilities that hide domain meaning.
-- Letting adapter code accumulate policy decisions.
-- Hiding semantic changes behind mocks, fixtures, or broad snapshot tests.
+以下はプロジェクトごとに調整が必要である。
+
+- 実際の複雑度閾値
+- mypy と pyright のどちらを正式採用するか
+- Pydantic v2 を標準採用するか
+- repository / gateway interface を Protocol で書くか abstract base class で書くか
+- 小規模スクリプトにどこまで適用するか
+
+### 逸脱リスク
+
+このADRの主な逸脱リスクは以下である。
+
+- 分割そのものが目的化する
+- ファイル数だけが増え、意味境界が明確にならない
+- Clean Architecture 風の過剰抽象化に陥る
+- 小さなスクリプトにも同じ基準を強制する
+- 型定義が形式的になり、実際の不変条件を表現しない
+- テスト容易性ではなく、単なる見た目の整理に留まる
+
+## 次回更新方針
+
+実プロジェクトで以下を観測し、ADRを更新する。
+
+- 複雑度警戒値が現実的か
+- 分割基準がレビューで使いやすいか
+- CIで検出できる項目と、人間レビューが必要な項目の境界
+- domain, usecases, adapters, interfaces の粒度が適切か
+- RDE / TDD / CI の連携方法
+- 実際に巨大化したファイルのリファクタ事例
+
+## Final Rule
+
+Pythonコードの巨大化は、行数ではなく意味境界の崩壊として扱う。
+
+したがって、本プロジェクトでは以下を基本原則とする。
+
+```text
+変更理由が違うものは分ける。
+副作用は外側へ寄せる。
+domain は外部依存を知らない。
+テストしにくいコードは責務過多とみなす。
+意味変化 ΔM をテストで観測可能にする。
+```
