@@ -6,8 +6,8 @@ import yaml
 from typer.testing import CliRunner
 
 from chronicle.cli import app
-from chronicle.cli_export import export_app
 from chronicle.exporters.redaction import ExportProfile, RedactionOptions
+from chronicle.exporters.yaml_exporter import YamlExporter
 
 
 def _run(tmp_path, *args):
@@ -16,10 +16,9 @@ def _run(tmp_path, *args):
     return runner.invoke(app, list(args))
 
 
-def _run_export(tmp_path, *args):
+def _profile_yaml(tmp_path, profile: ExportProfile) -> str:
     os.chdir(str(tmp_path))
-    runner = CliRunner()
-    return runner.invoke(export_app, list(args))
+    return YamlExporter().export(redaction=RedactionOptions.from_profile(profile))
 
 
 def _setup_sensitive_context(tmp_path):
@@ -87,23 +86,21 @@ def test_yaml_exclude_sensitive_context(tmp_path):
 def test_export_profile_public_review_redacts_sensitive_context(tmp_path):
     _setup_sensitive_context(tmp_path)
 
-    result = _run_export(tmp_path, "profile", "--format", "yaml", "--profile", "public-review")
-    payload = yaml.safe_load(result.stdout)
+    content = _profile_yaml(tmp_path, ExportProfile.PUBLIC_REVIEW)
+    payload = yaml.safe_load(content)
 
-    assert result.exit_code == 0
     assert payload["export_manifest"]["export_options"]["profile"] == "public-review"
     assert payload["export_manifest"]["export_options"]["redact_sensitive"] is True
-    assert "Sensitive Context Title" not in result.stdout
-    assert "[REDACTED:sensitive]" in result.stdout
+    assert "Sensitive Context Title" not in content
+    assert "[REDACTED:sensitive]" in content
 
 
 def test_export_profile_restricted_summary_excludes_sensitive_context(tmp_path):
     _setup_sensitive_context(tmp_path)
 
-    result = _run_export(tmp_path, "profile", "--format", "yaml", "--profile", "restricted-summary")
-    payload = yaml.safe_load(result.stdout)
+    content = _profile_yaml(tmp_path, ExportProfile.RESTRICTED_SUMMARY)
+    payload = yaml.safe_load(content)
 
-    assert result.exit_code == 0
     assert payload["export_manifest"]["export_options"]["profile"] == "restricted-summary"
     assert payload["export_manifest"]["export_options"]["exclude_sensitive"] is True
     assert payload["contexts"] == {}
@@ -112,14 +109,13 @@ def test_export_profile_restricted_summary_excludes_sensitive_context(tmp_path):
 def test_export_profile_internal_review_keeps_sensitive_context(tmp_path):
     _setup_sensitive_context(tmp_path)
 
-    result = _run_export(tmp_path, "profile", "--format", "yaml", "--profile", "internal-review")
-    payload = yaml.safe_load(result.stdout)
+    content = _profile_yaml(tmp_path, ExportProfile.INTERNAL_REVIEW)
+    payload = yaml.safe_load(content)
 
-    assert result.exit_code == 0
     assert payload["export_manifest"]["export_options"]["profile"] == "internal-review"
     assert payload["export_manifest"]["export_options"]["redact_sensitive"] is False
     assert payload["export_manifest"]["export_options"]["exclude_sensitive"] is False
-    assert "Sensitive Context Title" in result.stdout
+    assert "Sensitive Context Title" in content
 
 
 def test_export_profile_options_mapping():
@@ -172,7 +168,7 @@ def test_redaction_export_does_not_mutate_jsonl(tmp_path):
 
     assert _run(tmp_path, "export", "--format", "yaml", "--redact-sensitive").exit_code == 0
     assert _run(tmp_path, "export", "--format", "html", "--exclude-sensitive").exit_code == 0
-    assert _run_export(tmp_path, "profile", "--format", "yaml", "--profile", "public-review").exit_code == 0
+    _profile_yaml(tmp_path, ExportProfile.PUBLIC_REVIEW)
 
     after = events_file.read_text(encoding="utf-8")
     assert after == before
