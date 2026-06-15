@@ -32,10 +32,26 @@ class IntegrationPackageStore:
         )
         return package_dir
 
-    def load(self, package_id: str) -> IntegrationPackage:
+    def list_package_ids(self) -> list[str]:
+        """Return persisted package IDs that have a manifest file."""
+        if not self.paths.packages_dir.exists():
+            return []
+        return sorted(
+            package_dir.name
+            for package_dir in self.paths.packages_dir.iterdir()
+            if package_dir.is_dir() and (package_dir / "manifest.json").exists()
+        )
+
+    def load_manifest(self, package_id: str) -> IntegrationPackageManifest:
         manifest_raw = json.loads(self.paths.package_manifest_path(package_id).read_text(encoding="utf-8"))
+        return IntegrationPackageManifest.model_validate(manifest_raw)
+
+    def load_records(self, package_id: str) -> list[IntegrationPackageRecord]:
         records_raw = json.loads(self.paths.package_records_path(package_id).read_text(encoding="utf-8"))
+        return [IntegrationPackageRecord.model_validate(record) for record in records_raw]
+
+    def load(self, package_id: str) -> IntegrationPackage:
         return IntegrationPackage(
-            manifest=IntegrationPackageManifest.model_validate(manifest_raw),
-            records=[IntegrationPackageRecord.model_validate(record) for record in records_raw],
+            manifest=self.load_manifest(package_id),
+            records=self.load_records(package_id),
         )
