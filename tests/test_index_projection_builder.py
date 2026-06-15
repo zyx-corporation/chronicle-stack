@@ -6,6 +6,10 @@ from chronicle.models.event import Actor, ChronicleEvent, EventType
 from chronicle.services.index_projection_builder import IndexProjectionBuilder
 
 
+def _timestamp() -> str:
+    return "2026-06-15T00:00:00+00:00"
+
+
 def _event(event_type: EventType, payload: dict) -> ChronicleEvent:
     return ChronicleEvent(
         event_id="evt_test",
@@ -25,13 +29,13 @@ def test_index_projection_builder_projects_contexts_and_decisions():
             {
                 "context": {
                     "context_id": "ctx_1",
-                    "chronicle_id": "chr_test",
                     "title": "Context",
                     "summary": "Summary",
                     "source_type": "conversation",
                     "source_ref": "",
                     "scope": "project",
                     "visibility_hint": "unknown",
+                    "created_at": _timestamp(),
                 }
             },
         ),
@@ -41,7 +45,9 @@ def test_index_projection_builder_projects_contexts_and_decisions():
                 "decision": {
                     "decision_id": "dec_1",
                     "chronicle_id": "chr_test",
-                    "decision_type": "adopted",
+                    "decision_type": "accepted",
+                    "decided_by": "user",
+                    "decided_at": _timestamp(),
                     "reason": "Use explicit projection builder",
                     "artifact_id": None,
                     "alternatives": [],
@@ -66,16 +72,21 @@ def test_index_projection_builder_links_rde_record_to_target_version():
             "title": "Artifact",
             "artifact_type": "document",
             "current_version_id": "ver_2",
+            "created_at": _timestamp(),
+            "updated_at": _timestamp(),
+            "status": "draft",
+            "path": ".chronicle/artifacts/art_1/current.md",
             "visibility_hint": "unknown",
             "tags": [],
         },
         "version": {
             "version_id": "ver_2",
             "artifact_id": "art_1",
-            "chronicle_id": "chr_test",
-            "created_at": "2026-06-15T00:00:00+00:00",
+            "created_at": _timestamp(),
+            "created_by": "user",
+            "source_event_id": "evt_version",
+            "parent_version_id": "ver_1",
             "path": ".chronicle/artifacts/art_1/current.md",
-            "content_hash": "hash_2",
             "change_summary": "updated",
             "rde_record_id": None,
         },
@@ -83,10 +94,11 @@ def test_index_projection_builder_links_rde_record_to_target_version():
     rde_payload = {
         "rde": {
             "rde_record_id": "rde_1",
-            "chronicle_id": "chr_test",
             "artifact_id": "art_1",
             "from_version_id": "ver_1",
             "to_version_id": "ver_2",
+            "created_at": _timestamp(),
+            "created_by": "user",
             "summary": "Meaning changed",
             "preserved": [],
             "transformed": [],
@@ -94,7 +106,6 @@ def test_index_projection_builder_links_rde_record_to_target_version():
             "unresolved": [],
             "deviation_risks": [],
             "next_update_policy": [],
-            "event_id": "evt_rde",
         }
     }
 
