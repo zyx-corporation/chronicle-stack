@@ -3,6 +3,7 @@
 from pathlib import Path
 
 from chronicle.lifecycle.derived_output_policy import LifecycleTargetState, lifecycle_state_by_target
+from chronicle.models.event import ChronicleEvent
 from chronicle.services.chronicle_service import ChronicleService
 from chronicle.services.lifecycle_service import LifecycleService
 
@@ -11,6 +12,22 @@ def _lifecycle_marker(state: LifecycleTargetState | None) -> str:
     if state is not None and state.is_sealed:
         return " [lifecycle: sealed]"
     return ""
+
+
+def _event_target_ids(event: ChronicleEvent) -> set[str]:
+    target_ids: set[str] = set()
+    for key in ("context", "artifact", "decision", "boundary_rule"):
+        value = event.payload.get(key)
+        if isinstance(value, dict):
+            for id_key in ("context_id", "artifact_id", "decision_id", "rule_id"):
+                record_id = value.get(id_key)
+                if isinstance(record_id, str):
+                    target_ids.add(record_id)
+    for id_key in ("context_id", "artifact_id", "decision_id", "rule_id", "target_id"):
+        record_id = event.payload.get(id_key)
+        if isinstance(record_id, str):
+            target_ids.add(record_id)
+    return target_ids
 
 
 class MarkdownExporter:
@@ -37,12 +54,21 @@ class MarkdownExporter:
             for context in contexts.values()
             if not lifecycle_states.get(context.context_id, LifecycleTargetState(context.context_id)).is_tombstoned
         ]
+        visible_events = [
+            event
+            for event in events
+            if not any(
+                lifecycle_states.get(target_id) is not None and lifecycle_states[target_id].is_tombstoned
+                for target_id in _event_target_ids(event)
+            )
+        ]
         excluded_lifecycle_tombstone_count = (
             len(artifacts)
             + len(contexts)
             - len(visible_artifacts)
             - len(visible_contexts)
         )
+        excluded_lifecycle_event_count = len(events) - len(visible_events)
         sealed_lifecycle_count = sum(
             1
             for record_id in [
@@ -66,11 +92,15 @@ class MarkdownExporter:
             lines.append(
                 f"- lifecycle_tombstoned_records_excluded: {excluded_lifecycle_tombstone_count} record(s) omitted from this derived export."
             )
+        if excluded_lifecycle_event_count:
+            lines.append(
+                f"- lifecycle_tombstoned_events_excluded: {excluded_lifecycle_event_count} event row(s) referencing omitted records hidden."
+            )
         if sealed_lifecycle_count:
             lines.append(
                 f"- lifecycle_sealed_record: {sealed_lifecycle_count} sealed record(s) marked in this derived export."
             )
-        if not excluded_lifecycle_tombstone_count and not sealed_lifecycle_count:
+        if not excluded_lifecycle_tombstone_count and not excluded_lifecycle_event_count and not sealed_lifecycle_count:
             lines.append("- none")
 
         lines.extend([
@@ -79,9 +109,17 @@ class MarkdownExporter:
             "",
         ])
 
-        for event in events:
+        for event in visible_events:
+            event_state = next(
+                (
+                    lifecycle_states[target_id]
+                    for target_id in _event_target_ids(event)
+                    if lifecycle_states.get(target_id) is not None and lifecycle_states[target_id].is_sealed
+                ),
+                None,
+            )
             lines.append(
-                f"- `{event.event_id}` **{event.event_type.value}** "
+                f"- `{event.event_id}` **{event.event_type.value}{_lifecycle_marker(event_state)}** "
                 f"({event.timestamp.strftime('%Y-%m-%d %H:%M')}) — {event.summary}"
             )
 
