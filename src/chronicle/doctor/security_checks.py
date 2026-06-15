@@ -21,15 +21,16 @@ def check_security_metadata(events: list[ChronicleEvent]) -> list[DoctorCheck]:
 
 
 def _contexts(events: list[ChronicleEvent]) -> list[Context]:
-    contexts: list[Context] = []
+    latest_by_id: dict[str, Context] = {}
     for event in events:
         context = event.payload.get("context")
         if isinstance(context, dict):
             try:
-                contexts.append(Context.model_validate(context))
+                parsed = Context.model_validate(context)
             except ValueError:
                 continue
-    return contexts
+            latest_by_id[parsed.context_id] = parsed
+    return list(latest_by_id.values())
 
 
 def check_context_classification(contexts: list[Context]) -> DoctorCheck:
