@@ -7,7 +7,9 @@ from typing import Annotated, Any
 import typer
 
 from chronicle.models.integration_package import IntegrationPackageRecord, IntegrationTargetEnvironment
+from chronicle.models.package_review import PackageReviewStatus
 from chronicle.services.integration_package_service import IntegrationPackageService
+from chronicle.services.package_review_service import PackageReviewService
 
 package_app = typer.Typer(
     name="chronicle-package",
@@ -63,6 +65,48 @@ def context_package_cmd(
         typer.echo(f"Package written to {output}")
     else:
         typer.echo(payload)
+
+
+@package_app.command("review")
+def review_package_cmd(
+    purpose: Annotated[str | None, typer.Option("--purpose", help="Purpose for reviewing a new context package.")] = None,
+    target: Annotated[IntegrationTargetEnvironment, typer.Option("--target", help="Target environment: local or external.")] = IntegrationTargetEnvironment.LOCAL,
+    context_id: Annotated[list[str] | None, typer.Option("--context", help="Context ID to include. Repeatable. If omitted, all contexts are checked.")] = None,
+    package: Annotated[str | None, typer.Option("--package", help="Persisted package ID to review.")] = None,
+    json_output: Annotated[bool, typer.Option("--json")] = False,
+) -> None:
+    """Review a package before persistence or handoff.
+
+    Review is diagnostic. It does not call external runtimes and does not certify correctness.
+    """
+    service = PackageReviewService()
+    if package:
+        report = service.review_persisted_package(package)
+    else:
+        report = service.review_context_package(
+            purpose=purpose or "package review",
+            target_environment=target,
+            context_ids=context_id,
+        )
+
+    if json_output:
+        typer.echo(json.dumps(report.model_dump(mode="json"), ensure_ascii=False, indent=2))
+    else:
+        typer.echo("Chronicle Package Review")
+        typer.echo(f"Status: {report.status.value}")
+        typer.echo(f"Purpose: {report.purpose}")
+        typer.echo(f"Target: {report.target_environment}")
+        typer.echo(f"Records: {report.record_count}")
+        typer.echo(f"Output classification: {report.output_classification}")
+        for finding in report.findings:
+            prefix = finding.record_id or "package"
+            typer.echo(f"[{finding.severity.value}] {prefix}: {finding.code}")
+            if finding.recommendation:
+                typer.echo(f"  Recommendation: {finding.recommendation}")
+        typer.echo("Boundary: package review is diagnostic, not certification.")
+
+    if report.status == PackageReviewStatus.BLOCKED:
+        raise typer.Exit(code=1)
 
 
 @package_app.command("list")
@@ -122,7 +166,6 @@ def package_records_cmd(
     if not summaries:
         typer.echo("No records found.")
         return
-
     for summary in summaries:
         typer.echo(
             f"{summary['record_id']}  {summary['record_kind']}  "
