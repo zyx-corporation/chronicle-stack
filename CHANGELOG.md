@@ -1,5 +1,56 @@
 # Changelog
 
+## v0.6.0 - 2026-06-15
+
+### Added
+- Observation E2E surface-gate boundary documentation.
+- ADR-0011 through ADR-0017 for v0.6 architecture decisions:
+  - ADR-0011: Observation E2E as Separate Surface Gate
+  - ADR-0012: Audit Insertion Points for Derived Operations
+  - ADR-0013: Lifecycle-aware Export Filtering
+  - ADR-0014: Package Persistence Model
+  - ADR-0015: Python Code Splitting and Complexity Management Criteria
+  - ADR-0016: HTTP Bridge Auth Dependency Boundary
+  - ADR-0017: Auxiliary CLI Integration Boundary
+- Package persistence under `.chronicle/packages`.
+- Persisted package inspection commands:
+  - `chronicle package list`
+  - `chronicle package show --package ...`
+  - `chronicle package records --package ...`
+- Lifecycle-aware export filtering across major derived export surfaces:
+  - Markdown
+  - YAML
+  - HTML
+  - graph-json
+- Shared lifecycle export helper logic for derived-output filtering.
+- Primary CLI aliases for previously auxiliary surfaces:
+  - `chronicle package ...`
+  - `chronicle context ...`
+  - `chronicle graph ...`
+  - `chronicle export profile ...`
+- Primary alias tests for package, context, graph, and export profile workflows.
+- Future HTTP bridge auth dependency guidance for Chronicle / Sayane integration planning.
+- v0.6 release-readiness document.
+- v0.6 smoke-test checklist.
+
+### Changed
+- User-facing documentation now prefers primary CLI aliases while preserving auxiliary commands as compatibility surfaces.
+- `chronicle export` now supports the `profile` subcommand while preserving existing `chronicle export --format ...` behavior.
+- Lifecycle markers now influence derived exports without mutating primary records.
+- Package persistence makes controlled integration packages inspectable after generation.
+- README and CLI reference document primary CLI aliases and auxiliary compatibility.
+
+### Notes
+- `chronicle.jsonl` remains the primary record.
+- Observation E2E remains a separate non-certifying workflow observation surface and is not promoted to the Core CI phase gate.
+- Core CI pass is not semantic correctness certification or security certification.
+- Lifecycle-aware export is derived-output filtering, not physical deletion, access-control enforcement, or deletion-law compliance by itself.
+- Hard-delete markers are lifecycle markers and do not physically erase primary records in v0.6.
+- Package persistence is a transport artifact, not a permission grant, publication event, external submission, or access-control decision.
+- Primary CLI aliases do not deprecate `chronicle-context`, `chronicle-export`, `chronicle-package`, or `chronicle-graph`.
+- Future HTTP bridge auth guidance does not add an HTTP server, authentication, or authorization implementation to Chronicle Stack.
+- Observation E2E runner implementation, release tag creation, external model API calls, GraphRAG engine, vector DB, graph DB, Sayane runtime execution, HTTP bridge implementation, real encrypted backend, key management, and lifecycle enforcement remain out of scope.
+
 ## v0.5.0 - 2026-06-14
 
 ### Added
