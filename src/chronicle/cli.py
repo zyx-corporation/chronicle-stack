@@ -5,8 +5,10 @@ from typing import Annotated
 
 import typer
 
+from chronicle.cli_audit import audit_app
 from chronicle.cli_context import context_app
 from chronicle.cli_graph import graph_app
+from chronicle.cli_lifecycle import lifecycle_app
 from chronicle.cli_package import package_app
 from chronicle.interfaces.cli.artifact import artifact_app
 from chronicle.interfaces.cli.boundary import boundary_app
@@ -66,6 +68,8 @@ app.add_typer(boundary_app, name="boundary")
 app.add_typer(injection_app, name="injection")
 app.add_typer(package_app, name="package")
 app.add_typer(context_app, name="context")
+app.add_typer(audit_app, name="audit")
+app.add_typer(lifecycle_app, name="lifecycle")
 app.add_typer(graph_app, name="graph")
 
 
