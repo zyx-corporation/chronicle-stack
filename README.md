@@ -162,6 +162,7 @@ chronicle show
 - [v0.5 ロードマップ](docs/roadmap-v0.5.md)
 - [v0.5 スモークテスト](docs/smoke-test-v0.5.md)
 - [v0.5 リリース判定](docs/release-readiness-v0.5.md)
+- [v0.6 リリース判定](docs/release-readiness-v0.6.md)
 - [セキュリティ方針 v0.1](docs/security-policy-v0.1.md)
 - [Audit Log Model](docs/audit-log-model.md)
 - [Audit Insertion Points](docs/audit-insertion-points.md)
