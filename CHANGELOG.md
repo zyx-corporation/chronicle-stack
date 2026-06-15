@@ -196,7 +196,6 @@
   - `--exclude-sensitive`
 - Static HTML dashboard section navigation and stable local anchors.
 - Static HTML dashboard local row filtering.
-- Static HTML dashboard local row filtering.
 - `chronicle-graph` auxiliary console command for read-only graph export inspection.
 - `chronicle-graph summary`, `chronicle-graph nodes`, and `chronicle-graph edges` commands.
 
