@@ -116,14 +116,16 @@ chronicle artifact create --title "Basic Spec" --type specification --file docs/
 chronicle boundary add --type warn --field visibility --operator equals --value sensitive --reason "Review sensitive context"
 chronicle injection plan --task "Draft v0.3 release notes" --record
 chronicle export --format yaml
-chronicle-export profile --format yaml --profile public-review
-chronicle-package context --purpose "Sayane review" --target local
+chronicle export profile --format yaml --profile public-review
+chronicle package context --purpose "Sayane review" --target local
 chronicle export --format graph-json -o graph.json
 chronicle export --format html -o chronicle-dashboard.html
-chronicle-graph summary
-chronicle-context check --target local --purpose "internal review"
+chronicle graph summary
+chronicle context check --target local --purpose "internal review"
 chronicle show
 ```
+
+補助CLIとして `chronicle-export`, `chronicle-package`, `chronicle-graph`, `chronicle-context` も互換目的で維持されています。v0.6 以降の文書例では primary CLI alias を優先します。
 
 ## 重要な動作仕様
 
@@ -218,10 +220,6 @@ ruff check src/ tests/
 
 ## ライセンス
 
-Chronicle Stack v0.2.0 以降は GNU Affero General Public License v3.0 or later（AGPL-3.0-or-later）で提供します。
+AGPL-3.0-or-later. 詳細は [LICENSE](LICENSE) を参照してください。
 
-過去に異なる条件で公開されたリリースの利用条件は、この変更によって遡及的に変更されません。
-
-AGPL版では、Chronicle Stackを改変してネットワークサービスとして提供する場合にも、利用者が対応するソースコードへアクセスできるようにすることを重視します。
-
-商用利用、閉源組み込み、SaaS提供、または別条件での利用については、ZYX Corp株式会社との個別契約により商用ライセンスを提供する場合があります。
+商用利用、クローズドソース製品への組み込み、SaaS/ホステッドサービスでの利用については、別途商用ライセンスを検討します。
