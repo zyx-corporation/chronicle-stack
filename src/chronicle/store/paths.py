@@ -9,6 +9,7 @@ LIFECYCLE_FILE = "lifecycle.jsonl"
 METADATA_FILE = "metadata.yaml"
 ARTIFACTS_DIR = "artifacts"
 INDEXES_DIR = "indexes"
+PACKAGES_DIR = "packages"
 REPORTS_DIR = "reports/rde"
 
 
@@ -22,6 +23,7 @@ class ChroniclePaths:
         self.metadata_file = self.chronicle_dir / METADATA_FILE
         self.artifacts_dir = self.chronicle_dir / ARTIFACTS_DIR
         self.indexes_dir = self.chronicle_dir / INDEXES_DIR
+        self.packages_dir = self.chronicle_dir / PACKAGES_DIR
         self.reports_dir = self.chronicle_dir / REPORTS_DIR
         self.artifact_index_file = self.indexes_dir / "artifact_index.json"
         self.context_index_file = self.indexes_dir / "context_index.json"
@@ -43,6 +45,15 @@ class ChroniclePaths:
 
     def artifact_version_path(self, artifact_id: str, version_id: str) -> Path:
         return self.artifact_versions_dir(artifact_id) / f"{version_id}.md"
+
+    def package_dir(self, package_id: str) -> Path:
+        return self.packages_dir / package_id
+
+    def package_manifest_path(self, package_id: str) -> Path:
+        return self.package_dir(package_id) / "manifest.json"
+
+    def package_records_path(self, package_id: str) -> Path:
+        return self.package_dir(package_id) / "records.json"
 
     def rde_report_path(self, rde_record_id: str) -> Path:
         return self.reports_dir / f"{rde_record_id}.md"
