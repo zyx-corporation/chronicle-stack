@@ -29,6 +29,8 @@ dev = [
 chronicle = "chronicle.cli:app"
 chronicle-graph = "chronicle.cli_graph:graph_app"
 chronicle-context = "chronicle.cli_context:context_app"
+chronicle-audit = "chronicle.cli_audit:audit_app"
+chronicle-lifecycle = "chronicle.cli_lifecycle:lifecycle_app"
 chronicle-export = "chronicle.cli_export:export_app"
 chronicle-package = "chronicle.cli_package:package_app"
 
