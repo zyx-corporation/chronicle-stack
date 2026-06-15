@@ -39,7 +39,10 @@ def check_context_classification(contexts: list[Context]) -> DoctorCheck:
             "security_context_classification_present",
             "one or more Context records are missing classification metadata",
             detail=", ".join(unclassified),
-            recommendation="add ClassificationMetadata before export or model-context workflows",
+            recommendation=(
+                "run `chronicle context classification missing` and "
+                "`chronicle context classification set --context <id> --layer internal --sensitivity internal`"
+            ),
         )
     return ok("security_context_classification_present", "Context classification metadata is present")
 
@@ -109,7 +112,7 @@ def check_integrity_metadata_presence(contexts: list[Context]) -> DoctorCheck:
             "security_integrity_metadata_present",
             "classified Context records are missing integrity metadata hashes",
             detail=", ".join(missing),
-            recommendation="use integrity metadata helpers before packaging or controlled export workflows",
+            recommendation="use the context classification workflow before packaging or controlled export workflows",
         )
     return ok(
         "security_integrity_metadata_present",
