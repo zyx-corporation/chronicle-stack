@@ -23,14 +23,14 @@ def check_audit_log_surface(paths: ChroniclePaths) -> DoctorCheck:
             "security_audit_log_parseable",
             "audit.jsonl contains parse errors",
             detail=f"{corrupt} corrupt line(s)",
-            recommendation="repair or remove corrupted audit JSONL lines",
+            recommendation="repair audit.jsonl or recreate audit events with `chronicle audit record ...`",
         )
     if paths.audit_file.exists():
         return ok("security_audit_log_parseable", "audit.jsonl is parseable")
     return warn(
         "security_audit_log_parseable",
         "audit.jsonl is not present",
-        recommendation="record audit events for export, context-use, and reinterpretation workflows",
+        recommendation="record a local audit event with `chronicle audit record --operation export --purpose <purpose>`",
     )
 
 
@@ -42,12 +42,12 @@ def check_lifecycle_surface(paths: ChroniclePaths) -> DoctorCheck:
             "security_lifecycle_log_parseable",
             "lifecycle.jsonl contains parse errors",
             detail=f"{corrupt} corrupt line(s)",
-            recommendation="repair or remove corrupted lifecycle JSONL lines",
+            recommendation="repair lifecycle.jsonl or recreate lifecycle markers with `chronicle lifecycle record ...`",
         )
     if paths.lifecycle_file.exists():
         return ok("security_lifecycle_log_parseable", "lifecycle.jsonl is parseable")
     return warn(
         "security_lifecycle_log_parseable",
         "lifecycle.jsonl is not present",
-        recommendation="record lifecycle events for redact, seal, tombstone, and retention workflows",
+        recommendation="record an advisory lifecycle marker with `chronicle lifecycle record --target <id> --action seal`",
     )
