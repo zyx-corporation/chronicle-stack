@@ -7,8 +7,15 @@ no vector database, no embeddings, no LLM calls.
 from datetime import datetime, timezone
 from pathlib import Path
 
-from chronicle.lifecycle.derived_output_policy import LifecycleTargetState, lifecycle_state_by_target
-from chronicle.models.event import ChronicleEvent
+from chronicle.lifecycle.derived_output_policy import (
+    LIFECYCLE_SEALED_RECORD_WARNING,
+    count_sealed_targets,
+    event_lifecycle_target_ids,
+    event_references_tombstoned_target,
+    is_lifecycle_tombstoned,
+    lifecycle_seal_metadata,
+    lifecycle_state_by_target,
+)
 from chronicle.models.graph import GraphEdge, GraphExport, GraphNode
 from chronicle.services.chronicle_service import ChronicleService
 from chronicle.services.export_manifest_service import ExportManifestService
@@ -21,39 +28,6 @@ def _nid(prefix: str, source_id: str) -> str:
 
 def _eid(prefix: str, from_id: str, to_id: str) -> str:
     return f"e_{prefix}_{from_id}_{to_id}"
-
-
-def _event_target_ids(event: ChronicleEvent) -> set[str]:
-    target_ids: set[str] = set()
-    if event.artifact_id:
-        target_ids.add(event.artifact_id)
-    if event.decision_id:
-        target_ids.add(event.decision_id)
-    if event.rde_record_id:
-        target_ids.add(event.rde_record_id)
-    for key in ("context", "artifact", "decision", "boundary_rule"):
-        value = event.payload.get(key)
-        if isinstance(value, dict):
-            for id_key in ("context_id", "artifact_id", "decision_id", "rule_id"):
-                record_id = value.get(id_key)
-                if isinstance(record_id, str):
-                    target_ids.add(record_id)
-    for id_key in ("context_id", "artifact_id", "decision_id", "rule_id", "target_id"):
-        record_id = event.payload.get(id_key)
-        if isinstance(record_id, str):
-            target_ids.add(record_id)
-    return target_ids
-
-
-def _is_tombstoned(record_id: str, lifecycle_states: dict[str, LifecycleTargetState]) -> bool:
-    return lifecycle_states.get(record_id, LifecycleTargetState(record_id)).is_tombstoned
-
-
-def _seal_metadata(record_id: str, lifecycle_states: dict[str, LifecycleTargetState]) -> dict[str, str]:
-    state = lifecycle_states.get(record_id)
-    if state is not None and state.is_sealed:
-        return {"lifecycle_warning": "lifecycle_sealed_record"}
-    return {}
 
 
 class GraphExportService:
@@ -74,27 +48,31 @@ class GraphExportService:
         visible_events = [
             event
             for event in events
-            if not any(_is_tombstoned(target_id, lifecycle_states) for target_id in _event_target_ids(event))
+            if not event_references_tombstoned_target(
+                event,
+                lifecycle_states,
+                include_event_fields=True,
+            )
         ]
         visible_artifacts = {
             artifact_id: artifact
             for artifact_id, artifact in artifacts.items()
-            if not _is_tombstoned(artifact_id, lifecycle_states)
+            if not is_lifecycle_tombstoned(artifact_id, lifecycle_states)
         }
         visible_contexts = {
             context_id: context
             for context_id, context in contexts.items()
-            if not _is_tombstoned(context_id, lifecycle_states)
+            if not is_lifecycle_tombstoned(context_id, lifecycle_states)
         }
         visible_decisions = {
             decision_id: decision
             for decision_id, decision in decisions.items()
-            if not _is_tombstoned(decision_id, lifecycle_states)
+            if not is_lifecycle_tombstoned(decision_id, lifecycle_states)
         }
         visible_boundary_rules = {
             rule_id: rule
             for rule_id, rule in boundary_rules.items()
-            if not _is_tombstoned(rule_id, lifecycle_states)
+            if not is_lifecycle_tombstoned(rule_id, lifecycle_states)
         }
         visible_event_ids = {event.event_id for event in visible_events}
         visible_context_ids = set(visible_contexts)
@@ -112,15 +90,14 @@ class GraphExportService:
             - len(visible_boundary_rules)
         )
         excluded_lifecycle_event_count = len(events) - len(visible_events)
-        sealed_lifecycle_count = sum(
-            1
-            for record_id in [
+        sealed_lifecycle_count = count_sealed_targets(
+            [
                 *visible_artifact_ids,
                 *visible_context_ids,
                 *visible_decision_ids,
                 *visible_boundary_rules.keys(),
-            ]
-            if lifecycle_states.get(record_id) is not None and lifecycle_states[record_id].is_sealed
+            ],
+            lifecycle_states,
         )
 
         nodes: list[GraphNode] = []
@@ -138,8 +115,8 @@ class GraphExportService:
         for event in visible_events:
             evt_nid = _nid("event", event.event_id)
             event_metadata: dict[str, str] = {}
-            for target_id in _event_target_ids(event):
-                event_metadata.update(_seal_metadata(target_id, lifecycle_states))
+            for target_id in event_lifecycle_target_ids(event, include_event_fields=True):
+                event_metadata.update(lifecycle_seal_metadata(target_id, lifecycle_states))
             nodes.append(GraphNode(
                 node_id=evt_nid, node_type="event", source_id=event.event_id,
                 title=event.summary, summary=event.event_type.value,
@@ -186,7 +163,7 @@ class GraphExportService:
             nodes.append(GraphNode(
                 node_id=ctx_nid, node_type="context", source_id=ctx.context_id,
                 title=ctx.title, summary=ctx.summary,
-                metadata={"scope": ctx.scope.value, "visibility": ctx.visibility_hint.value, **_seal_metadata(ctx.context_id, lifecycle_states)},
+                metadata={"scope": ctx.scope.value, "visibility": ctx.visibility_hint.value, **lifecycle_seal_metadata(ctx.context_id, lifecycle_states)},
             ))
             if ctx.source:
                 src_nid = _nid("source_provenance", ctx.context_id)
@@ -206,7 +183,7 @@ class GraphExportService:
             nodes.append(GraphNode(
                 node_id=art_nid, node_type="artifact", source_id=art.artifact_id,
                 title=art.title, summary=art.artifact_type.value,
-                metadata={"visibility": art.visibility_hint.value, **_seal_metadata(art.artifact_id, lifecycle_states)},
+                metadata={"visibility": art.visibility_hint.value, **lifecycle_seal_metadata(art.artifact_id, lifecycle_states)},
             ))
             for ver in versions.get(art.artifact_id, []):
                 if ver.source_event_id and ver.source_event_id not in visible_event_ids:
@@ -233,7 +210,7 @@ class GraphExportService:
             nodes.append(GraphNode(
                 node_id=dec_nid, node_type="decision", source_id=dec.decision_id,
                 title=dec.reason or dec.decision_type.value,
-                metadata={"decision_type": dec.decision_type.value, "event_id": dec.event_id or "", **_seal_metadata(dec.decision_id, lifecycle_states)},
+                metadata={"decision_type": dec.decision_type.value, "event_id": dec.event_id or "", **lifecycle_seal_metadata(dec.decision_id, lifecycle_states)},
             ))
             if dec.event_id and dec.event_id in visible_event_ids:
                 edges.append(GraphEdge(
@@ -249,7 +226,7 @@ class GraphExportService:
             nodes.append(GraphNode(
                 node_id=br_nid, node_type="boundary_rule", source_id=rule.rule_id,
                 title=rule.reason or f"{rule.rule_type.value} {rule.field.value} {rule.operator.value} {val}",
-                metadata={"rule_type": rule.rule_type.value, "field": rule.field.value, "operator": rule.operator.value, **_seal_metadata(rule.rule_id, lifecycle_states)},
+                metadata={"rule_type": rule.rule_type.value, "field": rule.field.value, "operator": rule.operator.value, **lifecycle_seal_metadata(rule.rule_id, lifecycle_states)},
             ))
 
         # Recorded InjectionPlan nodes and edges
@@ -307,7 +284,7 @@ class GraphExportService:
         if excluded_lifecycle_event_count:
             lifecycle_notes.append(f"lifecycle_tombstoned_events_excluded={excluded_lifecycle_event_count}")
         if sealed_lifecycle_count:
-            lifecycle_notes.append(f"lifecycle_sealed_record={sealed_lifecycle_count}")
+            lifecycle_notes.append(f"{LIFECYCLE_SEALED_RECORD_WARNING}={sealed_lifecycle_count}")
         if lifecycle_notes:
             manifest.notes.extend(lifecycle_notes)
 
