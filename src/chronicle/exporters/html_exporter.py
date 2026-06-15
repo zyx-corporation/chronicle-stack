@@ -14,8 +14,14 @@ from chronicle.exporters.redaction import (
     event_has_sensitive_payload,
     model_is_sensitive,
 )
-from chronicle.lifecycle.derived_output_policy import LifecycleTargetState, lifecycle_state_by_target
-from chronicle.models.event import ChronicleEvent
+from chronicle.lifecycle.derived_output_policy import (
+    LifecycleTargetState,
+    count_sealed_targets,
+    event_lifecycle_target_ids,
+    event_references_tombstoned_target,
+    is_lifecycle_tombstoned,
+    lifecycle_state_by_target,
+)
 from chronicle.services.chronicle_service import ChronicleService
 from chronicle.services.export_manifest_service import ExportManifestService
 from chronicle.services.graph_export_service import GraphExportService
@@ -89,22 +95,6 @@ def _filter_attrs(*values: object) -> str:
     return f'data-filter-row="true" data-filter-text="{_esc(text)}"'
 
 
-def _event_target_ids(event: ChronicleEvent) -> set[str]:
-    target_ids: set[str] = set()
-    for key in ("context", "artifact", "decision", "boundary_rule"):
-        value = event.payload.get(key)
-        if isinstance(value, dict):
-            for id_key in ("context_id", "artifact_id", "decision_id", "rule_id"):
-                record_id = value.get(id_key)
-                if isinstance(record_id, str):
-                    target_ids.add(record_id)
-    for id_key in ("context_id", "artifact_id", "decision_id", "rule_id", "target_id"):
-        record_id = event.payload.get(id_key)
-        if isinstance(record_id, str):
-            target_ids.add(record_id)
-    return target_ids
-
-
 class HtmlDashboardExporter:
     def __init__(self, root: Path | None = None) -> None:
         self.chronicle = ChronicleService(root)
@@ -125,10 +115,7 @@ class HtmlDashboardExporter:
         visible_events = [
             event
             for event in events
-            if not any(
-                lifecycle_states.get(target_id) is not None and lifecycle_states[target_id].is_tombstoned
-                for target_id in _event_target_ids(event)
-            )
+            if not event_references_tombstoned_target(event, lifecycle_states)
         ]
 
         recorded_plans = []
@@ -146,32 +133,39 @@ class HtmlDashboardExporter:
             graph_edge_count = 0
             graph_available = False
 
-        visible_contexts = [
+        lifecycle_visible_contexts = [
             c
             for c in contexts.values()
+            if not is_lifecycle_tombstoned(c.context_id, lifecycle_states)
+        ]
+        lifecycle_visible_artifacts = [
+            a
+            for a in artifacts.values()
+            if not is_lifecycle_tombstoned(a.artifact_id, lifecycle_states)
+        ]
+        visible_contexts = [
+            c
+            for c in lifecycle_visible_contexts
             if not (options.exclude_sensitive and model_is_sensitive(c))
-            and not lifecycle_states.get(c.context_id, LifecycleTargetState(c.context_id)).is_tombstoned
         ]
         visible_artifacts = [
             a
-            for a in artifacts.values()
+            for a in lifecycle_visible_artifacts
             if not (options.exclude_sensitive and model_is_sensitive(a))
-            and not lifecycle_states.get(a.artifact_id, LifecycleTargetState(a.artifact_id)).is_tombstoned
         ]
         excluded_lifecycle_tombstone_count = (
             len(artifacts)
             + len(contexts)
-            - len([a for a in artifacts.values() if not lifecycle_states.get(a.artifact_id, LifecycleTargetState(a.artifact_id)).is_tombstoned])
-            - len([c for c in contexts.values() if not lifecycle_states.get(c.context_id, LifecycleTargetState(c.context_id)).is_tombstoned])
+            - len(lifecycle_visible_artifacts)
+            - len(lifecycle_visible_contexts)
         )
         excluded_lifecycle_event_count = len(events) - len(visible_events)
-        sealed_lifecycle_count = sum(
-            1
-            for record_id in [
+        sealed_lifecycle_count = count_sealed_targets(
+            [
                 *(artifact.artifact_id for artifact in visible_artifacts),
                 *(context.context_id for context in visible_contexts),
-            ]
-            if lifecycle_states.get(record_id) is not None and lifecycle_states[record_id].is_sealed
+            ],
+            lifecycle_states,
         )
 
         now = datetime.now(timezone.utc).astimezone().strftime("%Y-%m-%d %H:%M:%S %Z")
@@ -259,7 +253,7 @@ class HtmlDashboardExporter:
             event_state = next(
                 (
                     lifecycle_states[target_id]
-                    for target_id in _event_target_ids(event)
+                    for target_id in event_lifecycle_target_ids(event)
                     if lifecycle_states.get(target_id) is not None and lifecycle_states[target_id].is_sealed
                 ),
                 None,
