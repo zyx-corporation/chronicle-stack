@@ -14,6 +14,7 @@ from chronicle.models.integration_package import (
     IntegrationPackage,
     IntegrationPackageKind,
     IntegrationPackageManifest,
+    IntegrationPackageRecord,
     IntegrationTargetEnvironment,
 )
 from chronicle.services.audit_service import AuditService
@@ -72,6 +73,21 @@ class IntegrationPackageService:
         package_dir = self.store.save(package)
         self._record_package_audit(package, package_dir)
         return package_dir
+
+    def list_package_manifests(self) -> list[IntegrationPackageManifest]:
+        """List persisted package manifests."""
+        self.chronicle.require_initialized()
+        return [self.store.load_manifest(package_id) for package_id in self.store.list_package_ids()]
+
+    def load_package_manifest(self, package_id: str) -> IntegrationPackageManifest:
+        """Load a persisted package manifest."""
+        self.chronicle.require_initialized()
+        return self.store.load_manifest(package_id)
+
+    def load_package_records(self, package_id: str) -> list[IntegrationPackageRecord]:
+        """Load persisted package records."""
+        self.chronicle.require_initialized()
+        return self.store.load_records(package_id)
 
     def load_package(self, package_id: str) -> IntegrationPackage:
         """Load a persisted controlled integration package."""
