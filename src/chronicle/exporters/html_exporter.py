@@ -14,9 +14,12 @@ from chronicle.exporters.redaction import (
     event_has_sensitive_payload,
     model_is_sensitive,
 )
+from chronicle.lifecycle.derived_output_policy import LifecycleTargetState, lifecycle_state_by_target
+from chronicle.models.event import ChronicleEvent
 from chronicle.services.chronicle_service import ChronicleService
 from chronicle.services.export_manifest_service import ExportManifestService
 from chronicle.services.graph_export_service import GraphExportService
+from chronicle.services.lifecycle_service import LifecycleService
 
 
 CSS = """
@@ -41,6 +44,7 @@ th { background: #f9fafb; font-weight: 600; }
 .badge-private { background: #fefce8; color: #ca8a04; }
 .badge-public { background: #f0fdf4; color: #16a34a; }
 .badge-unknown { background: #f3f4f6; color: #6b7280; }
+.badge-lifecycle-sealed { background: #eff6ff; color: #1d4ed8; }
 .warning { background: #fefce8; border-left: 4px solid #eab308; padding: 8px 12px; margin: 8px 0; border-radius: 0 4px 4px 0; }
 .footer { margin-top: 32px; padding-top: 16px; border-top: 1px solid #e5e7eb; font-size: 0.8em; color: #9ca3af; }
 """
@@ -66,6 +70,12 @@ def _badge(visibility: str) -> str:
     return f'<span class="badge badge-{visibility}">{_esc(visibility)}</span>'
 
 
+def _sealed_badge(state: LifecycleTargetState | None) -> str:
+    if state is not None and state.is_sealed:
+        return ' <span class="badge badge-lifecycle-sealed">lifecycle_sealed_record</span>'
+    return ""
+
+
 def _id_cell(value: str) -> str:
     return f'<span class="id">{_esc(value)}</span>'
 
@@ -79,10 +89,27 @@ def _filter_attrs(*values: object) -> str:
     return f'data-filter-row="true" data-filter-text="{_esc(text)}"'
 
 
+def _event_target_ids(event: ChronicleEvent) -> set[str]:
+    target_ids: set[str] = set()
+    for key in ("context", "artifact", "decision", "boundary_rule"):
+        value = event.payload.get(key)
+        if isinstance(value, dict):
+            for id_key in ("context_id", "artifact_id", "decision_id", "rule_id"):
+                record_id = value.get(id_key)
+                if isinstance(record_id, str):
+                    target_ids.add(record_id)
+    for id_key in ("context_id", "artifact_id", "decision_id", "rule_id", "target_id"):
+        record_id = event.payload.get(id_key)
+        if isinstance(record_id, str):
+            target_ids.add(record_id)
+    return target_ids
+
+
 class HtmlDashboardExporter:
     def __init__(self, root: Path | None = None) -> None:
         self.chronicle = ChronicleService(root)
         self.manifest = ExportManifestService(root)
+        self.lifecycle = LifecycleService(root)
 
     def export(self, redaction: RedactionOptions | None = None) -> str:
         options = redaction or RedactionOptions()
@@ -92,10 +119,20 @@ class HtmlDashboardExporter:
         contexts = self.chronicle.index.load_contexts()
         decisions = self.chronicle.index.load_decisions()
         boundary_rules = self.chronicle.index.load_boundary_rules()
+        lifecycle_states = lifecycle_state_by_target(self.lifecycle.list_events())
         manifest = self.manifest.build_manifest("html", export_options=options.as_manifest_options())
 
+        visible_events = [
+            event
+            for event in events
+            if not any(
+                lifecycle_states.get(target_id) is not None and lifecycle_states[target_id].is_tombstoned
+                for target_id in _event_target_ids(event)
+            )
+        ]
+
         recorded_plans = []
-        for event in events:
+        for event in visible_events:
             if event.event_type.value == "injection_plan_recorded" and "injection_plan" in event.payload:
                 recorded_plans.append(event.payload["injection_plan"])
 
@@ -109,8 +146,33 @@ class HtmlDashboardExporter:
             graph_edge_count = 0
             graph_available = False
 
-        visible_contexts = [c for c in contexts.values() if not (options.exclude_sensitive and model_is_sensitive(c))]
-        visible_artifacts = [a for a in artifacts.values() if not (options.exclude_sensitive and model_is_sensitive(a))]
+        visible_contexts = [
+            c
+            for c in contexts.values()
+            if not (options.exclude_sensitive and model_is_sensitive(c))
+            and not lifecycle_states.get(c.context_id, LifecycleTargetState(c.context_id)).is_tombstoned
+        ]
+        visible_artifacts = [
+            a
+            for a in artifacts.values()
+            if not (options.exclude_sensitive and model_is_sensitive(a))
+            and not lifecycle_states.get(a.artifact_id, LifecycleTargetState(a.artifact_id)).is_tombstoned
+        ]
+        excluded_lifecycle_tombstone_count = (
+            len(artifacts)
+            + len(contexts)
+            - len([a for a in artifacts.values() if not lifecycle_states.get(a.artifact_id, LifecycleTargetState(a.artifact_id)).is_tombstoned])
+            - len([c for c in contexts.values() if not lifecycle_states.get(c.context_id, LifecycleTargetState(c.context_id)).is_tombstoned])
+        )
+        excluded_lifecycle_event_count = len(events) - len(visible_events)
+        sealed_lifecycle_count = sum(
+            1
+            for record_id in [
+                *(artifact.artifact_id for artifact in visible_artifacts),
+                *(context.context_id for context in visible_contexts),
+            ]
+            if lifecycle_states.get(record_id) is not None and lifecycle_states[record_id].is_sealed
+        )
 
         now = datetime.now(timezone.utc).astimezone().strftime("%Y-%m-%d %H:%M:%S %Z")
         cid = metadata.chronicle_id
@@ -156,16 +218,30 @@ class HtmlDashboardExporter:
             f"<tr><td>Exclude sensitive</td><td>{str(options.exclude_sensitive).lower()}</td></tr>",
             "</table>",
             "",
+            '<h2 id="lifecycle-warnings">Lifecycle Export Warnings</h2>',
+            '<div class="warning">',
+        ]
+        if excluded_lifecycle_tombstone_count:
+            lines.append(f"<p>lifecycle_tombstoned_records_excluded: {_esc(excluded_lifecycle_tombstone_count)} record(s) omitted from this derived export.</p>")
+        if excluded_lifecycle_event_count:
+            lines.append(f"<p>lifecycle_tombstoned_events_excluded: {_esc(excluded_lifecycle_event_count)} event row(s) referencing omitted records hidden.</p>")
+        if sealed_lifecycle_count:
+            lines.append(f"<p>lifecycle_sealed_record: {_esc(sealed_lifecycle_count)} sealed record(s) marked in this derived export.</p>")
+        if not excluded_lifecycle_tombstone_count and not excluded_lifecycle_event_count and not sealed_lifecycle_count:
+            lines.append("<p>none</p>")
+        lines.extend([
+            "</div>",
+            "",
             '<h2 id="summary">Summary</h2>',
             '<div class="cards">',
-            self._card("Events", len(events)),
+            self._card("Events", len(visible_events)),
             self._card("Contexts", len(visible_contexts)),
             self._card("Artifacts", len(visible_artifacts)),
             self._card("Decisions", len(decisions)),
-            self._card("RDE Records", sum(1 for e in events if e.event_type.value == "rde_diff_recorded")),
+            self._card("RDE Records", sum(1 for e in visible_events if e.event_type.value == "rde_diff_recorded")),
             self._card("Boundary Rules", len(boundary_rules)),
             self._card("Injection Plans", len(recorded_plans)),
-        ]
+        ])
         if graph_available:
             lines.append(self._card("Graph Nodes", graph_node_count))
             lines.append(self._card("Graph Edges", graph_edge_count))
@@ -176,15 +252,23 @@ class HtmlDashboardExporter:
             '<h2 id="events">Recent Events</h2>',
             "<table><tr><th>Event ID</th><th>Type</th><th>Timestamp</th><th>Summary</th></tr>",
         ])
-        for event in reversed(events[-30:]):
+        for event in reversed(visible_events[-30:]):
             sensitive_event = event_has_sensitive_payload(event.model_dump(mode="json"))
             if options.exclude_sensitive and sensitive_event:
                 continue
+            event_state = next(
+                (
+                    lifecycle_states[target_id]
+                    for target_id in _event_target_ids(event)
+                    if lifecycle_states.get(target_id) is not None and lifecycle_states[target_id].is_sealed
+                ),
+                None,
+            )
             summary = REDACTED if options.redact_sensitive and sensitive_event else event.summary
             ts = event.timestamp.strftime("%Y-%m-%d %H:%M")
             lines.append(
                 f"<tr {_filter_attrs(event.event_id, event.event_type.value, ts, summary)}><td>{_id_cell(event.event_id)}</td>"
-                f"<td>{_esc(event.event_type.value)}</td>"
+                f"<td>{_esc(event.event_type.value)}{_sealed_badge(event_state)}</td>"
                 f"<td>{_esc(ts)}</td>"
                 f"<td>{_esc(summary)}</td></tr>"
             )
@@ -196,11 +280,12 @@ class HtmlDashboardExporter:
         ])
         for ctx in sorted(visible_contexts, key=lambda c: c.created_at):
             sensitive = model_is_sensitive(ctx)
+            state = lifecycle_states.get(ctx.context_id)
             title = _display_sensitive(ctx.title, options) if sensitive else ctx.title
             summary = _display_sensitive(ctx.summary, options) if sensitive else ctx.summary
             lines.append(
                 f"<tr {_filter_attrs(ctx.context_id, title, ctx.scope.value, ctx.visibility_hint.value, summary)}><td>{_id_cell(ctx.context_id)}</td>"
-                f"<td>{_esc(title)}</td>"
+                f"<td>{_esc(title)}{_sealed_badge(state)}</td>"
                 f"<td>{_esc(ctx.scope.value)}</td>"
                 f"<td>{_badge(ctx.visibility_hint.value)}</td>"
                 f"<td>{_esc(summary)}</td></tr>"
@@ -213,10 +298,11 @@ class HtmlDashboardExporter:
         ])
         for art in sorted(visible_artifacts, key=lambda a: a.created_at):
             sensitive = model_is_sensitive(art)
+            state = lifecycle_states.get(art.artifact_id)
             title = _display_sensitive(art.title, options) if sensitive else art.title
             lines.append(
                 f"<tr {_filter_attrs(art.artifact_id, title, art.artifact_type.value, art.status.value, art.visibility_hint.value)}><td>{_id_cell(art.artifact_id)}</td>"
-                f"<td>{_esc(title)}</td>"
+                f"<td>{_esc(title)}{_sealed_badge(state)}</td>"
                 f"<td>{_esc(art.artifact_type.value)}</td>"
                 f"<td>{_esc(art.status.value)}</td>"
                 f"<td>{_badge(art.visibility_hint.value)}</td></tr>"
@@ -270,6 +356,7 @@ class HtmlDashboardExporter:
             "<p>一次記録は <code>.chronicle/chronicle.jsonl</code> です。</p>",
             "<p>Visibility Hint はアクセス制御やredactionではありません。</p>",
             "<p>Redaction-aware export は明示オプションによる派生export制御であり、access controlではありません。</p>",
+            "<p>Lifecycle-aware export は派生ビュー上の助言的な表示制御であり、deletion / access control enforcement ではありません。</p>",
             "<p>Boundary Rules は助言的な分類であり、強制的な保護機構ではありません。</p>",
             "<p>Injection Plan はLLMへの自動注入ではありません。</p>",
             "<p>graph-json export はGraphRAG接続準備であり、GraphRAGエンジンではありません。</p>",
