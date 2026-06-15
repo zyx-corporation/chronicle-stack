@@ -1,15 +1,15 @@
 # Observation E2E Gate
 
-Status: Draft for v0.6-alpha  
-Related: ADR-0002, ADR-0011, #87, #88
+Status: Draft for v0.6-beta  
+Related: ADR-0002, ADR-0011, #87, #127
 
 ## Purpose
 
 Observation E2E is a separate workflow observation surface for Chronicle Stack.
 
-It exists to make user-facing and integration-facing behavior visible across realistic command sequences, especially when multiple v0.5 security-aware surfaces interact.
+It exists to make user-facing and integration-facing behavior visible across realistic command sequences, especially when multiple security-aware surfaces interact.
 
-Observation E2E is not a replacement for Core CI. It is not a proof of semantic correctness, safety, security, or policy sufficiency.
+Observation E2E is not a replacement for Core CI. It is not a proof of semantic correctness, safety, security, privacy sufficiency, lifecycle enforcement, or policy sufficiency.
 
 ## Relationship to Core CI
 
@@ -24,6 +24,8 @@ Observation E2E  = separate workflow observation surface
 
 Observation E2E may be run during release preparation, workflow-sensitive PRs, CLI changes, documentation updates, or security-aware feature work. It should not be silently promoted into a required merge gate without a new architecture decision.
 
+A Core CI pass does not imply Observation E2E pass. An Observation E2E pass does not imply semantic correctness or security certification.
+
 ## What Observation E2E observes
 
 Observation E2E should focus on externally visible workflow drift.
@@ -36,6 +38,8 @@ Examples:
 - documentation / command mismatch
 - doctor status drift
 - export profile behavior drift
+- lifecycle-aware export behavior drift
+- package persistence and package inspection drift
 - package boundary drift
 - lifecycle / audit surface parseability drift
 
@@ -43,7 +47,7 @@ Observation E2E should not try to prove that a generated output is semantically 
 
 ## Initial scenario inventory
 
-The v0.6-alpha scenario inventory starts with the following candidates.
+The v0.6-beta scenario inventory starts with the following candidates.
 
 ### Fresh project and doctor warning semantics
 
@@ -118,6 +122,24 @@ Expected observation:
 - profile behavior remains documented and explicit
 - export remains a derived projection, not publication approval
 
+### Lifecycle-aware export example
+
+Scenario:
+
+```bash
+chronicle export --format markdown
+chronicle export --format yaml
+chronicle export --format html
+chronicle export --format graph-json
+```
+
+Expected observation:
+
+- derived exports omit records marked by tombstone or hard-delete lifecycle markers where lifecycle data is available
+- sealed records remain visible but are marked or warned as `lifecycle_sealed_record`
+- directly referencing event rows or nodes are hidden when they would leak lifecycle-omitted record titles or summaries
+- lifecycle-aware export remains advisory derived-output filtering, not deletion or access-control enforcement
+
 ### Controlled package generation example
 
 Scenario:
@@ -132,6 +154,24 @@ Expected observation:
 - package generation does not submit content to external services
 - Layer 4 or restricted content defaults to reference-only where applicable
 - package records are transport contracts, not permission grants
+
+### Package persistence and inspection example
+
+Scenario:
+
+```bash
+chronicle-package context --purpose "Persistence observation" --persist
+chronicle-package list
+chronicle-package show --package <package_id>
+chronicle-package records --package <package_id>
+```
+
+Expected observation:
+
+- persisted package manifests and record summaries are inspectable
+- record inspection does not print full record body content by default
+- package persistence remains a derived transport artifact, not permission grant or external submission
+- package audit metadata records package facts but does not copy record body content
 
 ### Audit and lifecycle parseability example
 
@@ -198,7 +238,9 @@ Observation E2E drift includes:
 - warning becomes an unclassified failure
 - a dry-run performs real external submission
 - package generation changes body/reference-only semantics
+- package persistence or inspection exposes body content where only summaries were expected
 - export profile behavior diverges from documentation
+- lifecycle-aware export silently leaks omitted record content through another derived surface
 - lifecycle or audit surfaces are silently ignored where observability was expected
 
 ## What does not count as certification
@@ -212,6 +254,8 @@ Observation E2E does not certify:
 - correctness of future model interpretation
 - cryptographic integrity
 - compliance with deletion laws
+- physical deletion
+- access-control enforcement
 - correctness of GraphRAG or Sayane runtime behavior
 
 ## Recording results
@@ -237,11 +281,13 @@ This can be recorded in the PR body, release-readiness document, smoke-test docu
 - Observation E2E remains separate from Core CI.
 - JSONL primary record semantics remain unchanged.
 - Security-aware metadata remains advisory unless later explicitly enforced.
+- Lifecycle markers remain advisory derived-output signals unless later explicitly enforced.
 
 ### Transformed
 
-- v0.5 contracts become observable workflow expectations.
+- v0.5 and v0.6 contracts become observable workflow expectations.
 - Warnings become part of release and workflow provenance rather than incidental console output.
+- Lifecycle-aware derived export behavior becomes part of the observation inventory.
 
 ### Added
 
@@ -249,6 +295,7 @@ This can be recorded in the PR body, release-readiness document, smoke-test docu
 - Scenario inventory.
 - Drift definition.
 - Result recording guidance.
+- Lifecycle-aware export and package persistence observation scenarios.
 
 ### Unresolved
 
@@ -261,5 +308,6 @@ This can be recorded in the PR body, release-readiness document, smoke-test docu
 
 - Treating Observation E2E pass as semantic correctness proof.
 - Treating Observation E2E pass as security certification.
+- Treating lifecycle-aware export observation as deletion or access-control proof.
 - Making examples too brittle to serve as practical observations.
 - Over-normalizing outputs until meaningful warnings disappear.
