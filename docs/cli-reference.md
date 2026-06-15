@@ -1,8 +1,10 @@
 # Chronicle Stack CLI Reference
 
-Chronicle Stack v0.4 の CLI コマンド一覧です。
+Chronicle Stack v0.6 の CLI コマンド一覧です。
 
 CLIの通常出力は人間向けです。機械処理を行う場合は、利用可能なコマンドでは `--json` を使用してください。CLI JSON出力の安定性については [インターフェース契約](interface-contracts.md) を参照してください。
+
+v0.6 以降の文書例では primary CLI alias を優先します。補助CLIである `chronicle-context`, `chronicle-export`, `chronicle-package`, `chronicle-graph` は互換目的で維持されています。詳細は [ADR-0017](adr/0017-auxiliary-cli-integration-boundary.md) を参照してください。
 
 ## グローバル
 
@@ -240,6 +242,16 @@ chronicle export --format html -o chronicle-dashboard.html
 | `graph-json` | Semi-public / derived | GraphRAG接続準備用のnode/edge export。top-level `export_manifest` を含む |
 | `html` | Human-facing | 静的・読み取り専用Dashboard。Export Manifest sectionを含む |
 
+### chronicle export profile
+
+```bash
+chronicle export profile --format yaml --profile public-review
+chronicle export profile --format yaml --profile restricted-summary --output export.yaml --json
+chronicle export profile --format html --profile public-review --output dashboard.html
+```
+
+Security-aware export profile を使った派生exportです。`chronicle-export profile ...` と同じ実装を共有する primary CLI alias です。
+
 注意:
 
 - exportは派生ビューです。
@@ -248,6 +260,59 @@ chronicle export --format html -o chronicle-dashboard.html
 - `graph-json` はGraphRAGエンジンではありません。
 - `html` はWebアプリケーションではありません。
 - visibility hintはredactionではないため、デフォルトでは隠蔽されません。
+- profile export は公開承認やアクセス制御ではありません。
+
+## chronicle package
+
+```bash
+chronicle package context --purpose "Sayane review" --target local
+chronicle package context --purpose "External review" --target external --persist
+chronicle package list
+chronicle package show --package pkg_xxx
+chronicle package records --package pkg_xxx --json
+```
+
+Controlled integration package を生成・永続化・検査します。`chronicle-package ...` と同じ実装を共有する primary CLI alias です。
+
+Package は transport contract であり、外部送信、許可付与、アクセス制御ではありません。
+
+## chronicle context
+
+```bash
+chronicle context check --target local --purpose "internal review"
+chronicle context check --target external --purpose "draft public summary" --json
+```
+
+Context records を model-facing context として使う前の dry-run check です。`chronicle-context ...` と同じ実装を共有する primary CLI alias です。
+
+このコマンドは外部モデルAPIを呼びません。
+
+## chronicle graph
+
+```bash
+chronicle graph summary
+chronicle graph summary --json
+chronicle graph nodes --json
+chronicle graph nodes --type context
+chronicle graph edges --json
+```
+
+Read-only graph export inspection です。`chronicle-graph ...` と同じ実装を共有する primary CLI alias です。
+
+`graph-json` はGraphRAG接続準備用の派生viewであり、GraphRAG engine ではありません。
+
+## Auxiliary CLI compatibility
+
+v0.6 では以下の補助CLIも互換目的で維持されています。
+
+```bash
+chronicle-context check ...
+chronicle-export profile ...
+chronicle-package context ...
+chronicle-graph summary
+```
+
+文書例では primary CLI alias を優先しますが、補助CLIを削除・非推奨化するものではありません。primary/auxiliary の挙動差分は Observation E2E の観測対象であり、semantic correctness certification ではありません。
 
 ## chronicle index rebuild
 
@@ -258,16 +323,3 @@ chronicle index rebuild
 `chronicle.jsonl` から派生インデックスを再生成します。
 
 `indexes/` は一次記録ではありません。破棄しても `chronicle index rebuild` で再生成可能です。
-
-## Exit codes and errors
-
-不正なenum値、存在しないファイル、必須オプション不足などは非zero exitになります。
-
-例:
-
-```text
-Invalid visibility: secret
-Allowed values: public, private, sensitive, unknown
-```
-
-human-readable error本文は改善のために変更される可能性があります。機械処理契約として扱わないでください。
