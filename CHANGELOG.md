@@ -1,5 +1,24 @@
 # Changelog
 
+## v0.9.0 - 2026-06-15
+
+### Added
+- Release Candidate Hardening and Version Finalization track.
+- v0.9 release-readiness document.
+- v0.9 smoke-test profile.
+- v0.9 release deployment procedure.
+
+### Changed
+- Project version finalized as `0.9.0`.
+- README document list now includes v0.7, v0.8, and v0.9 technical docs.
+- v0.9 release checklist connects v0.7 operational workflows and v0.8 package review workflow into one release candidate path.
+
+### Notes
+- v0.9 is a local-first technical release candidate.
+- v0.9 does not introduce a server, daemon, model runtime, GraphRAG engine, vector DB, or graph DB.
+- v0.9 does not finalize #26 commercial license template or #27 CLA / DCO final policy.
+- Tag and GitHub Release creation remain explicit release execution steps.
+
 ## v0.8.0 - 2026-06-15
 
 ### Added
