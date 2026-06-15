@@ -9,6 +9,7 @@ from chronicle.integration.context_package_builder import (
     ContextSelectionPolicy,
     PackageClassificationSummary,
 )
+from chronicle.lifecycle.derived_output_policy import lifecycle_state_by_target
 from chronicle.models.audit import AuditOperation, AuditSeverity, AuditTargetEnvironment
 from chronicle.models.integration_package import (
     IntegrationPackage,
@@ -20,6 +21,7 @@ from chronicle.models.integration_package import (
 from chronicle.services.audit_service import AuditService
 from chronicle.services.chronicle_service import ChronicleService
 from chronicle.store.integration_package_store import IntegrationPackageStore
+from chronicle.store.lifecycle_store import LifecycleStore
 
 
 class IntegrationPackageService:
@@ -36,6 +38,7 @@ class IntegrationPackageService:
         self.classification_summary = PackageClassificationSummary()
         self.store = IntegrationPackageStore(self.chronicle.paths)
         self.audit = AuditService(root)
+        self.lifecycle_store = LifecycleStore(self.chronicle.paths.lifecycle_file)
 
     def build_context_package(
         self,
@@ -46,9 +49,20 @@ class IntegrationPackageService:
     ) -> IntegrationPackage:
         metadata = self.chronicle.require_initialized()
         contexts = self.chronicle.index.load_contexts()
-        selected = self.selection_policy.select(contexts, context_ids)
-        records = [self.record_builder.build(context, target_environment) for context in selected]
+        lifecycle_states = lifecycle_state_by_target(self.lifecycle_store.read_all())
+        selected = self.selection_policy.select(contexts, context_ids, lifecycle_states)
+        records = [
+            self.record_builder.build(context, target_environment, lifecycle_states.get(context.context_id))
+            for context in selected
+        ]
         warnings = sorted({warning for record in records for warning in record.warnings})
+        excluded = sorted(
+            context_id
+            for context_id, state in lifecycle_states.items()
+            if state.is_tombstoned and (context_ids is None or context_id in context_ids)
+        )
+        if excluded:
+            warnings.append("lifecycle_tombstoned_records_excluded")
 
         manifest = IntegrationPackageManifest(
             package_id=generate_id("package"),
@@ -63,6 +77,7 @@ class IntegrationPackageService:
             metadata={
                 "record_count": str(len(records)),
                 "runtime": "none",
+                "excluded_lifecycle_tombstone_count": str(len(excluded)),
             },
         )
         return IntegrationPackage(manifest=manifest, records=records)
