@@ -1,5 +1,7 @@
 """Package review service for v0.8 verified export workflows."""
 
+from pathlib import Path
+
 from chronicle.models.integration_package import IntegrationPackage, IntegrationTargetEnvironment
 from chronicle.models.package_review import PackageReviewFinding, PackageReviewReport, PackageReviewStatus
 from chronicle.services.integration_package_service import IntegrationPackageService
@@ -23,8 +25,8 @@ WARNING_RECOMMENDATIONS = {
 class PackageReviewService:
     """Review controlled packages before persistence or external handoff."""
 
-    def __init__(self) -> None:
-        self.packages = IntegrationPackageService()
+    def __init__(self, root: Path | None = None) -> None:
+        self.packages = IntegrationPackageService(root)
 
     def review_context_package(
         self,
