@@ -9,6 +9,7 @@ from chronicle.errors import ChronicleNotInitializedError
 from chronicle.ids import generate_id
 from chronicle.models.event import Actor, ChronicleEvent, EventType
 from chronicle.models.metadata import ChronicleMetadata
+from chronicle.services.index_projection_builder import IndexProjectionBuilder
 from chronicle.store.artifact_store import ArtifactStore
 from chronicle.store.index_store import IndexStore
 from chronicle.store.jsonl_store import JsonlStore
@@ -28,6 +29,7 @@ class ChronicleService:
             self.paths.boundary_rule_index_file,
         )
         self.artifact_store = ArtifactStore(self.paths.artifacts_dir)
+        self.index_projection_builder = IndexProjectionBuilder()
 
     def require_initialized(self) -> ChronicleMetadata:
         if not self.paths.is_initialized():
@@ -132,89 +134,9 @@ class ChronicleService:
 
     def rebuild_indexes(self) -> None:
         events = self.jsonl.read_all(skip_corrupt=True)
-        artifacts: dict = {}
-        versions: dict = {}
-        contexts: dict = {}
-        decisions: dict = {}
-        rde_records: dict = {}
-        boundary_rules: dict = {}
-
-        for event in events:
-            payload = event.payload
-            if (
-                event.event_type == EventType.CONTEXT_ADDED
-                and "context" in payload
-            ):
-                ctx_data = payload["context"]
-                contexts[ctx_data["context_id"]] = ctx_data
-            elif (
-                event.event_type == EventType.ARTIFACT_CREATED
-                and "artifact" in payload
-            ):
-                art_data = payload["artifact"]
-                artifacts[art_data["artifact_id"]] = art_data
-                if "version" in payload:
-                    ver_data = payload["version"]
-                    aid = ver_data["artifact_id"]
-                    versions.setdefault(aid, []).append(ver_data)
-            elif event.event_type in (
-                EventType.ARTIFACT_UPDATED,
-                EventType.ARTIFACT_VERSIONED,
-            ) and "version" in payload:
-                ver_data = payload["version"]
-                aid = ver_data["artifact_id"]
-                versions.setdefault(aid, []).append(ver_data)
-                if "artifact" in payload:
-                    art_data = payload["artifact"]
-                    artifacts[art_data["artifact_id"]] = art_data
-            elif (
-                event.event_type == EventType.DECISION_RECORDED
-                and "decision" in payload
-            ):
-                dec_data = payload["decision"]
-                decisions[dec_data["decision_id"]] = dec_data
-            elif event.event_type == EventType.RDE_DIFF_RECORDED and "rde" in payload:
-                rde_data = payload["rde"]
-                rde_records[rde_data["rde_record_id"]] = rde_data
-            elif event.event_type == EventType.BOUNDARY_RULE_ADDED and "boundary_rule" in payload:
-                br_data = payload["boundary_rule"]
-                boundary_rules[br_data["rule_id"]] = br_data
-
-        from chronicle.models.artifact import Artifact, ArtifactVersion
-        from chronicle.models.boundary import BoundaryRule
-        from chronicle.models.context import Context
-        from chronicle.models.decision import Decision
-        from chronicle.models.rde import RdeDiffRecord
-
-        # Enrich ArtifactVersion with rde_record_id from RDE records
-        parsed_versions: dict[str, list[ArtifactVersion]] = {}
-        for aid, vlist in versions.items():
-            parsed_vlist = [ArtifactVersion.model_validate(v) for v in vlist]
-            parsed_versions[aid] = parsed_vlist
-
-        for rde_data in rde_records.values():
-            to_version_id = rde_data.get("to_version_id")
-            rde_id = rde_data["rde_record_id"]
-            if to_version_id:
-                for vlist in parsed_versions.values():
-                    for ver in vlist:
-                        if ver.version_id == to_version_id:
-                            ver.rde_record_id = rde_id
-                            break
-
-        self.index.save_artifacts(
-            {k: Artifact.model_validate(v) for k, v in artifacts.items()},
-            parsed_versions,
-        )
-        self.index.save_contexts(
-            {k: Context.model_validate(v) for k, v in contexts.items()}
-        )
-        self.index.save_decisions(
-            {k: Decision.model_validate(v) for k, v in decisions.items()}
-        )
-        self.index.save_rde_records(
-            {k: RdeDiffRecord.model_validate(v) for k, v in rde_records.items()}
-        )
-        self.index.save_boundary_rules(
-            {k: BoundaryRule.model_validate(v) for k, v in boundary_rules.items()}
-        )
+        projection = self.index_projection_builder.build(events)
+        self.index.save_artifacts(projection.artifacts, projection.versions)
+        self.index.save_contexts(projection.contexts)
+        self.index.save_decisions(projection.decisions)
+        self.index.save_rde_records(projection.rde_records)
+        self.index.save_boundary_rules(projection.boundary_rules)
