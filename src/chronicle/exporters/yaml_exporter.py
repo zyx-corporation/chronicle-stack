@@ -1,43 +1,21 @@
 """YAML export."""
 
 from pathlib import Path
-from typing import Any
 
 import yaml
 
 from chronicle.exporters.redaction import RedactionOptions, transform_event_dump, transform_model_dump
-from chronicle.lifecycle.derived_output_policy import LifecycleTargetState, lifecycle_state_by_target
-from chronicle.models.event import ChronicleEvent
+from chronicle.lifecycle.derived_output_policy import (
+    LIFECYCLE_SEALED_RECORD_WARNING,
+    count_sealed_targets,
+    event_references_tombstoned_target,
+    is_lifecycle_tombstoned,
+    lifecycle_state_by_target,
+    mark_lifecycle_sealed_warning,
+)
 from chronicle.services.chronicle_service import ChronicleService
 from chronicle.services.export_manifest_service import ExportManifestService
 from chronicle.services.lifecycle_service import LifecycleService
-
-
-def _event_target_ids(event: ChronicleEvent) -> set[str]:
-    target_ids: set[str] = set()
-    for key in ("context", "artifact", "decision", "boundary_rule"):
-        value = event.payload.get(key)
-        if isinstance(value, dict):
-            for id_key in ("context_id", "artifact_id", "decision_id", "rule_id"):
-                record_id = value.get(id_key)
-                if isinstance(record_id, str):
-                    target_ids.add(record_id)
-    for id_key in ("context_id", "artifact_id", "decision_id", "rule_id", "target_id"):
-        record_id = event.payload.get(id_key)
-        if isinstance(record_id, str):
-            target_ids.add(record_id)
-    return target_ids
-
-
-def _mark_lifecycle_sealed(data: dict[str, Any], state: LifecycleTargetState | None) -> dict[str, Any]:
-    if state is None or not state.is_sealed:
-        return data
-    marked = dict(data)
-    warnings = list(marked.get("warnings", []))
-    if "lifecycle_sealed_record" not in warnings:
-        warnings.append("lifecycle_sealed_record")
-    marked["warnings"] = warnings
-    return marked
 
 
 class YamlExporter:
@@ -63,20 +41,17 @@ class YamlExporter:
         visible_artifacts = {
             artifact_id: artifact
             for artifact_id, artifact in artifacts.items()
-            if not lifecycle_states.get(artifact_id, LifecycleTargetState(artifact_id)).is_tombstoned
+            if not is_lifecycle_tombstoned(artifact_id, lifecycle_states)
         }
         visible_contexts = {
             context_id: context
             for context_id, context in contexts.items()
-            if not lifecycle_states.get(context_id, LifecycleTargetState(context_id)).is_tombstoned
+            if not is_lifecycle_tombstoned(context_id, lifecycle_states)
         }
         visible_events = [
             event
             for event in events
-            if not any(
-                lifecycle_states.get(target_id) is not None and lifecycle_states[target_id].is_tombstoned
-                for target_id in _event_target_ids(event)
-            )
+            if not event_references_tombstoned_target(event, lifecycle_states)
         ]
         excluded_lifecycle_tombstone_count = (
             len(artifacts)
@@ -85,10 +60,9 @@ class YamlExporter:
             - len(visible_contexts)
         )
         excluded_lifecycle_event_count = len(events) - len(visible_events)
-        sealed_lifecycle_count = sum(
-            1
-            for record_id in [*visible_artifacts.keys(), *visible_contexts.keys()]
-            if lifecycle_states.get(record_id) is not None and lifecycle_states[record_id].is_sealed
+        sealed_lifecycle_count = count_sealed_targets(
+            [*visible_artifacts.keys(), *visible_contexts.keys()],
+            lifecycle_states,
         )
 
         manifest = self.manifest.build_manifest(
@@ -102,7 +76,7 @@ class YamlExporter:
         if excluded_lifecycle_event_count:
             lifecycle_warnings.append("lifecycle_tombstoned_events_excluded")
         if sealed_lifecycle_count:
-            lifecycle_warnings.append("lifecycle_sealed_record")
+            lifecycle_warnings.append(LIFECYCLE_SEALED_RECORD_WARNING)
         if lifecycle_warnings:
             manifest_dump["warnings"] = [*manifest_dump.get("warnings", []), *lifecycle_warnings]
             manifest_dump.setdefault("metadata", {})
@@ -122,12 +96,12 @@ class YamlExporter:
             for k, v in visible_contexts.items()
         }
         artifact_dumps = {
-            k: _mark_lifecycle_sealed(v, lifecycle_states.get(k))
+            k: mark_lifecycle_sealed_warning(v, lifecycle_states.get(k))
             for k, v in artifact_dumps.items()
             if v is not None
         }
         context_dumps = {
-            k: _mark_lifecycle_sealed(v, lifecycle_states.get(k))
+            k: mark_lifecycle_sealed_warning(v, lifecycle_states.get(k))
             for k, v in context_dumps.items()
             if v is not None
         }
