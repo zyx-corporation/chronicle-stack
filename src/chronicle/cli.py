@@ -5,6 +5,7 @@ from typing import Annotated
 
 import typer
 
+from chronicle.cli_package import package_app
 from chronicle.interfaces.cli.artifact import artifact_app
 from chronicle.interfaces.cli.boundary import boundary_app
 from chronicle.interfaces.cli.core import register_core_commands
@@ -61,6 +62,7 @@ app.add_typer(rde_app, name="rde")
 app.add_typer(index_app, name="index")
 app.add_typer(boundary_app, name="boundary")
 app.add_typer(injection_app, name="injection")
+app.add_typer(package_app, name="package")
 
 
 if __name__ == "__main__":
