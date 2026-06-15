@@ -9,13 +9,16 @@ from chronicle.integration.context_package_builder import (
     ContextSelectionPolicy,
     PackageClassificationSummary,
 )
+from chronicle.models.audit import AuditOperation, AuditSeverity, AuditTargetEnvironment
 from chronicle.models.integration_package import (
     IntegrationPackage,
     IntegrationPackageKind,
     IntegrationPackageManifest,
     IntegrationTargetEnvironment,
 )
+from chronicle.services.audit_service import AuditService
 from chronicle.services.chronicle_service import ChronicleService
+from chronicle.store.integration_package_store import IntegrationPackageStore
 
 
 class IntegrationPackageService:
@@ -30,6 +33,8 @@ class IntegrationPackageService:
         self.selection_policy = ContextSelectionPolicy()
         self.record_builder = ContextPackageRecordBuilder()
         self.classification_summary = PackageClassificationSummary()
+        self.store = IntegrationPackageStore(self.chronicle.paths)
+        self.audit = AuditService(root)
 
     def build_context_package(
         self,
@@ -60,3 +65,35 @@ class IntegrationPackageService:
             },
         )
         return IntegrationPackage(manifest=manifest, records=records)
+
+    def save_package(self, package: IntegrationPackage) -> Path:
+        """Persist a controlled integration package through the package store."""
+        self.chronicle.require_initialized()
+        package_dir = self.store.save(package)
+        self._record_package_audit(package, package_dir)
+        return package_dir
+
+    def load_package(self, package_id: str) -> IntegrationPackage:
+        """Load a persisted controlled integration package."""
+        self.chronicle.require_initialized()
+        return self.store.load(package_id)
+
+    def _record_package_audit(self, package: IntegrationPackage, package_dir: Path) -> None:
+        """Record package persistence without copying record content."""
+        manifest = package.manifest
+        self.audit.record(
+            operation=AuditOperation.EXPORT,
+            actor="integration-package-service",
+            purpose=manifest.purpose,
+            target_environment=AuditTargetEnvironment.PACKAGE,
+            output_classification=manifest.output_classification,
+            referenced_records=manifest.referenced_records,
+            result=AuditSeverity.INFO,
+            summary=f"Persisted integration package {manifest.package_id}.",
+            metadata={
+                "package_id": manifest.package_id,
+                "package_kind": manifest.package_kind.value,
+                "record_count": str(len(package.records)),
+                "package_path": str(package_dir),
+            },
+        )
