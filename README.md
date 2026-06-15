@@ -100,9 +100,27 @@ flowchart TD
 
 ## インストール
 
+開発用:
+
 ```bash
 pip install -e ".[dev]"
 ```
+
+ローカル配備用の inspect-first 手順:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/zyx-corporation/chronicle-stack/main/scripts/install-local.sh -o /tmp/chronicle-install-local.sh
+less /tmp/chronicle-install-local.sh
+bash /tmp/chronicle-install-local.sh
+```
+
+簡易 one-liner:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/zyx-corporation/chronicle-stack/main/scripts/install-local.sh | bash
+```
+
+詳細は [curl-based Local Deployment](docs/local-deployment-curl.md) を参照してください。
 
 ## クイックスタート
 
@@ -149,6 +167,7 @@ chronicle show
 - [インターフェース契約](docs/interface-contracts.md)
 - [GraphRAG 接続境界](docs/graphrag-boundary.md)
 - [CLI リファレンス](docs/cli-reference.md)
+- [curl-based Local Deployment](docs/local-deployment-curl.md)
 - [データモデル](docs/data-model.md)
 - [ストレージ形式](docs/storage-format.md)
 - [テスト戦略](docs/testing-strategy.md)
