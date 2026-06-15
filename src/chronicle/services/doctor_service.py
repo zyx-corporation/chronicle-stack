@@ -7,12 +7,10 @@ import yaml
 
 from chronicle.doctor.audit_lifecycle_checks import check_audit_lifecycle_surfaces
 from chronicle.doctor.export_checks import check_exports
-from chronicle.models.classification import AllowedOperation, ClassificationLayer
-from chronicle.models.context import Context
+from chronicle.doctor.security_checks import check_security_metadata
 from chronicle.models.doctor import DoctorCheck, DoctorReport, DoctorSeverity
 from chronicle.models.event import ChronicleEvent, EventType
 from chronicle.models.metadata import ChronicleMetadata
-from chronicle.security.prompt_injection import scan_text_for_prompt_injection
 from chronicle.store.paths import ChroniclePaths
 
 
@@ -34,7 +32,7 @@ class DoctorService:
         self._check_indexes(checks)
         self._check_artifact_files(checks, events)
         self._check_injection_plan_refs(checks, events)
-        self._check_security_metadata(checks, events)
+        checks.extend(check_security_metadata(events))
         checks.extend(check_audit_lifecycle_surfaces(self.paths))
         checks.extend(check_exports(self.paths, self.root))
 
@@ -289,115 +287,3 @@ class DoctorService:
             if isinstance(context, dict) and context.get("context_id"):
                 ids.add(context["context_id"])
         return ids
-
-    def _check_security_metadata(self, checks: list[DoctorCheck], events: list[ChronicleEvent]) -> None:
-        contexts = self._contexts(events)
-        self._check_context_classification(checks, contexts)
-        self._check_layer4_context_body_storage(checks, contexts)
-        self._check_context_use_policy_metadata(checks, contexts)
-        self._check_prompt_injection_markers(checks, contexts)
-        self._check_integrity_metadata_presence(checks, contexts)
-
-    @staticmethod
-    def _contexts(events: list[ChronicleEvent]) -> list[Context]:
-        contexts: list[Context] = []
-        for event in events:
-            context = event.payload.get("context")
-            if isinstance(context, dict):
-                try:
-                    contexts.append(Context.model_validate(context))
-                except ValueError:
-                    continue
-        return contexts
-
-    def _check_context_classification(self, checks: list[DoctorCheck], contexts: list[Context]) -> None:
-        unclassified = sorted(ctx.context_id for ctx in contexts if ctx.classification is None)
-        if unclassified:
-            checks.append(
-                self._warn(
-                    "security_context_classification_present",
-                    "one or more Context records are missing classification metadata",
-                    detail=", ".join(unclassified),
-                    recommendation="add ClassificationMetadata before export or model-context workflows",
-                )
-            )
-        else:
-            checks.append(self._ok("security_context_classification_present", "Context classification metadata is present"))
-
-    def _check_layer4_context_body_storage(self, checks: list[DoctorCheck], contexts: list[Context]) -> None:
-        layer4 = sorted(
-            ctx.context_id
-            for ctx in contexts
-            if ctx.classification is not None and ctx.classification.layer == ClassificationLayer.RESTRICTED_SECRET
-        )
-        if layer4:
-            checks.append(
-                self._warn(
-                    "security_layer4_body_storage",
-                    "Layer 4 Context records are present in Chronicle body storage",
-                    detail=", ".join(layer4),
-                    recommendation="store Layer 4 secrets as references to a dedicated secret manager instead of body text",
-                )
-            )
-        else:
-            checks.append(self._ok("security_layer4_body_storage", "no Layer 4 Context body storage detected"))
-
-    def _check_context_use_policy_metadata(self, checks: list[DoctorCheck], contexts: list[Context]) -> None:
-        risky = sorted(
-            ctx.context_id
-            for ctx in contexts
-            if ctx.classification is not None
-            and ctx.classification.layer >= ClassificationLayer.SENSITIVE_CONTEXT
-            and (
-                AllowedOperation.INJECT in ctx.classification.allowed_operations
-                or ctx.classification.llm_policy.external_allowed
-            )
-        )
-        if risky:
-            checks.append(
-                self._warn(
-                    "security_sensitive_context_use_policy",
-                    "sensitive Context records are marked for model-context or external use",
-                    detail=", ".join(risky),
-                    recommendation="review LlmPolicy and allowed_operations before context-use workflows",
-                )
-            )
-        else:
-            checks.append(self._ok("security_sensitive_context_use_policy", "no sensitive external/model-context policy risk detected"))
-
-    def _check_prompt_injection_markers(self, checks: list[DoctorCheck], contexts: list[Context]) -> None:
-        findings: list[str] = []
-        for ctx in contexts:
-            text = f"{ctx.title}\n{ctx.summary}"
-            report = scan_text_for_prompt_injection(text, source_id=ctx.context_id)
-            if report.findings:
-                findings.extend(f"{finding.source_id}:{finding.pattern_id}" for finding in report.findings)
-        if findings:
-            checks.append(
-                self._warn(
-                    "security_prompt_injection_markers",
-                    "stored Context text contains instruction-like markers",
-                    detail="; ".join(sorted(findings)),
-                    recommendation="treat stored content as data and use Chronicle data block boundaries for model-facing workflows",
-                )
-            )
-        else:
-            checks.append(self._ok("security_prompt_injection_markers", "no prompt-injection markers detected in Context text"))
-
-    def _check_integrity_metadata_presence(self, checks: list[DoctorCheck], contexts: list[Context]) -> None:
-        missing = sorted(
-            ctx.context_id
-            for ctx in contexts
-            if ctx.classification is not None and not ctx.classification.integrity.hash
-        )
-        if missing:
-            checks.append(
-                self._warn(
-                    "security_integrity_metadata_present",
-                    "classified Context records are missing integrity metadata hashes",
-                    detail=", ".join(missing),
-                    recommendation="use integrity metadata helpers before packaging or controlled export workflows",
-                )
-            )
-        else:
-            checks.append(self._ok("security_integrity_metadata_present", "classified Context integrity metadata is present or no classified Contexts exist"))
