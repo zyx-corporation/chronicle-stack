@@ -1,5 +1,68 @@
 # Changelog
 
+## v0.8.0 - 2026-06-15
+
+### Added
+- Verified Package / Export Review Workflow.
+- Package review models:
+  - `PackageReviewStatus`
+  - `PackageReviewFinding`
+  - `PackageReviewReport`
+- Package review service for converting controlled-package warnings into an explicit review report.
+- `chronicle package review` CLI command.
+- JSON package review output.
+- Review support for both generated context packages and persisted packages.
+- v0.8 package review workflow documentation.
+- v0.8 package review smoke profile.
+- v0.8 package review tests covering pass, warning, blocked, and persisted-package review paths.
+
+### Changed
+- Controlled package warnings can now be inspected before persistence or handoff through a local review checkpoint.
+- Package review reports classify findings as `pass`, `warning`, or `blocked`.
+- Sensitive external package review conditions can return a blocked status without calling any external runtime.
+
+### Notes
+- Package review is diagnostic and local-first.
+- Package review does not call models, GraphRAG engines, vector databases, graph databases, servers, or daemons.
+- `pass` is not formal correctness proof.
+- `warning` is not automatic approval.
+- `blocked` requires review before handoff.
+- #26 commercial license template and #27 CLA / DCO final policy remain intentionally out of scope until explicitly directed.
+
+## v0.7.0 - 2026-06-15
+
+### Added
+- Operational Hardening and Verified Context Workflows.
+- Context classification workflow:
+  - `chronicle context classification missing`
+  - `chronicle context classification set --context ...`
+  - `chronicle context classification show --context ...`
+- Audit event workflow:
+  - `chronicle audit record`
+  - `chronicle audit list`
+  - `chronicle audit show --id ...`
+- Lifecycle marker workflow:
+  - `chronicle lifecycle record`
+  - `chronicle lifecycle list`
+  - `chronicle lifecycle show --id ...`
+- `chronicle-audit` and `chronicle-lifecycle` entry points.
+- Doctor remediation guidance for classification / audit / lifecycle warnings.
+- v0.7 operational hardening plan.
+- v0.7 smoke test profile.
+- v0.7 operational workflow tests.
+
+### Changed
+- Doctor security checks now evaluate the latest Context snapshot per `context_id`.
+- Missing classification warnings point to the classification workflow.
+- Missing audit/lifecycle log warnings point to local CLI workflows.
+- Context classification records a new Context snapshot with advisory classification metadata and integrity metadata.
+
+### Notes
+- Classification metadata remains advisory and is not access control.
+- Audit events improve traceability and are not enforcement.
+- Lifecycle markers are advisory metadata and do not mutate primary records by themselves.
+- v0.7 does not introduce a server, daemon, model runtime, GraphRAG engine, vector DB, or graph DB.
+
 ## v0.6.0 - 2026-06-15
 
 ### Added
@@ -133,9 +196,9 @@
   - `--exclude-sensitive`
 - Static HTML dashboard section navigation and stable local anchors.
 - Static HTML dashboard local row filtering.
+- Static HTML dashboard local row filtering.
 - `chronicle-graph` auxiliary console command for read-only graph export inspection.
 - `chronicle-graph summary`, `chronicle-graph nodes`, and `chronicle-graph edges` commands.
-- Graph inspection JSON output and node/edge type filtering.
 
 ### Changed
 - v0.4 focuses on operational reliability rather than new memory semantics.
@@ -218,8 +281,3 @@
 - Prevent accidental empty artifact updates (`ARTIFACT_CONTENT_MISSING` error)
 
 ### Notes
-- GraphRAG is out of scope for v0.1
-- Dashboard is out of scope for v0.1
-- RDE is a structured diff record, not a full semantic validation engine
-- `chronicle.jsonl` is the primary record; `indexes/` are derived and rebuildable
-- Multiple RDE records targeting the same version: the last RDE in JSONL order wins in the derived index
