@@ -46,8 +46,15 @@ class PackageReviewService:
 
     def review_package(self, package: IntegrationPackage) -> PackageReviewReport:
         findings: list[PackageReviewFinding] = []
+        record_warning_codes = {
+            warning
+            for record in package.records
+            for warning in record.warnings
+        }
 
         for warning in package.manifest.warnings:
+            if warning in record_warning_codes:
+                continue
             findings.append(_finding_for_warning(warning))
 
         for record in package.records:
