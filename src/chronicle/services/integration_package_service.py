@@ -16,6 +16,7 @@ from chronicle.models.integration_package import (
     IntegrationTargetEnvironment,
 )
 from chronicle.services.chronicle_service import ChronicleService
+from chronicle.store.integration_package_store import IntegrationPackageStore
 
 
 class IntegrationPackageService:
@@ -30,6 +31,7 @@ class IntegrationPackageService:
         self.selection_policy = ContextSelectionPolicy()
         self.record_builder = ContextPackageRecordBuilder()
         self.classification_summary = PackageClassificationSummary()
+        self.store = IntegrationPackageStore(self.chronicle.paths)
 
     def build_context_package(
         self,
@@ -60,3 +62,13 @@ class IntegrationPackageService:
             },
         )
         return IntegrationPackage(manifest=manifest, records=records)
+
+    def save_package(self, package: IntegrationPackage) -> Path:
+        """Persist a controlled integration package through the package store."""
+        self.chronicle.require_initialized()
+        return self.store.save(package)
+
+    def load_package(self, package_id: str) -> IntegrationPackage:
+        """Load a persisted controlled integration package."""
+        self.chronicle.require_initialized()
+        return self.store.load(package_id)
