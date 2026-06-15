@@ -168,6 +168,7 @@ chronicle show
 - [GraphRAG 接続境界](docs/graphrag-boundary.md)
 - [CLI リファレンス](docs/cli-reference.md)
 - [curl-based Local Deployment](docs/local-deployment-curl.md)
+- [v0.6 Release Deployment Procedure](docs/release-deployment-v0.6.md)
 - [データモデル](docs/data-model.md)
 - [ストレージ形式](docs/storage-format.md)
 - [テスト戦略](docs/testing-strategy.md)
