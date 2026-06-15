@@ -1,5 +1,6 @@
 """Context integration package construction helpers."""
 
+from chronicle.lifecycle.derived_output_policy import LifecycleTargetState, package_warnings_for_lifecycle
 from chronicle.models.classification import ClassificationLayer
 from chronicle.models.context import Context
 from chronicle.models.integration_package import (
@@ -17,10 +18,12 @@ class ContextSelectionPolicy:
         self,
         contexts: dict[str, Context],
         context_ids: list[str] | None,
+        lifecycle_states: dict[str, LifecycleTargetState] | None = None,
     ) -> list[Context]:
-        if not context_ids:
-            return list(contexts.values())
-        return [contexts[context_id] for context_id in context_ids if context_id in contexts]
+        selected_contexts = list(contexts.values()) if not context_ids else [contexts[context_id] for context_id in context_ids if context_id in contexts]
+        if not lifecycle_states:
+            return selected_contexts
+        return [context for context in selected_contexts if not lifecycle_states.get(context.context_id, LifecycleTargetState(context.context_id)).is_tombstoned]
 
 
 class ContextPackageRecordBuilder:
@@ -30,6 +33,7 @@ class ContextPackageRecordBuilder:
         self,
         context: Context,
         target_environment: IntegrationTargetEnvironment,
+        lifecycle_state: LifecycleTargetState | None = None,
     ) -> IntegrationPackageRecord:
         classification = context.classification
         warnings: list[str] = []
@@ -38,6 +42,8 @@ class ContextPackageRecordBuilder:
         allowed_operations: list[str] = []
         boundary = PackageRecordBoundary.CHRONICLE_DATA
         body = f"{context.title}\n{context.summary}"
+
+        warnings.extend(package_warnings_for_lifecycle(lifecycle_state))
 
         if classification is None:
             warnings.append("unclassified_context")
