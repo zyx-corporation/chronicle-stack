@@ -1,4 +1,4 @@
-"""Tests for static HTML dashboard export (v0.4)."""
+"""Tests for static HTML dashboard / review console export."""
 
 import os
 
@@ -8,13 +8,17 @@ from typer.testing import CliRunner
 from chronicle.cli import app
 from chronicle.exporters.html_exporter import HtmlDashboardExporter
 from chronicle.models.artifact import ArtifactType
+from chronicle.models.audit import AuditOperation, AuditSeverity, AuditTargetEnvironment
 from chronicle.models.boundary import BoundaryConditionField, BoundaryOperator, BoundaryRuleType
+from chronicle.models.lifecycle import LifecycleAction, LifecycleReasonClass
 from chronicle.models.visibility import VisibilityHint
 from chronicle.services.artifact_service import ArtifactService
+from chronicle.services.audit_service import AuditService
 from chronicle.services.boundary_service import BoundaryService
 from chronicle.services.chronicle_service import ChronicleService
 from chronicle.services.context_service import ContextService
 from chronicle.services.injection_service import InjectionPlanService
+from chronicle.services.lifecycle_service import LifecycleService
 
 
 @pytest.fixture
@@ -24,8 +28,8 @@ def populated_chronicle(tmp_path):
     svc.init("Dashboard Test")
 
     ctx_svc = ContextService(tmp_path)
-    ctx_svc.add_context(title="Public Context", visibility_hint=VisibilityHint.PUBLIC)
-    ctx_svc.add_context(
+    public_ctx = ctx_svc.add_context(title="Public Context", visibility_hint=VisibilityHint.PUBLIC)
+    sensitive_ctx = ctx_svc.add_context(
         title="Sensitive Note",
         summary="Secret <script>alert(1)</script>",
         visibility_hint=VisibilityHint.SENSITIVE,
@@ -54,7 +58,31 @@ def populated_chronicle(tmp_path):
     plan = ip_svc.generate_plan(task="Dashboard task")
     ip_svc.record_plan(plan)
 
+    AuditService(tmp_path).record(
+        operation=AuditOperation.EXPORT,
+        actor="test",
+        purpose="review console audit",
+        target_environment=AuditTargetEnvironment.LOCAL,
+        result=AuditSeverity.WARNING,
+        summary="Audit review marker",
+        referenced_records=[public_ctx.context_id],
+    )
+
+    LifecycleService(tmp_path).record(
+        action=LifecycleAction.SEAL,
+        target_id=sensitive_ctx.context_id,
+        target_kind="context",
+        actor="test",
+        reason_class=LifecycleReasonClass.PRIVACY,
+        reason="Review console lifecycle marker",
+    )
+
     return HtmlDashboardExporter(tmp_path)
+
+
+@pytest.fixture
+def populated_root(populated_chronicle):
+    return populated_chronicle.chronicle.paths.root
 
 
 def test_html_export_succeeds(populated_chronicle):
@@ -69,7 +97,7 @@ def test_html_export_contains_basic_structure(populated_chronicle):
     assert "<!DOCTYPE html>" in html
     assert "<html" in html
     assert "<body" in html
-    assert "Chronicle Stack Dashboard" in html
+    assert "Chronicle Stack Review Console" in html
 
 
 def test_html_export_contains_navigation_and_filter(populated_chronicle):
@@ -78,6 +106,9 @@ def test_html_export_contains_navigation_and_filter(populated_chronicle):
     assert 'class="nav"' in html
     assert 'href="#contexts"' in html
     assert 'href="#artifacts"' in html
+    assert 'href="#package-review"' in html
+    assert 'href="#audit-events"' in html
+    assert 'href="#lifecycle-markers"' in html
     assert 'id="chronicle-filter"' in html
     assert "filterChronicleRows" in html
     assert 'data-filter-row="true"' in html
@@ -87,8 +118,12 @@ def test_html_export_contains_section_anchors(populated_chronicle):
     """Important dashboard sections should have stable local anchors."""
     html = populated_chronicle.export()
     for anchor in (
+        'id="review-console"',
         'id="manifest"',
         'id="summary"',
+        'id="package-review"',
+        'id="audit-events"',
+        'id="lifecycle-markers"',
         'id="events"',
         'id="contexts"',
         'id="artifacts"',
@@ -109,6 +144,49 @@ def test_html_export_contains_summary_cards(populated_chronicle):
     assert "Artifacts" in html
     assert "Boundary Rules" in html
     assert "Injection Plans" in html
+    assert "Audit Events" in html
+    assert "Lifecycle Markers" in html
+    assert "Package Findings" in html
+
+
+def test_html_export_contains_review_console_boundary(populated_chronicle):
+    """Review console must describe its read-only runtime boundary."""
+    html = populated_chronicle.export()
+    assert "Read-first review console" in html
+    assert "does not write Chronicle records" in html
+    assert "start a daemon" in html
+    assert "Primary record" in html
+    assert "Audit log" in html
+    assert "Lifecycle log" in html
+    assert "Packages" in html
+
+
+def test_html_export_contains_package_review_snapshot(populated_chronicle):
+    """Review console should include package review status and findings."""
+    html = populated_chronicle.export()
+    assert "Package Review Snapshot" in html
+    assert "html review console snapshot" in html
+    assert "Output classification" in html
+    assert "unclassified_context" in html
+    assert "classify the Context before package or export review" in html
+
+
+def test_html_export_contains_audit_events(populated_chronicle):
+    """Review console should display audit events."""
+    html = populated_chronicle.export()
+    assert "Audit Events" in html
+    assert "review console audit" in html
+    assert "Audit review marker" in html
+    assert "badge-warning" in html
+
+
+def test_html_export_contains_lifecycle_markers(populated_chronicle):
+    """Review console should display lifecycle markers."""
+    html = populated_chronicle.export()
+    assert "Lifecycle Markers" in html
+    assert "Review console lifecycle marker" in html
+    assert "privacy" in html
+    assert "seal" in html
 
 
 def test_html_export_contains_contexts(populated_chronicle):
@@ -174,6 +252,8 @@ def test_html_export_contains_notes(populated_chronicle):
     assert "一次記録" in html
     assert "access control" in html.lower() or "アクセス制御" in html
     assert "単一HTMLファイル" in html
+    assert "Audit events" in html
+    assert "Package review" in html
 
 
 def test_cli_export_html(tmp_path):
@@ -185,9 +265,10 @@ def test_cli_export_html(tmp_path):
     result = runner.invoke(app, ["export", "--format", "html"])
     assert result.exit_code == 0
     assert "<!DOCTYPE html>" in result.stdout
-    assert "Chronicle Stack Dashboard" in result.stdout
+    assert "Chronicle Stack Review Console" in result.stdout
     assert "CLI HTML" in result.stdout
     assert 'id="chronicle-filter"' in result.stdout
+    assert 'id="review-console"' in result.stdout
 
 
 def test_html_export_graph_overview(populated_chronicle):
