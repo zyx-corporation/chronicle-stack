@@ -80,27 +80,15 @@ flowchart TD
 | Artifact履歴 | v0.1完了 |
 | Decision記録 | v0.1完了 |
 | RDE Diff Record | v0.1完了 |
-| Context Scope Model | v0.2実装済み |
-| Visibility Hint | v0.2実装済み |
-| Source Provenance | v0.2実装済み |
-| Boundary Rules | v0.2実装済み |
-| Context Injection Plan生成 | v0.2実装済み |
-| Interface Contracts | v0.3実装済み |
-| Contract Tests | v0.3実装済み |
-| Recorded Injection Plans | v0.3実装済み |
-| Graph-ready Export | v0.3実装済み |
-| Static HTML Dashboard Export | v0.3実装済み |
-| CLI UX / `--version` | v0.3実装済み |
-| Chronicle Doctor | v0.4実装済み |
-| Export Manifest | v0.4実装済み |
-| Redaction-aware Export | v0.4実装済み |
-| Dashboard Navigation / Filtering | v0.4実装済み |
-| Graph Export Inspection | v0.4実装済み |
+| Context Scope / Visibility / Provenance / Boundary | v0.2実装済み |
+| Interface Contracts / Recorded Injection Plans / Graph-ready Export / Static Dashboard | v0.3実装済み |
+| Doctor / Export Manifest / Redaction-aware Export / Dashboard filtering / Graph inspection | v0.4実装済み |
 | Security-aware Context Metadata | v0.5実装済み |
 | Package Persistence / Primary CLI aliases | v0.6実装済み |
 | Classification / Audit / Lifecycle workflows | v0.7実装済み |
 | Package Review workflow | v0.8実装済み |
-| Release Candidate version finalization | v0.9候補 |
+| Release Candidate hardening | v0.9.0完了 |
+| Stable release criteria / compatibility policy / integration boundary / release execution docs | v1.0.0準備済み |
 | GraphRAG query engine | 将来構想 |
 | Live Dashboard / editing UI | 将来構想 |
 
@@ -183,6 +171,14 @@ chronicle show
 - [GraphRAG 接続境界](docs/graphrag-boundary.md)
 - [CLI リファレンス](docs/cli-reference.md)
 - [curl-based Local Deployment](docs/local-deployment-curl.md)
+- [v1.0 Release Criteria and Compatibility Policy](docs/v1-release-criteria-and-compatibility.md)
+- [v1.0 Release Status](docs/release-status-v1.0.0.md)
+- [v1.0 Release Readiness](docs/release-readiness-v1.0.md)
+- [v1.0 Smoke Test Profile](docs/smoke-test-v1.0.md)
+- [v1.0 CLI Compatibility Audit](docs/v1-cli-compatibility-audit.md)
+- [v1.0 Sayane / CSG-RAG Integration Boundary](docs/v1-integration-boundary-sayane-csg-rag.md)
+- [v1.0 Release Execution Plan](docs/release-execution-v1.0.0.md)
+- [v1.0 Release Notes](docs/release-notes-v1.0.0.md)
 - [v0.6 Release Deployment Procedure](docs/release-deployment-v0.6.md)
 - [v0.7 Operational Hardening Plan](docs/v0.7-operational-hardening-plan.md)
 - [v0.8 Package Review Workflow](docs/v0.8-package-review-workflow.md)
@@ -190,35 +186,7 @@ chronicle show
 - [データモデル](docs/data-model.md)
 - [ストレージ形式](docs/storage-format.md)
 - [テスト戦略](docs/testing-strategy.md)
-- [Observation E2E Gate](docs/observation-e2e-gate.md)
 - [Doctor Security Checks](docs/doctor-security-checks.md)
-- [v0.3 スモークテスト](docs/smoke-test-v0.3.md)
-- [v0.3 リリース判定](docs/release-readiness-v0.3.md)
-- [v0.4 ロードマップ](docs/roadmap-v0.4.md)
-- [v0.4 スモークテスト](docs/smoke-test-v0.4.md)
-- [v0.4 リリース判定](docs/release-readiness-v0.4.md)
-- [v0.5 ロードマップ](docs/roadmap-v0.5.md)
-- [v0.5 スモークテスト](docs/smoke-test-v0.5.md)
-- [v0.5 リリース判定](docs/release-readiness-v0.5.md)
-- [v0.6 スモークテスト](docs/smoke-test-v0.6.md)
-- [v0.6 リリース判定](docs/release-readiness-v0.6.md)
-- [v0.7 スモークテスト](docs/smoke-test-v0.7.md)
-- [v0.8 スモークテスト](docs/smoke-test-v0.8.md)
-- [v0.8 リリース判定](docs/release-readiness-v0.8.md)
-- [v0.9 スモークテスト](docs/smoke-test-v0.9.md)
-- [v0.9 リリース判定](docs/release-readiness-v0.9.md)
-- [セキュリティ方針 v0.1](docs/security-policy-v0.1.md)
-- [Audit Log Model](docs/audit-log-model.md)
-- [Audit Insertion Points](docs/audit-insertion-points.md)
-- [Lifecycle Model](docs/lifecycle-model.md)
-- [Lifecycle-aware Export Filtering](docs/lifecycle-aware-export.md)
-- [Package Persistence Model](docs/package-persistence-model.md)
-- [Integrity Metadata](docs/integrity-metadata.md)
-- [Model Context Use Policy](docs/model-context-use-policy.md)
-- [Encrypted Store Contract](docs/encrypted-store-contract.md)
-- [Prompt Injection Sanitizer Boundary](docs/prompt-injection-sanitizer-boundary.md)
-- [Security-aware Export Profiles](docs/security-aware-export-profiles.md)
-- [Controlled Integration Packages](docs/controlled-integration-packages.md)
 - [ADR Index](docs/adr/README.md)
 
 契約・運用関連:
@@ -228,12 +196,6 @@ chronicle show
 - [商標・名称利用ポリシー](docs/trademark-policy.md)
 - [商用サポート・Enterprise契約範囲](docs/commercial-support-scope.md)
 - [Contributor License Policy](docs/contributor-license-policy.md)
-
-過去リリース:
-
-- [v0.2 バックログ](docs/backlog-v0.2.md)
-- [v0.2 スモークテスト](docs/smoke-test-v0.2.md)
-- [v0.2 リリース判定](docs/release-readiness-v0.2.md)
 
 仕様書:
 
@@ -260,12 +222,14 @@ ruff check src/ tests/
 
 ## リリース
 
-- Latest published release: **v0.6.0**
-- Current release candidate: **v0.9.0**
-- GitHub Release: https://github.com/zyx-corporation/chronicle-stack/releases/tag/v0.6.0
+- Latest published release: **v0.9.0**
+- Current stable target: **v1.0.0**
+- v1.0.0 release execution: [docs/release-execution-v1.0.0.md](docs/release-execution-v1.0.0.md)
+- v1.0.0 release notes: [docs/release-notes-v1.0.0.md](docs/release-notes-v1.0.0.md)
+- v1.0.0 publication requires tag creation, GitHub Release publication, and installer smoke from the tag.
 
 ## ライセンス
 
 AGPL-3.0-or-later. 詳細は [LICENSE](LICENSE) を参照してください。
 
-商用利用、クローズドソース製品への組み込み、SaaS/ホステッドサービスでの利用については、別途商用ライセンスを検討します。
+商用利用、クローズドソース製品への組み込み、SaaS/ホステッドサービスでの利用については、別途商用ライセンスを検討します。`Commercial-SaaS-License.md` と `docs/contributor-license-policy.md` は draft completed / counsel review pending です。
