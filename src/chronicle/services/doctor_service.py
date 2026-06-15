@@ -5,16 +5,14 @@ from pathlib import Path
 
 import yaml
 
-from chronicle.exporters.html_exporter import HtmlDashboardExporter
+from chronicle.doctor.audit_lifecycle_checks import check_audit_lifecycle_surfaces
+from chronicle.doctor.export_checks import check_exports
 from chronicle.models.classification import AllowedOperation, ClassificationLayer
 from chronicle.models.context import Context
 from chronicle.models.doctor import DoctorCheck, DoctorReport, DoctorSeverity
 from chronicle.models.event import ChronicleEvent, EventType
 from chronicle.models.metadata import ChronicleMetadata
 from chronicle.security.prompt_injection import scan_text_for_prompt_injection
-from chronicle.services.graph_export_service import GraphExportService
-from chronicle.store.audit_log_store import AuditLogStore
-from chronicle.store.lifecycle_store import LifecycleStore
 from chronicle.store.paths import ChroniclePaths
 
 
@@ -37,8 +35,8 @@ class DoctorService:
         self._check_artifact_files(checks, events)
         self._check_injection_plan_refs(checks, events)
         self._check_security_metadata(checks, events)
-        self._check_audit_lifecycle_surfaces(checks)
-        self._check_exports(checks)
+        checks.extend(check_audit_lifecycle_surfaces(self.paths))
+        checks.extend(check_exports(self.paths, self.root))
 
         return DoctorReport.from_checks(checks, chronicle_id=chronicle_id)
 
@@ -403,90 +401,3 @@ class DoctorService:
             )
         else:
             checks.append(self._ok("security_integrity_metadata_present", "classified Context integrity metadata is present or no classified Contexts exist"))
-
-    def _check_audit_lifecycle_surfaces(self, checks: list[DoctorCheck]) -> None:
-        self._check_audit_log_surface(checks)
-        self._check_lifecycle_surface(checks)
-
-    def _check_audit_log_surface(self, checks: list[DoctorCheck]) -> None:
-        store = AuditLogStore(self.paths.audit_file)
-        corrupt = store.count_corrupt_lines()
-        if corrupt:
-            checks.append(
-                self._warn(
-                    "security_audit_log_parseable",
-                    "audit.jsonl contains parse errors",
-                    detail=f"{corrupt} corrupt line(s)",
-                    recommendation="repair or remove corrupted audit JSONL lines",
-                )
-            )
-        elif self.paths.audit_file.exists():
-            checks.append(self._ok("security_audit_log_parseable", "audit.jsonl is parseable"))
-        else:
-            checks.append(self._warn("security_audit_log_parseable", "audit.jsonl is not present", recommendation="record audit events for export, context-use, and reinterpretation workflows"))
-
-    def _check_lifecycle_surface(self, checks: list[DoctorCheck]) -> None:
-        store = LifecycleStore(self.paths.lifecycle_file)
-        corrupt = store.count_corrupt_lines()
-        if corrupt:
-            checks.append(
-                self._warn(
-                    "security_lifecycle_log_parseable",
-                    "lifecycle.jsonl contains parse errors",
-                    detail=f"{corrupt} corrupt line(s)",
-                    recommendation="repair or remove corrupted lifecycle JSONL lines",
-                )
-            )
-        elif self.paths.lifecycle_file.exists():
-            checks.append(self._ok("security_lifecycle_log_parseable", "lifecycle.jsonl is parseable"))
-        else:
-            checks.append(self._warn("security_lifecycle_log_parseable", "lifecycle.jsonl is not present", recommendation="record lifecycle events for redact, seal, tombstone, and retention workflows"))
-
-    def _check_exports(self, checks: list[DoctorCheck]) -> None:
-        if not self.paths.is_initialized():
-            checks.append(
-                self._warn(
-                    "graph_export_available",
-                    "graph export cannot be checked before initialization",
-                )
-            )
-            checks.append(
-                self._warn(
-                    "html_export_available",
-                    "HTML export cannot be checked before initialization",
-                )
-            )
-            return
-
-        self._check_graph_export(checks)
-        self._check_html_export(checks)
-
-    def _check_graph_export(self, checks: list[DoctorCheck]) -> None:
-        try:
-            graph = GraphExportService(self.root).export_graph()
-        except Exception as exc:
-            checks.append(
-                self._warn(
-                    "graph_export_available",
-                    "graph export could not be generated",
-                    detail=str(exc),
-                )
-            )
-            return
-        detail = f"{len(graph.nodes)} node(s), {len(graph.edges)} edge(s)"
-        checks.append(self._ok("graph_export_available", "graph export can be generated", detail))
-
-    def _check_html_export(self, checks: list[DoctorCheck]) -> None:
-        try:
-            html = HtmlDashboardExporter(self.root).export()
-        except Exception as exc:
-            checks.append(
-                self._warn(
-                    "html_export_available",
-                    "HTML dashboard export could not be generated",
-                    detail=str(exc),
-                )
-            )
-            return
-        detail = f"{len(html)} character(s)"
-        checks.append(self._ok("html_export_available", "HTML dashboard export can be generated", detail))
