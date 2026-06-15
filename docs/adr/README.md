@@ -22,3 +22,4 @@ ADRs capture decisions that affect architecture, security boundaries, data contr
 - [ADR-0014: Package Persistence Model](0014-package-persistence-model.md)
 - [ADR-0015: Python Code Splitting and Complexity Management Criteria](0015-python-code-complexity-management.md)
 - [ADR-0016: HTTP Bridge Auth Dependency Boundary](0016-http-bridge-auth-boundary.md)
+- [ADR-0017: Auxiliary CLI Integration Boundary](0017-auxiliary-cli-integration-boundary.md)
