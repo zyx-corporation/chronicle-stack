@@ -94,7 +94,8 @@ flowchart TD
 | Static read-first Review Console | v1.1実装済み |
 | Explicit local web UI / `chronicle ui` | v1.1実装済み |
 | v1.1 GUI/readability release preparation | v1.1.0完了 |
-| Read-only UI detail endpoints | v1.2準備中 |
+| Read-only UI detail endpoints | v1.2実装済み |
+| v1.2 UI drill-down release preparation | v1.2.0準備済み |
 | GraphRAG query engine | 将来構想 |
 | Full interactive editing UI | 将来構想 |
 
@@ -153,7 +154,7 @@ chronicle show
 
 `chronicle ui` は `/api/overview`, `/api/events`, `/api/contexts`, `/api/artifacts`, `/api/decisions`, `/api/rde`, `/api/boundary`, `/api/audit`, `/api/lifecycle`, `/api/package-review`, `/api/graph-summary` を read-only endpoint として提供します。これらはすべてローカル Chronicle ファイル由来の派生ビューです。
 
-v1.2 では、`/api/events/<id>`, `/api/contexts/<id>`, `/api/artifacts/<id>`, `/api/decisions/<id>`, `/api/rde/<id>`, `/api/boundary/<id>`, `/api/audit/<id>`, `/api/lifecycle/<id>` のような read-only detail endpoint を追加します。これらも記録を変更しない閲覧用の派生ビューです。
+v1.2 では、`/api/events/<id>`, `/api/contexts/<id>`, `/api/artifacts/<id>`, `/api/decisions/<id>`, `/api/rde/<id>`, `/api/boundary/<id>`, `/api/audit/<id>`, `/api/lifecycle/<id>` のような read-only detail endpoint を提供します。これらも記録を変更しない閲覧用の派生ビューです。
 
 補助CLIとして `chronicle-export`, `chronicle-package`, `chronicle-graph`, `chronicle-context`, `chronicle-audit`, `chronicle-lifecycle` も互換目的で維持されています。v0.6 以降の文書例では primary CLI alias を優先します。
 
@@ -198,6 +199,9 @@ v1.2 では、`/api/events/<id>`, `/api/contexts/<id>`, `/api/artifacts/<id>`, `
 - [v1.1 Smoke Test Profile](docs/smoke-test-v1.1.md)
 - [v1.1 Release Readiness](docs/release-readiness-v1.1.md)
 - [v1.1 Release Notes](docs/release-notes-v1.1.0.md)
+- [v1.2 Smoke Test Profile](docs/smoke-test-v1.2.md)
+- [v1.2 Release Readiness](docs/release-readiness-v1.2.md)
+- [v1.2 Release Notes](docs/release-notes-v1.2.0.md)
 - [v0.6 Release Deployment Procedure](docs/release-deployment-v0.6.md)
 - [v0.7 Operational Hardening Plan](docs/v0.7-operational-hardening-plan.md)
 - [v0.8 Package Review Workflow](docs/v0.8-package-review-workflow.md)
@@ -243,9 +247,10 @@ ruff check src/ tests/
 
 - Latest published release: **v1.1.0**
 - Current repository-side release target: **v1.2.0**
-- v1.1.0 release readiness: [docs/release-readiness-v1.1.md](docs/release-readiness-v1.1.md)
-- v1.1.0 smoke profile: [docs/smoke-test-v1.1.md](docs/smoke-test-v1.1.md)
-- v1.1.0 release notes: [docs/release-notes-v1.1.0.md](docs/release-notes-v1.1.0.md)
+- v1.2.0 release readiness: [docs/release-readiness-v1.2.md](docs/release-readiness-v1.2.md)
+- v1.2.0 smoke profile: [docs/smoke-test-v1.2.md](docs/smoke-test-v1.2.md)
+- v1.2.0 release notes: [docs/release-notes-v1.2.0.md](docs/release-notes-v1.2.0.md)
+- v1.2.0 publication requires tag creation, GitHub Release publication, and installer smoke from the tag.
 
 ## ライセンス
 
