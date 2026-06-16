@@ -23,6 +23,7 @@ from chronicle.interfaces.cli.index import index_app
 from chronicle.interfaces.cli.injection import injection_app
 from chronicle.interfaces.cli.rde import rde_app
 from chronicle.ui_server import DEFAULT_UI_HOST, DEFAULT_UI_PORT, build_startup_metadata, serve_ui, validate_ui_root
+from chronicle.ui_smoke import run_ui_smoke
 
 
 def _version_callback(value: bool) -> None:
@@ -82,6 +83,30 @@ def ui_cmd(
             typer.echo("Boundary: no daemon, no external model API, no GraphRAG runtime, no vector DB, no graph DB")
             typer.echo("Press Ctrl-C to stop.")
         serve_ui(host=host, port=port, root=root, open_browser=open_browser)
+    except ChronicleError as exc:
+        handle_error(exc, json_output)
+
+
+@app.command("ui-smoke")
+def ui_smoke_cmd(
+    root: Annotated[Path, typer.Option("--root", help="Chronicle root. Defaults to current working directory.")] = Path("."),
+    json_output: Annotated[bool, typer.Option("--json", help="Emit machine-readable smoke report.")] = False,
+) -> None:
+    """Run read-only local UI smoke checks without starting a server."""
+    try:
+        validate_ui_root(root)
+        report = run_ui_smoke(root)
+        if json_output:
+            typer.echo(report.to_json())
+        else:
+            typer.echo("Chronicle UI smoke")
+            typer.echo(f"Root: {report.root}")
+            typer.echo("Mode: read-only, no server, no browser, no external runtime")
+            for check in report.checks:
+                status = "PASS" if check.passed else "FAIL"
+                typer.echo(f"[{status}] {check.name} - {check.message}")
+        if not report.passed:
+            raise typer.Exit(code=1)
     except ChronicleError as exc:
         handle_error(exc, json_output)
 
