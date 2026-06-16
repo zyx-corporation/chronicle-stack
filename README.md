@@ -92,7 +92,7 @@ flowchart TD
 | Release Candidate hardening | v0.9.0完了 |
 | Stable release criteria / compatibility policy / integration boundary / release execution docs | v1.0.0完了 |
 | Static read-first Review Console | v1.1実装済み |
-| Explicit local web UI / `chronicle ui` | v1.1最小実装 |
+| Explicit local web UI / `chronicle ui` | v1.1実装済み |
 | GraphRAG query engine | 将来構想 |
 | Full interactive editing UI | 将来構想 |
 
@@ -148,6 +148,8 @@ chronicle show
 ```
 
 `chronicle ui` は明示起動型の foreground local web UI です。デフォルトでは `127.0.0.1:8765` に bind し、read-only で現在の Chronicle root を表示します。終了するには terminal で `Ctrl-C` を押します。
+
+`chronicle ui` は `/api/overview`, `/api/events`, `/api/contexts`, `/api/artifacts`, `/api/decisions`, `/api/rde`, `/api/boundary`, `/api/audit`, `/api/lifecycle`, `/api/package-review`, `/api/graph-summary` を read-only endpoint として提供します。これらはすべてローカル Chronicle ファイル由来の派生ビューです。
 
 補助CLIとして `chronicle-export`, `chronicle-package`, `chronicle-graph`, `chronicle-context`, `chronicle-audit`, `chronicle-lifecycle` も互換目的で維持されています。v0.6 以降の文書例では primary CLI alias を優先します。
 
