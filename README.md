@@ -95,7 +95,8 @@ flowchart TD
 | Explicit local web UI / `chronicle ui` | v1.1実装済み |
 | v1.1 GUI/readability release preparation | v1.1.0完了 |
 | Read-only UI detail endpoints | v1.2実装済み |
-| v1.2 UI drill-down release preparation | v1.2.0準備済み |
+| v1.2 UI drill-down release preparation | v1.2.0完了 |
+| Automated read-only UI smoke command | v1.3準備中 |
 | GraphRAG query engine | 将来構想 |
 | Full interactive editing UI | 将来構想 |
 
@@ -144,6 +145,7 @@ chronicle export profile --format yaml --profile public-review
 chronicle package context --purpose "Sayane review" --target local
 chronicle export --format graph-json -o graph.json
 chronicle export --format html -o chronicle-review-console.html
+chronicle ui-smoke
 chronicle ui
 chronicle graph summary
 chronicle context check --target local --purpose "internal review"
@@ -151,6 +153,8 @@ chronicle show
 ```
 
 `chronicle ui` は明示起動型の foreground local web UI です。デフォルトでは `127.0.0.1:8765` に bind し、read-only で現在の Chronicle root を表示します。終了するには terminal で `Ctrl-C` を押します。
+
+`chronicle ui-smoke` は、サーバーを起動せず、ブラウザも使わず、ローカル UI の read-only データ面を検証する smoke command です。`--json` を付けると機械可読の smoke report を出力します。
 
 `chronicle ui` は `/api/overview`, `/api/events`, `/api/contexts`, `/api/artifacts`, `/api/decisions`, `/api/rde`, `/api/boundary`, `/api/audit`, `/api/lifecycle`, `/api/package-review`, `/api/graph-summary` を read-only endpoint として提供します。これらはすべてローカル Chronicle ファイル由来の派生ビューです。
 
@@ -176,6 +180,7 @@ v1.2 では、`/api/events/<id>`, `/api/contexts/<id>`, `/api/artifacts/<id>`, `
 - `graph-json` はGraphRAG接続準備用の派生exportです。
 - HTML Review Console は静的・読み取り専用の派生ビューです。
 - `chronicle ui` は明示起動型の read-only local web UI であり、daemon、server-by-default、access control、correctness proof ではありません。
+- `chronicle ui-smoke` は read-only diagnostic smoke であり、サーバー起動、ブラウザ操作、セキュリティ認証、正しさの証明ではありません。
 
 ## ドキュメント
 
@@ -245,12 +250,11 @@ ruff check src/ tests/
 
 ## リリース
 
-- Latest published release: **v1.1.0**
-- Current repository-side release target: **v1.2.0**
+- Latest published release: **v1.2.0**
+- Current repository-side release target: **v1.3.0**
 - v1.2.0 release readiness: [docs/release-readiness-v1.2.md](docs/release-readiness-v1.2.md)
 - v1.2.0 smoke profile: [docs/smoke-test-v1.2.md](docs/smoke-test-v1.2.md)
 - v1.2.0 release notes: [docs/release-notes-v1.2.0.md](docs/release-notes-v1.2.0.md)
-- v1.2.0 publication requires tag creation, GitHub Release publication, and installer smoke from the tag.
 
 ## ライセンス
 
