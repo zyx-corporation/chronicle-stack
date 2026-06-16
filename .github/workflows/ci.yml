@@ -38,19 +38,62 @@ jobs:
           ROOT="$RUNNER_TEMP/chronicle-ui-smoke"
           rm -rf "$ROOT"
           mkdir -p "$ROOT"
-          cd "$ROOT"
+          export CHRONICLE_UI_SMOKE_ROOT="$ROOT"
 
-          chronicle init --title "CI UI Smoke"
-          chronicle record --type user_input --actor ci --summary "CI ui-smoke event"
-          chronicle add-context --title "CI Smoke Context" --summary "CI ui-smoke context" --visibility public
-          printf 'ci smoke artifact body\n' > artifact.md
-          chronicle artifact create --title "CI Smoke Artifact" --type document --file artifact.md --visibility private
-          chronicle boundary add --type warn --field visibility --operator equals --value private --reason "CI smoke private visibility warning"
-          chronicle audit record --operation export --purpose "CI ui-smoke" --target local
-          chronicle lifecycle record --target ci-smoke-target --target-kind context --action seal --reason "CI smoke marker"
+          python - <<'PY'
+          import os
+          from pathlib import Path
 
-          chronicle ui-smoke
-          chronicle ui-smoke --json > ui-smoke.json
+          from chronicle.models.artifact import ArtifactType
+          from chronicle.models.audit import AuditOperation, AuditSeverity, AuditTargetEnvironment
+          from chronicle.models.boundary import BoundaryConditionField, BoundaryOperator, BoundaryRuleType
+          from chronicle.models.lifecycle import LifecycleAction, LifecycleReasonClass
+          from chronicle.models.visibility import VisibilityHint
+          from chronicle.services.artifact_service import ArtifactService
+          from chronicle.services.audit_service import AuditService
+          from chronicle.services.boundary_service import BoundaryService
+          from chronicle.services.chronicle_service import ChronicleService
+          from chronicle.services.context_service import ContextService
+          from chronicle.services.lifecycle_service import LifecycleService
+
+          root = Path(os.environ["CHRONICLE_UI_SMOKE_ROOT"])
+          ChronicleService(root).init("CI UI Smoke")
+          context = ContextService(root).add_context(title="CI Smoke Context", visibility_hint=VisibilityHint.PUBLIC)
+          artifact_file = root / "artifact.md"
+          artifact_file.write_text("ci smoke artifact body\n", encoding="utf-8")
+          ArtifactService(root).create(
+              title="CI Smoke Artifact",
+              artifact_type=ArtifactType.DOCUMENT,
+              source_file=artifact_file,
+              visibility_hint=VisibilityHint.PRIVATE,
+          )
+          BoundaryService(root).add_rule(
+              rule_type=BoundaryRuleType.WARN,
+              field=BoundaryConditionField.VISIBILITY,
+              operator=BoundaryOperator.EQUALS,
+              value="private",
+              reason="CI smoke private visibility warning",
+          )
+          AuditService(root).record(
+              operation=AuditOperation.EXPORT,
+              actor="ci",
+              purpose="CI ui-smoke",
+              target_environment=AuditTargetEnvironment.LOCAL,
+              result=AuditSeverity.INFO,
+              summary="CI smoke audit",
+          )
+          LifecycleService(root).record(
+              action=LifecycleAction.SEAL,
+              target_id=context.context_id,
+              target_kind="context",
+              actor="ci",
+              reason_class=LifecycleReasonClass.PRIVACY,
+              reason="CI smoke marker",
+          )
+          PY
+
+          chronicle ui-smoke --root "$ROOT"
+          chronicle ui-smoke --root "$ROOT" --json > ui-smoke.json
           python - <<'PY'
           import json
           from pathlib import Path
