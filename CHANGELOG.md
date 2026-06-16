@@ -1,5 +1,50 @@
 # Changelog
 
+## v1.1.0 - 2026-06-16
+
+### Added
+- Static read-first Review Console for GUI-oriented inspection.
+- Explicit foreground local web UI command:
+  - `chronicle ui`
+- Python stdlib local UI server with no new web framework dependency.
+- Default loopback UI binding:
+  - host: `127.0.0.1`
+  - port: `8765`
+- Lightweight browser shell for local read-only review.
+- Read-only local UI endpoints:
+  - `/api/overview`
+  - `/api/events`
+  - `/api/contexts`
+  - `/api/artifacts`
+  - `/api/decisions`
+  - `/api/rde`
+  - `/api/boundary`
+  - `/api/audit`
+  - `/api/lifecycle`
+  - `/api/package-review`
+  - `/api/graph-summary`
+- `/review-console` route for the static Review Console view.
+- v1.1 Review Console plan.
+- v1.1 Local Web UI design document.
+- UI server tests covering startup metadata, shell rendering, read-only endpoints, and HTTP smoke.
+
+### Changed
+- Project version finalized as `1.1.0`.
+- README now documents `chronicle ui` usage and read-only endpoint surface.
+- HTML dashboard language now presents the surface as a Review Console.
+- GUI/readability is now an explicit v1.1 release theme.
+
+### Notes
+- v1.1.0 is a GUI/readability release over the v1.0.0 local-first foundation.
+- `chronicle ui` is explicitly launched and foreground-only.
+- `chronicle ui` does not install or start a daemon, autostart service, hosted UI, or cloud sync.
+- `chronicle ui` does not call external model APIs.
+- `chronicle ui` does not embed GraphRAG, vector DB, or graph DB runtime.
+- UI visibility is not access control, enforcement, or correctness proof.
+- Static HTML Review Console remains available as a portable read-only derived export.
+- Commercial SaaS license and contributor policy drafts remain draft completed / counsel review pending.
+- Tag creation, GitHub Release publication, and installer smoke from tag remain explicit release-operator steps.
+
 ## v1.0.0 - 2026-06-15
 
 ### Added
@@ -178,9 +223,3 @@
 - Classification layers 0-4 and sensitivity labels.
 - Operation permission vocabulary for view / create / edit / append / summarize / reinterpret / redact / seal / export / inject / publish.
 - Model-context dry-run models and `ContextUseService`.
-- `chronicle-context check` auxiliary CLI.
-- Prompt-injection boundary helpers:
-  - `scan_text_for_prompt_injection(...)`
-  - `format_as_chronicle_data_block(...)`
-- Audit log surface:
-  - `.chronicle/audit.jsonl`
