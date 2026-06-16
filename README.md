@@ -93,6 +93,7 @@ flowchart TD
 | Stable release criteria / compatibility policy / integration boundary / release execution docs | v1.0.0完了 |
 | Static read-first Review Console | v1.1実装済み |
 | Explicit local web UI / `chronicle ui` | v1.1実装済み |
+| v1.1 GUI/readability release preparation | v1.1.0準備済み |
 | GraphRAG query engine | 将来構想 |
 | Full interactive editing UI | 将来構想 |
 
@@ -191,6 +192,9 @@ chronicle show
 - [v1.0 Release Notes](docs/release-notes-v1.0.0.md)
 - [v1.1 Review Console Plan](docs/v1.1-review-console-plan.md)
 - [v1.1 Local Web UI Design](docs/v1.1-local-web-ui-design.md)
+- [v1.1 Smoke Test Profile](docs/smoke-test-v1.1.md)
+- [v1.1 Release Readiness](docs/release-readiness-v1.1.md)
+- [v1.1 Release Notes](docs/release-notes-v1.1.0.md)
 - [v0.6 Release Deployment Procedure](docs/release-deployment-v0.6.md)
 - [v0.7 Operational Hardening Plan](docs/v0.7-operational-hardening-plan.md)
 - [v0.8 Package Review Workflow](docs/v0.8-package-review-workflow.md)
@@ -234,11 +238,12 @@ ruff check src/ tests/
 
 ## リリース
 
-- Latest published release: **v0.9.0**
-- Current stable target: **v1.0.0**
-- v1.0.0 release execution: [docs/release-execution-v1.0.0.md](docs/release-execution-v1.0.0.md)
-- v1.0.0 release notes: [docs/release-notes-v1.0.0.md](docs/release-notes-v1.0.0.md)
-- v1.0.0 publication requires tag creation, GitHub Release publication, and installer smoke from the tag.
+- Latest published release: **v1.0.0**
+- Current repository-side release target: **v1.1.0**
+- v1.1.0 release readiness: [docs/release-readiness-v1.1.md](docs/release-readiness-v1.1.md)
+- v1.1.0 smoke profile: [docs/smoke-test-v1.1.md](docs/smoke-test-v1.1.md)
+- v1.1.0 release notes: [docs/release-notes-v1.1.0.md](docs/release-notes-v1.1.0.md)
+- v1.1.0 publication requires tag creation, GitHub Release publication, and installer smoke from the tag.
 
 ## ライセンス
 
