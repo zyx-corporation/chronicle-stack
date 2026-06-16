@@ -44,19 +44,19 @@ def _populate(root):
         source_file=artifact_file,
         visibility_hint=VisibilityHint.PRIVATE,
     )
-    DecisionService(root).record(
+    decision = DecisionService(root).record(
         decision_type=DecisionType.ACCEPTED,
         reason="UI decision",
         artifact_id=artifact.artifact_id,
     )
-    BoundaryService(root).add_rule(
+    boundary_rule = BoundaryService(root).add_rule(
         rule_type=BoundaryRuleType.WARN,
         field=BoundaryConditionField.VISIBILITY,
         operator=BoundaryOperator.EQUALS,
         value="private",
         reason="UI boundary",
     )
-    AuditService(root).record(
+    audit_event = AuditService(root).record(
         operation=AuditOperation.EXPORT,
         actor="test",
         purpose="ui audit",
@@ -64,7 +64,7 @@ def _populate(root):
         result=AuditSeverity.INFO,
         summary="UI audit event",
     )
-    LifecycleService(root).record(
+    lifecycle_marker = LifecycleService(root).record(
         action=LifecycleAction.SEAL,
         target_id=context.context_id,
         target_kind="context",
@@ -72,6 +72,16 @@ def _populate(root):
         reason_class=LifecycleReasonClass.PRIVACY,
         reason="UI lifecycle marker",
     )
+    event_id = ChronicleService(root).jsonl.read_all()[0].event_id
+    return {
+        "event_id": event_id,
+        "context_id": context.context_id,
+        "artifact_id": artifact.artifact_id,
+        "decision_id": decision.decision_id,
+        "rule_id": boundary_rule.rule_id,
+        "audit_id": audit_event.audit_id,
+        "lifecycle_id": lifecycle_marker.lifecycle_id,
+    }
 
 
 def test_startup_metadata(tmp_path):
@@ -122,6 +132,22 @@ def test_ui_data_service_read_endpoints(tmp_path):
     assert "nodes" in service.graph_summary()
 
 
+def test_ui_data_service_detail_endpoints(tmp_path):
+    ids = _populate(tmp_path)
+    service = ChronicleUIDataService(tmp_path)
+
+    assert service.detail_payload(f"/api/events/{ids['event_id']}")["record"]["event_id"] == ids["event_id"]
+    assert service.detail_payload(f"/api/contexts/{ids['context_id']}")["record"]["title"] == "UI Context"
+    artifact_detail = service.detail_payload(f"/api/artifacts/{ids['artifact_id']}")["record"]
+    assert artifact_detail["title"] == "UI Artifact"
+    assert artifact_detail["versions"]
+    assert service.detail_payload(f"/api/decisions/{ids['decision_id']}")["record"]["reason"] == "UI decision"
+    assert service.detail_payload(f"/api/boundary/{ids['rule_id']}")["record"]["reason"] == "UI boundary"
+    assert service.detail_payload(f"/api/audit/{ids['audit_id']}")["record"]["summary"] == "UI audit event"
+    assert service.detail_payload(f"/api/lifecycle/{ids['lifecycle_id']}")["record"]["reason"] == "UI lifecycle marker"
+    assert service.detail_payload("/api/contexts/missing") is None
+
+
 def test_ui_shell_contains_interactive_local_ui(tmp_path):
     ChronicleService(tmp_path).init("UI Shell")
 
@@ -129,14 +155,14 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
 
     assert "Chronicle Stack Local UI" in html
     assert "Read-only foreground local UI" in html
-    assert "fetch(endpoint)" in html
+    assert "loadDetail" in html
     assert "/api/events" in html
     assert "/api/package-review" in html
     assert "does not write records" in html
 
 
 def test_http_root_and_read_only_endpoints(tmp_path):
-    _populate(tmp_path)
+    ids = _populate(tmp_path)
     server = make_server(host="127.0.0.1", port=0, root=tmp_path)
     host, port = server.server_address
     thread = threading.Thread(target=server.serve_forever, daemon=True)
@@ -164,6 +190,24 @@ def test_http_root_and_read_only_endpoints(tmp_path):
             assert status == 200, endpoint
             payload = json.loads(body)
             assert key in payload, endpoint
+
+        detail_paths = [
+            f"/api/events/{ids['event_id']}",
+            f"/api/contexts/{ids['context_id']}",
+            f"/api/artifacts/{ids['artifact_id']}",
+            f"/api/decisions/{ids['decision_id']}",
+            f"/api/boundary/{ids['rule_id']}",
+            f"/api/audit/{ids['audit_id']}",
+            f"/api/lifecycle/{ids['lifecycle_id']}",
+        ]
+        for endpoint in detail_paths:
+            status, body = _http_get(host, port, endpoint)
+            assert status == 200, endpoint
+            payload = json.loads(body)
+            assert "record" in payload, endpoint
+
+        status, _body = _http_get(host, port, "/api/contexts/missing")
+        assert status == 404
 
         status, review_console = _http_get(host, port, "/review-console")
         assert status == 200

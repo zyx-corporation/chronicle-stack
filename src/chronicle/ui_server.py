@@ -2,7 +2,7 @@
 
 This module intentionally uses Python stdlib only. It serves read-only views over
 local Chronicle files and must not be confused with a daemon, hosted service,
-access-control layer, model runtime, GraphRAG engine, vector DB, or graph DB.
+model runtime, GraphRAG engine, vector DB, or graph DB.
 """
 
 from __future__ import annotations
@@ -15,7 +15,7 @@ from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
-from urllib.parse import urlparse
+from urllib.parse import unquote, urlparse
 
 from chronicle.errors import ChronicleError
 from chronicle.exporters.html_exporter import HtmlDashboardExporter
@@ -59,6 +59,13 @@ def _dump_model(model: object) -> dict[str, Any]:
     return model.model_dump(mode="json")  # type: ignore[attr-defined]
 
 
+def _find_by_attr(items: list[object], attr: str, value: str) -> dict[str, Any] | None:
+    for item in items:
+        if getattr(item, attr, None) == value:
+            return _dump_model(item)
+    return None
+
+
 class ChronicleUIDataService:
     """Read-only data provider for the local UI."""
 
@@ -70,7 +77,6 @@ class ChronicleUIDataService:
         self.package_review = PackageReviewService(self.root)
 
     def overview(self) -> dict[str, Any]:
-        """Return a minimal local UI overview document."""
         metadata = self.chronicle.require_initialized()
         events = self.chronicle.jsonl.read_all()
         artifacts, _ = self.chronicle.index.load_artifacts()
@@ -80,7 +86,6 @@ class ChronicleUIDataService:
         boundary_rules = self.chronicle.index.load_boundary_rules()
         audit_events = self.audit.list_events()
         lifecycle_events = self.lifecycle.list_events()
-
         return {
             "chronicle": {
                 "id": metadata.chronicle_id,
@@ -130,8 +135,8 @@ class ChronicleUIDataService:
 
     def rde_records(self) -> dict[str, Any]:
         self.chronicle.require_initialized()
-        rde_records = sorted(self.chronicle.index.load_rde_records().values(), key=lambda item: item.created_at)
-        return {"rde_records": [_dump_model(record) for record in rde_records]}
+        records = sorted(self.chronicle.index.load_rde_records().values(), key=lambda item: item.created_at)
+        return {"rde_records": [_dump_model(record) for record in records]}
 
     def boundary_rules(self) -> dict[str, Any]:
         self.chronicle.require_initialized()
@@ -148,8 +153,8 @@ class ChronicleUIDataService:
 
     def package_review_snapshot(self) -> dict[str, Any]:
         try:
-            review_report = self.package_review.review_context_package(purpose="chronicle ui overview")
-            return review_report.model_dump(mode="json")
+            report = self.package_review.review_context_package(purpose="chronicle ui overview")
+            return report.model_dump(mode="json")
         except Exception as exc:  # pragma: no cover - defensive UI degradation
             return {"status": "unavailable", "error": str(exc)}
 
@@ -170,9 +175,41 @@ class ChronicleUIDataService:
             "graphrag_runtime": False,
             "vector_db": False,
             "graph_db": False,
-            "access_control": False,
             "correctness_proof": False,
         }
+
+    def detail_payload(self, path: str) -> dict[str, Any] | None:
+        parts = [unquote(part) for part in path.strip("/").split("/")]
+        if len(parts) != 3 or parts[0] != "api":
+            return None
+        resource, record_id = parts[1], parts[2]
+        self.chronicle.require_initialized()
+        if resource == "events":
+            record = _find_by_attr(self.chronicle.jsonl.read_all(), "event_id", record_id)
+        elif resource == "contexts":
+            contexts = self.chronicle.index.load_contexts()
+            record = _dump_model(contexts[record_id]) if record_id in contexts else None
+        elif resource == "artifacts":
+            artifacts, versions = self.chronicle.index.load_artifacts()
+            record = _dump_model(artifacts[record_id]) if record_id in artifacts else None
+            if record is not None:
+                record["versions"] = [_dump_model(version) for version in versions.get(record_id, [])]
+        elif resource == "decisions":
+            decisions = self.chronicle.index.load_decisions()
+            record = _dump_model(decisions[record_id]) if record_id in decisions else None
+        elif resource == "rde":
+            records = self.chronicle.index.load_rde_records()
+            record = _dump_model(records[record_id]) if record_id in records else None
+        elif resource == "boundary":
+            rules = self.chronicle.index.load_boundary_rules()
+            record = _dump_model(rules[record_id]) if record_id in rules else None
+        elif resource == "audit":
+            record = _find_by_attr(self.audit.list_events(), "audit_id", record_id)
+        elif resource == "lifecycle":
+            record = _find_by_attr(self.lifecycle.list_events(), "lifecycle_id", record_id)
+        else:
+            return None
+        return {"record": record} if record is not None else None
 
     def api_payload(self, path: str) -> dict[str, Any] | None:
         routes = {
@@ -189,10 +226,11 @@ class ChronicleUIDataService:
             "/api/graph-summary": lambda: {"graph_summary": self.graph_summary()},
         }
         handler = routes.get(path)
-        return handler() if handler else None
+        if handler:
+            return handler()
+        return self.detail_payload(path)
 
     def html_shell(self) -> str:
-        """Return the interactive local UI shell."""
         metadata = self.chronicle.require_initialized()
         title = html.escape(metadata.title)
         root = html.escape(str(self.root.resolve()))
@@ -204,20 +242,12 @@ class ChronicleUIDataService:
 <title>Chronicle Local UI — {title}</title>
 <style>
 body {{ font-family: -apple-system, BlinkMacSystemFont, sans-serif; max-width: 1180px; margin: 0 auto; padding: 20px; color: #1f2937; }}
-h1 {{ border-bottom: 2px solid #2563eb; padding-bottom: 8px; }}
-nav {{ display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0; }}
-button {{ border: 1px solid #d1d5db; background: #fff; border-radius: 6px; padding: 8px 10px; cursor: pointer; }}
-button:hover {{ background: #f9fafb; }}
-.panel {{ border: 1px solid #e5e7eb; border-radius: 8px; padding: 14px; margin: 12px 0; background: #fff; }}
-.warning {{ background: #fefce8; border-left: 4px solid #eab308; padding: 10px 12px; border-radius: 0 4px 4px 0; }}
-.cards {{ display: flex; flex-wrap: wrap; gap: 12px; }}
-.card {{ border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; min-width: 120px; }}
-.count {{ font-size: 1.8em; font-weight: bold; color: #2563eb; }}
-.label {{ color: #6b7280; font-size: 0.85em; }}
-pre {{ white-space: pre-wrap; word-break: break-word; background: #f9fafb; padding: 12px; border-radius: 8px; border: 1px solid #e5e7eb; }}
+button {{ margin: 3px; padding: 6px 9px; }}
+.panel {{ border: 1px solid #e5e7eb; border-radius: 8px; padding: 14px; margin: 12px 0; }}
+.warning {{ background: #fefce8; border-left: 4px solid #eab308; padding: 10px 12px; }}
+pre {{ white-space: pre-wrap; word-break: break-word; background: #f9fafb; padding: 12px; }}
 table {{ width: 100%; border-collapse: collapse; }}
-th, td {{ padding: 8px; text-align: left; border-bottom: 1px solid #e5e7eb; vertical-align: top; }}
-th {{ background: #f9fafb; }}
+th, td {{ padding: 6px; border-bottom: 1px solid #e5e7eb; vertical-align: top; }}
 .id {{ font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.85em; }}
 </style>
 </head>
@@ -227,7 +257,7 @@ th {{ background: #f9fafb; }}
 <p>Root: <span class="id">{root}</span></p>
 <div class="warning">
   <p><strong>Read-only foreground local UI.</strong> This UI reads local Chronicle files and does not write records.</p>
-  <p>No daemon, no autostart, no external model API, no GraphRAG runtime, no vector DB, no graph DB. UI visibility is not access control or correctness proof.</p>
+  <p>No daemon, no autostart, no external model API, no GraphRAG runtime, no vector DB, no graph DB. UI visibility is not correctness proof.</p>
 </div>
 <nav>
   <button data-endpoint="/api/overview">Overview</button>
@@ -242,41 +272,38 @@ th {{ background: #f9fafb; }}
   <button data-endpoint="/api/package-review">Package Review</button>
   <button data-endpoint="/api/graph-summary">Graph Summary</button>
 </nav>
-<section id="summary" class="panel"></section>
 <section id="view" class="panel"><p>Loading overview...</p></section>
+<section id="detail" class="panel"><p>Select JSON from a table row to inspect one record.</p></section>
 <script>
-function escapeHtml(value) {{
-  return String(value).replace(/[&<>\"']/g, function(ch) {{
-    return {{'&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;', "'": '&#39;'}}[ch];
-  }});
-}}
-function renderCards(counts) {{
-  return '<div class="cards">' + Object.keys(counts).map(function(key) {{
-    return '<div class="card"><div class="count">' + escapeHtml(counts[key]) + '</div><div class="label">' + escapeHtml(key) + '</div></div>';
-  }}).join('') + '</div>';
-}}
-function renderTable(rows) {{
-  if (!Array.isArray(rows) || rows.length === 0) return '<p>No records.</p>';
+const idFields = ['event_id', 'context_id', 'artifact_id', 'decision_id', 'rde_record_id', 'rule_id', 'audit_id', 'lifecycle_id'];
+function esc(value) {{ return String(value).replace(/[&<>\"']/g, ch => ({{'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}}[ch])); }}
+function firstArray(payload) {{ for (const key of Object.keys(payload)) if (Array.isArray(payload[key])) return payload[key]; return null; }}
+function detailPath(endpoint, row) {{ for (const key of idFields) if (row[key]) return endpoint + '/' + encodeURIComponent(row[key]); return null; }}
+function renderTable(endpoint, rows) {{
+  if (!rows || rows.length === 0) return '<p>No records.</p>';
   const keys = Object.keys(rows[0]).slice(0, 8);
-  return '<table><thead><tr>' + keys.map(k => '<th>' + escapeHtml(k) + '</th>').join('') + '</tr></thead><tbody>' +
-    rows.map(row => '<tr>' + keys.map(k => '<td>' + escapeHtml(typeof row[k] === 'object' ? JSON.stringify(row[k]) : row[k] ?? '') + '</td>').join('') + '</tr>').join('') +
-    '</tbody></table>';
-}}
-function firstArray(payload) {{
-  for (const key of Object.keys(payload)) if (Array.isArray(payload[key])) return payload[key];
-  return null;
+  return '<table><thead><tr><th>detail</th>' + keys.map(k => '<th>' + esc(k) + '</th>').join('') + '</tr></thead><tbody>' +
+    rows.map(row => {{
+      const path = detailPath(endpoint, row);
+      const button = path ? '<button data-detail="' + esc(path) + '">JSON</button>' : '';
+      return '<tr><td>' + button + '</td>' + keys.map(k => '<td>' + esc(typeof row[k] === 'object' ? JSON.stringify(row[k]) : row[k] ?? '') + '</td>').join('') + '</tr>';
+    }}).join('') + '</tbody></table>';
 }}
 async function loadEndpoint(endpoint) {{
   const response = await fetch(endpoint);
   const payload = await response.json();
-  if (payload.counts) document.getElementById('summary').innerHTML = '<h2>Summary</h2>' + renderCards(payload.counts);
   const rows = firstArray(payload);
-  let body = rows ? renderTable(rows) : '<pre>' + escapeHtml(JSON.stringify(payload, null, 2)) + '</pre>';
-  document.getElementById('view').innerHTML = '<h2>' + escapeHtml(endpoint) + '</h2>' + body;
+  const body = rows ? renderTable(endpoint, rows) : '<pre>' + esc(JSON.stringify(payload, null, 2)) + '</pre>';
+  document.getElementById('view').innerHTML = '<h2>' + esc(endpoint) + '</h2>' + body;
 }}
-document.querySelectorAll('button[data-endpoint]').forEach(button => {{
-  button.addEventListener('click', () => loadEndpoint(button.dataset.endpoint));
-}});
+async function loadDetail(endpoint) {{
+  const response = await fetch(endpoint);
+  document.getElementById('detail').innerHTML = response.ok
+    ? '<h2>' + esc(endpoint) + '</h2><pre>' + esc(JSON.stringify(await response.json(), null, 2)) + '</pre>'
+    : '<h2>Detail</h2><p>Not found.</p>';
+}}
+document.querySelectorAll('button[data-endpoint]').forEach(button => button.addEventListener('click', () => loadEndpoint(button.dataset.endpoint)));
+document.getElementById('view').addEventListener('click', event => {{ if (event.target.dataset.detail) loadDetail(event.target.dataset.detail); }});
 loadEndpoint('/api/overview');
 </script>
 </body>
@@ -287,11 +314,10 @@ loadEndpoint('/api/overview');
 
 
 def create_handler(root: Path | None = None) -> type[BaseHTTPRequestHandler]:
-    """Create a request handler class bound to a Chronicle root."""
     service = ChronicleUIDataService(root)
 
     class ChronicleUIRequestHandler(BaseHTTPRequestHandler):
-        server_version = "ChronicleUILocal/0.2"
+        server_version = "ChronicleUILocal/0.3"
 
         def do_GET(self) -> None:  # noqa: N802 - stdlib API
             parsed = urlparse(self.path)
@@ -308,7 +334,6 @@ def create_handler(root: Path | None = None) -> type[BaseHTTPRequestHandler]:
             self.send_error(HTTPStatus.NOT_FOUND, "Not found")
 
         def log_message(self, format: str, *args: object) -> None:
-            """Suppress default request logs for cleaner foreground CLI output."""
             return
 
         def _send_html(self, body: str) -> None:
@@ -331,7 +356,6 @@ def create_handler(root: Path | None = None) -> type[BaseHTTPRequestHandler]:
 
 
 def make_server(*, host: str = DEFAULT_UI_HOST, port: int = DEFAULT_UI_PORT, root: Path | None = None) -> ThreadingHTTPServer:
-    """Create the local UI server without starting it."""
     return ThreadingHTTPServer((host, port), create_handler(root))
 
 
@@ -342,11 +366,6 @@ def serve_ui(
     root: Path | None = None,
     open_browser: bool = False,
 ) -> UIStartupMetadata:
-    """Start the foreground local UI server.
-
-    This function blocks until interrupted by the user. It returns only if the
-    server exits normally, which is mainly useful for tests around setup failure.
-    """
     root_path = root or Path.cwd()
     service = ChronicleService(root_path)
     service.require_initialized()
@@ -364,7 +383,6 @@ def serve_ui(
 
 
 def validate_ui_root(root: Path | None = None) -> None:
-    """Validate that the target root is an initialized Chronicle."""
     try:
         ChronicleService(root).require_initialized()
     except ChronicleError:
