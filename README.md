@@ -96,7 +96,8 @@ flowchart TD
 | v1.1 GUI/readability release preparation | v1.1.0完了 |
 | Read-only UI detail endpoints | v1.2実装済み |
 | v1.2 UI drill-down release preparation | v1.2.0完了 |
-| Automated read-only UI smoke command | v1.3準備中 |
+| Automated read-only UI smoke command | v1.3実装済み |
+| v1.3 UI smoke release preparation | v1.3.0準備済み |
 | GraphRAG query engine | 将来構想 |
 | Full interactive editing UI | 将来構想 |
 
@@ -146,6 +147,7 @@ chronicle package context --purpose "Sayane review" --target local
 chronicle export --format graph-json -o graph.json
 chronicle export --format html -o chronicle-review-console.html
 chronicle ui-smoke
+chronicle ui-smoke --json
 chronicle ui
 chronicle graph summary
 chronicle context check --target local --purpose "internal review"
@@ -207,6 +209,9 @@ v1.2 では、`/api/events/<id>`, `/api/contexts/<id>`, `/api/artifacts/<id>`, `
 - [v1.2 Smoke Test Profile](docs/smoke-test-v1.2.md)
 - [v1.2 Release Readiness](docs/release-readiness-v1.2.md)
 - [v1.2 Release Notes](docs/release-notes-v1.2.0.md)
+- [v1.3 Smoke Test Profile](docs/smoke-test-v1.3.md)
+- [v1.3 Release Readiness](docs/release-readiness-v1.3.md)
+- [v1.3 Release Notes](docs/release-notes-v1.3.0.md)
 - [v0.6 Release Deployment Procedure](docs/release-deployment-v0.6.md)
 - [v0.7 Operational Hardening Plan](docs/v0.7-operational-hardening-plan.md)
 - [v0.8 Package Review Workflow](docs/v0.8-package-review-workflow.md)
@@ -252,9 +257,10 @@ ruff check src/ tests/
 
 - Latest published release: **v1.2.0**
 - Current repository-side release target: **v1.3.0**
-- v1.2.0 release readiness: [docs/release-readiness-v1.2.md](docs/release-readiness-v1.2.md)
-- v1.2.0 smoke profile: [docs/smoke-test-v1.2.md](docs/smoke-test-v1.2.md)
-- v1.2.0 release notes: [docs/release-notes-v1.2.0.md](docs/release-notes-v1.2.0.md)
+- v1.3.0 release readiness: [docs/release-readiness-v1.3.md](docs/release-readiness-v1.3.md)
+- v1.3.0 smoke profile: [docs/smoke-test-v1.3.md](docs/smoke-test-v1.3.md)
+- v1.3.0 release notes: [docs/release-notes-v1.3.0.md](docs/release-notes-v1.3.0.md)
+- v1.3.0 publication requires tag creation, GitHub Release publication, and installer smoke from the tag.
 
 ## ライセンス
 
