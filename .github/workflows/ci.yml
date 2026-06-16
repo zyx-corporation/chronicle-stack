@@ -31,3 +31,35 @@ jobs:
 
       - name: Run tests
         run: pytest -v
+
+      - name: Run UI smoke
+        run: |
+          set -euo pipefail
+          ROOT="$RUNNER_TEMP/chronicle-ui-smoke"
+          rm -rf "$ROOT"
+          mkdir -p "$ROOT"
+          cd "$ROOT"
+
+          chronicle init --title "CI UI Smoke"
+          chronicle record --type user_input --actor ci --summary "CI ui-smoke event"
+          chronicle add-context --title "CI Smoke Context" --summary "CI ui-smoke context" --visibility public
+          printf 'ci smoke artifact body\n' > artifact.md
+          chronicle artifact create --title "CI Smoke Artifact" --type document --file artifact.md --visibility private
+          chronicle boundary add --type warn --field visibility --operator equals --value private --reason "CI smoke private visibility warning"
+          chronicle audit record --operation export --purpose "CI ui-smoke" --target local
+          chronicle lifecycle record --target ci-smoke-target --target-kind context --action seal --reason "CI smoke marker"
+
+          chronicle ui-smoke
+          chronicle ui-smoke --json > ui-smoke.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          payload = json.loads(Path("ui-smoke.json").read_text(encoding="utf-8"))
+          assert payload["passed"] is True
+          assert payload["read_only"] is True
+          assert payload["server_started"] is False
+          assert payload["browser_required"] is False
+          assert payload["external_runtime"] is False
+          assert payload["checks"]
+          PY
