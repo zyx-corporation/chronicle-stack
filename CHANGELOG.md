@@ -1,5 +1,36 @@
 # Changelog
 
+## v1.2.0 - 2026-06-16
+
+### Added
+- Read-only detail endpoints for `chronicle ui`:
+  - `/api/events/<id>`
+  - `/api/contexts/<id>`
+  - `/api/artifacts/<id>`
+  - `/api/decisions/<id>`
+  - `/api/rde/<id>`
+  - `/api/boundary/<id>`
+  - `/api/audit/<id>`
+  - `/api/lifecycle/<id>`
+- Artifact detail payloads now include version metadata.
+- Lightweight browser-shell drill-down affordance for table rows.
+- Tests for service-level and HTTP-level detail endpoint success and not-found behavior.
+- v1.2 UI detail endpoint release track.
+
+### Changed
+- Project version finalized as `1.2.0`.
+- README now documents v1.2 detail endpoint status and release target.
+- `chronicle ui` moves from collection-oriented review to record-inspection review.
+
+### Notes
+- v1.2.0 is a UI drill-down / inspectability release over the v1.1.0 GUI/readability release.
+- Detail endpoints are read-only derived views over local Chronicle files.
+- Detail views do not write records, enforce access control, or prove correctness.
+- `chronicle ui` remains explicitly launched, foreground-only, and loopback-bound by default.
+- v1.2.0 does not add daemon/autostart behavior, hosted service, model API, GraphRAG runtime, vector DB, or graph DB.
+- Commercial SaaS license and contributor policy drafts remain draft completed / counsel review pending.
+- Tag creation, GitHub Release publication, and installer smoke from tag remain explicit release-operator steps.
+
 ## v1.1.0 - 2026-06-16
 
 ### Added
