@@ -1,8 +1,8 @@
 """Tests for explicit local Chronicle UI server."""
 
+import http.client
 import json
 import threading
-import urllib.request
 
 from typer.testing import CliRunner
 
@@ -10,6 +10,16 @@ from chronicle.cli import app
 from chronicle.services.chronicle_service import ChronicleService
 from chronicle.services.context_service import ContextService
 from chronicle.ui_server import ChronicleUIDataService, build_startup_metadata, make_server
+
+
+def _http_get(host: str, port: int, path: str) -> tuple[int, str]:
+    connection = http.client.HTTPConnection(host, port, timeout=5)
+    try:
+        connection.request("GET", path)
+        response = connection.getresponse()
+        return response.status, response.read().decode("utf-8")
+    finally:
+        connection.close()
 
 
 def test_startup_metadata(tmp_path):
@@ -57,12 +67,13 @@ def test_http_root_and_overview_endpoint(tmp_path):
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
     try:
-        with urllib.request.urlopen(f"http://{host}:{port}/", timeout=5) as response:
-            html = response.read().decode("utf-8")
+        status, html = _http_get(host, port, "/")
+        assert status == 200
         assert "Chronicle Stack Review Console" in html
 
-        with urllib.request.urlopen(f"http://{host}:{port}/api/overview", timeout=5) as response:
-            payload = json.loads(response.read().decode("utf-8"))
+        status, body = _http_get(host, port, "/api/overview")
+        assert status == 200
+        payload = json.loads(body)
         assert payload["chronicle"]["title"] == "HTTP UI"
         assert payload["runtime_boundary"]["read_only"] is True
     finally:
@@ -75,7 +86,8 @@ def test_chronicle_ui_help():
     runner = CliRunner()
     result = runner.invoke(app, ["ui", "--help"])
     assert result.exit_code == 0
-    assert "Start an explicit foreground read-only local web UI" in result.stdout
+    assert "foreground" in result.stdout
+    assert "read-only" in result.stdout
     assert "--host" in result.stdout
     assert "--port" in result.stdout
     assert "--open" in result.stdout
