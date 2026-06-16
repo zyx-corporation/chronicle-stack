@@ -1,5 +1,32 @@
 # Changelog
 
+## v1.3.0 - 2026-06-17
+
+### Added
+- Automated read-only UI smoke command:
+  - `chronicle ui-smoke`
+  - `chronicle ui-smoke --json`
+  - `chronicle ui-smoke --root <root>`
+- `chronicle.ui_smoke` service and report models.
+- Collection payload smoke checks for the local UI data surface.
+- Detail payload smoke checks for available records.
+- Missing-detail smoke behavior.
+- Text and JSON smoke report output.
+- Tests for service success, CLI text output, CLI JSON output, missing-root failure, and help text.
+
+### Changed
+- Project version finalized as `1.3.0`.
+- README now documents `chronicle ui-smoke` and the v1.3 release target.
+- v1.2 manual UI detail smoke is now supported by repeatable local automation.
+
+### Notes
+- v1.3.0 is an automated UI smoke / release-verification release over v1.2.0.
+- `chronicle ui-smoke` does not start a server, bind sockets, or open a browser.
+- `chronicle ui-smoke` does not write records, call external model APIs, embed GraphRAG, use vector DB, or use graph DB.
+- Smoke pass is diagnostic and is not security certification, access-control enforcement, or correctness proof.
+- Commercial SaaS license and contributor policy drafts remain draft completed / counsel review pending.
+- Tag creation, GitHub Release publication, and installer smoke from tag remain explicit release-operator steps.
+
 ## v1.2.0 - 2026-06-16
 
 ### Added
@@ -215,7 +242,6 @@
 - Primary alias tests for package, context, graph, and export profile workflows.
 - Future HTTP bridge auth dependency guidance for Chronicle / Sayane integration planning.
 - v0.6 release-readiness document.
-- v0.6 smoke-test checklist.
 
 ### Changed
 - User-facing documentation now prefers primary CLI aliases while preserving auxiliary commands as compatibility surfaces.
