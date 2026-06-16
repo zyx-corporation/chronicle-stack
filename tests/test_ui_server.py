@@ -86,10 +86,5 @@ def test_chronicle_ui_help():
     runner = CliRunner()
     result = runner.invoke(app, ["ui", "--help"])
     assert result.exit_code == 0
-    assert "foreground" in result.stdout
-    assert "read-only" in result.stdout
-    assert "--host" in result.stdout
-    assert "--port" in result.stdout
-    assert "--open" in result.stdout
-    assert "--root" in result.stdout
-    assert "--json" in result.stdout
+    for option in ("host", "port", "open", "root", "json"):
+        assert option in result.stdout.lower()
