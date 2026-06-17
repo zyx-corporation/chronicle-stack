@@ -2,18 +2,18 @@
 
 ## Status
 
-Repository-side release preparation for v1.4.0 is in progress.
+Repository-side release preparation for v1.4.0 is complete, and external v1.4.0 release execution has been completed.
 
-Latest published release before this track:
-
-```text
-v1.3.0
-```
-
-Current repository-side release target:
+Latest published release for this track:
 
 ```text
 v1.4.0
+```
+
+Current post-release documentation track:
+
+```text
+v1.5 release operator guide
 ```
 
 ## Scope
@@ -34,6 +34,7 @@ It includes:
 
 ## Release documents
 
+- [Release Operator Guide](release-operator-guide.md)
 - [v1.4 Smoke Test Profile](smoke-test-v1.4.md)
 - [v1.4 Release Readiness](release-readiness-v1.4.md)
 - [v1.4 Release Notes](release-notes-v1.4.0.md)
@@ -59,6 +60,6 @@ Preserved: local-first release discipline, inspect-first installer, no-daemon/no
 
 Transformed: v1.3 corrective retag incident becomes v1.4 release hardening.
 
-Supplemented: release status page for v1.4.0 while README release-status updates are kept as a separate documentation polish surface if needed.
+Supplemented: release status page now links the reusable release operator guide.
 
-Unresolved: external v1.4.0 tag publication and installer smoke evidence.
+Unresolved: future full release automation, package publishing, and immutable tag governance.
