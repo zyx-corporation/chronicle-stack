@@ -1,6 +1,6 @@
 # Chronicle Stack curl-based Local Deployment
 
-Status: v0.6 local deployment guide  
+Status: v1.4 local deployment guide  
 Scope: local CLI installation only
 
 ## Purpose
@@ -30,7 +30,7 @@ curl -fsSL https://raw.githubusercontent.com/zyx-corporation/chronicle-stack/mai
 Pinned ref example:
 
 ```bash
-CHRONICLE_STACK_REF=v0.6.0 \
+CHRONICLE_STACK_REF=v1.3.0 \
   curl -fsSL https://raw.githubusercontent.com/zyx-corporation/chronicle-stack/main/scripts/install-local.sh | bash
 ```
 
@@ -97,6 +97,7 @@ You can override the defaults with environment variables.
 | `PYTHON_BIN` | `python3` | Python executable |
 | `VENV_DIR` | `$INSTALL_DIR/.venv` | Virtual environment directory |
 | `DRY_RUN` | `0` | Print commands without executing when set to `1` |
+| `CHRONICLE_STACK_ALLOW_MOVED_TAG` | `1` | Force-refresh a requested local tag from origin when set to `1` |
 
 Example custom install:
 
@@ -112,6 +113,33 @@ Dry run:
 ```bash
 DRY_RUN=1 bash /tmp/chronicle-install-local.sh
 ```
+
+## Moved or Recreated Tags
+
+Release tags should normally be immutable. If a release tag must be corrected, record the reason in the release issue and rerun smoke evidence after correction.
+
+Existing local installer checkouts can retain stale local tag objects. The installer therefore fetches the requested branch/tag explicitly before checkout. For tag refs, the default behavior is to force-refresh the requested local tag from origin:
+
+```text
+CHRONICLE_STACK_ALLOW_MOVED_TAG=1
+```
+
+To disable that behavior and keep ordinary non-forced tag fetch semantics:
+
+```bash
+CHRONICLE_STACK_ALLOW_MOVED_TAG=0 bash /tmp/chronicle-install-local.sh
+```
+
+After a corrective retag, verify the installed checkout:
+
+```bash
+git -C "$INSTALL_DIR" rev-parse HEAD
+git -C "$INSTALL_DIR" rev-parse "$CHRONICLE_STACK_REF"
+grep 'version =' "$INSTALL_DIR/pyproject.toml"
+chronicle --version
+```
+
+For high-confidence release smoke after a retag, a clean install directory is still recommended.
 
 ## Verify Install
 
@@ -157,11 +185,11 @@ curl -fsSL https://raw.githubusercontent.com/zyx-corporation/chronicle-stack/mai
 For a pinned release:
 
 ```bash
-CHRONICLE_STACK_REF=v0.6.0 \
+CHRONICLE_STACK_REF=v1.3.0 \
   curl -fsSL https://raw.githubusercontent.com/zyx-corporation/chronicle-stack/main/scripts/install-local.sh | bash
 ```
 
-The installer fetches the repository, checks out the requested ref, recreates or refreshes the virtual environment, reinstalls the package, and refreshes command symlinks.
+The installer fetches the requested branch/tag ref, checks it out, recreates or refreshes the virtual environment, reinstalls the package, and refreshes command symlinks.
 
 ## Uninstall
 
@@ -204,13 +232,14 @@ This deployment path does not:
 
 ### Transformed
 
-- Local installation becomes reproducible from a single bootstrap script.
-- Release deployment becomes easier for non-developer local evaluation.
+- Local installation becomes more robust against stale local tags after exceptional release correction.
+- Release deployment remains inspect-first while recording moved-tag risk explicitly.
 
 ### Complemented
 
 - The installer supports pinned refs for repeatable release installation.
 - The documentation distinguishes inspect-first usage from convenience `curl | bash` usage.
+- Corrective retag behavior is made explicit instead of hidden in release operator memory.
 
 ### Deviation Risks
 
@@ -218,3 +247,4 @@ This deployment path does not:
 - Do not imply local install is a server deployment.
 - Do not imply the installer provides security, sandboxing, or access control.
 - Do not treat installation success as semantic correctness certification.
+- Do not normalize moving release tags; it remains exceptional and should be evidence-recorded.
