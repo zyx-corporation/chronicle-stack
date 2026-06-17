@@ -16,6 +16,7 @@ PREFIXES = {
     "audit": "aud_",
     "lifecycle": "lc_",
     "package": "pkg_",
+    "summary_job": "sum_",
 }
 
 
