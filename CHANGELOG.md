@@ -1,5 +1,28 @@
 # Changelog
 
+## v1.4.0 - 2026-06-17
+
+### Added
+- Local installer hardening for moved/recreated release tags.
+- Forced refresh of requested local release tags from origin by default.
+- `CHRONICLE_STACK_ALLOW_MOVED_TAG=0` opt-out for non-forced tag fetch semantics.
+- Installer checkout commit logging.
+- Local deployment documentation for moved/recreated tag handling and clean smoke guidance.
+
+### Changed
+- Project version finalized as `1.4.0`.
+- `scripts/install-local.sh` now explicitly resolves requested branch/tag refs before checkout.
+- Local installer uses `pip install --force-reinstall` to reduce stale package installs.
+- README release status now points to v1.4.0 preparation.
+
+### Notes
+- v1.4.0 is a local installer hardening release over v1.3.0.
+- Moving release tags remains exceptional and should be evidence-recorded.
+- Installer success is diagnostic and is not correctness proof or security certification.
+- The installer still does not install a daemon, service, hosted UI, model API, GraphRAG runtime, vector DB, or graph DB.
+- Commercial SaaS license and contributor policy drafts remain draft completed / counsel review pending.
+- Tag creation, GitHub Release publication, and installer smoke from tag remain explicit release-operator steps.
+
 ## v1.3.0 - 2026-06-17
 
 ### Added
@@ -196,7 +219,6 @@
 - `chronicle-audit` and `chronicle-lifecycle` entry points.
 - Doctor remediation guidance for classification / audit / lifecycle warnings.
 - v0.7 operational hardening plan.
-- v0.7 smoke test profile.
 - v0.7 operational workflow tests.
 
 ### Changed
