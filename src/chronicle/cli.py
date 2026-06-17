@@ -11,6 +11,7 @@ from chronicle.cli_context import context_app
 from chronicle.cli_graph import graph_app
 from chronicle.cli_lifecycle import lifecycle_app
 from chronicle.cli_package import package_app
+from chronicle.cli_review import review_app
 from chronicle.cli_runtime import runtime_app
 from chronicle.cli_summary import summary_app
 from chronicle.errors import ChronicleError
@@ -130,6 +131,7 @@ app.add_typer(lifecycle_app, name="lifecycle")
 app.add_typer(graph_app, name="graph")
 app.add_typer(runtime_app, name="runtime")
 app.add_typer(summary_app, name="summary")
+app.add_typer(review_app, name="review")
 
 
 if __name__ == "__main__":
