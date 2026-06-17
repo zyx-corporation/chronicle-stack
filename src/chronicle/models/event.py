@@ -26,6 +26,7 @@ class EventType(StrEnum):
     BOUNDARY_RULE_ADDED = "boundary_rule_added"
     INJECTION_PLAN_RECORDED = "injection_plan_recorded"
     SUMMARY_JOB_CREATED = "summary_job_created"
+    REVIEW_DECISION_RECORDED = "review_decision_recorded"
 
 
 class Actor(StrEnum):
