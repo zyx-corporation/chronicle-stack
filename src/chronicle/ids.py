@@ -17,6 +17,7 @@ PREFIXES = {
     "lifecycle": "lc_",
     "package": "pkg_",
     "summary_job": "sum_",
+    "review": "rvw_",
 }
 
 
