@@ -8,6 +8,7 @@ BIN_DIR="${BIN_DIR:-${HOME}/.local/bin}"
 PYTHON_BIN="${PYTHON_BIN:-python3}"
 VENV_DIR="${VENV_DIR:-${INSTALL_DIR}/.venv}"
 DRY_RUN="${DRY_RUN:-0}"
+ALLOW_MOVED_TAG="${CHRONICLE_STACK_ALLOW_MOVED_TAG:-1}"
 
 COMMANDS=(
   chronicle
@@ -45,10 +46,46 @@ ensure_parent_dirs() {
   run mkdir -p "$INSTALL_DIR" "$BIN_DIR"
 }
 
+is_commit_sha() {
+  case "$1" in
+    *[!0-9a-fA-F]* | "") return 1 ;;
+    *) [ "${#1}" -ge 7 ] && [ "${#1}" -le 40 ] ;;
+  esac
+}
+
+fetch_requested_ref() {
+  if is_commit_sha "$REF"; then
+    log "Fetching commit/ref directly: $REF"
+    run git -C "$INSTALL_DIR" fetch --prune origin "$REF"
+    return 0
+  fi
+
+  log "Fetching branch ref if available: $REF"
+  if git -C "$INSTALL_DIR" ls-remote --exit-code --heads origin "$REF" >/dev/null 2>&1; then
+    run git -C "$INSTALL_DIR" fetch --prune origin "+refs/heads/$REF:refs/remotes/origin/$REF"
+    return 0
+  fi
+
+  log "Fetching tag ref if available: $REF"
+  if git -C "$INSTALL_DIR" ls-remote --exit-code --tags origin "refs/tags/$REF" >/dev/null 2>&1; then
+    if [ "$ALLOW_MOVED_TAG" != "1" ]; then
+      log "Moved-tag refresh disabled; fetching tags without forced tag update"
+      run git -C "$INSTALL_DIR" fetch --tags --prune origin
+      return 0
+    fi
+    log "Refreshing local tag from origin: $REF"
+    run git -C "$INSTALL_DIR" fetch --prune origin "+refs/tags/$REF:refs/tags/$REF"
+    return 0
+  fi
+
+  log "Requested ref was not found as a branch or tag; falling back to generic fetch"
+  run git -C "$INSTALL_DIR" fetch --tags --prune origin
+}
+
 clone_or_update_repo() {
   if [ -d "$INSTALL_DIR/.git" ]; then
     log "Updating existing checkout at $INSTALL_DIR"
-    run git -C "$INSTALL_DIR" fetch --tags --prune origin
+    fetch_requested_ref
   elif [ -e "$INSTALL_DIR" ] && [ "$(find "$INSTALL_DIR" -mindepth 1 -maxdepth 1 2>/dev/null | wc -l | tr -d ' ')" != "0" ]; then
     printf '[chronicle-install] error: INSTALL_DIR exists but is not a git checkout: %s\n' "$INSTALL_DIR" >&2
     printf '[chronicle-install] set INSTALL_DIR to a new path or remove the directory.\n' >&2
@@ -56,10 +93,15 @@ clone_or_update_repo() {
   else
     log "Cloning $REPO_URL into $INSTALL_DIR"
     run git clone "$REPO_URL" "$INSTALL_DIR"
+    fetch_requested_ref
   fi
 
   log "Checking out ref: $REF"
-  run git -C "$INSTALL_DIR" checkout "$REF"
+  run git -C "$INSTALL_DIR" checkout --detach "$REF"
+  if [ "$DRY_RUN" != "1" ]; then
+    checked_out_sha="$(git -C "$INSTALL_DIR" rev-parse HEAD)"
+    log "Checked out commit: $checked_out_sha"
+  fi
 }
 
 create_venv_and_install() {
@@ -70,7 +112,7 @@ create_venv_and_install() {
   run "$VENV_DIR/bin/python" -m pip install --upgrade pip
 
   log "Installing Chronicle Stack from local checkout"
-  run "$VENV_DIR/bin/python" -m pip install "$INSTALL_DIR"
+  run "$VENV_DIR/bin/python" -m pip install --force-reinstall "$INSTALL_DIR"
 }
 
 link_commands() {
@@ -114,6 +156,8 @@ Installed commands:
 Notes:
   - This installer does not install a daemon, service, web server, or HTTP runtime.
   - It does not call external model APIs, GraphRAG engines, vector DBs, or graph DBs.
+  - Existing checkout installs refresh requested branch/tag refs before checkout.
+  - Set CHRONICLE_STACK_ALLOW_MOVED_TAG=0 to disable forced local tag refresh.
   - Inspect the script before piping it to bash in production-like environments.
 EOF
 }
