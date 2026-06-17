@@ -25,6 +25,7 @@ class EventType(StrEnum):
     METADATA_UPDATED = "metadata_updated"
     BOUNDARY_RULE_ADDED = "boundary_rule_added"
     INJECTION_PLAN_RECORDED = "injection_plan_recorded"
+    SUMMARY_JOB_CREATED = "summary_job_created"
 
 
 class Actor(StrEnum):
