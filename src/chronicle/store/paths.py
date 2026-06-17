@@ -11,6 +11,7 @@ ARTIFACTS_DIR = "artifacts"
 INDEXES_DIR = "indexes"
 PACKAGES_DIR = "packages"
 REPORTS_DIR = "reports/rde"
+SUMMARY_JOBS_DIR = "summary_jobs"
 
 
 class ChroniclePaths:
@@ -25,6 +26,7 @@ class ChroniclePaths:
         self.indexes_dir = self.chronicle_dir / INDEXES_DIR
         self.packages_dir = self.chronicle_dir / PACKAGES_DIR
         self.reports_dir = self.chronicle_dir / REPORTS_DIR
+        self.summary_jobs_dir = self.chronicle_dir / SUMMARY_JOBS_DIR
         self.artifact_index_file = self.indexes_dir / "artifact_index.json"
         self.context_index_file = self.indexes_dir / "context_index.json"
         self.decision_index_file = self.indexes_dir / "decision_index.json"
@@ -57,3 +59,6 @@ class ChroniclePaths:
 
     def rde_report_path(self, rde_record_id: str) -> Path:
         return self.reports_dir / f"{rde_record_id}.md"
+
+    def summary_job_path(self, summary_job_id: str) -> Path:
+        return self.summary_jobs_dir / f"{summary_job_id}.json"

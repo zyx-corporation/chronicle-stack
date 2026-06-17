@@ -12,6 +12,7 @@ from chronicle.cli_graph import graph_app
 from chronicle.cli_lifecycle import lifecycle_app
 from chronicle.cli_package import package_app
 from chronicle.cli_runtime import runtime_app
+from chronicle.cli_summary import summary_app
 from chronicle.errors import ChronicleError
 from chronicle.interfaces.cli.artifact import artifact_app
 from chronicle.interfaces.cli.boundary import boundary_app
@@ -128,6 +129,7 @@ app.add_typer(audit_app, name="audit")
 app.add_typer(lifecycle_app, name="lifecycle")
 app.add_typer(graph_app, name="graph")
 app.add_typer(runtime_app, name="runtime")
+app.add_typer(summary_app, name="summary")
 
 
 if __name__ == "__main__":
