@@ -53,6 +53,14 @@ is_commit_sha() {
   esac
 }
 
+remote_has_branch() {
+  git ls-remote --exit-code --heads "$REPO_URL" "$REF" >/dev/null 2>&1
+}
+
+remote_has_tag() {
+  git ls-remote --exit-code --tags "$REPO_URL" "refs/tags/$REF" >/dev/null 2>&1
+}
+
 fetch_requested_ref() {
   if is_commit_sha "$REF"; then
     log "Fetching commit/ref directly: $REF"
@@ -61,13 +69,13 @@ fetch_requested_ref() {
   fi
 
   log "Fetching branch ref if available: $REF"
-  if git -C "$INSTALL_DIR" ls-remote --exit-code --heads origin "$REF" >/dev/null 2>&1; then
+  if remote_has_branch; then
     run git -C "$INSTALL_DIR" fetch --prune origin "+refs/heads/$REF:refs/remotes/origin/$REF"
     return 0
   fi
 
   log "Fetching tag ref if available: $REF"
-  if git -C "$INSTALL_DIR" ls-remote --exit-code --tags origin "refs/tags/$REF" >/dev/null 2>&1; then
+  if remote_has_tag; then
     if [ "$ALLOW_MOVED_TAG" != "1" ]; then
       log "Moved-tag refresh disabled; fetching tags without forced tag update"
       run git -C "$INSTALL_DIR" fetch --tags --prune origin
