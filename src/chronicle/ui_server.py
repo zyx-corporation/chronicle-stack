@@ -838,6 +838,68 @@ function textInput(id, placeholder) {{
 function filterRows(rows, predicate) {{
   return rows.filter(predicate);
 }}
+function sortRows(rows, comparator) {{
+  return [...rows].sort(comparator);
+}}
+function currentSortValue(endpoint) {{
+  if (!window.__chronicleSorts) return '';
+  if (endpoint === '/api/runtime-records') return window.__chronicleSorts.runtimeRecords || 'latest';
+  if (endpoint === '/api/review-queue') return window.__chronicleSorts.reviewQueue || 'attention';
+  return '';
+}}
+function sortSelect(id, value, options) {{
+  return '<label style="margin-right: 10px;">Sort: <select data-sort-input="' + esc(id)
+    + '" style="margin: 6px 6px 10px 6px; padding: 6px 8px;">'
+    + options.map(option =>
+      '<option value="' + esc(option.value) + '"' + (option.value === value ? ' selected' : '') + '>'
+      + esc(option.label) + '</option>'
+    ).join('')
+    + '</select></label>';
+}}
+function compareTextDesc(left, right) {{
+  return String(right || '').localeCompare(String(left || ''));
+}}
+function reviewAttentionRank(row) {{
+  const capability = row.review_capability || {{}};
+  const readiness = row.package_readiness_summary || {{}};
+  if (row.review_kind === 'review_requested') return 0;
+  if (capability.status === 'advisory') return 1;
+  if (capability.status === 'ready') return 2;
+  if (readiness.status === 'package_context_available') return 3;
+  if (capability.status === 'resolved') return 4;
+  return 5;
+}}
+function sortRuntimeRows(rows) {{
+  const sortValue = currentSortValue('/api/runtime-records');
+  if (sortValue === 'kind') {{
+    return sortRows(rows, (left, right) => {{
+      const kindCompare = String(left.runtime_record_kind || '').localeCompare(String(right.runtime_record_kind || ''));
+      if (kindCompare !== 0) return kindCompare;
+      return compareTextDesc(left.event_id, right.event_id);
+    }});
+  }}
+  return sortRows(rows, (left, right) => compareTextDesc(left.event_id, right.event_id));
+}}
+function sortReviewRows(rows) {{
+  const sortValue = currentSortValue('/api/review-queue');
+  if (sortValue === 'latest') {{
+    return sortRows(rows, (left, right) => compareTextDesc(left.target_event_id, right.target_event_id));
+  }}
+  if (sortValue === 'reviewer') {{
+    return sortRows(rows, (left, right) => {{
+      const leftReviewer = (left.latest_reviewer_identity && left.latest_reviewer_identity.label) || left.latest_reviewer || '';
+      const rightReviewer = (right.latest_reviewer_identity && right.latest_reviewer_identity.label) || right.latest_reviewer || '';
+      const reviewerCompare = String(leftReviewer).localeCompare(String(rightReviewer));
+      if (reviewerCompare !== 0) return reviewerCompare;
+      return compareTextDesc(left.target_event_id, right.target_event_id);
+    }});
+  }}
+  return sortRows(rows, (left, right) => {{
+    const rankCompare = reviewAttentionRank(left) - reviewAttentionRank(right);
+    if (rankCompare !== 0) return rankCompare;
+    return compareTextDesc(left.target_event_id, right.target_event_id);
+  }});
+}}
 function currentFilterLabel() {{
   if (!window.__chronicleCurrentEndpoint || !window.__chronicleFilters) return '';
   if (window.__chronicleCurrentEndpoint === '/api/runtime-records' && window.__chronicleFilters.runtimeRecords) {{
@@ -993,10 +1055,15 @@ function renderTable(endpoint, rows) {{
         preview.preview_text || '',
       ]).toLowerCase().includes(query);
     }});
+    const sorted = sortRuntimeRows(filtered);
     return textInput('runtimeRecords', 'Filter runtime records...')
+      + sortSelect('runtimeRecords', currentSortValue('/api/runtime-records'), [
+        {{ value: 'latest', label: 'Latest first' }},
+        {{ value: 'kind', label: 'Kind' }},
+      ])
       + (query ? '<p><button data-reset-filter="runtimeRecords">Reset Filter</button></p>' : '')
       + '<table><thead><tr><th>detail</th><th>event</th><th>kind</th><th>preview</th><th>source counts</th></tr></thead><tbody>'
-      + filtered.map(row => {{
+      + sorted.map(row => {{
         const path = detailPath(endpoint, row);
         const button = path ? '<button data-detail="' + esc(path) + '">JSON</button>' : '';
         const preview = row.runtime_record_preview || {{}};
@@ -1024,10 +1091,16 @@ function renderTable(endpoint, rows) {{
         (row.latest_reviewer_identity && row.latest_reviewer_identity.label) || row.latest_reviewer || '',
       ]).toLowerCase().includes(query);
     }});
+    const sorted = sortReviewRows(filtered);
     return textInput('reviewQueue', 'Filter review queue...')
+      + sortSelect('reviewQueue', currentSortValue('/api/review-queue'), [
+        {{ value: 'attention', label: 'Needs attention first' }},
+        {{ value: 'latest', label: 'Latest first' }},
+        {{ value: 'reviewer', label: 'Reviewer' }},
+      ])
       + (query ? '<p><button data-reset-filter="reviewQueue">Reset Filter</button></p>' : '')
       + '<table><thead><tr><th>detail</th><th>target</th><th>status</th><th>warnings</th><th>latest reviewer</th></tr></thead><tbody>'
-      + filtered.map(row => {{
+      + sorted.map(row => {{
         const path = detailPath(endpoint, row);
         const button = path ? '<button data-detail="' + esc(path) + '">JSON</button>' : '';
         const capability = row.review_capability || {{}};
@@ -1235,12 +1308,20 @@ document.getElementById('detail').addEventListener('click', event => {{
   if (event.target.dataset.backView && window.__chronicleCurrentEndpoint) loadEndpoint(window.__chronicleCurrentEndpoint);
 }});
 window.__chronicleFilters = {{ runtimeRecords: '', reviewQueue: '' }};
+window.__chronicleSorts = {{ runtimeRecords: 'latest', reviewQueue: 'attention' }};
 window.__chronicleDetailTrail = [];
 document.getElementById('view').addEventListener('input', event => {{
   const filterId = event.target.dataset.filterInput;
   if (!filterId) return;
   if (filterId === 'runtimeRecords') window.__chronicleFilters.runtimeRecords = event.target.value || '';
   if (filterId === 'reviewQueue') window.__chronicleFilters.reviewQueue = event.target.value || '';
+  if (window.__chronicleCurrentEndpoint) loadEndpoint(window.__chronicleCurrentEndpoint);
+}});
+document.getElementById('view').addEventListener('change', event => {{
+  const sortId = event.target.dataset.sortInput;
+  if (!sortId || !window.__chronicleSorts) return;
+  if (sortId === 'runtimeRecords') window.__chronicleSorts.runtimeRecords = event.target.value || 'latest';
+  if (sortId === 'reviewQueue') window.__chronicleSorts.reviewQueue = event.target.value || 'attention';
   if (window.__chronicleCurrentEndpoint) loadEndpoint(window.__chronicleCurrentEndpoint);
 }});
 loadEndpoint('/api/overview');

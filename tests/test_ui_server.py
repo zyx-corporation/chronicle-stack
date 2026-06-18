@@ -326,6 +326,10 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "currentFilterLabel" in html
     assert "hasActiveFilters" in html
     assert "resetFilters" in html
+    assert "currentSortValue" in html
+    assert "sortSelect" in html
+    assert "sortRuntimeRows" in html
+    assert "sortReviewRows" in html
     assert "overviewJumpButton" in html
     assert "currentTrailLabel" in html
     assert "currentTrailButtons" in html
@@ -350,9 +354,12 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "data-back-view" in html
     assert 'data-reset-filter="runtimeRecords"' in html
     assert 'data-reset-filter="reviewQueue"' in html
+    assert "runtimeRecords" in html
+    assert "reviewQueue" in html
     assert "textInput('runtimeRecords'" in html
     assert "textInput('reviewQueue'" in html
     assert "__chronicleFilters" in html
+    assert "__chronicleSorts" in html
     assert "Review Capability" in html
     assert "Identity Assurance" in html
     assert "warning_details" in html
