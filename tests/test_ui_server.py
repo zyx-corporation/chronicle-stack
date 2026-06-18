@@ -199,6 +199,8 @@ def test_ui_data_service_read_endpoints(tmp_path):
     assert service.review_queue()["review_queue"][0]["review_preview_only"] is True
     assert service.review_queue()["review_queue"][0]["target_event_id"].startswith("evt_")
     assert service.review_queue()["review_queue"][0]["review_capability"]["status"] == "advisory_only"
+    assert service.review_queue()["review_queue"][0]["package_readiness_summary"]["label"].startswith("package:")
+    assert service.review_queue()["review_queue"][0]["package_readiness_summary"]["message"]
     assert "ui_auth_not_enabled" in service.review_queue()["review_queue"][0]["review_capability"]["warnings"]
     assert service.review_queue()["review_queue"][0]["review_capability"]["warning_details"][0]["message"]
     assert "latest_identity_assurance" not in service.review_queue()["review_queue"][0]
@@ -265,6 +267,7 @@ def test_ui_data_service_detail_endpoints(tmp_path):
     assert review_plan_detail["package_readiness"]["status"] == "package_context_available"
     assert ids["context_id"] in review_plan_detail["package_readiness"]["eligible_context_ids"]
     assert review_plan_detail["package_readiness"]["package_review"]["status"] in {"pass", "warning", "blocked"}
+    assert review_plan_detail["package_readiness_summary"]["status"] == "package_context_available"
     assert service.detail_payload(f"/api/ai-index/vector/{ids['event_id']}")["record"]["record_id"] == ids["event_id"]
     graph_detail = service.detail_payload(f"/api/ai-index/graph-nodes/{ids['event_id']}")["record"]
     assert graph_detail["node_id"] == ids["event_id"]
@@ -308,6 +311,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "Retrieval Handoff" in html
     assert "Package Handoff Preview" in html
     assert "Review Package Readiness" in html
+    assert "readinessBadge" in html
     assert "Review Capability" in html
     assert "Identity Assurance" in html
     assert "warning_details" in html

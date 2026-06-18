@@ -307,6 +307,8 @@ class ChronicleUIDataService:
                     ReviewerIdentity.model_validate(data["latest_reviewer_identity"]),
                     boundary,
                 )
+            readiness = self.review_package_readiness(entry.target_event_id)
+            data["package_readiness_summary"] = self._package_readiness_summary(readiness)
             data["ui_mutation_enabled"] = False
             data["review_preview_only"] = True
             rows.append(data)
@@ -557,6 +559,36 @@ class ChronicleUIDataService:
         data = item.model_dump(mode="json")
         data["identity_assurance"] = self._identity_assurance(item.reviewer_identity, boundary)
         return data
+
+    @staticmethod
+    def _package_readiness_summary(readiness: dict[str, Any]) -> dict[str, Any]:
+        package_review = readiness.get("package_review", {})
+        status = str(readiness.get("status", "unknown"))
+        review_status = str(package_review.get("status", "not_available"))
+        eligible_context_ids = readiness.get("eligible_context_ids", [])
+        warnings = package_review.get("package_warnings", [])
+
+        if status == "package_context_available":
+            label = f"package:{review_status}"
+            message = (
+                f"Package preview available for {len(eligible_context_ids)} context record(s); "
+                f"review status is {review_status}."
+            )
+        elif status == "no_context_records":
+            label = "package:advisory"
+            message = "No context-linked records available for package/export preview."
+        else:
+            label = f"package:{status}"
+            message = str(readiness.get("message", "Package readiness unavailable."))
+
+        return {
+            "status": status,
+            "review_status": review_status,
+            "eligible_context_count": len(eligible_context_ids) if isinstance(eligible_context_ids, list) else 0,
+            "warning_count": len(warnings) if isinstance(warnings, list) else 0,
+            "label": label,
+            "message": message,
+        }
 
     @staticmethod
     def _warning_message(code: str) -> str:
@@ -813,6 +845,7 @@ function renderTable(endpoint, rows) {{
         const path = detailPath(endpoint, row);
         const button = path ? '<button data-detail="' + esc(path) + '">JSON</button>' : '';
         const capability = row.review_capability || {{}};
+        const readiness = row.package_readiness_summary || {{}};
         const warnList = Array.isArray(capability.warnings) ? capability.warnings : [];
         const warnDetails = Array.isArray(capability.warning_details) ? capability.warning_details : [];
         const statusBadge = capability.status === 'ready'
@@ -820,10 +853,15 @@ function renderTable(endpoint, rows) {{
           : capability.status === 'resolved'
             ? badge('Resolved', 'badge-neutral')
             : badge('Advisory', 'badge-warning');
+        const readinessBadge = readiness.status === 'package_context_available'
+          ? badge(readiness.label || 'Package Ready', 'badge-ready')
+          : readiness.status === 'no_context_records'
+            ? badge(readiness.label || 'Package Advisory', 'badge-warning')
+            : badge(readiness.label || 'Package Unknown', 'badge-neutral');
         return '<tr>'
           + '<td>' + button + '</td>'
           + '<td><span class="id">' + esc(row.target_event_id || '') + '</span><br>' + esc(row.target_summary || '') + '</td>'
-          + '<td>' + statusBadge + '</td>'
+          + '<td>' + statusBadge + '<br>' + readinessBadge + '</td>'
           + '<td>' + esc(warnDetails.map(item => item.message).join(' | ') || warnList.join(', ') || '(none)') + '</td>'
           + '<td>' + esc((row.latest_reviewer_identity && row.latest_reviewer_identity.label) || row.latest_reviewer || '') + '</td>'
           + '</tr>';
