@@ -26,6 +26,7 @@ from chronicle.services.audit_service import AuditService
 from chronicle.services.chronicle_service import ChronicleService
 from chronicle.services.graph_index_service import GraphIndexService
 from chronicle.services.graph_export_service import GraphExportService
+from chronicle.services.integration_package_service import IntegrationPackageService
 from chronicle.services.lifecycle_service import LifecycleService
 from chronicle.services.package_review_service import PackageReviewService
 from chronicle.services.review_service import ReviewService
@@ -145,6 +146,16 @@ def _find_by_attr(items: list[object], attr: str, value: str) -> dict[str, Any] 
     return None
 
 
+def _unique_list(plan: RuntimeRetrievalPlan) -> list[str]:
+    seen: set[str] = set()
+    values: list[str] = []
+    for hit in [*plan.vector_hits, *plan.graph_hits, *plan.chronicle_hits]:
+        if hit.identifier and hit.identifier not in seen:
+            values.append(hit.identifier)
+            seen.add(hit.identifier)
+    return values
+
+
 class ChronicleUIDataService:
     """Read-only data provider for the local UI."""
 
@@ -163,6 +174,7 @@ class ChronicleUIDataService:
         self.chronicle = ChronicleService(self.root)
         self.audit = AuditService(self.root)
         self.lifecycle = LifecycleService(self.root)
+        self.packages = IntegrationPackageService(self.root)
         self.package_review = PackageReviewService(self.root)
         self.review = ReviewService(self.root)
         self.runtime = RuntimeService(self.root)
@@ -346,6 +358,30 @@ class ChronicleUIDataService:
         except Exception as exc:  # pragma: no cover - defensive UI degradation
             return {"nodes": 0, "edges": 0, "error": str(exc)}
 
+    def runtime_package_handoff(self, plan: RuntimeRetrievalPlan) -> dict[str, Any]:
+        context_ids = [record_id for record_id in _unique_list(plan) if record_id.startswith("ctx_")]
+        skipped_ids = [record_id for record_id in _unique_list(plan) if not record_id.startswith("ctx_")]
+        payload: dict[str, Any] = {
+            "status": "package_context_available" if context_ids else "no_context_records",
+            "eligible_context_ids": context_ids,
+            "skipped_record_ids": skipped_ids,
+            "purpose": f"runtime retrieval handoff: {plan.query}",
+            "target_environment": "local",
+            "package_review_required": True,
+        }
+        if not context_ids:
+            payload["message"] = "No context records were selected by the retrieval dry-run, so package preview is advisory only."
+            return payload
+        package = self.packages.build_context_package(
+            purpose=payload["purpose"],
+            context_ids=context_ids,
+        )
+        review = self.package_review.review_package(package)
+        payload["package_manifest_preview"] = package.manifest.model_dump(mode="json")
+        payload["package_review"] = review.model_dump(mode="json")
+        payload["message"] = "Read-only package preview derived from retrieval-plan context hits."
+        return payload
+
     def runtime_boundary(self) -> dict[str, Any]:
         return {
             "read_only": True,
@@ -505,6 +541,7 @@ class ChronicleUIDataService:
             if "runtime_retrieval_plan" in payload:
                 plan = RuntimeRetrievalPlan.model_validate(payload["runtime_retrieval_plan"])
                 record["retrieval_handoff"] = self.runtime.retrieval_handoff(plan).model_dump(mode="json")
+                record["package_handoff_preview"] = self.runtime_package_handoff(plan)
             return {"record": record}
 
         if len(parts) == 3 and parts[0] == "api" and parts[1] == "review-queue":
@@ -783,6 +820,20 @@ async function loadDetail(endpoint) {{
       + '<p>Referenced IDs: ' + esc((handoff.referenced_record_ids || []).join(', ') || '(none)') + '</p>'
       + '<p>Downstream commands: ' + esc((handoff.downstream_commands || []).join(' | ')) + '</p>'
       + '<p>Notes: ' + esc((handoff.notes || []).join(' | ')) + '</p>'
+      + '</div>';
+  }}
+  if (record.package_handoff_preview) {{
+    const preview = record.package_handoff_preview;
+    const packageReview = preview.package_review || {{}};
+    const manifest = preview.package_manifest_preview || {{}};
+    extra += '<div class="notice"><h3>Package Handoff Preview</h3>'
+      + '<p>Status: ' + esc(preview.status || '') + '</p>'
+      + '<p>' + esc(preview.message || '') + '</p>'
+      + '<p>Eligible contexts: ' + esc((preview.eligible_context_ids || []).join(', ') || '(none)') + '</p>'
+      + '<p>Skipped records: ' + esc((preview.skipped_record_ids || []).join(', ') || '(none)') + '</p>'
+      + '<p>Package review status: ' + esc(packageReview.status || '(not available)') + '</p>'
+      + '<p>Package warnings: ' + esc((packageReview.package_warnings || []).join(', ') || '(none)') + '</p>'
+      + '<p>Manifest refs: ' + esc((manifest.referenced_records || []).join(', ') || '(none)') + '</p>'
       + '</div>';
   }}
   if (record.review_capability) {{

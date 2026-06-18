@@ -111,7 +111,7 @@ def _populate(root):
         record=True,
     )
     runtime_plan = RuntimeService(root).retrieve_plan(
-        query="UI runtime visibility",
+        query="UI Context",
         record=True,
     )
     return {
@@ -240,9 +240,13 @@ def test_ui_data_service_detail_endpoints(tmp_path):
     retrieval_detail = service.detail_payload(f"/api/runtime-records/{ids['runtime_plan_event_id']}")["record"]
     assert "runtime_retrieval_plan" in retrieval_detail["payload"]
     assert retrieval_detail["runtime_record_preview"]["record_kind"] == "retrieval_plan"
-    assert retrieval_detail["retrieval_handoff"]["query"] == "UI runtime visibility"
+    assert retrieval_detail["retrieval_handoff"]["query"] == "UI Context"
     assert retrieval_detail["retrieval_handoff"]["package_review_required"] is True
     assert retrieval_detail["retrieval_handoff"]["downstream_commands"][0].startswith("chronicle package review")
+    assert retrieval_detail["package_handoff_preview"]["status"] == "package_context_available"
+    assert ids["context_id"] in retrieval_detail["package_handoff_preview"]["eligible_context_ids"]
+    assert retrieval_detail["package_handoff_preview"]["package_review"]["status"] in {"pass", "warning", "blocked"}
+    assert ids["context_id"] in retrieval_detail["package_handoff_preview"]["package_manifest_preview"]["referenced_records"]
     review_detail = service.detail_payload(f"/api/review-queue/{ids['runtime_summary_event_id']}")["record"]
     assert review_detail["target_event_id"] == ids["runtime_summary_event_id"]
     assert review_detail["review_preview_only"] is True
@@ -296,6 +300,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "loadDetail" in html
     assert "Runtime Preview" in html
     assert "Retrieval Handoff" in html
+    assert "Package Handoff Preview" in html
     assert "Review Capability" in html
     assert "Identity Assurance" in html
     assert "warning_details" in html

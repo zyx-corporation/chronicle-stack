@@ -44,6 +44,8 @@ retrieval plan の detail view では、downstream runtime へ渡す前の hando
 - referenced record IDs
 - recommended next CLI commands
 - package review required boundary note
+- package handoff preview for eligible `ctx_*` records
+- derived package review snapshot before persistence or sharing
 
 この handoff 表示は GraphRAG runtime を実装するものではなく、どの local surface が候補になっているかを operator が確認するための dry-run です。
 
