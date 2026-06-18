@@ -838,6 +838,16 @@ function textInput(id, placeholder) {{
 function filterRows(rows, predicate) {{
   return rows.filter(predicate);
 }}
+function currentFilterLabel() {{
+  if (!window.__chronicleCurrentEndpoint || !window.__chronicleFilters) return '';
+  if (window.__chronicleCurrentEndpoint === '/api/runtime-records' && window.__chronicleFilters.runtimeRecords) {{
+    return 'filter=' + window.__chronicleFilters.runtimeRecords;
+  }}
+  if (window.__chronicleCurrentEndpoint === '/api/review-queue' && window.__chronicleFilters.reviewQueue) {{
+    return 'filter=' + window.__chronicleFilters.reviewQueue;
+  }}
+  return '';
+}}
 function renderOverview(payload) {{
   const chronicle = payload.chronicle || {{}};
   const counts = payload.counts || {{}};
@@ -1013,10 +1023,13 @@ async function loadDetail(endpoint) {{
   }}
   const payload = await response.json();
   const record = payload.record || {{}};
+  const filterLabel = currentFilterLabel();
   let extra = '<div class="notice"><h3>Navigation</h3>'
     + '<p><button data-back-view="true">Back to current list</button> '
     + '<span class="id">' + esc(window.__chronicleCurrentEndpoint || '/api/overview') + '</span> → '
-    + '<span class="id">' + esc(endpoint) + '</span></p></div>';
+    + '<span class="id">' + esc(endpoint) + '</span>'
+    + (filterLabel ? ' <span class="id">(' + esc(filterLabel) + ')</span>' : '')
+    + '</p></div>';
   if (record.runtime_record_preview) {{
     const preview = record.runtime_record_preview;
     extra += '<div class="notice"><h3>Runtime Preview</h3>'

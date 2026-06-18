@@ -322,6 +322,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "Review Package Readiness" in html
     assert "Related Links" in html
     assert "Back to current list" in html
+    assert "currentFilterLabel" in html
     assert "readinessBadge" in html
     assert "Needs attention:" in html
     assert "Runtime kinds:" in html
