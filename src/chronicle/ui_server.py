@@ -156,6 +156,10 @@ def _unique_list(plan: RuntimeRetrievalPlan) -> list[str]:
     return values
 
 
+def _related_link(path: str, label: str) -> dict[str, str]:
+    return {"path": path, "label": label}
+
+
 class ChronicleUIDataService:
     """Read-only data provider for the local UI."""
 
@@ -425,6 +429,17 @@ class ChronicleUIDataService:
         payload["message"] = "Read-only package preview derived from retrieval-plan context hits."
         return payload
 
+    def runtime_related_links(self, event_id: str, payload: dict[str, Any]) -> list[dict[str, str]]:
+        links = [_related_link(f"/api/review-queue/{event_id}", "Open matching review detail")]
+        if "runtime_retrieval_plan" in payload:
+            plan = RuntimeRetrievalPlan.model_validate(payload["runtime_retrieval_plan"])
+            for record_id in _unique_list(plan):
+                if record_id.startswith("ctx_"):
+                    links.append(_related_link(f"/api/contexts/{record_id}", f"Open context {record_id}"))
+                elif record_id.startswith("evt_"):
+                    links.append(_related_link(f"/api/events/{record_id}", f"Open event {record_id}"))
+        return links
+
     def review_package_readiness(self, target_event_id: str) -> dict[str, Any]:
         self.chronicle.require_initialized()
         event = next(
@@ -481,6 +496,14 @@ class ChronicleUIDataService:
             "package_manifest_preview": package.manifest.model_dump(mode="json"),
             "package_review": review.model_dump(mode="json"),
         }
+
+    def review_related_links(self, target_event_id: str) -> list[dict[str, str]]:
+        links = [_related_link(f"/api/runtime-records/{target_event_id}", "Open matching runtime record")]
+        readiness = self.review_package_readiness(target_event_id)
+        for context_id in readiness.get("eligible_context_ids", []):
+            if isinstance(context_id, str) and context_id.startswith("ctx_"):
+                links.append(_related_link(f"/api/contexts/{context_id}", f"Open context {context_id}"))
+        return links
 
     def runtime_boundary(self) -> dict[str, Any]:
         return {
@@ -668,6 +691,7 @@ class ChronicleUIDataService:
             record["runtime_record_kind"] = preview.record_kind
             record["runtime_record_preview"] = preview.model_dump(mode="json")
             record["suggested_cli_family"] = preview.suggested_cli_family
+            record["related_links"] = self.runtime_related_links(parts[2], payload)
             if "runtime_retrieval_plan" in payload:
                 plan = RuntimeRetrievalPlan.model_validate(payload["runtime_retrieval_plan"])
                 record["retrieval_handoff"] = self.runtime.retrieval_handoff(plan).model_dump(mode="json")
@@ -683,6 +707,7 @@ class ChronicleUIDataService:
                         for item in self.review.history(event_id=parts[2])
                     ]
                     row["package_readiness"] = self.review_package_readiness(parts[2])
+                    row["related_links"] = self.review_related_links(parts[2])
                     row["ui_mutation_enabled"] = False
                     row["review_preview_only"] = True
                     return {"record": row}
@@ -1039,6 +1064,13 @@ async function loadDetail(endpoint) {{
       + '<p>Manifest refs: ' + esc((manifest.referenced_records || []).join(', ') || '(none)') + '</p>'
       + '</div>';
   }}
+  if (Array.isArray(record.related_links) && record.related_links.length > 0) {{
+    extra += '<div class="notice"><h3>Related Links</h3><p>'
+      + record.related_links.map(item =>
+        '<button data-detail-nav="' + esc(item.path || '') + '">' + esc(item.label || item.path || '') + '</button>'
+      ).join('')
+      + '</p></div>';
+  }}
   if (record.review_capability) {{
     const capability = record.review_capability;
     const warnList = Array.isArray(capability.warnings) ? capability.warnings : [];
@@ -1077,6 +1109,9 @@ document.getElementById('view').addEventListener('click', event => {{
     if (filterTarget === 'reviewQueue') window.__chronicleFilters.reviewQueue = filterValue;
     loadEndpoint(event.target.dataset.jump);
   }}
+}});
+document.getElementById('detail').addEventListener('click', event => {{
+  if (event.target.dataset.detailNav) loadDetail(event.target.dataset.detailNav);
 }});
 window.__chronicleFilters = {{ runtimeRecords: '', reviewQueue: '' }};
 document.getElementById('view').addEventListener('input', event => {{
