@@ -848,6 +848,20 @@ function currentFilterLabel() {{
   }}
   return '';
 }}
+function hasActiveFilters() {{
+  if (!window.__chronicleFilters) return false;
+  return Boolean(window.__chronicleFilters.runtimeRecords || window.__chronicleFilters.reviewQueue);
+}}
+function resetFilters(target) {{
+  if (!window.__chronicleFilters) return;
+  if (!target || target === 'all') {{
+    window.__chronicleFilters.runtimeRecords = '';
+    window.__chronicleFilters.reviewQueue = '';
+    return;
+  }}
+  if (target === 'runtimeRecords') window.__chronicleFilters.runtimeRecords = '';
+  if (target === 'reviewQueue') window.__chronicleFilters.reviewQueue = '';
+}}
 function currentTrailLabel() {{
   if (!Array.isArray(window.__chronicleDetailTrail) || window.__chronicleDetailTrail.length === 0) return '';
   return window.__chronicleDetailTrail.slice(-3).join(' <- ');
@@ -936,7 +950,8 @@ function renderOverview(payload) {{
     + '<p>Package readiness counts: ' + esc(JSON.stringify(triage.package_readiness_counts || {{}})) + '</p>'
     + '<p><button data-jump="/api/review-queue">Open Review Queue</button>'
     + '<button data-jump="/api/runtime-records">Open Runtime Records</button>'
-    + '<button data-jump="/api/package-review">Open Package Review</button></p>'
+    + '<button data-jump="/api/package-review">Open Package Review</button>'
+    + '<button data-reset-filters="all">Reset Filters</button></p>'
     + '<p><button data-jump="/api/review-queue" data-filter-target="reviewQueue" data-filter-value="advisory">Advisory Reviews</button>'
     + '<button data-jump="/api/review-queue" data-filter-target="reviewQueue" data-filter-value="package:package_context_available">Package Ready Reviews</button>'
     + '<button data-jump="/api/runtime-records" data-filter-target="runtimeRecords" data-filter-value="retrieval_plan">Retrieval Plans</button></p>'
@@ -966,6 +981,7 @@ function renderTable(endpoint, rows) {{
       ]).toLowerCase().includes(query);
     }});
     return textInput('runtimeRecords', 'Filter runtime records...')
+      + (query ? '<p><button data-reset-filter="runtimeRecords">Reset Filter</button></p>' : '')
       + '<table><thead><tr><th>detail</th><th>event</th><th>kind</th><th>preview</th><th>source counts</th></tr></thead><tbody>'
       + filtered.map(row => {{
         const path = detailPath(endpoint, row);
@@ -996,6 +1012,7 @@ function renderTable(endpoint, rows) {{
       ]).toLowerCase().includes(query);
     }});
     return textInput('reviewQueue', 'Filter review queue...')
+      + (query ? '<p><button data-reset-filter="reviewQueue">Reset Filter</button></p>' : '')
       + '<table><thead><tr><th>detail</th><th>target</th><th>status</th><th>warnings</th><th>latest reviewer</th></tr></thead><tbody>'
       + filtered.map(row => {{
         const path = detailPath(endpoint, row);
@@ -1064,6 +1081,7 @@ async function loadDetail(endpoint) {{
   let extra = '<div class="notice"><h3>Navigation</h3>'
     + '<p><button data-back-view="true">Back to current list</button> '
     + (previousDetail ? '<button data-back-detail="true">Back to previous detail</button> ' : '')
+    + (hasActiveFilters() ? '<button data-reset-filters="all">Reset Filters</button> ' : '')
     + '<span class="id">' + esc(window.__chronicleCurrentEndpoint || '/api/overview') + '</span> → '
     + '<span class="id">' + esc(endpoint) + '</span>'
     + (filterLabel ? ' <span class="id">(' + esc(filterLabel) + ')</span>' : '')
@@ -1170,6 +1188,14 @@ document.getElementById('view').addEventListener('click', event => {{
     if (filterTarget === 'reviewQueue') window.__chronicleFilters.reviewQueue = filterValue;
     loadEndpoint(event.target.dataset.jump);
   }}
+  if (event.target.dataset.resetFilter) {{
+    resetFilters(event.target.dataset.resetFilter);
+    if (window.__chronicleCurrentEndpoint) loadEndpoint(window.__chronicleCurrentEndpoint);
+  }}
+  if (event.target.dataset.resetFilters) {{
+    resetFilters(event.target.dataset.resetFilters);
+    if (window.__chronicleCurrentEndpoint) loadEndpoint(window.__chronicleCurrentEndpoint);
+  }}
 }});
 document.getElementById('detail').addEventListener('click', event => {{
   if (event.target.dataset.detailNav) loadDetail(event.target.dataset.detailNav);
@@ -1188,6 +1214,10 @@ document.getElementById('detail').addEventListener('click', event => {{
       window.__chronicleLastDetail = '';
       loadDetail(previousDetail);
     }}
+  }}
+  if (event.target.dataset.resetFilters) {{
+    resetFilters(event.target.dataset.resetFilters);
+    if (window.__chronicleCurrentEndpoint) loadEndpoint(window.__chronicleCurrentEndpoint);
   }}
   if (event.target.dataset.backView && window.__chronicleCurrentEndpoint) loadEndpoint(window.__chronicleCurrentEndpoint);
 }});

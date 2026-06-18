@@ -324,6 +324,8 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "Back to current list" in html
     assert "Back to previous detail" in html
     assert "currentFilterLabel" in html
+    assert "hasActiveFilters" in html
+    assert "resetFilters" in html
     assert "currentTrailLabel" in html
     assert "currentTrailButtons" in html
     assert "humanizeDetailPath" in html
@@ -335,6 +337,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert 'data-jump="/api/review-queue"' in html
     assert 'data-jump="/api/runtime-records"' in html
     assert 'data-jump="/api/package-review"' in html
+    assert 'data-reset-filters="all"' in html
     assert 'data-filter-target="reviewQueue"' in html
     assert 'data-filter-value="advisory"' in html
     assert 'data-filter-target="runtimeRecords"' in html
@@ -342,6 +345,8 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "data-detail-nav" in html
     assert "data-detail-trail" in html
     assert "data-back-view" in html
+    assert 'data-reset-filter="runtimeRecords"' in html
+    assert 'data-reset-filter="reviewQueue"' in html
     assert "textInput('runtimeRecords'" in html
     assert "textInput('reviewQueue'" in html
     assert "__chronicleFilters" in html
