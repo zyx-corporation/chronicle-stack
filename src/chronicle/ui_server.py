@@ -960,6 +960,34 @@ function overviewJumpButton(label, endpoint, filterTarget, filterValue, variant)
   return '<button' + className + ' data-jump="' + esc(endpoint) + '"' + targetAttr + valueAttr + '>'
     + label + '</button>';
 }}
+function relatedListButtons(detailEndpoint, record) {{
+  const buttons = [];
+  if (detailEndpoint.startsWith('/api/runtime-records/')) {{
+    buttons.push(overviewJumpButton('Open Runtime Records', '/api/runtime-records'));
+    const runtimeKind = record.runtime_record_kind || (record.runtime_record_preview && record.runtime_record_preview.record_kind) || '';
+    if (runtimeKind) {{
+      buttons.push(overviewJumpButton('More ' + esc(runtimeKind), '/api/runtime-records', 'runtimeRecords', runtimeKind));
+    }}
+  }}
+  if (detailEndpoint.startsWith('/api/review-queue/')) {{
+    buttons.push(overviewJumpButton('Open Review Queue', '/api/review-queue'));
+    const capability = record.review_capability || {{}};
+    const readiness = record.package_readiness || {{}};
+    if (record.review_kind) {{
+      buttons.push(overviewJumpButton('More ' + esc(record.review_kind), '/api/review-queue', 'reviewQueue', record.review_kind));
+    }}
+    if (capability.status) {{
+      buttons.push(overviewJumpButton('More ' + esc(capability.status), '/api/review-queue', 'reviewQueue', capability.status));
+    }}
+    if (readiness.status) {{
+      buttons.push(overviewJumpButton('More ' + esc(readiness.status), '/api/review-queue', 'reviewQueue', 'package:' + readiness.status));
+    }}
+  }}
+  if (record.package_handoff_preview || record.package_readiness) {{
+    buttons.push(overviewJumpButton('Open Package Review', '/api/package-review'));
+  }}
+  return buttons.join('');
+}}
 function renderOverview(payload) {{
   const chronicle = payload.chronicle || {{}};
   const counts = payload.counts || {{}};
@@ -1159,6 +1187,7 @@ async function loadDetail(endpoint) {{
   const payload = await response.json();
   const record = payload.record || {{}};
   const filterLabel = currentFilterLabel();
+  const listButtons = relatedListButtons(endpoint, record);
   const previousDetail = window.__chronicleDetailTrail.length > 0
     ? window.__chronicleDetailTrail[window.__chronicleDetailTrail.length - 1]
     : '';
@@ -1175,6 +1204,7 @@ async function loadDetail(endpoint) {{
     + '</p>'
     + (trailLabel ? '<p><span class="id">trail=' + esc(trailLabel) + '</span></p>' : '')
     + (trailButtons ? '<p>' + trailButtons + '</p>' : '')
+    + (listButtons ? '<p>' + listButtons + '</p>' : '')
     + '</div>';
   if (record.runtime_record_preview) {{
     const preview = record.runtime_record_preview;

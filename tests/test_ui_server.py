@@ -331,6 +331,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "sortRuntimeRows" in html
     assert "sortReviewRows" in html
     assert "overviewJumpButton" in html
+    assert "relatedListButtons" in html
     assert "currentTrailLabel" in html
     assert "currentTrailButtons" in html
     assert "humanizeDetailPath" in html
@@ -352,6 +353,9 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "data-detail-nav" in html
     assert "data-detail-trail" in html
     assert "data-back-view" in html
+    assert "Open Runtime Records" in html
+    assert "Open Review Queue" in html
+    assert "Open Package Review" in html
     assert 'data-reset-filter="runtimeRecords"' in html
     assert 'data-reset-filter="reviewQueue"' in html
     assert "runtimeRecords" in html
