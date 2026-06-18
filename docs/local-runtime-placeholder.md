@@ -38,6 +38,15 @@ runtime 記録は local UI の read-only endpoint から確認できます。
 - `/api/runtime-records`
 - `/api/runtime-records/<event_id>`
 
+retrieval plan の detail view では、downstream runtime へ渡す前の handoff contract を read-only で確認できます。
+
+- hit count summary
+- referenced record IDs
+- recommended next CLI commands
+- package review required boundary note
+
+この handoff 表示は GraphRAG runtime を実装するものではなく、どの local surface が候補になっているかを operator が確認するための dry-run です。
+
 ## Persistence
 
 `chronicle runtime summarize` は、デフォルトでは非永続です。

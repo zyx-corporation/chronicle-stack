@@ -105,5 +105,27 @@ class RuntimeRetrievalPlan(BaseModel):
     event_id: str | None = None
 
 
+class RuntimeRecordPreview(BaseModel):
+    record_kind: str
+    title: str
+    preview_text: str = ""
+    source_counts: dict[str, int] = Field(default_factory=dict)
+    referenced_record_ids: list[str] = Field(default_factory=list)
+    suggested_cli_family: str
+    boundary_notes: list[str] = Field(default_factory=list)
+
+
+class RuntimeRetrievalHandoff(BaseModel):
+    query: str
+    vector_hit_count: int = 0
+    graph_hit_count: int = 0
+    chronicle_hit_count: int = 0
+    referenced_record_ids: list[str] = Field(default_factory=list)
+    downstream_commands: list[str] = Field(default_factory=list)
+    package_review_required: bool = True
+    primary_record_authoritative: bool = True
+    notes: list[str] = Field(default_factory=list)
+
+
 def disabled_runtime_status() -> DisabledRuntimeStatus:
     return DisabledRuntimeStatus()

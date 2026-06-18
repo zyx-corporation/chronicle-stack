@@ -20,6 +20,7 @@ from urllib.parse import unquote, urlparse
 
 from chronicle.errors import ChronicleError, UIHostNotLoopbackError
 from chronicle.exporters.html_exporter import HtmlDashboardExporter
+from chronicle.models.runtime import RuntimeRetrievalPlan
 from chronicle.models.review import ReviewerIdentity
 from chronicle.services.audit_service import AuditService
 from chronicle.services.chronicle_service import ChronicleService
@@ -267,12 +268,9 @@ class ChronicleUIDataService:
         rows: list[dict[str, Any]] = []
         for event in reversed(events[-limit:]):
             data = _dump_model(event)
-            if "runtime_summary" in event.payload:
-                data["runtime_record_kind"] = "summary"
-            elif "runtime_retrieval_plan" in event.payload:
-                data["runtime_record_kind"] = "retrieval_plan"
-            else:
-                data["runtime_record_kind"] = "unknown"
+            preview = self.runtime.record_preview(event)
+            data["runtime_record_kind"] = preview.record_kind
+            data["runtime_record_preview"] = preview.model_dump(mode="json")
             rows.append(data)
         return {"runtime_records": rows}
 
@@ -490,12 +488,23 @@ class ChronicleUIDataService:
 
         if len(parts) == 3 and parts[0] == "api" and parts[1] == "runtime-records":
             self.chronicle.require_initialized()
-            record = _find_by_attr(self.chronicle.jsonl.read_all(), "event_id", parts[2])
-            if record is None:
+            event = next(
+                (item for item in self.chronicle.jsonl.read_all() if item.event_id == parts[2]),
+                None,
+            )
+            if event is None:
                 return None
+            record = _dump_model(event)
             payload = record["payload"]
             if "runtime_summary" not in payload and "runtime_retrieval_plan" not in payload:
                 return None
+            preview = self.runtime.record_preview(event)
+            record["runtime_record_kind"] = preview.record_kind
+            record["runtime_record_preview"] = preview.model_dump(mode="json")
+            record["suggested_cli_family"] = preview.suggested_cli_family
+            if "runtime_retrieval_plan" in payload:
+                plan = RuntimeRetrievalPlan.model_validate(payload["runtime_retrieval_plan"])
+                record["retrieval_handoff"] = self.runtime.retrieval_handoff(plan).model_dump(mode="json")
             return {"record": record}
 
         if len(parts) == 3 and parts[0] == "api" and parts[1] == "review-queue":
@@ -688,6 +697,21 @@ function detailPath(endpoint, row) {{
 }}
 function renderTable(endpoint, rows) {{
   if (!rows || rows.length === 0) return '<p>No records.</p>';
+  if (endpoint === '/api/runtime-records') {{
+    return '<table><thead><tr><th>detail</th><th>event</th><th>kind</th><th>preview</th><th>source counts</th></tr></thead><tbody>'
+      + rows.map(row => {{
+        const path = detailPath(endpoint, row);
+        const button = path ? '<button data-detail="' + esc(path) + '">JSON</button>' : '';
+        const preview = row.runtime_record_preview || {{}};
+        return '<tr>'
+          + '<td>' + button + '</td>'
+          + '<td><span class="id">' + esc(row.event_id || '') + '</span></td>'
+          + '<td>' + esc(row.runtime_record_kind || '') + '</td>'
+          + '<td><strong>' + esc(preview.title || '') + '</strong><br>' + esc(preview.preview_text || '') + '</td>'
+          + '<td>' + esc(JSON.stringify(preview.source_counts || {{}})) + '</td>'
+          + '</tr>';
+      }}).join('') + '</tbody></table>';
+  }}
   if (endpoint === '/api/review-queue') {{
     return '<table><thead><tr><th>detail</th><th>target</th><th>status</th><th>warnings</th><th>latest reviewer</th></tr></thead><tbody>'
       + rows.map(row => {{
@@ -738,6 +762,29 @@ async function loadDetail(endpoint) {{
   const payload = await response.json();
   const record = payload.record || {{}};
   let extra = '';
+  if (record.runtime_record_preview) {{
+    const preview = record.runtime_record_preview;
+    extra += '<div class="notice"><h3>Runtime Preview</h3>'
+      + '<p><strong>' + esc(preview.title || '') + '</strong></p>'
+      + '<p>' + esc(preview.preview_text || '') + '</p>'
+      + '<p>Kind: ' + esc(preview.record_kind || record.runtime_record_kind || '') + '</p>'
+      + '<p>Source counts: ' + esc(JSON.stringify(preview.source_counts || {{}})) + '</p>'
+      + '<p>Referenced IDs: ' + esc((preview.referenced_record_ids || []).join(', ') || '(none)') + '</p>'
+      + '<p>CLI: ' + esc(preview.suggested_cli_family || '') + '</p>'
+      + '</div>';
+  }}
+  if (record.retrieval_handoff) {{
+    const handoff = record.retrieval_handoff;
+    extra += '<div class="notice"><h3>Retrieval Handoff</h3>'
+      + '<p>Query: ' + esc(handoff.query || '') + '</p>'
+      + '<p>Hit counts: vector=' + esc(handoff.vector_hit_count || 0)
+      + ', graph=' + esc(handoff.graph_hit_count || 0)
+      + ', chronicle=' + esc(handoff.chronicle_hit_count || 0) + '</p>'
+      + '<p>Referenced IDs: ' + esc((handoff.referenced_record_ids || []).join(', ') || '(none)') + '</p>'
+      + '<p>Downstream commands: ' + esc((handoff.downstream_commands || []).join(' | ')) + '</p>'
+      + '<p>Notes: ' + esc((handoff.notes || []).join(' | ')) + '</p>'
+      + '</div>';
+  }}
   if (record.review_capability) {{
     const capability = record.review_capability;
     const warnList = Array.isArray(capability.warnings) ? capability.warnings : [];

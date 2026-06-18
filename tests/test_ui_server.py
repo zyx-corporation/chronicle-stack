@@ -191,6 +191,10 @@ def test_ui_data_service_read_endpoints(tmp_path):
     assert service.audit_events()["audit_events"][0]["summary"] == "UI audit event"
     assert service.lifecycle_markers()["lifecycle_markers"][0]["reason"] == "UI lifecycle marker"
     assert len(service.runtime_records()["runtime_records"]) == 2
+    assert service.runtime_records()["runtime_records"][0]["runtime_record_preview"]["title"]
+    assert service.runtime_records()["runtime_records"][0]["runtime_record_preview"]["suggested_cli_family"].startswith(
+        "chronicle runtime"
+    )
     assert len(service.review_queue()["review_queue"]) == 2
     assert service.review_queue()["review_queue"][0]["review_preview_only"] is True
     assert service.review_queue()["review_queue"][0]["target_event_id"].startswith("evt_")
@@ -231,8 +235,14 @@ def test_ui_data_service_detail_endpoints(tmp_path):
     assert service.detail_payload(f"/api/lifecycle/{ids['lifecycle_id']}")["record"]["reason"] == "UI lifecycle marker"
     runtime_detail = service.detail_payload(f"/api/runtime-records/{ids['runtime_summary_event_id']}")["record"]
     assert "runtime_summary" in runtime_detail["payload"]
+    assert runtime_detail["runtime_record_preview"]["record_kind"] == "summary"
+    assert runtime_detail["suggested_cli_family"] == "chronicle runtime summarize --record"
     retrieval_detail = service.detail_payload(f"/api/runtime-records/{ids['runtime_plan_event_id']}")["record"]
     assert "runtime_retrieval_plan" in retrieval_detail["payload"]
+    assert retrieval_detail["runtime_record_preview"]["record_kind"] == "retrieval_plan"
+    assert retrieval_detail["retrieval_handoff"]["query"] == "UI runtime visibility"
+    assert retrieval_detail["retrieval_handoff"]["package_review_required"] is True
+    assert retrieval_detail["retrieval_handoff"]["downstream_commands"][0].startswith("chronicle package review")
     review_detail = service.detail_payload(f"/api/review-queue/{ids['runtime_summary_event_id']}")["record"]
     assert review_detail["target_event_id"] == ids["runtime_summary_event_id"]
     assert review_detail["review_preview_only"] is True
@@ -284,6 +294,8 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "Chronicle Stack Local UI" in html
     assert "Read-only foreground local UI" in html
     assert "loadDetail" in html
+    assert "Runtime Preview" in html
+    assert "Retrieval Handoff" in html
     assert "Review Capability" in html
     assert "Identity Assurance" in html
     assert "warning_details" in html
