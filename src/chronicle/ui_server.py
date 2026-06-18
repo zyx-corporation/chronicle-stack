@@ -1005,6 +1005,7 @@ async function loadEndpoint(endpoint) {{
   document.getElementById('view').innerHTML = '<h2>' + esc(endpoint) + '</h2>' + body;
 }}
 async function loadDetail(endpoint) {{
+  window.__chronicleLastDetail = endpoint;
   const response = await fetch(endpoint);
   if (!response.ok) {{
     document.getElementById('detail').innerHTML = '<h2>Detail</h2><p>Not found.</p>';
@@ -1012,7 +1013,10 @@ async function loadDetail(endpoint) {{
   }}
   const payload = await response.json();
   const record = payload.record || {{}};
-  let extra = '';
+  let extra = '<div class="notice"><h3>Navigation</h3>'
+    + '<p><button data-back-view="true">Back to current list</button> '
+    + '<span class="id">' + esc(window.__chronicleCurrentEndpoint || '/api/overview') + '</span> → '
+    + '<span class="id">' + esc(endpoint) + '</span></p></div>';
   if (record.runtime_record_preview) {{
     const preview = record.runtime_record_preview;
     extra += '<div class="notice"><h3>Runtime Preview</h3>'
@@ -1112,6 +1116,7 @@ document.getElementById('view').addEventListener('click', event => {{
 }});
 document.getElementById('detail').addEventListener('click', event => {{
   if (event.target.dataset.detailNav) loadDetail(event.target.dataset.detailNav);
+  if (event.target.dataset.backView && window.__chronicleCurrentEndpoint) loadEndpoint(window.__chronicleCurrentEndpoint);
 }});
 window.__chronicleFilters = {{ runtimeRecords: '', reviewQueue: '' }};
 document.getElementById('view').addEventListener('input', event => {{

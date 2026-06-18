@@ -321,6 +321,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "Package Handoff Preview" in html
     assert "Review Package Readiness" in html
     assert "Related Links" in html
+    assert "Back to current list" in html
     assert "readinessBadge" in html
     assert "Needs attention:" in html
     assert "Runtime kinds:" in html
@@ -332,6 +333,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert 'data-filter-target="runtimeRecords"' in html
     assert 'data-filter-value="retrieval_plan"' in html
     assert "data-detail-nav" in html
+    assert "data-back-view" in html
     assert "textInput('runtimeRecords'" in html
     assert "textInput('reviewQueue'" in html
     assert "__chronicleFilters" in html
