@@ -382,6 +382,63 @@ class ChronicleUIDataService:
         payload["message"] = "Read-only package preview derived from retrieval-plan context hits."
         return payload
 
+    def review_package_readiness(self, target_event_id: str) -> dict[str, Any]:
+        self.chronicle.require_initialized()
+        event = next(
+            (item for item in self.chronicle.jsonl.read_all() if item.event_id == target_event_id),
+            None,
+        )
+        if event is None:
+            return {
+                "status": "missing_target",
+                "message": "Target event is not available for package readiness derivation.",
+                "suggested_commands": [],
+            }
+
+        payload = getattr(event, "payload", {})
+        if "runtime_retrieval_plan" in payload:
+            plan = RuntimeRetrievalPlan.model_validate(payload["runtime_retrieval_plan"])
+            handoff = self.runtime_package_handoff(plan)
+            handoff["suggested_commands"] = [
+                'chronicle package review --purpose "runtime retrieval handoff"',
+                'chronicle package context --purpose "runtime retrieval handoff" --persist',
+            ]
+            return handoff
+
+        context_ids = [context_id for context_id in getattr(event, "context_ids", []) if context_id.startswith("ctx_")]
+        source_ref = getattr(getattr(event, "source", None), "source_ref", "") or ""
+        if source_ref.startswith("ctx_") and source_ref not in context_ids:
+            context_ids.append(source_ref)
+
+        if not context_ids:
+            return {
+                "status": "no_context_records",
+                "eligible_context_ids": [],
+                "skipped_record_ids": [],
+                "message": "No context-linked records are available for package/export preview from this review target.",
+                "suggested_commands": ["chronicle show --json", "chronicle review queue --json"],
+                "package_review_required": True,
+            }
+
+        package = self.packages.build_context_package(
+            purpose=f"review target handoff: {target_event_id}",
+            context_ids=context_ids,
+        )
+        review = self.package_review.review_package(package)
+        return {
+            "status": "package_context_available",
+            "eligible_context_ids": context_ids,
+            "skipped_record_ids": [],
+            "message": "Read-only package readiness derived from context-linked review target records.",
+            "suggested_commands": [
+                'chronicle package review --purpose "review target handoff"',
+                'chronicle package context --purpose "review target handoff" --persist',
+            ],
+            "package_review_required": True,
+            "package_manifest_preview": package.manifest.model_dump(mode="json"),
+            "package_review": review.model_dump(mode="json"),
+        }
+
     def runtime_boundary(self) -> dict[str, Any]:
         return {
             "read_only": True,
@@ -552,6 +609,7 @@ class ChronicleUIDataService:
                         self._history_row(item, boundary)
                         for item in self.review.history(event_id=parts[2])
                     ]
+                    row["package_readiness"] = self.review_package_readiness(parts[2])
                     row["ui_mutation_enabled"] = False
                     row["review_preview_only"] = True
                     return {"record": row}
@@ -831,6 +889,20 @@ async function loadDetail(endpoint) {{
       + '<p>' + esc(preview.message || '') + '</p>'
       + '<p>Eligible contexts: ' + esc((preview.eligible_context_ids || []).join(', ') || '(none)') + '</p>'
       + '<p>Skipped records: ' + esc((preview.skipped_record_ids || []).join(', ') || '(none)') + '</p>'
+      + '<p>Package review status: ' + esc(packageReview.status || '(not available)') + '</p>'
+      + '<p>Package warnings: ' + esc((packageReview.package_warnings || []).join(', ') || '(none)') + '</p>'
+      + '<p>Manifest refs: ' + esc((manifest.referenced_records || []).join(', ') || '(none)') + '</p>'
+      + '</div>';
+  }}
+  if (record.package_readiness) {{
+    const readiness = record.package_readiness;
+    const packageReview = readiness.package_review || {{}};
+    const manifest = readiness.package_manifest_preview || {{}};
+    extra += '<div class="notice"><h3>Review Package Readiness</h3>'
+      + '<p>Status: ' + esc(readiness.status || '') + '</p>'
+      + '<p>' + esc(readiness.message || '') + '</p>'
+      + '<p>Eligible contexts: ' + esc((readiness.eligible_context_ids || []).join(', ') || '(none)') + '</p>'
+      + '<p>Suggested commands: ' + esc((readiness.suggested_commands || []).join(' | ') || '(none)') + '</p>'
       + '<p>Package review status: ' + esc(packageReview.status || '(not available)') + '</p>'
       + '<p>Package warnings: ' + esc((packageReview.package_warnings || []).join(', ') || '(none)') + '</p>'
       + '<p>Manifest refs: ' + esc((manifest.referenced_records || []).join(', ') || '(none)') + '</p>'

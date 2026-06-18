@@ -250,6 +250,8 @@ def test_ui_data_service_detail_endpoints(tmp_path):
     review_detail = service.detail_payload(f"/api/review-queue/{ids['runtime_summary_event_id']}")["record"]
     assert review_detail["target_event_id"] == ids["runtime_summary_event_id"]
     assert review_detail["review_preview_only"] is True
+    assert review_detail["package_readiness"]["status"] == "no_context_records"
+    assert review_detail["package_readiness"]["suggested_commands"][0] == "chronicle show --json"
     assert review_detail["latest_audit_id"].startswith("aud_")
     assert review_detail["latest_reviewer_identity"]["kind"] == "local_operator"
     assert review_detail["review_capability"]["status"] == "advisory_only"
@@ -259,6 +261,10 @@ def test_ui_data_service_detail_endpoints(tmp_path):
     assert review_detail["history"][0]["reviewer_identity"]["session_label"] == "ui-test"
     assert review_detail["history"][0]["identity_assurance"]["boundary_auth_mode"] == "not_enabled"
     assert review_detail["history"][0]["audit_summary"]
+    review_plan_detail = service.detail_payload(f"/api/review-queue/{ids['runtime_plan_event_id']}")["record"]
+    assert review_plan_detail["package_readiness"]["status"] == "package_context_available"
+    assert ids["context_id"] in review_plan_detail["package_readiness"]["eligible_context_ids"]
+    assert review_plan_detail["package_readiness"]["package_review"]["status"] in {"pass", "warning", "blocked"}
     assert service.detail_payload(f"/api/ai-index/vector/{ids['event_id']}")["record"]["record_id"] == ids["event_id"]
     graph_detail = service.detail_payload(f"/api/ai-index/graph-nodes/{ids['event_id']}")["record"]
     assert graph_detail["node_id"] == ids["event_id"]
@@ -301,6 +307,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "Runtime Preview" in html
     assert "Retrieval Handoff" in html
     assert "Package Handoff Preview" in html
+    assert "Review Package Readiness" in html
     assert "Review Capability" in html
     assert "Identity Assurance" in html
     assert "warning_details" in html
