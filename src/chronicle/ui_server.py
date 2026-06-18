@@ -910,6 +910,10 @@ function currentFilterLabel() {{
   }}
   return '';
 }}
+function currentSortLabel(endpoint) {{
+  const sortValue = currentSortValue(endpoint || window.__chronicleCurrentEndpoint || '');
+  return sortValue ? 'sort=' + sortValue : '';
+}}
 function hasActiveFilters() {{
   if (!window.__chronicleFilters) return false;
   return Boolean(window.__chronicleFilters.runtimeRecords || window.__chronicleFilters.reviewQueue);
@@ -933,6 +937,20 @@ function currentTrailButtons() {{
   return window.__chronicleDetailTrail.slice(-3).map(path =>
     '<button data-detail-trail="' + esc(path) + '">' + esc(humanizeDetailPath(path)) + '</button>'
   ).join('');
+}}
+function activeViewSummary(endpoint, mode) {{
+  const parts = [];
+  const currentEndpoint = endpoint || window.__chronicleCurrentEndpoint || '/api/overview';
+  parts.push('view=' + currentEndpoint);
+  const filterLabel = currentFilterLabel();
+  if (filterLabel) parts.push(filterLabel);
+  const sortLabel = currentSortLabel(currentEndpoint);
+  if (sortLabel) parts.push(sortLabel);
+  if (mode === 'detail') {{
+    const trailLabel = currentTrailLabel();
+    if (trailLabel) parts.push('trail=' + trailLabel);
+  }}
+  return '<p class="id">Active view: ' + esc(parts.join(' | ')) + '</p>';
 }}
 function humanizeDetailPath(path) {{
   const parts = String(path || '').split('/').filter(Boolean);
@@ -1003,6 +1021,7 @@ function renderOverview(payload) {{
   const graphEdgeCount = aiIndex.graph && aiIndex.graph.edge_count ? aiIndex.graph.edge_count : 0;
   return ''
     + '<h2>/api/overview</h2>'
+    + '<div class="panel">' + activeViewSummary('/api/overview', 'overview') + '</div>'
     + '<div class="panel">'
     + '<p><strong>' + esc(chronicle.title || '') + '</strong></p>'
     + '<p>Chronicle ID: <span class="id">' + esc(chronicle.id || '') + '</span></p>'
@@ -1084,7 +1103,8 @@ function renderTable(endpoint, rows) {{
       ]).toLowerCase().includes(query);
     }});
     const sorted = sortRuntimeRows(filtered);
-    return textInput('runtimeRecords', 'Filter runtime records...')
+    return activeViewSummary(endpoint, 'list')
+      + textInput('runtimeRecords', 'Filter runtime records...')
       + sortSelect('runtimeRecords', currentSortValue('/api/runtime-records'), [
         {{ value: 'latest', label: 'Latest first' }},
         {{ value: 'kind', label: 'Kind' }},
@@ -1120,7 +1140,8 @@ function renderTable(endpoint, rows) {{
       ]).toLowerCase().includes(query);
     }});
     const sorted = sortReviewRows(filtered);
-    return textInput('reviewQueue', 'Filter review queue...')
+    return activeViewSummary(endpoint, 'list')
+      + textInput('reviewQueue', 'Filter review queue...')
       + sortSelect('reviewQueue', currentSortValue('/api/review-queue'), [
         {{ value: 'attention', label: 'Needs attention first' }},
         {{ value: 'latest', label: 'Latest first' }},
@@ -1194,6 +1215,7 @@ async function loadDetail(endpoint) {{
   const trailLabel = currentTrailLabel();
   const trailButtons = currentTrailButtons();
   let extra = '<div class="notice"><h3>Navigation</h3>'
+    + activeViewSummary(endpoint, 'detail')
     + '<p><button data-back-view="true">Back to current list</button> '
     + (previousDetail ? '<button data-back-detail="true">Back to previous detail</button> ' : '')
     + (hasActiveFilters() ? '<button data-reset-filters="all">Reset Filters</button> ' : '')
