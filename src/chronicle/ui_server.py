@@ -855,8 +855,27 @@ function currentTrailLabel() {{
 function currentTrailButtons() {{
   if (!Array.isArray(window.__chronicleDetailTrail) || window.__chronicleDetailTrail.length === 0) return '';
   return window.__chronicleDetailTrail.slice(-3).map(path =>
-    '<button data-detail-trail="' + esc(path) + '">' + esc(path) + '</button>'
+    '<button data-detail-trail="' + esc(path) + '">' + esc(humanizeDetailPath(path)) + '</button>'
   ).join('');
+}}
+function humanizeDetailPath(path) {{
+  const parts = String(path || '').split('/').filter(Boolean);
+  if (parts.length < 3 || parts[0] !== 'api') return String(path || '');
+  const resource = parts[1];
+  const recordId = parts[2];
+  const labels = {{
+    'runtime-records': 'Runtime',
+    'review-queue': 'Review',
+    'events': 'Event',
+    'contexts': 'Context',
+    'artifacts': 'Artifact',
+    'decisions': 'Decision',
+    'audit': 'Audit',
+    'lifecycle': 'Lifecycle',
+    'boundary': 'Boundary',
+    'rde': 'RDE',
+  }};
+  return (labels[resource] || resource) + ': ' + recordId;
 }}
 function renderOverview(payload) {{
   const chronicle = payload.chronicle || {{}};
