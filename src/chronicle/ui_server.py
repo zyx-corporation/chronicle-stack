@@ -863,6 +863,9 @@ function renderOverview(payload) {{
     + '<p>Runtime kinds: ' + esc(JSON.stringify(triage.runtime_record_kinds || {{}})) + '</p>'
     + '<p>Review capability counts: ' + esc(JSON.stringify(triage.review_capability_counts || {{}})) + '</p>'
     + '<p>Package readiness counts: ' + esc(JSON.stringify(triage.package_readiness_counts || {{}})) + '</p>'
+    + '<p><button data-jump="/api/review-queue">Open Review Queue</button>'
+    + '<button data-jump="/api/runtime-records">Open Runtime Records</button>'
+    + '<button data-jump="/api/package-review">Open Package Review</button></p>'
     + '</div>';
 }}
 function detailPath(endpoint, row) {{
@@ -1027,7 +1030,10 @@ async function loadDetail(endpoint) {{
     '<h2>' + esc(endpoint) + '</h2>' + extra + '<pre>' + esc(JSON.stringify(payload, null, 2)) + '</pre>';
 }}
 document.querySelectorAll('button[data-endpoint]').forEach(button => button.addEventListener('click', () => loadEndpoint(button.dataset.endpoint)));
-document.getElementById('view').addEventListener('click', event => {{ if (event.target.dataset.detail) loadDetail(event.target.dataset.detail); }});
+document.getElementById('view').addEventListener('click', event => {{
+  if (event.target.dataset.detail) loadDetail(event.target.dataset.detail);
+  if (event.target.dataset.jump) loadEndpoint(event.target.dataset.jump);
+}});
 loadEndpoint('/api/overview');
 </script>
 </body>
