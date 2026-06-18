@@ -1015,6 +1015,9 @@ async function loadEndpoint(endpoint) {{
   document.getElementById('view').innerHTML = '<h2>' + esc(endpoint) + '</h2>' + body;
 }}
 async function loadDetail(endpoint) {{
+  if (window.__chronicleLastDetail && window.__chronicleLastDetail !== endpoint) {{
+    window.__chronicleDetailTrail.push(window.__chronicleLastDetail);
+  }}
   window.__chronicleLastDetail = endpoint;
   const response = await fetch(endpoint);
   if (!response.ok) {{
@@ -1024,11 +1027,16 @@ async function loadDetail(endpoint) {{
   const payload = await response.json();
   const record = payload.record || {{}};
   const filterLabel = currentFilterLabel();
+  const previousDetail = window.__chronicleDetailTrail.length > 0
+    ? window.__chronicleDetailTrail[window.__chronicleDetailTrail.length - 1]
+    : '';
   let extra = '<div class="notice"><h3>Navigation</h3>'
     + '<p><button data-back-view="true">Back to current list</button> '
+    + (previousDetail ? '<button data-back-detail="true">Back to previous detail</button> ' : '')
     + '<span class="id">' + esc(window.__chronicleCurrentEndpoint || '/api/overview') + '</span> → '
     + '<span class="id">' + esc(endpoint) + '</span>'
     + (filterLabel ? ' <span class="id">(' + esc(filterLabel) + ')</span>' : '')
+    + (previousDetail ? ' <span class="id">prev=' + esc(previousDetail) + '</span>' : '')
     + '</p></div>';
   if (record.runtime_record_preview) {{
     const preview = record.runtime_record_preview;
@@ -1129,9 +1137,17 @@ document.getElementById('view').addEventListener('click', event => {{
 }});
 document.getElementById('detail').addEventListener('click', event => {{
   if (event.target.dataset.detailNav) loadDetail(event.target.dataset.detailNav);
+  if (event.target.dataset.backDetail && window.__chronicleDetailTrail.length > 0) {{
+    const previousDetail = window.__chronicleDetailTrail.pop();
+    if (previousDetail) {{
+      window.__chronicleLastDetail = '';
+      loadDetail(previousDetail);
+    }}
+  }}
   if (event.target.dataset.backView && window.__chronicleCurrentEndpoint) loadEndpoint(window.__chronicleCurrentEndpoint);
 }});
 window.__chronicleFilters = {{ runtimeRecords: '', reviewQueue: '' }};
+window.__chronicleDetailTrail = [];
 document.getElementById('view').addEventListener('input', event => {{
   const filterId = event.target.dataset.filterInput;
   if (!filterId) return;
