@@ -322,6 +322,9 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert 'data-jump="/api/review-queue"' in html
     assert 'data-jump="/api/runtime-records"' in html
     assert 'data-jump="/api/package-review"' in html
+    assert "textInput('runtimeRecords'" in html
+    assert "textInput('reviewQueue'" in html
+    assert "__chronicleFilters" in html
     assert "Review Capability" in html
     assert "Identity Assurance" in html
     assert "warning_details" in html

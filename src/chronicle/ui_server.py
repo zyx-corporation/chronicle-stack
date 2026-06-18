@@ -806,6 +806,13 @@ const idFields = ['event_id', 'context_id', 'artifact_id', 'decision_id', 'rde_r
 function esc(value) {{ return String(value).replace(/[&<>\"']/g, ch => ({{'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}}[ch])); }}
 function firstArray(payload) {{ for (const key of Object.keys(payload)) if (Array.isArray(payload[key])) return payload[key]; return null; }}
 function badge(text, cls) {{ return '<span class="badge ' + cls + '">' + esc(text) + '</span>'; }}
+function textInput(id, placeholder) {{
+  return '<input id="' + esc(id) + '" data-filter-input="' + esc(id) + '" placeholder="' + esc(placeholder)
+    + '" style="margin: 6px 6px 10px 0; padding: 6px 8px; width: 260px;">';
+}}
+function filterRows(rows, predicate) {{
+  return rows.filter(predicate);
+}}
 function renderOverview(payload) {{
   const chronicle = payload.chronicle || {{}};
   const counts = payload.counts || {{}};
@@ -880,8 +887,20 @@ function detailPath(endpoint, row) {{
 function renderTable(endpoint, rows) {{
   if (!rows || rows.length === 0) return '<p>No records.</p>';
   if (endpoint === '/api/runtime-records') {{
-    return '<table><thead><tr><th>detail</th><th>event</th><th>kind</th><th>preview</th><th>source counts</th></tr></thead><tbody>'
-      + rows.map(row => {{
+    const query = (window.__chronicleFilters && window.__chronicleFilters.runtimeRecords || '').toLowerCase();
+    const filtered = filterRows(rows, row => {{
+      if (!query) return true;
+      const preview = row.runtime_record_preview || {{}};
+      return JSON.stringify([
+        row.event_id || '',
+        row.runtime_record_kind || '',
+        preview.title || '',
+        preview.preview_text || '',
+      ]).toLowerCase().includes(query);
+    }});
+    return textInput('runtimeRecords', 'Filter runtime records...')
+      + '<table><thead><tr><th>detail</th><th>event</th><th>kind</th><th>preview</th><th>source counts</th></tr></thead><tbody>'
+      + filtered.map(row => {{
         const path = detailPath(endpoint, row);
         const button = path ? '<button data-detail="' + esc(path) + '">JSON</button>' : '';
         const preview = row.runtime_record_preview || {{}};
@@ -895,8 +914,23 @@ function renderTable(endpoint, rows) {{
       }}).join('') + '</tbody></table>';
   }}
   if (endpoint === '/api/review-queue') {{
-    return '<table><thead><tr><th>detail</th><th>target</th><th>status</th><th>warnings</th><th>latest reviewer</th></tr></thead><tbody>'
-      + rows.map(row => {{
+    const query = (window.__chronicleFilters && window.__chronicleFilters.reviewQueue || '').toLowerCase();
+    const filtered = filterRows(rows, row => {{
+      if (!query) return true;
+      const capability = row.review_capability || {{}};
+      const readiness = row.package_readiness_summary || {{}};
+      return JSON.stringify([
+        row.target_event_id || '',
+        row.target_summary || '',
+        row.review_kind || '',
+        capability.status || '',
+        readiness.label || '',
+        (row.latest_reviewer_identity && row.latest_reviewer_identity.label) || row.latest_reviewer || '',
+      ]).toLowerCase().includes(query);
+    }});
+    return textInput('reviewQueue', 'Filter review queue...')
+      + '<table><thead><tr><th>detail</th><th>target</th><th>status</th><th>warnings</th><th>latest reviewer</th></tr></thead><tbody>'
+      + filtered.map(row => {{
         const path = detailPath(endpoint, row);
         const button = path ? '<button data-detail="' + esc(path) + '">JSON</button>' : '';
         const capability = row.review_capability || {{}};
@@ -931,6 +965,7 @@ function renderTable(endpoint, rows) {{
     }}).join('') + '</tbody></table>';
 }}
 async function loadEndpoint(endpoint) {{
+  window.__chronicleCurrentEndpoint = endpoint;
   const response = await fetch(endpoint);
   const payload = await response.json();
   if (endpoint === '/api/overview') {{
@@ -1033,6 +1068,14 @@ document.querySelectorAll('button[data-endpoint]').forEach(button => button.addE
 document.getElementById('view').addEventListener('click', event => {{
   if (event.target.dataset.detail) loadDetail(event.target.dataset.detail);
   if (event.target.dataset.jump) loadEndpoint(event.target.dataset.jump);
+}});
+window.__chronicleFilters = {{ runtimeRecords: '', reviewQueue: '' }};
+document.getElementById('view').addEventListener('input', event => {{
+  const filterId = event.target.dataset.filterInput;
+  if (!filterId) return;
+  if (filterId === 'runtimeRecords') window.__chronicleFilters.runtimeRecords = event.target.value || '';
+  if (filterId === 'reviewQueue') window.__chronicleFilters.reviewQueue = event.target.value || '';
+  if (window.__chronicleCurrentEndpoint) loadEndpoint(window.__chronicleCurrentEndpoint);
 }});
 loadEndpoint('/api/overview');
 </script>
