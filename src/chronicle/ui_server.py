@@ -891,6 +891,13 @@ function humanizeDetailPath(path) {{
   }};
   return (labels[resource] || resource) + ': ' + recordId;
 }}
+function overviewJumpButton(label, endpoint, filterTarget, filterValue, variant) {{
+  const targetAttr = filterTarget ? ' data-filter-target="' + esc(filterTarget) + '"' : '';
+  const valueAttr = filterValue ? ' data-filter-value="' + esc(filterValue) + '"' : '';
+  const className = variant ? ' class="' + esc(variant) + '"' : '';
+  return '<button' + className + ' data-jump="' + esc(endpoint) + '"' + targetAttr + valueAttr + '>'
+    + label + '</button>';
+}}
 function renderOverview(payload) {{
   const chronicle = payload.chronicle || {{}};
   const counts = payload.counts || {{}};
@@ -941,10 +948,16 @@ function renderOverview(payload) {{
     + '</div>'
     + '<div class="panel">'
     + '<h3>Triage</h3>'
-    + '<p>' + badge('Needs attention: ' + esc(triage.needs_attention_reviews ?? 0), 'badge-warning') + '</p>'
-    + '<p>' + badge('Review ready: ' + esc(triage.ready_now_reviews ?? 0), 'badge-ready')
-    + badge('Review advisory: ' + esc(triage.advisory_only_reviews ?? 0), 'badge-warning') + '</p>'
-    + '<p>' + badge('Package ready: ' + esc(triage.package_ready_reviews ?? 0), 'badge-ready') + '</p>'
+    + '<p>'
+    + overviewJumpButton(badge('Needs attention: ' + esc(triage.needs_attention_reviews ?? 0), 'badge-warning'), '/api/review-queue', 'reviewQueue', 'review_requested')
+    + '</p>'
+    + '<p>'
+    + overviewJumpButton(badge('Review ready: ' + esc(triage.ready_now_reviews ?? 0), 'badge-ready'), '/api/review-queue', 'reviewQueue', 'ready')
+    + overviewJumpButton(badge('Review advisory: ' + esc(triage.advisory_only_reviews ?? 0), 'badge-warning'), '/api/review-queue', 'reviewQueue', 'advisory')
+    + '</p>'
+    + '<p>'
+    + overviewJumpButton(badge('Package ready: ' + esc(triage.package_ready_reviews ?? 0), 'badge-ready'), '/api/review-queue', 'reviewQueue', 'package:package_context_available')
+    + '</p>'
     + '<p>Runtime kinds: ' + esc(JSON.stringify(triage.runtime_record_kinds || {{}})) + '</p>'
     + '<p>Review capability counts: ' + esc(JSON.stringify(triage.review_capability_counts || {{}})) + '</p>'
     + '<p>Package readiness counts: ' + esc(JSON.stringify(triage.package_readiness_counts || {{}})) + '</p>'

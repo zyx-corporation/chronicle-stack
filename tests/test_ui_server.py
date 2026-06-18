@@ -326,6 +326,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "currentFilterLabel" in html
     assert "hasActiveFilters" in html
     assert "resetFilters" in html
+    assert "overviewJumpButton" in html
     assert "currentTrailLabel" in html
     assert "currentTrailButtons" in html
     assert "humanizeDetailPath" in html
@@ -333,6 +334,8 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "__chronicleDetailTrail" in html
     assert "readinessBadge" in html
     assert "Needs attention:" in html
+    assert "review_requested" in html
+    assert "ready" in html
     assert "Runtime kinds:" in html
     assert 'data-jump="/api/review-queue"' in html
     assert 'data-jump="/api/runtime-records"' in html
