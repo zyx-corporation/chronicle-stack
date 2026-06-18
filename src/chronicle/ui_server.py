@@ -848,6 +848,10 @@ function currentFilterLabel() {{
   }}
   return '';
 }}
+function currentTrailLabel() {{
+  if (!Array.isArray(window.__chronicleDetailTrail) || window.__chronicleDetailTrail.length === 0) return '';
+  return window.__chronicleDetailTrail.slice(-3).join(' <- ');
+}}
 function renderOverview(payload) {{
   const chronicle = payload.chronicle || {{}};
   const counts = payload.counts || {{}};
@@ -1030,6 +1034,7 @@ async function loadDetail(endpoint) {{
   const previousDetail = window.__chronicleDetailTrail.length > 0
     ? window.__chronicleDetailTrail[window.__chronicleDetailTrail.length - 1]
     : '';
+  const trailLabel = currentTrailLabel();
   let extra = '<div class="notice"><h3>Navigation</h3>'
     + '<p><button data-back-view="true">Back to current list</button> '
     + (previousDetail ? '<button data-back-detail="true">Back to previous detail</button> ' : '')
@@ -1037,7 +1042,9 @@ async function loadDetail(endpoint) {{
     + '<span class="id">' + esc(endpoint) + '</span>'
     + (filterLabel ? ' <span class="id">(' + esc(filterLabel) + ')</span>' : '')
     + (previousDetail ? ' <span class="id">prev=' + esc(previousDetail) + '</span>' : '')
-    + '</p></div>';
+    + '</p>'
+    + (trailLabel ? '<p><span class="id">trail=' + esc(trailLabel) + '</span></p>' : '')
+    + '</div>';
   if (record.runtime_record_preview) {{
     const preview = record.runtime_record_preview;
     extra += '<div class="notice"><h3>Runtime Preview</h3>'
