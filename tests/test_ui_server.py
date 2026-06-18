@@ -327,6 +327,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "currentTrailLabel" in html
     assert "currentTrailButtons" in html
     assert "humanizeDetailPath" in html
+    assert "Related Links" in html
     assert "__chronicleDetailTrail" in html
     assert "readinessBadge" in html
     assert "Needs attention:" in html

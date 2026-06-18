@@ -1126,7 +1126,9 @@ async function loadDetail(endpoint) {{
   if (Array.isArray(record.related_links) && record.related_links.length > 0) {{
     extra += '<div class="notice"><h3>Related Links</h3><p>'
       + record.related_links.map(item =>
-        '<button data-detail-nav="' + esc(item.path || '') + '">' + esc(item.label || item.path || '') + '</button>'
+        '<button data-detail-nav="' + esc(item.path || '') + '">'
+        + esc(item.label || humanizeDetailPath(item.path || ''))
+        + '</button>'
       ).join('')
       + '</p></div>';
   }}
