@@ -10,6 +10,7 @@ METADATA_FILE = "metadata.yaml"
 ARTIFACTS_DIR = "artifacts"
 INDEXES_DIR = "indexes"
 PACKAGES_DIR = "packages"
+AI_INDEXES_DIR = "ai_indexes"
 REPORTS_DIR = "reports/rde"
 SUMMARY_JOBS_DIR = "summary_jobs"
 REVIEWS_DIR = "reviews"
@@ -26,6 +27,7 @@ class ChroniclePaths:
         self.artifacts_dir = self.chronicle_dir / ARTIFACTS_DIR
         self.indexes_dir = self.chronicle_dir / INDEXES_DIR
         self.packages_dir = self.chronicle_dir / PACKAGES_DIR
+        self.ai_indexes_dir = self.chronicle_dir / AI_INDEXES_DIR
         self.reports_dir = self.chronicle_dir / REPORTS_DIR
         self.summary_jobs_dir = self.chronicle_dir / SUMMARY_JOBS_DIR
         self.reviews_dir = self.chronicle_dir / REVIEWS_DIR
@@ -34,6 +36,8 @@ class ChroniclePaths:
         self.decision_index_file = self.indexes_dir / "decision_index.json"
         self.rde_index_file = self.indexes_dir / "rde_index.json"
         self.boundary_rule_index_file = self.indexes_dir / "boundary_rule_index.json"
+        self.vector_index_file = self.ai_indexes_dir / "vector_index.json"
+        self.graph_index_file = self.ai_indexes_dir / "graph_index.json"
 
     def is_initialized(self) -> bool:
         return self.events_file.exists() and self.metadata_file.exists()

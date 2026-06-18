@@ -1,5 +1,36 @@
 # Changelog
 
+## Unreleased
+
+### Added
+- Local placeholder AI index CLI surface:
+  - `chronicle ai-index status`
+  - `chronicle ai-index vector add`
+  - `chronicle ai-index vector search`
+  - `chronicle ai-index graph add-node`
+  - `chronicle ai-index graph add-edge`
+  - `chronicle ai-index graph neighbors`
+- Local file-backed placeholder AI index storage:
+  - `.chronicle/ai_indexes/vector_index.json`
+  - `.chronicle/ai_indexes/graph_index.json`
+- Read-only local UI visibility for placeholder AI index surfaces:
+  - `/api/ai-index-status`
+  - `/api/ai-index-vector`
+  - `/api/ai-index-graph-nodes`
+  - `/api/ai-index-graph-edges`
+- Placeholder AI index detail JSON for vector entries and graph nodes.
+- CLI contract, README, and placeholder AI index documentation updates.
+
+### Changed
+- `chronicle init` now creates the `.chronicle/ai_indexes/` directory for local placeholder index surfaces.
+- UI smoke now validates read-only placeholder AI index endpoints in addition to the existing local UI data surface.
+
+### Notes
+- Placeholder AI indexes are derived local surfaces, not primary records.
+- Placeholder vector search uses local token-overlap and substring scoring only.
+- No LLM, embedding provider, vector DB, graph DB, GraphRAG runtime, or external service is invoked.
+- Read-only UI visibility does not imply GUI mutation, approval automation, or correctness proof.
+
 ## v1.4.0 - 2026-06-17
 
 ### Added

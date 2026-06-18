@@ -19,8 +19,19 @@ from chronicle.services.boundary_service import BoundaryService
 from chronicle.services.chronicle_service import ChronicleService
 from chronicle.services.context_service import ContextService
 from chronicle.services.decision_service import DecisionService
+from chronicle.services.graph_index_service import GraphIndexService
 from chronicle.services.lifecycle_service import LifecycleService
-from chronicle.ui_server import ChronicleUIDataService, build_startup_metadata, make_server
+from chronicle.services.review_service import ReviewService
+from chronicle.services.runtime_service import RuntimeService
+from chronicle.services.vector_index_service import VectorIndexService
+from chronicle.models.review import ReviewerIdentityKind
+from chronicle.ui_server import (
+    ChronicleUIDataService,
+    UIAuthMode,
+    UIAuthorizationMode,
+    build_startup_metadata,
+    make_server,
+)
 
 
 def _http_get(host: str, port: int, path: str) -> tuple[int, str]:
@@ -73,6 +84,36 @@ def _populate(root):
         reason="UI lifecycle marker",
     )
     event_id = ChronicleService(root).jsonl.read_all()[0].event_id
+    VectorIndexService(root).add_entry(
+        record_id=event_id,
+        text="UI placeholder vector entry for local ai index visibility",
+        record_type="event",
+        metadata={"source": "ui-test"},
+    )
+    GraphIndexService(root).add_node(
+        node_id=event_id,
+        labels=["event"],
+        properties={"title": "UI event"},
+    )
+    GraphIndexService(root).add_node(
+        node_id=context.context_id,
+        labels=["context"],
+        properties={"title": "UI Context"},
+    )
+    GraphIndexService(root).add_edge(
+        source_id=event_id,
+        target_id=context.context_id,
+        relation="references",
+        properties={"source": "ui-test"},
+    )
+    runtime_summary = RuntimeService(root).summarize(
+        text="Runtime summary for UI visibility. It stays local.",
+        record=True,
+    )
+    runtime_plan = RuntimeService(root).retrieve_plan(
+        query="UI runtime visibility",
+        record=True,
+    )
     return {
         "event_id": event_id,
         "context_id": context.context_id,
@@ -81,6 +122,8 @@ def _populate(root):
         "rule_id": boundary_rule.rule_id,
         "audit_id": audit_event.audit_id,
         "lifecycle_id": lifecycle_marker.lifecycle_id,
+        "runtime_summary_event_id": runtime_summary.event_id,
+        "runtime_plan_event_id": runtime_plan.event_id,
     }
 
 
@@ -91,9 +134,28 @@ def test_startup_metadata(tmp_path):
     assert payload["port"] == 8765
     assert payload["url"] == "http://127.0.0.1:8765"
     assert payload["root"] == str(tmp_path.resolve())
+    assert payload["bind_scope"] == "loopback-only"
     assert payload["read_only"] is True
     assert payload["runtime"] == "foreground-local-ui"
     assert payload["external_runtime"] is False
+    assert payload["mutation_enabled"] is False
+    assert payload["auth_mode"] == "not_enabled"
+    assert payload["authorization_mode"] == "not_enabled"
+    assert payload["ui_boundary"]["loopback_only"] is True
+
+
+def test_startup_metadata_with_configured_auth_mode(tmp_path):
+    metadata = build_startup_metadata(
+        host="127.0.0.1",
+        port=8765,
+        root=tmp_path,
+        auth_mode=UIAuthMode.LOOPBACK_LOCAL,
+        authorization_mode=UIAuthorizationMode.REVIEWER_DECLARED,
+    )
+    payload = json.loads(metadata.to_json())
+    assert payload["auth_mode"] == "loopback_local"
+    assert payload["authorization_mode"] == "reviewer_declared"
+    assert payload["ui_boundary"]["session_gating"] is True
 
 
 def test_ui_overview_data(tmp_path):
@@ -114,6 +176,8 @@ def test_ui_overview_data(tmp_path):
     assert overview["runtime_boundary"]["graphrag_runtime"] is False
     assert overview["runtime_boundary"]["vector_db"] is False
     assert overview["runtime_boundary"]["graph_db"] is False
+    assert overview["ui_boundary"]["mutation_enabled"] is False
+    assert overview["ui_boundary"]["auth_mode"] == "not_enabled"
 
 
 def test_ui_data_service_read_endpoints(tmp_path):
@@ -126,14 +190,34 @@ def test_ui_data_service_read_endpoints(tmp_path):
     assert service.boundary_rules()["boundary_rules"][0]["reason"] == "UI boundary"
     assert service.audit_events()["audit_events"][0]["summary"] == "UI audit event"
     assert service.lifecycle_markers()["lifecycle_markers"][0]["reason"] == "UI lifecycle marker"
+    assert len(service.runtime_records()["runtime_records"]) == 2
+    assert len(service.review_queue()["review_queue"]) == 2
+    assert service.review_queue()["review_queue"][0]["review_preview_only"] is True
+    assert service.review_queue()["review_queue"][0]["target_event_id"].startswith("evt_")
+    assert service.review_queue()["review_queue"][0]["review_capability"]["status"] == "advisory_only"
+    assert "ui_auth_not_enabled" in service.review_queue()["review_queue"][0]["review_capability"]["warnings"]
+    assert service.review_queue()["review_queue"][0]["review_capability"]["warning_details"][0]["message"]
+    assert "latest_identity_assurance" not in service.review_queue()["review_queue"][0]
+    assert service.ui_boundary()["ui_boundary"]["loopback_only"] is True
     assert "events" in service.events()
     assert "rde_records" in service.rde_records()
     assert "status" in service.package_review_snapshot()
     assert "nodes" in service.graph_summary()
+    assert service.ai_index_status()["ai_index_status"]["vector"]["entry_count"] == 1
+    assert service.ai_index_vector_entries()["vector_entries"][0]["record_id"] == service.events()["events"][-1]["event_id"]
+    assert service.ai_index_graph_nodes()["graph_nodes"]
+    assert service.ai_index_graph_edges()["graph_edges"]
 
 
 def test_ui_data_service_detail_endpoints(tmp_path):
     ids = _populate(tmp_path)
+    ReviewService(tmp_path).request_changes(
+        event_id=ids["runtime_summary_event_id"],
+        reviewer="alice",
+        reviewer_kind=ReviewerIdentityKind.LOCAL_OPERATOR,
+        session_label="ui-test",
+        note="revise wording",
+    )
     service = ChronicleUIDataService(tmp_path)
 
     assert service.detail_payload(f"/api/events/{ids['event_id']}")["record"]["event_id"] == ids["event_id"]
@@ -145,7 +229,51 @@ def test_ui_data_service_detail_endpoints(tmp_path):
     assert service.detail_payload(f"/api/boundary/{ids['rule_id']}")["record"]["reason"] == "UI boundary"
     assert service.detail_payload(f"/api/audit/{ids['audit_id']}")["record"]["summary"] == "UI audit event"
     assert service.detail_payload(f"/api/lifecycle/{ids['lifecycle_id']}")["record"]["reason"] == "UI lifecycle marker"
+    runtime_detail = service.detail_payload(f"/api/runtime-records/{ids['runtime_summary_event_id']}")["record"]
+    assert "runtime_summary" in runtime_detail["payload"]
+    retrieval_detail = service.detail_payload(f"/api/runtime-records/{ids['runtime_plan_event_id']}")["record"]
+    assert "runtime_retrieval_plan" in retrieval_detail["payload"]
+    review_detail = service.detail_payload(f"/api/review-queue/{ids['runtime_summary_event_id']}")["record"]
+    assert review_detail["target_event_id"] == ids["runtime_summary_event_id"]
+    assert review_detail["review_preview_only"] is True
+    assert review_detail["latest_audit_id"].startswith("aud_")
+    assert review_detail["latest_reviewer_identity"]["kind"] == "local_operator"
+    assert review_detail["review_capability"]["status"] == "advisory_only"
+    assert review_detail["review_capability"]["warning_details"][0]["code"] == "ui_auth_not_enabled"
+    assert review_detail["latest_identity_assurance"]["status"] == "local_session_unverified"
+    assert review_detail["history"][0]["disposition"] == "request_changes"
+    assert review_detail["history"][0]["reviewer_identity"]["session_label"] == "ui-test"
+    assert review_detail["history"][0]["identity_assurance"]["boundary_auth_mode"] == "not_enabled"
+    assert review_detail["history"][0]["audit_summary"]
+    assert service.detail_payload(f"/api/ai-index/vector/{ids['event_id']}")["record"]["record_id"] == ids["event_id"]
+    graph_detail = service.detail_payload(f"/api/ai-index/graph-nodes/{ids['event_id']}")["record"]
+    assert graph_detail["node_id"] == ids["event_id"]
+    assert graph_detail["neighbors"]["outgoing"][0]["relation"] == "references"
     assert service.detail_payload("/api/contexts/missing") is None
+
+
+def test_ui_detail_assurance_can_align_with_configured_boundary(tmp_path):
+    ids = _populate(tmp_path)
+    ReviewService(tmp_path).request_changes(
+        event_id=ids["runtime_summary_event_id"],
+        reviewer="alice",
+        reviewer_kind=ReviewerIdentityKind.LOCAL_OPERATOR,
+        session_label="ui-test",
+        note="revise wording",
+    )
+    service = ChronicleUIDataService(
+        tmp_path,
+        auth_mode=UIAuthMode.LOOPBACK_LOCAL,
+        authorization_mode=UIAuthorizationMode.REVIEWER_DECLARED,
+    )
+
+    review_detail = service.detail_payload(f"/api/review-queue/{ids['runtime_summary_event_id']}")["record"]
+
+    assert review_detail["review_capability"]["status"] == "ready"
+    assert review_detail["review_capability"]["can_review_now"] is True
+    assert review_detail["review_capability"]["warning_details"] == []
+    assert review_detail["latest_identity_assurance"]["status"] == "boundary_aligned"
+    assert review_detail["history"][0]["identity_assurance"]["boundary_auth_mode"] == "loopback_local"
 
 
 def test_ui_shell_contains_interactive_local_ui(tmp_path):
@@ -156,8 +284,15 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "Chronicle Stack Local UI" in html
     assert "Read-only foreground local UI" in html
     assert "loadDetail" in html
+    assert "Review Capability" in html
+    assert "Identity Assurance" in html
+    assert "warning_details" in html
     assert "/api/events" in html
+    assert "/api/runtime-records" in html
+    assert "/api/review-queue" in html
+    assert "/api/ui-boundary" in html
     assert "/api/package-review" in html
+    assert "/api/ai-index-status" in html
     assert "does not write records" in html
 
 
@@ -182,8 +317,15 @@ def test_http_root_and_read_only_endpoints(tmp_path):
             "/api/boundary": "boundary_rules",
             "/api/audit": "audit_events",
             "/api/lifecycle": "lifecycle_markers",
+            "/api/runtime-records": "runtime_records",
+            "/api/review-queue": "review_queue",
+            "/api/ui-boundary": "ui_boundary",
             "/api/package-review": "package_review",
             "/api/graph-summary": "graph_summary",
+            "/api/ai-index-status": "ai_index_status",
+            "/api/ai-index-vector": "vector_entries",
+            "/api/ai-index-graph-nodes": "graph_nodes",
+            "/api/ai-index-graph-edges": "graph_edges",
         }
         for endpoint, key in expected_keys.items():
             status, body = _http_get(host, port, endpoint)
@@ -199,6 +341,11 @@ def test_http_root_and_read_only_endpoints(tmp_path):
             f"/api/boundary/{ids['rule_id']}",
             f"/api/audit/{ids['audit_id']}",
             f"/api/lifecycle/{ids['lifecycle_id']}",
+            f"/api/runtime-records/{ids['runtime_summary_event_id']}",
+            f"/api/runtime-records/{ids['runtime_plan_event_id']}",
+            f"/api/review-queue/{ids['runtime_summary_event_id']}",
+            f"/api/ai-index/vector/{ids['event_id']}",
+            f"/api/ai-index/graph-nodes/{ids['event_id']}",
         ]
         for endpoint in detail_paths:
             status, body = _http_get(host, port, endpoint)

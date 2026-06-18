@@ -118,3 +118,92 @@ def test_cli_invalid_enum_exits_nonzero(tmp_path):
 
     result = runner.invoke(app, ["add-context", "--title", "Bad", "--scope", "invalid_scope"])
     assert result.exit_code != 0
+
+
+def test_ai_index_status_json_shape(tmp_path):
+    """chronicle ai-index status --json must expose stable status keys."""
+    runner = _setup_cli(tmp_path)
+    runner.invoke(app, ["init", "--title", "AI Index Shape"])
+
+    result = runner.invoke(app, ["ai-index", "status", "--json"])
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    for key in ["vector", "graph", "derived_surface", "primary_record_authoritative"]:
+        assert key in payload, f"Missing key '{key}' in ai-index status"
+    for key in ["path", "entry_count", "embedding_provider", "embedding_model"]:
+        assert key in payload["vector"], f"Missing key '{key}' in vector ai-index status"
+    for key in ["path", "node_count", "edge_count"]:
+        assert key in payload["graph"], f"Missing key '{key}' in graph ai-index status"
+
+
+def test_runtime_status_json_shape(tmp_path):
+    """chronicle runtime status --json must expose stable runtime keys."""
+    runner = _setup_cli(tmp_path)
+
+    result = runner.invoke(app, ["runtime", "status", "--json"])
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    for key in ["provider_kind", "model_name", "capabilities", "external_call_made"]:
+        assert key in payload, f"Missing key '{key}' in runtime status"
+
+
+def test_runtime_retrieve_plan_json_shape(tmp_path):
+    """chronicle runtime retrieve-plan --json must expose stable retrieval plan keys."""
+    runner = _setup_cli(tmp_path)
+    runner.invoke(app, ["init", "--title", "Runtime Plan Shape"])
+
+    result = runner.invoke(app, ["runtime", "retrieve-plan", "--query", "shape", "--json"])
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    for key in ["provider_kind", "query", "vector_hits", "graph_hits", "chronicle_hits", "notes"]:
+        assert key in payload, f"Missing key '{key}' in runtime retrieve-plan"
+
+
+def test_ui_startup_metadata_json_shape(tmp_path):
+    """chronicle ui startup metadata builder must expose stable boundary keys."""
+    from pathlib import Path
+
+    from chronicle.ui_server import build_startup_metadata
+
+    payload = json.loads(
+        build_startup_metadata(host="127.0.0.1", port=8765, root=Path(tmp_path)).to_json()
+    )
+    for key in ["host", "port", "url", "root", "bind_scope", "mutation_enabled", "ui_boundary"]:
+        assert key in payload, f"Missing key '{key}' in ui startup metadata"
+    for key in ["bind_scope", "loopback_only", "mutation_enabled", "auth_mode", "authorization_mode", "session_gating"]:
+        assert key in payload["ui_boundary"], f"Missing key '{key}' in ui boundary metadata"
+
+
+def test_review_queue_json_shape(tmp_path):
+    """chronicle review queue --json must expose stable review queue keys."""
+    from chronicle.services.runtime_service import RuntimeService
+
+    runner = _setup_cli(tmp_path)
+    runner.invoke(app, ["init", "--title", "Review Queue Shape"])
+    runtime_record = RuntimeService(tmp_path).summarize(text="Needs review", record=True)
+
+    result = runner.invoke(app, ["review", "queue", "--json"])
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload[0]["target_event_id"] == runtime_record.event_id
+    for key in ["target_event_id", "target_summary", "pending", "review_kind", "available_actions"]:
+        assert key in payload[0], f"Missing key '{key}' in review queue payload"
+
+
+def test_ui_review_capability_shape(tmp_path):
+    """UI review queue derived payload must expose capability warning details."""
+    from chronicle.services.runtime_service import RuntimeService
+    from chronicle.ui_server import ChronicleUIDataService
+
+    runner = _setup_cli(tmp_path)
+    runner.invoke(app, ["init", "--title", "UI Review Capability Shape"])
+    RuntimeService(tmp_path).summarize(text="Needs review", record=True)
+
+    payload = ChronicleUIDataService(tmp_path).review_queue()["review_queue"][0]
+
+    for key in ["status", "can_review_now", "warnings", "warning_details", "message"]:
+        assert key in payload["review_capability"], f"Missing key '{key}' in review capability payload"

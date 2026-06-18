@@ -30,7 +30,7 @@ def test_version_flag_output_not_empty(tmp_path):
 def test_help_includes_key_commands(tmp_path):
     """--help must list all major subcommands."""
     result = _run(tmp_path, "--help")
-    for cmd in ["artifact", "decision", "rde", "boundary", "injection",
+    for cmd in ["artifact", "decision", "rde", "boundary", "injection", "ai-index", "runtime", "review",
                 "init", "record", "add-context", "search", "export", "show", "index"]:
         assert cmd in result.stdout, f"Missing '{cmd}' in --help"
 
@@ -51,6 +51,41 @@ def test_injection_plan_help_shows_record_option(tmp_path):
     assert result.exit_code == 0
     # Rich may render as -record or --record depending on terminal
     assert "record" in result.stdout.lower()
+
+
+def test_runtime_help_lists_retrieve_plan(tmp_path):
+    """runtime --help must list summarize and retrieve-plan."""
+    result = _run(tmp_path, "runtime", "--help")
+    assert result.exit_code == 0
+    assert "summarize" in result.stdout
+    assert "retrieve-plan" in result.stdout
+
+
+def test_review_help_lists_actions(tmp_path):
+    """review --help must list queue and decision actions."""
+    result = _run(tmp_path, "review", "--help")
+    assert result.exit_code == 0
+    assert "queue" in result.stdout
+    assert "approve" in result.stdout
+    assert "reject" in result.stdout
+    assert "request-changes" in result.stdout
+
+
+def test_ui_rejects_non_loopback_host(tmp_path):
+    """ui must reject non-loopback hosts until auth/authz exists."""
+    result = _run(tmp_path, "init", "--title", "UI Host Test")
+    assert result.exit_code == 0
+
+    result = _run(tmp_path, "ui", "--host", "0.0.0.0", "--json")
+    assert result.exit_code != 0
+
+
+def test_ui_help_mentions_auth_mode_options(tmp_path):
+    """ui --help must mention auth boundary placeholder options."""
+    result = _run(tmp_path, "ui", "--help")
+    assert result.exit_code == 0
+    assert "auth-mode" in result.stdout
+    assert "authorization-mode" in result.stdout
 
 
 def test_invalid_export_format_exits_nonzero(tmp_path):

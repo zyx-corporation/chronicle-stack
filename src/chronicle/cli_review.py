@@ -1,100 +1,166 @@
-"""Review workflow CLI."""
+"""CLI commands for append-only review workflow actions."""
 
 import json
 from typing import Annotated
 
 import typer
 
-from chronicle.models.review import ReviewAction
+from chronicle.errors import ChronicleError
+from chronicle.interfaces.cli.common import handle_error
+from chronicle.models.review import ReviewerIdentityKind
 from chronicle.services.review_service import ReviewService
 
-review_app = typer.Typer(
-    name="review",
-    help="Local review workflow commands.",
-    no_args_is_help=True,
-)
+
+review_app = typer.Typer(help="Append-only review workflow commands.", no_args_is_help=True)
+
+
+def _dump_json(value: object) -> None:
+    typer.echo(json.dumps(value, ensure_ascii=False, indent=2))
 
 
 @review_app.command("queue")
-def review_queue_cmd(json_output: Annotated[bool, typer.Option("--json")] = False) -> None:
-    """List generated/prepared outputs waiting for review."""
-
-    jobs = ReviewService().list_review_queue()
-    if json_output:
-        typer.echo(json.dumps([job.model_dump(mode="json") for job in jobs], ensure_ascii=False, indent=2))
-        return
-    if not jobs:
-        typer.echo("Review queue is empty.")
-        return
-    for job in jobs:
-        typer.echo(f"{job.summary_job_id}: {job.title} [{job.status.value}]")
-
-
-@review_app.command("decisions")
-def review_decisions_cmd(json_output: Annotated[bool, typer.Option("--json")] = False) -> None:
-    """List recorded review decisions."""
-
-    decisions = ReviewService().list_decisions()
-    if json_output:
-        typer.echo(json.dumps([decision.model_dump(mode="json") for decision in decisions], ensure_ascii=False, indent=2))
-        return
-    if not decisions:
-        typer.echo("No review decisions found.")
-        return
-    for decision in decisions:
-        typer.echo(f"{decision.review_id}: {decision.action.value} {decision.target_id} -> {decision.resulting_status.value}")
-
-
-def _print_decision(decision, json_output: bool) -> None:
-    if json_output:
-        typer.echo(json.dumps(decision.model_dump(mode="json"), ensure_ascii=False, indent=2))
-        return
-    typer.echo(f"Review decision: {decision.review_id}")
-    typer.echo(f"Target: {decision.target_type.value}:{decision.target_id}")
-    typer.echo(f"Action: {decision.action.value}")
-    typer.echo(f"Resulting status: {decision.resulting_status.value}")
-    if decision.reason:
-        typer.echo(f"Reason: {decision.reason}")
-    typer.echo("Boundary: review records a local decision; it is not correctness proof or security certification.")
+def review_queue_cmd(
+    include_resolved: Annotated[bool, typer.Option("--include-resolved", help="Include already approved or rejected targets.")] = False,
+    json_output: Annotated[bool, typer.Option("--json")] = False,
+) -> None:
+    """List review targets derived from needs-review events."""
+    try:
+        rows = ReviewService().queue(include_resolved=include_resolved)
+        if json_output:
+            _dump_json([row.model_dump(mode="json") for row in rows])
+            return
+        typer.echo("Chronicle Review Queue")
+        typer.echo(f"Pending targets: {len(rows)}")
+        for row in rows:
+            typer.echo(f"- {row.target_event_id} [{row.review_kind}] {row.target_summary}")
+            if row.latest_disposition is not None:
+                typer.echo(f"  Latest: {row.latest_disposition.value} by {row.latest_reviewer}")
+        typer.echo("Boundary: append-only CLI review, UI mutation remains disabled.")
+    except ChronicleError as exc:
+        handle_error(exc, json_output)
 
 
 @review_app.command("approve")
 def review_approve_cmd(
-    summary_job_id: Annotated[str, typer.Option("--id", help="Summary job ID.")],
-    reason: Annotated[str, typer.Option("--reason", help="Optional approval reason.")] = "",
-    reviewer: Annotated[str, typer.Option("--reviewer", help="Reviewer label.")] = "reviewer",
+    event_id: Annotated[str, typer.Option("--event", help="Target event requiring review.")],
+    reviewer: Annotated[str, typer.Option("--reviewer", help="Reviewer identity label.")],
+    reviewer_kind: Annotated[
+        ReviewerIdentityKind,
+        typer.Option("--reviewer-kind", help="Structured reviewer identity kind."),
+    ] = ReviewerIdentityKind.USER_DECLARED,
+    session_label: Annotated[str | None, typer.Option("--session", help="Optional local session label.")] = None,
+    note: Annotated[str | None, typer.Option("--note", help="Optional review note.")] = None,
     json_output: Annotated[bool, typer.Option("--json")] = False,
 ) -> None:
-    """Approve a summary job."""
-
-    decision = ReviewService().decide_summary_job(summary_job_id, ReviewAction.APPROVE, reason=reason, reviewer=reviewer)
-    _print_decision(decision, json_output)
+    """Record an approval as an append-only reviewer event."""
+    _emit_decision(
+        "approve",
+        event_id=event_id,
+        reviewer=reviewer,
+        reviewer_kind=reviewer_kind,
+        session_label=session_label,
+        note=note,
+        json_output=json_output,
+    )
 
 
 @review_app.command("reject")
 def review_reject_cmd(
-    summary_job_id: Annotated[str, typer.Option("--id", help="Summary job ID.")],
-    reason: Annotated[str, typer.Option("--reason", help="Rejection reason.")],
-    reviewer: Annotated[str, typer.Option("--reviewer", help="Reviewer label.")] = "reviewer",
+    event_id: Annotated[str, typer.Option("--event", help="Target event requiring review.")],
+    reviewer: Annotated[str, typer.Option("--reviewer", help="Reviewer identity label.")],
+    reviewer_kind: Annotated[
+        ReviewerIdentityKind,
+        typer.Option("--reviewer-kind", help="Structured reviewer identity kind."),
+    ] = ReviewerIdentityKind.USER_DECLARED,
+    session_label: Annotated[str | None, typer.Option("--session", help="Optional local session label.")] = None,
+    note: Annotated[str | None, typer.Option("--note", help="Optional review note.")] = None,
     json_output: Annotated[bool, typer.Option("--json")] = False,
 ) -> None:
-    """Reject a summary job."""
-
-    decision = ReviewService().decide_summary_job(summary_job_id, ReviewAction.REJECT, reason=reason, reviewer=reviewer)
-    _print_decision(decision, json_output)
+    """Record a rejection as an append-only reviewer event."""
+    _emit_decision(
+        "reject",
+        event_id=event_id,
+        reviewer=reviewer,
+        reviewer_kind=reviewer_kind,
+        session_label=session_label,
+        note=note,
+        json_output=json_output,
+    )
 
 
 @review_app.command("request-changes")
 def review_request_changes_cmd(
-    summary_job_id: Annotated[str, typer.Option("--id", help="Summary job ID.")],
-    reason: Annotated[str, typer.Option("--reason", help="Requested changes.")],
-    reviewer: Annotated[str, typer.Option("--reviewer", help="Reviewer label.")] = "reviewer",
+    event_id: Annotated[str, typer.Option("--event", help="Target event requiring review.")],
+    reviewer: Annotated[str, typer.Option("--reviewer", help="Reviewer identity label.")],
+    reviewer_kind: Annotated[
+        ReviewerIdentityKind,
+        typer.Option("--reviewer-kind", help="Structured reviewer identity kind."),
+    ] = ReviewerIdentityKind.USER_DECLARED,
+    session_label: Annotated[str | None, typer.Option("--session", help="Optional local session label.")] = None,
+    note: Annotated[str | None, typer.Option("--note", help="Optional review note.")] = None,
     json_output: Annotated[bool, typer.Option("--json")] = False,
 ) -> None:
-    """Request changes for a summary job."""
+    """Record a request-for-changes as an append-only reviewer event."""
+    _emit_decision(
+        "request_changes",
+        event_id=event_id,
+        reviewer=reviewer,
+        reviewer_kind=reviewer_kind,
+        session_label=session_label,
+        note=note,
+        json_output=json_output,
+    )
 
-    decision = ReviewService().decide_summary_job(summary_job_id, ReviewAction.REQUEST_CHANGES, reason=reason, reviewer=reviewer)
-    _print_decision(decision, json_output)
+
+def _emit_decision(
+    action: str,
+    *,
+    event_id: str,
+    reviewer: str,
+    reviewer_kind: ReviewerIdentityKind,
+    session_label: str | None,
+    note: str | None,
+    json_output: bool,
+) -> None:
+    try:
+        service = ReviewService()
+        if action == "approve":
+            result = service.approve(
+                event_id=event_id,
+                reviewer=reviewer,
+                reviewer_kind=reviewer_kind,
+                session_label=session_label,
+                note=note,
+            )
+        elif action == "reject":
+            result = service.reject(
+                event_id=event_id,
+                reviewer=reviewer,
+                reviewer_kind=reviewer_kind,
+                session_label=session_label,
+                note=note,
+            )
+        else:
+            result = service.request_changes(
+                event_id=event_id,
+                reviewer=reviewer,
+                reviewer_kind=reviewer_kind,
+                session_label=session_label,
+                note=note,
+            )
+        if json_output:
+            _dump_json(result.model_dump(mode="json"))
+            return
+        typer.echo(f"Review recorded: {result.review_event_id}")
+        typer.echo(f"Target: {result.target_event_id}")
+        typer.echo(f"Disposition: {result.disposition.value}")
+        typer.echo(f"Reviewer: {result.reviewer}")
+        typer.echo(f"Reviewer kind: {result.reviewer_identity.kind.value}")
+        if result.note:
+            typer.echo(f"Note: {result.note}")
+        typer.echo("Boundary: append-only review event recorded; original target event remains unchanged.")
+    except ChronicleError as exc:
+        handle_error(exc, json_output)
 
 
 if __name__ == "__main__":

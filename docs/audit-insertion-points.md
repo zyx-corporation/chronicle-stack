@@ -36,6 +36,7 @@ Audit insertion must not mutate `.chronicle/chronicle.jsonl`.
 | context-use dry-run | record by explicit option first | fail-open with warning | avoids turning every check into persistent state too early |
 | package generation | record by default once package persistence exists | fail-open with warning | package generation is not external submission |
 | reinterpretation | record when workflow exists | fail-open with warning | must not overwrite original intent |
+| review decision | record by default with append-only reviewer event | fail-open with warning | audit remains operational provenance, not the decision surface |
 | lifecycle decision | record as lifecycle event first; audit linkage optional | fail-open with warning | lifecycle surface remains authoritative for lifecycle decisions |
 
 This policy is intentionally conservative. The first implementation target should be narrow.
@@ -155,6 +156,29 @@ Reinterpretation audit must preserve the distinction between:
 original record intent
 later derived interpretation
 ```
+
+### Review decisions
+
+Potential audit event:
+
+```text
+operation: review_decision
+target_environment: local
+purpose: review decision summary
+referenced_records: target event id, reviewer event id
+result: info / warning / blocked
+metadata:
+  disposition
+  reviewer
+  target_event_id
+  review_event_id
+```
+
+Current policy:
+
+- record by default when `chronicle review approve/reject/request-changes` runs
+- keep the review decision itself in append-only Chronicle events
+- keep operational visibility in `.chronicle/audit.jsonl`
 
 ### Lifecycle decisions
 

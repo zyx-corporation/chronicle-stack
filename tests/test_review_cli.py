@@ -1,106 +1,116 @@
-"""Review workflow CLI tests."""
+"""Tests for append-only review CLI workflow."""
 
 import json
-import os
-import re
-from pathlib import Path
 
 from typer.testing import CliRunner
 
 from chronicle.cli import app
-
-runner = CliRunner()
-
-
-def _extract_summary_job_id(text: str) -> str:
-    match = re.search(r"\b(sum_[a-f0-9]+)\b", text)
-    assert match is not None, text
-    return match.group(1)
+from chronicle.services.audit_service import AuditService
+from chronicle.services.runtime_service import RuntimeService
 
 
-def _create_summary_job(tmp_path: Path) -> str:
-    os.chdir(str(tmp_path))
-    runner.invoke(app, ["init", "--title", "Review Test"])
+def _setup(tmp_path):
+    runner = CliRunner()
+    result = runner.invoke(app, ["init", "--title", "Review Test"], catch_exceptions=False)
+    assert result.exit_code == 0
+    runtime_record = RuntimeService(tmp_path).summarize(
+        text="Review me locally.",
+        record=True,
+    )
+    return runner, runtime_record.event_id
+
+
+def test_review_queue_lists_needs_review_target(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    runner, event_id = _setup(tmp_path)
+
+    result = runner.invoke(app, ["review", "queue", "--json"], catch_exceptions=False)
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload[0]["target_event_id"] == event_id
+    assert payload[0]["pending"] is True
+    assert payload[0]["available_actions"]
+
+
+def test_review_approve_records_reviewer_event_and_resolves_queue(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    runner, event_id = _setup(tmp_path)
+
+    result = runner.invoke(
+        app,
+        ["review", "approve", "--event", event_id, "--reviewer", "alice", "--note", "looks good", "--json"],
+        catch_exceptions=False,
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["target_event_id"] == event_id
+    assert payload["disposition"] == "approve"
+    assert payload["audit_id"].startswith("aud_")
+    assert payload["reviewer_identity"]["label"] == "alice"
+    assert payload["reviewer_identity"]["kind"] == "user_declared"
+    audit_events = AuditService(tmp_path).list_events()
+    assert audit_events[-1].operation.value == "review_decision"
+    assert audit_events[-1].source_event_id == payload["review_event_id"]
+    queue_result = runner.invoke(app, ["review", "queue", "--json"], catch_exceptions=False)
+    assert queue_result.exit_code == 0
+    assert json.loads(queue_result.stdout) == []
+
+
+def test_review_request_changes_keeps_target_in_queue(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    runner, event_id = _setup(tmp_path)
+
     result = runner.invoke(
         app,
         [
-            "summary", "create",
-            "--title", "Review target",
-            "--text", "Draft summary body.",
+            "review",
+            "request-changes",
+            "--event",
+            event_id,
+            "--reviewer",
+            "alice",
+            "--reviewer-kind",
+            "local_operator",
+            "--session",
+            "terminal-1",
+            "--note",
+            "revise wording",
+            "--json",
         ],
+        catch_exceptions=False,
     )
-    assert result.exit_code == 0, result.stderr
-    return _extract_summary_job_id(result.stdout)
-
-
-def test_review_queue_lists_pending_summary_job(tmp_path: Path) -> None:
-    summary_job_id = _create_summary_job(tmp_path)
-
-    result = runner.invoke(app, ["review", "queue"])
 
     assert result.exit_code == 0
-    assert summary_job_id in result.stdout
-    assert "pending_review" in result.stdout
+    queue_result = runner.invoke(app, ["review", "queue", "--json"], catch_exceptions=False)
+    payload = json.loads(queue_result.stdout)
+    assert payload[0]["target_event_id"] == event_id
+    assert payload[0]["pending"] is True
+    assert payload[0]["latest_disposition"] == "request_changes"
+    assert payload[0]["latest_audit_id"].startswith("aud_")
+    assert payload[0]["history_count"] == 1
+    assert payload[0]["latest_reviewer_identity"]["kind"] == "local_operator"
 
 
-def test_review_approve_updates_summary_job_and_records_decision(tmp_path: Path) -> None:
-    summary_job_id = _create_summary_job(tmp_path)
+def test_review_history_tracks_multiple_decisions(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    runner, event_id = _setup(tmp_path)
 
-    approve_result = runner.invoke(
+    first = runner.invoke(
         app,
-        ["review", "approve", "--id", summary_job_id, "--reason", "Looks good", "--json"],
+        ["review", "request-changes", "--event", event_id, "--reviewer", "alice", "--note", "revise wording", "--json"],
+        catch_exceptions=False,
     )
-
-    assert approve_result.exit_code == 0, approve_result.stderr
-    decision = json.loads(approve_result.stdout)
-    assert decision["review_id"].startswith("rvw_")
-    assert decision["target_id"] == summary_job_id
-    assert decision["action"] == "approve"
-    assert decision["resulting_status"] == "approved"
-
-    show_result = runner.invoke(app, ["summary", "show", "--id", summary_job_id, "--json"])
-    assert show_result.exit_code == 0
-    summary = json.loads(show_result.stdout)
-    assert summary["status"] == "approved"
-
-    decisions_result = runner.invoke(app, ["review", "decisions", "--json"])
-    assert decisions_result.exit_code == 0
-    decisions = json.loads(decisions_result.stdout)
-    assert decisions[0]["review_id"] == decision["review_id"]
-
-
-def test_review_reject_updates_summary_job(tmp_path: Path) -> None:
-    summary_job_id = _create_summary_job(tmp_path)
-
-    reject_result = runner.invoke(
+    assert first.exit_code == 0
+    second = runner.invoke(
         app,
-        ["review", "reject", "--id", summary_job_id, "--reason", "Incorrect", "--json"],
+        ["review", "approve", "--event", event_id, "--reviewer", "bob", "--note", "fixed", "--json"],
+        catch_exceptions=False,
     )
+    assert second.exit_code == 0
 
-    assert reject_result.exit_code == 0, reject_result.stderr
-    decision = json.loads(reject_result.stdout)
-    assert decision["action"] == "reject"
-    assert decision["resulting_status"] == "rejected"
-
-    show_result = runner.invoke(app, ["summary", "show", "--id", summary_job_id, "--json"])
-    summary = json.loads(show_result.stdout)
-    assert summary["status"] == "rejected"
-
-
-def test_review_request_changes_keeps_item_in_queue(tmp_path: Path) -> None:
-    summary_job_id = _create_summary_job(tmp_path)
-
-    request_result = runner.invoke(
-        app,
-        ["review", "request-changes", "--id", summary_job_id, "--reason", "Need sources", "--json"],
-    )
-
-    assert request_result.exit_code == 0, request_result.stderr
-    decision = json.loads(request_result.stdout)
-    assert decision["action"] == "request_changes"
-    assert decision["resulting_status"] == "request_changes"
-
-    queue_result = runner.invoke(app, ["review", "queue", "--json"])
-    queue = json.loads(queue_result.stdout)
-    assert queue[0]["summary_job_id"] == summary_job_id
-    assert queue[0]["status"] == "request_changes"
+    queue_result = runner.invoke(app, ["review", "queue", "--include-resolved", "--json"], catch_exceptions=False)
+    payload = json.loads(queue_result.stdout)
+    assert payload[0]["history_count"] == 2
+    assert payload[0]["latest_disposition"] == "approve"

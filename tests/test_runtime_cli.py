@@ -1,40 +1,143 @@
-"""Runtime CLI tests."""
+"""Tests for explicit local runtime CLI commands."""
 
 import json
+import os
+import re
+from pathlib import Path
 
 from typer.testing import CliRunner
 
 from chronicle.cli import app
 
+
 runner = CliRunner()
 
 
-def test_runtime_status_text_defaults_to_disabled() -> None:
-    result = runner.invoke(app, ["runtime", "status"])
+def test_runtime_status_json(tmp_path: Path) -> None:
+    os.chdir(str(tmp_path))
 
-    assert result.exit_code == 0
-    assert "Chronicle AI Runtime Status" in result.stdout
-    assert "Status: disabled" in result.stdout
-    assert "Provider: disabled" in result.stdout
-    assert "network calls by default: False" in result.stdout
-    assert "model calls by default: False" in result.stdout
-    assert "generated output requires review: True" in result.stdout
-
-
-def test_runtime_status_json_defaults_to_disabled() -> None:
     result = runner.invoke(app, ["runtime", "status", "--json"])
 
     assert result.exit_code == 0
-    data = json.loads(result.stdout)
+    payload = json.loads(result.stdout)
+    assert payload["provider_kind"] == "local"
+    assert payload["external_call_made"] is False
+    assert payload["generated_output_requires_review"] is True
 
-    assert data["status"] == "disabled"
-    assert data["config"]["provider_kind"] == "disabled"
-    assert data["config"]["allow_network"] is False
-    assert data["config"]["allow_external_context"] is False
-    assert data["config"]["review_required"] is True
-    assert data["boundary"]["network_calls_default"] is False
-    assert data["boundary"]["model_calls_default"] is False
-    assert data["boundary"]["vector_db_default"] is False
-    assert data["boundary"]["graph_db_default"] is False
-    assert data["boundary"]["generated_output_requires_review"] is True
-    assert data["boundary"]["indexes_are_derived"] is True
+
+def test_runtime_summarize_json_without_record(tmp_path: Path) -> None:
+    os.chdir(str(tmp_path))
+
+    result = runner.invoke(
+        app,
+        [
+            "runtime",
+            "summarize",
+            "--text",
+            "First sentence. Second sentence. Third sentence. Fourth sentence.",
+            "--max-sentences",
+            "2",
+            "--json",
+        ],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["provider_kind"] == "local"
+    assert payload["external_call_made"] is False
+    assert payload["recorded"] is False
+    assert payload["generated_text"] == "First sentence. Second sentence."
+
+
+def test_runtime_summarize_record_persists_event(tmp_path: Path) -> None:
+    os.chdir(str(tmp_path))
+    runner.invoke(app, ["init", "--title", "Runtime Chronicle"])
+
+    result = runner.invoke(
+        app,
+        [
+            "runtime",
+            "summarize",
+            "--text",
+            "A local explicit runtime summary should be reviewable. It must stay local.",
+            "--record",
+            "--json",
+        ],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["recorded"] is True
+    assert re.match(r"evt_[a-f0-9]+", payload["event_id"])
+
+    show_result = runner.invoke(app, ["show", "--json"])
+    show_payload = json.loads(show_result.stdout)
+    assert show_payload["event_count"] == 2
+
+    search_result = runner.invoke(app, ["search", "Runtime summary generated", "--json"])
+    search_payload = json.loads(search_result.stdout)
+    assert any(item["kind"] == "event" for item in search_payload)
+
+
+def test_runtime_retrieve_plan_json(tmp_path: Path) -> None:
+    os.chdir(str(tmp_path))
+    runner.invoke(app, ["init", "--title", "Runtime Retrieve"])
+    record_result = runner.invoke(
+        app,
+        ["record", "--type", "user_input", "--actor", "user", "--summary", "GraphRAG planning context"],
+    )
+    event_id_match = re.search(r"evt_[a-f0-9]+", record_result.stdout)
+    assert event_id_match is not None
+    event_id = event_id_match.group(0)
+    runner.invoke(
+        app,
+        [
+            "ai-index",
+            "vector",
+            "add",
+            "--record",
+            event_id,
+            "--text",
+            "GraphRAG planning context for local retrieval plan",
+        ],
+    )
+
+    result = runner.invoke(
+        app,
+        ["runtime", "retrieve-plan", "--query", "GraphRAG planning", "--json"],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["provider_kind"] == "local"
+    assert payload["external_call_made"] is False
+    assert payload["query"] == "GraphRAG planning"
+    assert payload["vector_hits"]
+    assert payload["chronicle_hits"]
+
+
+def test_runtime_retrieve_plan_record_persists_event(tmp_path: Path) -> None:
+    os.chdir(str(tmp_path))
+    runner.invoke(app, ["init", "--title", "Runtime Retrieve Record"])
+    runner.invoke(
+        app,
+        ["record", "--type", "user_input", "--actor", "user", "--summary", "Retrieval context event"],
+    )
+
+    result = runner.invoke(
+        app,
+        ["runtime", "retrieve-plan", "--query", "Retrieval context", "--record", "--json"],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["recorded"] is True
+    assert re.match(r"evt_[a-f0-9]+", payload["event_id"])
+
+    show_result = runner.invoke(app, ["show", "--json"])
+    show_payload = json.loads(show_result.stdout)
+    assert show_payload["event_count"] == 3
+
+    search_result = runner.invoke(app, ["search", "Runtime retrieval plan generated", "--json"])
+    search_payload = json.loads(search_result.stdout)
+    assert any(item["kind"] == "event" for item in search_payload)

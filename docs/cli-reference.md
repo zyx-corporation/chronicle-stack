@@ -258,9 +258,190 @@ Security-aware export profile を使った派生exportです。`chronicle-export
 - JSONLを変更しません。
 - Export Manifestは来歴メタデータであり、暗号学的証明ではありません。
 - `graph-json` はGraphRAGエンジンではありません。
+
+## chronicle ai-index
+
+`ai-index` は local file-backed placeholder vector / graph surface です。一次記録ではなく、補助的な派生面です。
+
+境界:
+
+- LLM は呼びません
+- embedding provider は呼びません
+- vector DB は呼びません
+- graph DB は呼びません
+- GraphRAG runtime は呼びません
+- external service は呼びません
+- 検索結果は assistive であり、正しさの証明ではありません
+- `.chronicle/chronicle.jsonl` が引き続き正本です
+
+### chronicle ai-index status
+
+```bash
+chronicle ai-index status
+chronicle ai-index status --json
+```
+
+`.chronicle/ai_indexes/vector_index.json` と `.chronicle/ai_indexes/graph_index.json` の placeholder 状態を表示します。
+
+### chronicle ai-index vector
+
+```bash
+chronicle ai-index vector add --record evt_xxx --text "local placeholder text" --type event
+chronicle ai-index vector add --record evt_xxx --text "local placeholder text" --metadata source=manual --json
+chronicle ai-index vector search --query "placeholder" --limit 5
+chronicle ai-index vector search --query "placeholder" --json
+```
+
+`vector search` は token overlap と substring による placeholder scoring です。本格 embedding ではありません。
+
+### chronicle ai-index graph
+
+```bash
+chronicle ai-index graph add-node --id evt_xxx --label event --property title="Example"
+chronicle ai-index graph add-edge --source evt_xxx --target ctx_xxx --relation references
+chronicle ai-index graph neighbors --id evt_xxx
+chronicle ai-index graph neighbors --id evt_xxx --json
+```
+
+graph surface は単純 adjacency です。graph DB ではありません。
+
+## chronicle ui / chronicle ui-smoke
+
+```bash
+chronicle ui
+chronicle ui --host 127.0.0.1 --port 8765
+chronicle ui --auth-mode loopback_local --authorization-mode reviewer_declared
+chronicle ui --json
+chronicle ui-smoke
+chronicle ui-smoke --json
+```
+
+`chronicle ui` は明示起動型 foreground local web UI です。read-only であり、daemon、autostart、hosted service ではありません。
+
+現段階では auth/authz 未実装のため、bind host は loopback (`127.0.0.1`, `localhost`, `::1`) のみ許可されます。`--auth-mode` と `--authorization-mode` は placeholder boundary config であり、UI review detail の assurance 表示に反映されます。
+
+read-only endpoint:
+
+- `/api/overview`
+- `/api/events`
+- `/api/contexts`
+- `/api/artifacts`
+- `/api/decisions`
+- `/api/rde`
+- `/api/boundary`
+- `/api/audit`
+- `/api/lifecycle`
+- `/api/runtime-records`
+- `/api/review-queue`
+- `/api/ui-boundary`
+- `/api/package-review`
+- `/api/graph-summary`
+- `/api/ai-index-status`
+- `/api/ai-index-vector`
+- `/api/ai-index-graph-nodes`
+- `/api/ai-index-graph-edges`
+
+`chronicle ui-smoke` はサーバーを起動せず、ブラウザも使わず、local UI の read-only データ面だけを検証します。
+
+`/api/review-queue` は `review_status=needs_review` の record を preview-only で返します。ここでは write action は有効化されず、`suggested_cli_family` で関連 CLI family の目安だけを表示します。
+
+`/api/ui-boundary` は bind scope, mutation capability flag, auth/authz mode を read-only で返します。現在は mutation disabled が前提ですが、placeholder config により `auth_mode` / `authorization_mode` / `session_gating` を明示できます。
+
+## chronicle runtime
+
+`runtime` は explicit local runtime boundary を表す補助CLIです。
+
+### chronicle runtime status
+
+```bash
+chronicle runtime status
+chronicle runtime status --json
+```
+
+status は local placeholder runtime の境界を表示します。
+
+### chronicle runtime summarize
+
+```bash
+chronicle runtime summarize --text "Source text"
+chronicle runtime summarize --text "Source text" --max-sentences 2
+chronicle runtime summarize --text "Source text" --record
+chronicle runtime summarize --text "Source text" --record --json
+```
+
+方針:
+
+- explicit manual invocation only
+- no LLM call
+- no external runtime call
+- generated output requires review
+- `--record` 指定時のみ `assistant_output` event として記録
+
+### chronicle runtime retrieve-plan
+
+```bash
+chronicle runtime retrieve-plan --query "release note context"
+chronicle runtime retrieve-plan --query "release note context" --limit 3
+chronicle runtime retrieve-plan --query "release note context" --record
+chronicle runtime retrieve-plan --query "release note context" --json
+```
+
+`retrieve-plan` は local dry-run の retrieval composition を表示します。
+
+対象:
+
+- placeholder vector hits
+- graph export node hits
+- Chronicle search hits
+
+境界:
+
+- dry-run only
+- no LLM call
+- no GraphRAG runtime
+- no external retrieval service
+- `--record` 指定時のみ `assistant_output` event として記録
 - `html` はWebアプリケーションではありません。
 - visibility hintはredactionではないため、デフォルトでは隠蔽されません。
 - profile export は公開承認やアクセス制御ではありません。
+
+## chronicle review
+
+`review` は append-only review workflow の CLI skeleton です。
+
+### chronicle review queue
+
+```bash
+chronicle review queue
+chronicle review queue --include-resolved
+chronicle review queue --json
+```
+
+`queue` は `review_status=needs_review` の target event を派生的に列挙します。approve / reject 済み target はデフォルトでは隠れ、`request-changes` は pending のまま残ります。
+
+### chronicle review approve / reject / request-changes
+
+```bash
+chronicle review approve --event evt_xxx --reviewer alice
+chronicle review approve --event evt_xxx --reviewer alice --reviewer-kind local_operator --session terminal-1
+chronicle review reject --event evt_xxx --reviewer alice --note "reason"
+chronicle review request-changes --event evt_xxx --reviewer alice --note "revise section 2"
+chronicle review approve --event evt_xxx --reviewer alice --json
+```
+
+方針:
+
+- append-only reviewer event を追加する
+- target event 自体は直接変更しない
+- reviewer identity は `label`, `kind`, `session` の構造で保持する
+- `review_decision` audit event も同時に追加する
+- GUI mutation の代わりに CLI parity を先に整える
+- UI review queue はこの reviewer event を読んで pending / resolved を派生表示する
+- review queue detail は reviewer / audit timeline を read-only で表示する
+- review queue detail は current UI boundary と reviewer identity を照合した assurance も表示する
+- review queue は current boundary での capability/warning surface も表示する
+- local UI shell は capability / assurance を notice と badge で目立つ形に描画する
+- warning codes are expanded into user-facing explanation text in the local UI
 
 ## chronicle package
 

@@ -7,6 +7,7 @@ from typing import Annotated
 import typer
 
 from chronicle.cli_audit import audit_app
+from chronicle.cli_ai_index import ai_index_app
 from chronicle.cli_context import context_app
 from chronicle.cli_graph import graph_app
 from chronicle.cli_lifecycle import lifecycle_app
@@ -25,7 +26,16 @@ from chronicle.interfaces.cli.export import register_export_command
 from chronicle.interfaces.cli.index import index_app
 from chronicle.interfaces.cli.injection import injection_app
 from chronicle.interfaces.cli.rde import rde_app
-from chronicle.ui_server import DEFAULT_UI_HOST, DEFAULT_UI_PORT, build_startup_metadata, serve_ui, validate_ui_root
+from chronicle.ui_server import (
+    DEFAULT_UI_HOST,
+    DEFAULT_UI_PORT,
+    UIAuthMode,
+    UIAuthorizationMode,
+    build_startup_metadata,
+    serve_ui,
+    validate_ui_host,
+    validate_ui_root,
+)
 from chronicle.ui_smoke import run_ui_smoke
 
 
@@ -70,22 +80,48 @@ def ui_cmd(
     port: Annotated[int, typer.Option("--port", help="Bind port for the local UI.")] = DEFAULT_UI_PORT,
     root: Annotated[Path, typer.Option("--root", help="Chronicle root. Defaults to current working directory.")] = Path("."),
     open_browser: Annotated[bool, typer.Option("--open", help="Open the local UI in the default browser.")] = False,
+    auth_mode: Annotated[
+        str,
+        typer.Option("--auth-mode", help="UI boundary auth-mode placeholder metadata."),
+    ] = UIAuthMode.NOT_ENABLED,
+    authorization_mode: Annotated[
+        str,
+        typer.Option("--authorization-mode", help="UI boundary authorization-mode placeholder metadata."),
+    ] = UIAuthorizationMode.NOT_ENABLED,
     json_output: Annotated[bool, typer.Option("--json", help="Print startup metadata as JSON before serving.")] = False,
 ) -> None:
     """Start an explicit foreground read-only local web UI."""
     try:
         validate_ui_root(root)
-        metadata = build_startup_metadata(host=host, port=port, root=root)
+        validate_ui_host(host)
+        metadata = build_startup_metadata(
+            host=host,
+            port=port,
+            root=root,
+            auth_mode=auth_mode,
+            authorization_mode=authorization_mode,
+        )
         if json_output:
             typer.echo(metadata.to_json())
         else:
             typer.echo("Chronicle Stack local UI")
             typer.echo(f"Root: {metadata.root}")
             typer.echo(f"Serving: {metadata.url}")
-            typer.echo("Mode: read-only")
+            typer.echo(f"Bind scope: {metadata.bind_scope}")
+            typer.echo("Mode: read-only, mutation disabled")
+            typer.echo(
+                f"Auth: {metadata.auth_mode}; Authorization: {metadata.authorization_mode}"
+            )
             typer.echo("Boundary: no daemon, no external model API, no GraphRAG runtime, no vector DB, no graph DB")
             typer.echo("Press Ctrl-C to stop.")
-        serve_ui(host=host, port=port, root=root, open_browser=open_browser)
+        serve_ui(
+            host=host,
+            port=port,
+            root=root,
+            open_browser=open_browser,
+            auth_mode=auth_mode,
+            authorization_mode=authorization_mode,
+        )
     except ChronicleError as exc:
         handle_error(exc, json_output)
 
@@ -129,6 +165,7 @@ app.add_typer(context_app, name="context")
 app.add_typer(audit_app, name="audit")
 app.add_typer(lifecycle_app, name="lifecycle")
 app.add_typer(graph_app, name="graph")
+app.add_typer(ai_index_app, name="ai-index")
 app.add_typer(runtime_app, name="runtime")
 app.add_typer(summary_app, name="summary")
 app.add_typer(review_app, name="review")

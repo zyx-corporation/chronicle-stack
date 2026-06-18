@@ -64,8 +64,15 @@ _COLLECTION_CHECKS: tuple[tuple[str, str], ...] = (
     ("/api/boundary", "boundary_rules"),
     ("/api/audit", "audit_events"),
     ("/api/lifecycle", "lifecycle_markers"),
+    ("/api/runtime-records", "runtime_records"),
+    ("/api/review-queue", "review_queue"),
+    ("/api/ui-boundary", "ui_boundary"),
     ("/api/package-review", "package_review"),
     ("/api/graph-summary", "graph_summary"),
+    ("/api/ai-index-status", "ai_index_status"),
+    ("/api/ai-index-vector", "vector_entries"),
+    ("/api/ai-index-graph-nodes", "graph_nodes"),
+    ("/api/ai-index-graph-edges", "graph_edges"),
 )
 
 _DETAIL_ID_FIELDS: dict[str, str] = {
@@ -77,6 +84,10 @@ _DETAIL_ID_FIELDS: dict[str, str] = {
     "/api/boundary": "rule_id",
     "/api/audit": "audit_id",
     "/api/lifecycle": "lifecycle_id",
+    "/api/runtime-records": "event_id",
+    "/api/review-queue": "target_event_id",
+    "/api/ai-index-vector": "record_id",
+    "/api/ai-index-graph-nodes": "node_id",
 }
 
 

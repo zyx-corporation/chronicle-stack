@@ -12,6 +12,7 @@ def test_init_creates_chronicle(tmp_path):
     assert metadata.chronicle_id.startswith("chr_")
     assert service.paths.events_file.exists()
     assert service.paths.metadata_file.exists()
+    assert service.paths.ai_indexes_dir.exists()
 
     events = service.jsonl.read_all()
     assert len(events) == 1

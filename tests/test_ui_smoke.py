@@ -16,6 +16,7 @@ from chronicle.services.boundary_service import BoundaryService
 from chronicle.services.chronicle_service import ChronicleService
 from chronicle.services.context_service import ContextService
 from chronicle.services.lifecycle_service import LifecycleService
+from chronicle.services.runtime_service import RuntimeService
 from chronicle.ui_smoke import run_ui_smoke
 
 
@@ -53,6 +54,10 @@ def _populate(root):
         reason_class=LifecycleReasonClass.PRIVACY,
         reason="Smoke lifecycle",
     )
+    RuntimeService(root).summarize(
+        text="Smoke runtime summary. It stays local.",
+        record=True,
+    )
 
 
 def test_run_ui_smoke_success(tmp_path):
@@ -68,6 +73,8 @@ def test_run_ui_smoke_success(tmp_path):
     assert payload["external_runtime"] is False
     check_names = {check["name"] for check in payload["checks"]}
     assert "/api/overview" in check_names
+    assert "/api/review-queue" in check_names
+    assert "/api/ui-boundary" in check_names
     assert any(name.startswith("/api/contexts/") for name in check_names)
     assert "/api/contexts/__chronicle_missing_context__" in check_names
 

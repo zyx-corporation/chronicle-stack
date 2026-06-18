@@ -40,6 +40,7 @@ class ChronicleService:
         self.paths.chronicle_dir.mkdir(parents=True, exist_ok=True)
         self.paths.artifacts_dir.mkdir(parents=True, exist_ok=True)
         self.paths.indexes_dir.mkdir(parents=True, exist_ok=True)
+        self.paths.ai_indexes_dir.mkdir(parents=True, exist_ok=True)
         self.paths.reports_dir.mkdir(parents=True, exist_ok=True)
 
         now = datetime.now(timezone.utc).astimezone()

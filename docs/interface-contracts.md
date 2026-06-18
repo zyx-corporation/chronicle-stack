@@ -248,6 +248,54 @@ Exportは外部連携に使われる可能性があります。
 - visibility_hintはredactionではないため、デフォルトでは隠蔽しません。
 - 将来sensitive情報を除外する場合は、`--exclude-sensitive` などの明示オプションとして追加します。
 
+## 6.1 Local Placeholder AI Index Contract
+
+`ai-index` は local file-backed placeholder vector / graph surface です。
+
+これは一次記録ではありません。`.chronicle/chronicle.jsonl` が引き続き正本です。
+
+契約レベル:
+
+| Surface | 契約レベル |
+|---|---|
+| `chronicle ai-index ... --json` | Public Stable-ish |
+| `.chronicle/ai_indexes/*.json` | Derived/Internal |
+| placeholder scoring implementation | Internal |
+
+方針:
+
+- placeholder AI index は local derived surface です。
+- index 内容は削除・再生成・再投入されうる補助データです。
+- `vector search` の結果順は、実装改善により変わる可能性があります。
+- `embedding_provider=disabled`, `embedding_model=none`, `external_call_made=false` は境界の一部です。
+- record ID と record type の意味を破壊する変更は避けます。
+- `.chronicle/ai_indexes/*.json` のフォーマット自体は安定契約ではありません。
+
+## 6.2 Local UI Read-only Endpoint Contract
+
+`chronicle ui` が提供する `/api/*` endpoint は read-only derived view です。
+
+契約レベル:
+
+| Surface | 契約レベル |
+|---|---|
+| `/api/*` JSON payload | Public Stable-ish |
+| browser shell HTML | Human-facing |
+
+追加された endpoint:
+
+- `/api/ai-index-status`
+- `/api/ai-index-vector`
+- `/api/ai-index-graph-nodes`
+- `/api/ai-index-graph-edges`
+
+方針:
+
+- endpoint は local file 由来の派生 view です。
+- endpoint は Chronicle 記録を書き換えてはなりません。
+- endpoint は daemon / hosted runtime / GraphRAG runtime / vector DB / graph DB を含意してはなりません。
+- detail endpoint の not found は失敗として扱われず、read-only inspection failure として扱います。
+
 ## 7. Python API Stability Policy
 
 Python moduleはimport可能ですが、すべてを同じ安定度で扱うわけではありません。

@@ -12,6 +12,7 @@ class AuditOperation(StrEnum):
     EXPORT = "export"
     CONTEXT_USE = "context_use"
     REINTERPRET = "reinterpret"
+    REVIEW_DECISION = "review_decision"
 
 
 class AuditTargetEnvironment(StrEnum):

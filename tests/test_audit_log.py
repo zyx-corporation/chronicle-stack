@@ -81,3 +81,23 @@ def test_audit_service_records_to_separate_audit_file(tmp_path):
     assert (tmp_path / ".chronicle" / "audit.jsonl").exists()
     assert len(audit.list_events()) == 1
     assert ChronicleService(tmp_path).show()["event_count"] == 1
+
+
+def test_audit_service_supports_review_decision_operation(tmp_path):
+    ChronicleService(tmp_path).init("Audit Review Test")
+    audit = AuditService(tmp_path)
+
+    event = audit.record(
+        operation=AuditOperation.REVIEW_DECISION,
+        actor="alice",
+        purpose="review decision: approve",
+        target_environment=AuditTargetEnvironment.LOCAL,
+        referenced_records=["evt_1", "evt_2"],
+        source_event_id="evt_2",
+        result=AuditSeverity.INFO,
+        summary="Review approval recorded.",
+        metadata={"disposition": "approve"},
+    )
+
+    assert event.operation == AuditOperation.REVIEW_DECISION
+    assert event.metadata["disposition"] == "approve"

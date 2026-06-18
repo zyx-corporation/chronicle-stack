@@ -98,6 +98,10 @@ flowchart TD
 | v1.2 UI drill-down release preparation | v1.2.0完了 |
 | Automated read-only UI smoke command | v1.3実装済み |
 | v1.3 UI smoke release preparation | v1.3.0準備済み |
+| Local placeholder AI index CLI surface | v1.7 Phase D 実装済み |
+| Read-only UI visibility for placeholder AI index | v1.7 Phase E 相当 実装済み |
+| Explicit local runtime summarize MVP | v1.7 Phase F 実装済み |
+| Local retrieval dry-run plan MVP | v1.7 Phase G skeleton 実装済み |
 | GraphRAG query engine | 将来構想 |
 | Full interactive editing UI | 将来構想 |
 
@@ -146,6 +150,19 @@ chronicle export profile --format yaml --profile public-review
 chronicle package context --purpose "Sayane review" --target local
 chronicle export --format graph-json -o graph.json
 chronicle export --format html -o chronicle-review-console.html
+chronicle ai-index status
+chronicle ai-index vector add --record <EVENT_ID> --text "placeholder local search text" --type event
+chronicle ai-index vector search --query "local search"
+chronicle ai-index graph add-node --id <EVENT_ID> --label event
+chronicle ai-index graph neighbors --id <EVENT_ID>
+chronicle runtime status
+chronicle runtime summarize --text "Long source text to summarize locally" --record
+chronicle runtime retrieve-plan --query "What context should I use?"
+chronicle runtime retrieve-plan --query "What context should I use?" --record
+chronicle review queue
+chronicle review approve --event <EVENT_ID> --reviewer <NAME>
+chronicle review reject --event <EVENT_ID> --reviewer <NAME>
+chronicle review request-changes --event <EVENT_ID> --reviewer <NAME>
 chronicle ui-smoke
 chronicle ui-smoke --json
 chronicle ui
@@ -154,13 +171,19 @@ chronicle context check --target local --purpose "internal review"
 chronicle show
 ```
 
-`chronicle ui` は明示起動型の foreground local web UI です。デフォルトでは `127.0.0.1:8765` に bind し、read-only で現在の Chronicle root を表示します。終了するには terminal で `Ctrl-C` を押します。
+`chronicle ui` は明示起動型の foreground local web UI です。デフォルトでは `127.0.0.1:8765` に bind し、read-only で現在の Chronicle root を表示します。現段階では auth/authz 未実装のため loopback host (`127.0.0.1`, `localhost`, `::1`) のみ許可します。`--auth-mode` と `--authorization-mode` は現時点では placeholder config surface で、UI boundary と assurance 表示に反映されます。終了するには terminal で `Ctrl-C` を押します。
 
 `chronicle ui-smoke` は、サーバーを起動せず、ブラウザも使わず、ローカル UI の read-only データ面を検証する smoke command です。`--json` を付けると機械可読の smoke report を出力します。
 
-`chronicle ui` は `/api/overview`, `/api/events`, `/api/contexts`, `/api/artifacts`, `/api/decisions`, `/api/rde`, `/api/boundary`, `/api/audit`, `/api/lifecycle`, `/api/package-review`, `/api/graph-summary` を read-only endpoint として提供します。これらはすべてローカル Chronicle ファイル由来の派生ビューです。
+`chronicle ui` は `/api/overview`, `/api/events`, `/api/contexts`, `/api/artifacts`, `/api/decisions`, `/api/rde`, `/api/boundary`, `/api/audit`, `/api/lifecycle`, `/api/runtime-records`, `/api/review-queue`, `/api/ui-boundary`, `/api/package-review`, `/api/graph-summary`, `/api/ai-index-status`, `/api/ai-index-vector`, `/api/ai-index-graph-nodes`, `/api/ai-index-graph-edges` を read-only endpoint として提供します。これらはすべてローカル Chronicle ファイル由来の派生ビューです。
 
-v1.2 では、`/api/events/<id>`, `/api/contexts/<id>`, `/api/artifacts/<id>`, `/api/decisions/<id>`, `/api/rde/<id>`, `/api/boundary/<id>`, `/api/audit/<id>`, `/api/lifecycle/<id>` のような read-only detail endpoint を提供します。これらも記録を変更しない閲覧用の派生ビューです。
+v1.2 以降では、`/api/events/<id>`, `/api/contexts/<id>`, `/api/artifacts/<id>`, `/api/decisions/<id>`, `/api/rde/<id>`, `/api/boundary/<id>`, `/api/audit/<id>`, `/api/lifecycle/<id>`, `/api/runtime-records/<id>`, `/api/review-queue/<id>` のような read-only detail endpoint を提供します。これらも記録を変更しない閲覧用の派生ビューです。
+
+`/api/review-queue` は `review_status=needs_review` の記録を preview-only で表示します。UI mutation は有効化されず、CLI family の目安表示だけを返します。detail では reviewer event と linked audit event の履歴 timeline に加え、current UI boundary と照合した identity assurance、および review capability/warning surface を notice 表示で確認できます。warning code は説明文へ展開されます。
+
+`/api/ui-boundary` は現在の GUI mutation capability flag, bind scope, auth/authz 未実装状態を read-only に可視化します。
+
+`chronicle review` は append-only reviewer event を追加する CLI parity skeleton です。approve / reject / request-changes は target event を直接書き換えず、reviewer event を追記し、同時に `review_decision` audit event も残します。reviewer identity は `label`, `kind`, `session` の構造で保持され、将来の auth/authz 接続点になります。
 
 補助CLIとして `chronicle-export`, `chronicle-package`, `chronicle-graph`, `chronicle-context`, `chronicle-audit`, `chronicle-lifecycle` も互換目的で維持されています。v0.6 以降の文書例では primary CLI alias を優先します。
 
@@ -183,6 +206,9 @@ v1.2 では、`/api/events/<id>`, `/api/contexts/<id>`, `/api/artifacts/<id>`, `
 - HTML Review Console は静的・読み取り専用の派生ビューです。
 - `chronicle ui` は明示起動型の read-only local web UI であり、daemon、server-by-default、access control、correctness proof ではありません。
 - `chronicle ui-smoke` は read-only diagnostic smoke であり、サーバー起動、ブラウザ操作、セキュリティ認証、正しさの証明ではありません。
+- `chronicle runtime summarize` は明示実行型の local placeholder summarize であり、外部 LLM 呼び出しではありません。生成出力は review 前提です。
+- `chronicle runtime retrieve-plan` は dry-run の retrieval plan 表示であり、GraphRAG runtime や外部検索サービスではありません。
+- `chronicle runtime retrieve-plan --record` は retrieval dry-run 計画を review 前提の `assistant_output` event として記録します。
 
 ## ドキュメント
 
@@ -191,6 +217,11 @@ v1.2 では、`/api/events/<id>`, `/api/contexts/<id>`, `/api/artifacts/<id>`, `
 - [アーキテクチャ](docs/architecture.md)
 - [インターフェース契約](docs/interface-contracts.md)
 - [GraphRAG 接続境界](docs/graphrag-boundary.md)
+- [Local AI Index Placeholder](docs/local-ai-index-placeholder.md)
+- [v1.7 Phase D/E Progress](docs/v1.7-phase-d-e-progress.md)
+- [v1.7 Phase D/E Smoke Profile](docs/smoke-test-v1.7-phase-d-e.md)
+- [v1.7 Phase F/G/H Plan](docs/v1.7-phase-f-g-h-plan.md)
+- [v1.7 Phase H Auth and GUI Mutation Design](docs/v1.7-phase-h-auth-ui-design.md)
 - [CLI リファレンス](docs/cli-reference.md)
 - [curl-based Local Deployment](docs/local-deployment-curl.md)
 - [v1.0 Release Criteria and Compatibility Policy](docs/v1-release-criteria-and-compatibility.md)

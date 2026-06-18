@@ -135,3 +135,30 @@ class SourceFileNotFoundError(ChronicleError):
             message=f"Source file not found: {path}",
             hint="Check the file path and try again.",
         )
+
+
+class AiIndexRecordNotFoundError(ChronicleError):
+    def __init__(self, record_id: str) -> None:
+        super().__init__(
+            code="AI_INDEX_RECORD_NOT_FOUND",
+            message=f"Chronicle record not found for ai-index operation: {record_id}",
+            hint="Use a Chronicle event, context, artifact, decision, RDE, boundary, audit, lifecycle, or chronicle ID.",
+        )
+
+
+class InvalidMetadataOptionError(ChronicleError):
+    def __init__(self, option_name: str, value: str) -> None:
+        super().__init__(
+            code="INVALID_METADATA_OPTION",
+            message=f"Invalid {option_name} value: {value}",
+            hint=f"Pass repeated --{option_name} options as key=value.",
+        )
+
+
+class UIHostNotLoopbackError(ChronicleError):
+    def __init__(self, host: str) -> None:
+        super().__init__(
+            code="UI_HOST_NOT_LOOPBACK",
+            message=f"UI host must remain loopback-only until auth/authz is implemented: {host}",
+            hint="Use `127.0.0.1`, `localhost`, or `::1` for the local read-only UI.",
+        )
