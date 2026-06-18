@@ -328,6 +328,8 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "resetFilters" in html
     assert "currentSortValue" in html
     assert "currentSortLabel" in html
+    assert "sourceCountBadges" in html
+    assert "reviewerIdentityBadge" in html
     assert "sortSelect" in html
     assert "sortRuntimeRows" in html
     assert "sortReviewRows" in html
@@ -367,6 +369,8 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "__chronicleFilters" in html
     assert "__chronicleSorts" in html
     assert "Active view:" in html
+    assert "badge(row.runtime_record_kind" in html
+    assert "badge(row.review_kind" in html
     assert "Review Capability" in html
     assert "Identity Assurance" in html
     assert "warning_details" in html

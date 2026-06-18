@@ -831,6 +831,17 @@ const idFields = ['event_id', 'context_id', 'artifact_id', 'decision_id', 'rde_r
 function esc(value) {{ return String(value).replace(/[&<>\"']/g, ch => ({{'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}}[ch])); }}
 function firstArray(payload) {{ for (const key of Object.keys(payload)) if (Array.isArray(payload[key])) return payload[key]; return null; }}
 function badge(text, cls) {{ return '<span class="badge ' + cls + '">' + esc(text) + '</span>'; }}
+function sourceCountBadges(sourceCounts) {{
+  return Object.entries(sourceCounts || {{}}).map(([key, value]) =>
+    badge(key + ':' + value, 'badge-neutral')
+  ).join('');
+}}
+function reviewerIdentityBadge(identity) {{
+  if (!identity) return '';
+  const kind = identity.kind || 'reviewer';
+  const label = identity.label || 'unknown';
+  return badge(kind + ':' + label, 'badge-neutral');
+}}
 function textInput(id, placeholder) {{
   return '<input id="' + esc(id) + '" data-filter-input="' + esc(id) + '" placeholder="' + esc(placeholder)
     + '" style="margin: 6px 6px 10px 0; padding: 6px 8px; width: 260px;">';
@@ -1115,12 +1126,13 @@ function renderTable(endpoint, rows) {{
         const path = detailPath(endpoint, row);
         const button = path ? '<button data-detail="' + esc(path) + '">JSON</button>' : '';
         const preview = row.runtime_record_preview || {{}};
+        const sourceBadges = sourceCountBadges(preview.source_counts || {{}});
         return '<tr>'
           + '<td>' + button + '</td>'
           + '<td><span class="id">' + esc(row.event_id || '') + '</span></td>'
-          + '<td>' + esc(row.runtime_record_kind || '') + '</td>'
+          + '<td>' + badge(row.runtime_record_kind || 'unknown', 'badge-neutral') + '</td>'
           + '<td><strong>' + esc(preview.title || '') + '</strong><br>' + esc(preview.preview_text || '') + '</td>'
-          + '<td>' + esc(JSON.stringify(preview.source_counts || {{}})) + '</td>'
+          + '<td>' + sourceBadges + (sourceBadges ? '<br>' : '') + esc(JSON.stringify(preview.source_counts || {{}})) + '</td>'
           + '</tr>';
       }}).join('') + '</tbody></table>';
   }}
@@ -1156,6 +1168,8 @@ function renderTable(endpoint, rows) {{
         const readiness = row.package_readiness_summary || {{}};
         const warnList = Array.isArray(capability.warnings) ? capability.warnings : [];
         const warnDetails = Array.isArray(capability.warning_details) ? capability.warning_details : [];
+        const reviewerBadge = reviewerIdentityBadge(row.latest_reviewer_identity);
+        const reviewKindBadge = row.review_kind ? badge(row.review_kind, 'badge-neutral') : '';
         const statusBadge = capability.status === 'ready'
           ? badge('Ready', 'badge-ready')
           : capability.status === 'resolved'
@@ -1168,10 +1182,10 @@ function renderTable(endpoint, rows) {{
             : badge(readiness.label || 'Package Unknown', 'badge-neutral');
         return '<tr>'
           + '<td>' + button + '</td>'
-          + '<td><span class="id">' + esc(row.target_event_id || '') + '</span><br>' + esc(row.target_summary || '') + '</td>'
+          + '<td><span class="id">' + esc(row.target_event_id || '') + '</span><br>' + reviewKindBadge + esc(row.target_summary || '') + '</td>'
           + '<td>' + statusBadge + '<br>' + readinessBadge + '</td>'
           + '<td>' + esc(warnDetails.map(item => item.message).join(' | ') || warnList.join(', ') || '(none)') + '</td>'
-          + '<td>' + esc((row.latest_reviewer_identity && row.latest_reviewer_identity.label) || row.latest_reviewer || '') + '</td>'
+          + '<td>' + reviewerBadge + (reviewerBadge ? '<br>' : '') + esc((row.latest_reviewer_identity && row.latest_reviewer_identity.label) || row.latest_reviewer || '') + '</td>'
           + '</tr>';
       }}).join('') + '</tbody></table>';
   }}
