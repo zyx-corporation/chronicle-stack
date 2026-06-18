@@ -307,6 +307,8 @@ graph surface は単純 adjacency です。graph DB ではありません。
 
 ## chronicle ui / chronicle ui-smoke
 
+Related: `docs/adr/0018-local-ui-read-only-navigation-boundary.md`
+
 ```bash
 chronicle ui
 chronicle ui --host 127.0.0.1 --port 8765

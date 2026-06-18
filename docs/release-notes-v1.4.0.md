@@ -1,5 +1,7 @@
 # Chronicle Stack v1.4.0 Release Notes
 
+Related: `docs/adr/0018-local-ui-read-only-navigation-boundary.md`
+
 ## Summary
 
 Chronicle Stack v1.4.0 is a local installer hardening release over v1.3.0.

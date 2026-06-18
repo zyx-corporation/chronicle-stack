@@ -1,5 +1,7 @@
 # Chronicle Stack v1.4 Installer Hardening Smoke Profile
 
+Related: `docs/adr/0018-local-ui-read-only-navigation-boundary.md`
+
 Issue: #201
 
 ## Purpose

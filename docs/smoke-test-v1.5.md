@@ -1,5 +1,7 @@
 # Chronicle Stack v1.5 Release Operator Guide Smoke Profile
 
+Related: `docs/adr/0018-local-ui-read-only-navigation-boundary.md`
+
 Issue: #208
 
 ## Purpose

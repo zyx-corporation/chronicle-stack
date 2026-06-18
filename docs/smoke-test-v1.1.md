@@ -1,5 +1,7 @@
 # Chronicle Stack v1.1 GUI Smoke Profile
 
+Related: `docs/adr/0018-local-ui-read-only-navigation-boundary.md`
+
 Issue: #184
 
 ## Purpose

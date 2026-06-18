@@ -1,5 +1,7 @@
 # Chronicle Stack v1.2.0 Release Notes
 
+Related: `docs/adr/0018-local-ui-read-only-navigation-boundary.md`
+
 ## Summary
 
 Chronicle Stack v1.2.0 is a UI drill-down / inspectability release over v1.1.0.

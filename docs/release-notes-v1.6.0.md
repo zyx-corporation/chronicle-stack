@@ -1,5 +1,7 @@
 # Chronicle Stack v1.6.0 Release Notes
 
+Related: `docs/adr/0018-local-ui-read-only-navigation-boundary.md`
+
 ## Summary
 
 Chronicle Stack v1.6.0 is a release tag immutability policy documentation release over v1.5.0.

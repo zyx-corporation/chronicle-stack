@@ -1,5 +1,7 @@
 # Chronicle Stack v1.5.0 Release Notes
 
+Related: `docs/adr/0018-local-ui-read-only-navigation-boundary.md`
+
 ## Summary
 
 Chronicle Stack v1.5.0 is a release-operator documentation release over v1.4.0.

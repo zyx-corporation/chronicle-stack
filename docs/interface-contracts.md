@@ -1,5 +1,7 @@
 # Chronicle Stack Interface Contracts
 
+Related: [ADR-0001](adr/0001-context-assets-security.md), [ADR-0018](adr/0018-local-ui-read-only-navigation-boundary.md)
+
 この文書は、Chronicle Stack のコード上のインターフェース契約を定義します。
 
 Chronicle Stack は local-first な記録基盤であり、中心にある契約は `.chronicle/chronicle.jsonl` です。v0.x 系では実装が進化しますが、どの形式が安定契約で、どの形式が派生・表示・内部実装なのかを明確にします。

@@ -1,5 +1,7 @@
 # Chronicle Stack Release Operator Guide
 
+Related: `docs/adr/0018-local-ui-read-only-navigation-boundary.md`
+
 Status: v1.5 release-operator guide  
 Scope: manual release execution checklist
 

@@ -1,5 +1,7 @@
 # Chronicle Stack v1.3.0 Release Notes
 
+Related: `docs/adr/0018-local-ui-read-only-navigation-boundary.md`
+
 ## Summary
 
 Chronicle Stack v1.3.0 is an automated UI smoke / release-verification release over v1.2.0.

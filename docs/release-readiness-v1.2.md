@@ -1,5 +1,7 @@
 # Chronicle Stack v1.2.0 Release Readiness
 
+Related: `docs/adr/0018-local-ui-read-only-navigation-boundary.md`
+
 Issue: #189
 
 ## Decision

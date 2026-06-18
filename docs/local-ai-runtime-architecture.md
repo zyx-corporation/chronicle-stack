@@ -1,5 +1,7 @@
 # Chronicle Stack Local AI Runtime Architecture
 
+Related: `docs/adr/0014-package-persistence-model.md`, `docs/adr/0016-http-bridge-auth-boundary.md`, `docs/adr/0018-local-ui-read-only-navigation-boundary.md`
+
 Status: v1.7 architecture boundary  
 Scope: GraphRAG, vector search, graph search, summarization, and review workflow
 
