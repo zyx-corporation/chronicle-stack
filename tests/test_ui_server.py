@@ -178,6 +178,11 @@ def test_ui_overview_data(tmp_path):
     assert overview["runtime_boundary"]["graph_db"] is False
     assert overview["ui_boundary"]["mutation_enabled"] is False
     assert overview["ui_boundary"]["auth_mode"] == "not_enabled"
+    assert overview["triage"]["needs_attention_reviews"] == 2
+    assert overview["triage"]["runtime_record_kinds"]["summary"] == 1
+    assert overview["triage"]["runtime_record_kinds"]["retrieval_plan"] == 1
+    assert overview["triage"]["review_capability_counts"]["advisory_only"] == 2
+    assert overview["triage"]["package_readiness_counts"]["package_context_available"] >= 1
 
 
 def test_ui_data_service_read_endpoints(tmp_path):
@@ -312,6 +317,8 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "Package Handoff Preview" in html
     assert "Review Package Readiness" in html
     assert "readinessBadge" in html
+    assert "Needs attention:" in html
+    assert "Runtime kinds:" in html
     assert "Review Capability" in html
     assert "Identity Assurance" in html
     assert "warning_details" in html

@@ -194,6 +194,7 @@ class ChronicleUIDataService:
         runtime_records = self.runtime_records()["runtime_records"]
         review_queue = self.review_queue()["review_queue"]
         ai_index_status = self.ai_index_status()["ai_index_status"]
+        triage = self.overview_triage(runtime_records, review_queue)
         return {
             "chronicle": {
                 "id": metadata.chronicle_id,
@@ -219,8 +220,48 @@ class ChronicleUIDataService:
             "package_review": self.package_review_snapshot(),
             "graph_summary": self.graph_summary(),
             "ai_index": ai_index_status,
+            "triage": triage,
             "runtime_boundary": self.runtime_boundary(),
             "ui_boundary": self.ui_boundary()["ui_boundary"],
+        }
+
+    def overview_triage(
+        self,
+        runtime_records: list[dict[str, Any]],
+        review_queue: list[dict[str, Any]],
+    ) -> dict[str, Any]:
+        runtime_by_kind: dict[str, int] = {}
+        for row in runtime_records:
+            kind = str(row.get("runtime_record_kind", "unknown"))
+            runtime_by_kind[kind] = runtime_by_kind.get(kind, 0) + 1
+
+        review_capability_counts: dict[str, int] = {}
+        readiness_counts: dict[str, int] = {}
+        ready_now = 0
+        advisory_only = 0
+        package_ready = 0
+
+        for row in review_queue:
+            capability_status = str(row.get("review_capability", {}).get("status", "unknown"))
+            review_capability_counts[capability_status] = review_capability_counts.get(capability_status, 0) + 1
+            if capability_status == "ready":
+                ready_now += 1
+            elif capability_status == "advisory_only":
+                advisory_only += 1
+
+            readiness_status = str(row.get("package_readiness_summary", {}).get("status", "unknown"))
+            readiness_counts[readiness_status] = readiness_counts.get(readiness_status, 0) + 1
+            if readiness_status == "package_context_available":
+                package_ready += 1
+
+        return {
+            "runtime_record_kinds": runtime_by_kind,
+            "review_capability_counts": review_capability_counts,
+            "package_readiness_counts": readiness_counts,
+            "ready_now_reviews": ready_now,
+            "advisory_only_reviews": advisory_only,
+            "package_ready_reviews": package_ready,
+            "needs_attention_reviews": len(review_queue),
         }
 
     def events(self, *, limit: int = 100) -> dict[str, Any]:
@@ -771,6 +812,7 @@ function renderOverview(payload) {{
   const runtime = payload.runtime_boundary || {{}};
   const uiBoundary = payload.ui_boundary || {{}};
   const aiIndex = payload.ai_index || {{}};
+  const triage = payload.triage || {{}};
   const countRows = Object.entries(counts).map(([key, value]) =>
     '<tr><th>' + esc(key) + '</th><td>' + esc(value ?? '') + '</td></tr>'
   ).join('');
@@ -811,6 +853,16 @@ function renderOverview(payload) {{
     + '<p>Graph edges: ' + esc(graphEdgeCount) + '</p>'
     + '<p>Runtime records: ' + esc(counts.runtime_records ?? 0) + '</p>'
     + '<p>Needs-review records: ' + esc(counts.review_queue ?? 0) + '</p>'
+    + '</div>'
+    + '<div class="panel">'
+    + '<h3>Triage</h3>'
+    + '<p>' + badge('Needs attention: ' + esc(triage.needs_attention_reviews ?? 0), 'badge-warning') + '</p>'
+    + '<p>' + badge('Review ready: ' + esc(triage.ready_now_reviews ?? 0), 'badge-ready')
+    + badge('Review advisory: ' + esc(triage.advisory_only_reviews ?? 0), 'badge-warning') + '</p>'
+    + '<p>' + badge('Package ready: ' + esc(triage.package_ready_reviews ?? 0), 'badge-ready') + '</p>'
+    + '<p>Runtime kinds: ' + esc(JSON.stringify(triage.runtime_record_kinds || {{}})) + '</p>'
+    + '<p>Review capability counts: ' + esc(JSON.stringify(triage.review_capability_counts || {{}})) + '</p>'
+    + '<p>Package readiness counts: ' + esc(JSON.stringify(triage.package_readiness_counts || {{}})) + '</p>'
     + '</div>';
 }}
 function detailPath(endpoint, row) {{
