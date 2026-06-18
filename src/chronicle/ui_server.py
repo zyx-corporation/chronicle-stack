@@ -873,6 +873,9 @@ function renderOverview(payload) {{
     + '<p><button data-jump="/api/review-queue">Open Review Queue</button>'
     + '<button data-jump="/api/runtime-records">Open Runtime Records</button>'
     + '<button data-jump="/api/package-review">Open Package Review</button></p>'
+    + '<p><button data-jump="/api/review-queue" data-filter-target="reviewQueue" data-filter-value="advisory">Advisory Reviews</button>'
+    + '<button data-jump="/api/review-queue" data-filter-target="reviewQueue" data-filter-value="package:package_context_available">Package Ready Reviews</button>'
+    + '<button data-jump="/api/runtime-records" data-filter-target="runtimeRecords" data-filter-value="retrieval_plan">Retrieval Plans</button></p>'
     + '</div>';
 }}
 function detailPath(endpoint, row) {{
@@ -1067,7 +1070,13 @@ async function loadDetail(endpoint) {{
 document.querySelectorAll('button[data-endpoint]').forEach(button => button.addEventListener('click', () => loadEndpoint(button.dataset.endpoint)));
 document.getElementById('view').addEventListener('click', event => {{
   if (event.target.dataset.detail) loadDetail(event.target.dataset.detail);
-  if (event.target.dataset.jump) loadEndpoint(event.target.dataset.jump);
+  if (event.target.dataset.jump) {{
+    const filterTarget = event.target.dataset.filterTarget;
+    const filterValue = event.target.dataset.filterValue || '';
+    if (filterTarget === 'runtimeRecords') window.__chronicleFilters.runtimeRecords = filterValue;
+    if (filterTarget === 'reviewQueue') window.__chronicleFilters.reviewQueue = filterValue;
+    loadEndpoint(event.target.dataset.jump);
+  }}
 }});
 window.__chronicleFilters = {{ runtimeRecords: '', reviewQueue: '' }};
 document.getElementById('view').addEventListener('input', event => {{
