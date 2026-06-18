@@ -852,6 +852,12 @@ function currentTrailLabel() {{
   if (!Array.isArray(window.__chronicleDetailTrail) || window.__chronicleDetailTrail.length === 0) return '';
   return window.__chronicleDetailTrail.slice(-3).join(' <- ');
 }}
+function currentTrailButtons() {{
+  if (!Array.isArray(window.__chronicleDetailTrail) || window.__chronicleDetailTrail.length === 0) return '';
+  return window.__chronicleDetailTrail.slice(-3).map(path =>
+    '<button data-detail-trail="' + esc(path) + '">' + esc(path) + '</button>'
+  ).join('');
+}}
 function renderOverview(payload) {{
   const chronicle = payload.chronicle || {{}};
   const counts = payload.counts || {{}};
@@ -1035,6 +1041,7 @@ async function loadDetail(endpoint) {{
     ? window.__chronicleDetailTrail[window.__chronicleDetailTrail.length - 1]
     : '';
   const trailLabel = currentTrailLabel();
+  const trailButtons = currentTrailButtons();
   let extra = '<div class="notice"><h3>Navigation</h3>'
     + '<p><button data-back-view="true">Back to current list</button> '
     + (previousDetail ? '<button data-back-detail="true">Back to previous detail</button> ' : '')
@@ -1044,6 +1051,7 @@ async function loadDetail(endpoint) {{
     + (previousDetail ? ' <span class="id">prev=' + esc(previousDetail) + '</span>' : '')
     + '</p>'
     + (trailLabel ? '<p><span class="id">trail=' + esc(trailLabel) + '</span></p>' : '')
+    + (trailButtons ? '<p>' + trailButtons + '</p>' : '')
     + '</div>';
   if (record.runtime_record_preview) {{
     const preview = record.runtime_record_preview;
@@ -1144,6 +1152,15 @@ document.getElementById('view').addEventListener('click', event => {{
 }});
 document.getElementById('detail').addEventListener('click', event => {{
   if (event.target.dataset.detailNav) loadDetail(event.target.dataset.detailNav);
+  if (event.target.dataset.detailTrail) {{
+    const target = event.target.dataset.detailTrail;
+    if (target) {{
+      const index = window.__chronicleDetailTrail.lastIndexOf(target);
+      if (index >= 0) window.__chronicleDetailTrail = window.__chronicleDetailTrail.slice(0, index);
+      window.__chronicleLastDetail = '';
+      loadDetail(target);
+    }}
+  }}
   if (event.target.dataset.backDetail && window.__chronicleDetailTrail.length > 0) {{
     const previousDetail = window.__chronicleDetailTrail.pop();
     if (previousDetail) {{

@@ -325,6 +325,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "Back to previous detail" in html
     assert "currentFilterLabel" in html
     assert "currentTrailLabel" in html
+    assert "currentTrailButtons" in html
     assert "__chronicleDetailTrail" in html
     assert "readinessBadge" in html
     assert "Needs attention:" in html
@@ -337,6 +338,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert 'data-filter-target="runtimeRecords"' in html
     assert 'data-filter-value="retrieval_plan"' in html
     assert "data-detail-nav" in html
+    assert "data-detail-trail" in html
     assert "data-back-view" in html
     assert "textInput('runtimeRecords'" in html
     assert "textInput('reviewQueue'" in html
