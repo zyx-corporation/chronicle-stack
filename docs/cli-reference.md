@@ -441,6 +441,7 @@ chronicle review approve --event evt_xxx --reviewer alice --json
 - GUI mutation の代わりに CLI parity を先に整える
 - UI review queue はこの reviewer event を読んで pending / resolved を派生表示する
 - UI review queue list は CLI parity badge も派生表示し、detail を開かずに command drift の有無を確認できる
+- overview triage からも `aligned` / `drift_detected` の parity slice へ直接 drilldown できる
 - review queue detail は reviewer / audit timeline を read-only で表示する
 - review queue detail は current UI boundary と reviewer identity を照合した assurance も表示する
 - review queue は current boundary での capability/warning surface も表示する

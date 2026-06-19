@@ -232,6 +232,10 @@ def test_ui_data_service_read_endpoints(tmp_path):
         "reject",
         "request_changes",
     ]
+    overview = service.overview()
+    assert overview["triage"]["cli_parity_aligned_reviews"] == 2
+    assert overview["triage"]["cli_parity_drift_reviews"] == 0
+    assert overview["triage"]["cli_parity_counts"]["aligned"] == 2
     assert "ui_auth_not_enabled" in service.review_queue()["review_queue"][0]["review_capability"]["warnings"]
     assert service.review_queue()["review_queue"][0]["review_capability"]["warning_details"][0]["message"]
     assert "latest_identity_assurance" not in service.review_queue()["review_queue"][0]
@@ -387,6 +391,9 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "review_requested" in html
     assert "ready" in html
     assert "CLI Parity" in html
+    assert "CLI aligned:" in html
+    assert "CLI drift:" in html
+    assert "CLI parity counts:" in html
     assert "Runtime kinds:" in html
     assert 'data-jump="/api/review-queue"' in html
     assert 'data-jump="/api/runtime-records"' in html
@@ -394,6 +401,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert 'data-reset-filters="all"' in html
     assert 'data-filter-target="reviewQueue"' in html
     assert 'data-filter-value="advisory"' in html
+    assert 'data-filter-value="aligned"' in html
     assert 'data-filter-target="runtimeRecords"' in html
     assert 'data-filter-value="retrieval_plan"' in html
     assert "data-detail-nav" in html
@@ -405,6 +413,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "Open Runtime Records" in html
     assert "Open Review Queue" in html
     assert "Open Package Review" in html
+    assert "CLI Aligned Reviews" in html
     assert 'data-reset-filter="runtimeRecords"' in html
     assert 'data-reset-filter="reviewQueue"' in html
     assert "runtimeRecords" in html

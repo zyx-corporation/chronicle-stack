@@ -263,9 +263,12 @@ class ChronicleUIDataService:
 
         review_capability_counts: dict[str, int] = {}
         readiness_counts: dict[str, int] = {}
+        cli_parity_counts: dict[str, int] = {}
         ready_now = 0
         advisory_only = 0
         package_ready = 0
+        parity_aligned = 0
+        parity_drift = 0
 
         for row in review_queue:
             capability_status = str(row.get("review_capability", {}).get("status", "unknown"))
@@ -280,13 +283,23 @@ class ChronicleUIDataService:
             if readiness_status == "package_context_available":
                 package_ready += 1
 
+            parity_status = str(row.get("cli_parity_summary", {}).get("status", "unknown"))
+            cli_parity_counts[parity_status] = cli_parity_counts.get(parity_status, 0) + 1
+            if parity_status == "aligned":
+                parity_aligned += 1
+            elif parity_status == "drift_detected":
+                parity_drift += 1
+
         return {
             "runtime_record_kinds": runtime_by_kind,
             "review_capability_counts": review_capability_counts,
             "package_readiness_counts": readiness_counts,
+            "cli_parity_counts": cli_parity_counts,
             "ready_now_reviews": ready_now,
             "advisory_only_reviews": advisory_only,
             "package_ready_reviews": package_ready,
+            "cli_parity_aligned_reviews": parity_aligned,
+            "cli_parity_drift_reviews": parity_drift,
             "needs_attention_reviews": len(review_queue),
         }
 
@@ -1220,15 +1233,21 @@ function renderOverview(payload) {{
     + '<p>'
     + overviewJumpButton(badge('Package ready: ' + esc(triage.package_ready_reviews ?? 0), 'badge-ready'), '/api/review-queue', 'reviewQueue', 'package:package_context_available')
     + '</p>'
+    + '<p>'
+    + overviewJumpButton(badge('CLI aligned: ' + esc(triage.cli_parity_aligned_reviews ?? 0), 'badge-ready'), '/api/review-queue', 'reviewQueue', 'aligned')
+    + overviewJumpButton(badge('CLI drift: ' + esc(triage.cli_parity_drift_reviews ?? 0), 'badge-warning'), '/api/review-queue', 'reviewQueue', 'drift_detected')
+    + '</p>'
     + '<p>Runtime kinds: ' + esc(JSON.stringify(triage.runtime_record_kinds || {{}})) + '</p>'
     + '<p>Review capability counts: ' + esc(JSON.stringify(triage.review_capability_counts || {{}})) + '</p>'
     + '<p>Package readiness counts: ' + esc(JSON.stringify(triage.package_readiness_counts || {{}})) + '</p>'
+    + '<p>CLI parity counts: ' + esc(JSON.stringify(triage.cli_parity_counts || {{}})) + '</p>'
     + '<p><button data-jump="/api/review-queue">Open Review Queue</button>'
     + '<button data-jump="/api/runtime-records">Open Runtime Records</button>'
     + '<button data-jump="/api/package-review">Open Package Review</button>'
     + '<button data-reset-filters="all">Reset Filters</button></p>'
     + '<p><button data-jump="/api/review-queue" data-filter-target="reviewQueue" data-filter-value="advisory">Advisory Reviews</button>'
     + '<button data-jump="/api/review-queue" data-filter-target="reviewQueue" data-filter-value="package:package_context_available">Package Ready Reviews</button>'
+    + '<button data-jump="/api/review-queue" data-filter-target="reviewQueue" data-filter-value="aligned">CLI Aligned Reviews</button>'
     + '<button data-jump="/api/runtime-records" data-filter-target="runtimeRecords" data-filter-value="retrieval_plan">Retrieval Plans</button></p>'
     + '</div>';
 }}
