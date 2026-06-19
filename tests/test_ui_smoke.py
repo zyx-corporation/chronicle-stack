@@ -75,6 +75,7 @@ def test_run_ui_smoke_success(tmp_path):
     assert "/api/overview" in check_names
     assert "/api/review-queue" in check_names
     assert "/api/ui-boundary" in check_names
+    assert "html-shell" in check_names
     assert any(name.startswith("/api/contexts/") for name in check_names)
     assert "/api/contexts/__chronicle_missing_context__" in check_names
 
@@ -89,6 +90,7 @@ def test_ui_smoke_command_text_success(tmp_path):
     assert "Chronicle UI smoke" in result.stdout
     assert "Mode: read-only, no server, no browser, no external runtime" in result.stdout
     assert "[PASS] /api/overview" in result.stdout
+    assert "[PASS] html-shell" in result.stdout
 
 
 def test_ui_smoke_command_json_success(tmp_path):
@@ -103,6 +105,7 @@ def test_ui_smoke_command_json_success(tmp_path):
     assert payload["server_started"] is False
     assert payload["external_runtime"] is False
     assert any(check["name"] == "/api/overview" for check in payload["checks"])
+    assert any(check["name"] == "html-shell" for check in payload["checks"])
 
 
 def test_ui_smoke_command_missing_root_fails(tmp_path):

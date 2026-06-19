@@ -831,6 +831,12 @@ const idFields = ['event_id', 'context_id', 'artifact_id', 'decision_id', 'rde_r
 function esc(value) {{ return String(value).replace(/[&<>\"']/g, ch => ({{'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}}[ch])); }}
 function firstArray(payload) {{ for (const key of Object.keys(payload)) if (Array.isArray(payload[key])) return payload[key]; return null; }}
 function badge(text, cls) {{ return '<span class="badge ' + cls + '">' + esc(text) + '</span>'; }}
+function jumpBadge(text, cls, endpoint, filterTarget, filterValue) {{
+  const targetAttr = filterTarget ? ' data-filter-target="' + esc(filterTarget) + '"' : '';
+  const valueAttr = filterValue ? ' data-filter-value="' + esc(filterValue) + '"' : '';
+  return '<button data-jump="' + esc(endpoint) + '"' + targetAttr + valueAttr + '>'
+    + badge(text, cls) + '</button>';
+}}
 function sourceCountBadges(sourceCounts) {{
   return Object.entries(sourceCounts || {{}}).map(([key, value]) =>
     badge(key + ':' + value, 'badge-neutral')
@@ -1114,6 +1120,9 @@ function renderTable(endpoint, rows) {{
       ]).toLowerCase().includes(query);
     }});
     const sorted = sortRuntimeRows(filtered);
+    const emptyState = query && sorted.length === 0
+      ? '<p>No matching runtime records for current filter.</p>'
+      : '';
     return activeViewSummary(endpoint, 'list')
       + textInput('runtimeRecords', 'Filter runtime records...')
       + sortSelect('runtimeRecords', currentSortValue('/api/runtime-records'), [
@@ -1121,16 +1130,24 @@ function renderTable(endpoint, rows) {{
         {{ value: 'kind', label: 'Kind' }},
       ])
       + (query ? '<p><button data-reset-filter="runtimeRecords">Reset Filter</button></p>' : '')
+      + emptyState
       + '<table><thead><tr><th>detail</th><th>event</th><th>kind</th><th>preview</th><th>source counts</th></tr></thead><tbody>'
       + sorted.map(row => {{
         const path = detailPath(endpoint, row);
         const button = path ? '<button data-detail="' + esc(path) + '">JSON</button>' : '';
         const preview = row.runtime_record_preview || {{}};
         const sourceBadges = sourceCountBadges(preview.source_counts || {{}});
+        const kindBadge = jumpBadge(
+          row.runtime_record_kind || 'unknown',
+          'badge-neutral',
+          '/api/runtime-records',
+          'runtimeRecords',
+          row.runtime_record_kind || 'unknown',
+        );
         return '<tr>'
           + '<td>' + button + '</td>'
           + '<td><span class="id">' + esc(row.event_id || '') + '</span></td>'
-          + '<td>' + badge(row.runtime_record_kind || 'unknown', 'badge-neutral') + '</td>'
+          + '<td>' + kindBadge + '</td>'
           + '<td><strong>' + esc(preview.title || '') + '</strong><br>' + esc(preview.preview_text || '') + '</td>'
           + '<td>' + sourceBadges + (sourceBadges ? '<br>' : '') + esc(JSON.stringify(preview.source_counts || {{}})) + '</td>'
           + '</tr>';
@@ -1152,6 +1169,9 @@ function renderTable(endpoint, rows) {{
       ]).toLowerCase().includes(query);
     }});
     const sorted = sortReviewRows(filtered);
+    const emptyState = query && sorted.length === 0
+      ? '<p>No matching review rows for current filter.</p>'
+      : '';
     return activeViewSummary(endpoint, 'list')
       + textInput('reviewQueue', 'Filter review queue...')
       + sortSelect('reviewQueue', currentSortValue('/api/review-queue'), [
@@ -1160,6 +1180,7 @@ function renderTable(endpoint, rows) {{
         {{ value: 'reviewer', label: 'Reviewer' }},
       ])
       + (query ? '<p><button data-reset-filter="reviewQueue">Reset Filter</button></p>' : '')
+      + emptyState
       + '<table><thead><tr><th>detail</th><th>target</th><th>status</th><th>warnings</th><th>latest reviewer</th></tr></thead><tbody>'
       + sorted.map(row => {{
         const path = detailPath(endpoint, row);
@@ -1169,7 +1190,9 @@ function renderTable(endpoint, rows) {{
         const warnList = Array.isArray(capability.warnings) ? capability.warnings : [];
         const warnDetails = Array.isArray(capability.warning_details) ? capability.warning_details : [];
         const reviewerBadge = reviewerIdentityBadge(row.latest_reviewer_identity);
-        const reviewKindBadge = row.review_kind ? badge(row.review_kind, 'badge-neutral') : '';
+        const reviewKindBadge = row.review_kind
+          ? jumpBadge(row.review_kind, 'badge-neutral', '/api/review-queue', 'reviewQueue', row.review_kind)
+          : '';
         const statusBadge = capability.status === 'ready'
           ? badge('Ready', 'badge-ready')
           : capability.status === 'resolved'
@@ -1182,7 +1205,7 @@ function renderTable(endpoint, rows) {{
             : badge(readiness.label || 'Package Unknown', 'badge-neutral');
         return '<tr>'
           + '<td>' + button + '</td>'
-          + '<td><span class="id">' + esc(row.target_event_id || '') + '</span><br>' + reviewKindBadge + esc(row.target_summary || '') + '</td>'
+          + '<td><span class="id">' + esc(row.target_event_id || '') + '</span><br>' + reviewKindBadge + (reviewKindBadge ? '<br>' : '') + esc(row.target_summary || '') + '</td>'
           + '<td>' + statusBadge + '<br>' + readinessBadge + '</td>'
           + '<td>' + esc(warnDetails.map(item => item.message).join(' | ') || warnList.join(', ') || '(none)') + '</td>'
           + '<td>' + reviewerBadge + (reviewerBadge ? '<br>' : '') + esc((row.latest_reviewer_identity && row.latest_reviewer_identity.label) || row.latest_reviewer || '') + '</td>'

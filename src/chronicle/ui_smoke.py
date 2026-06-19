@@ -149,6 +149,24 @@ def run_ui_smoke(root: Path | None = None) -> UISmokeReport:
                 "ok" if missing is None else "missing detail unexpectedly returned payload",
             )
         )
+
+        html_shell = service.html_shell()
+        shell_ok = all(
+            marker in html_shell
+            for marker in (
+                "Active view:",
+                "Related Links",
+                "Review Queue",
+                "Runtime Records",
+            )
+        )
+        checks.append(
+            UISmokeCheck(
+                "html-shell",
+                shell_ok,
+                "ok" if shell_ok else "missing expected interactive markers",
+            )
+        )
     except Exception as exc:  # pragma: no cover - converted to visible smoke failure
         checks.append(UISmokeCheck("ui-smoke", False, str(exc)))
 

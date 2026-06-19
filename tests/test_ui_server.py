@@ -328,6 +328,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "resetFilters" in html
     assert "currentSortValue" in html
     assert "currentSortLabel" in html
+    assert "jumpBadge" in html
     assert "sourceCountBadges" in html
     assert "reviewerIdentityBadge" in html
     assert "sortSelect" in html
@@ -357,6 +358,8 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "data-detail-nav" in html
     assert "data-detail-trail" in html
     assert "data-back-view" in html
+    assert "No matching runtime records for current filter." in html
+    assert "No matching review rows for current filter." in html
     assert "Open Runtime Records" in html
     assert "Open Review Queue" in html
     assert "Open Package Review" in html
@@ -369,8 +372,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "__chronicleFilters" in html
     assert "__chronicleSorts" in html
     assert "Active view:" in html
-    assert "badge(row.runtime_record_kind" in html
-    assert "badge(row.review_kind" in html
+    assert "jumpBadge(" in html
     assert "Review Capability" in html
     assert "Identity Assurance" in html
     assert "warning_details" in html
