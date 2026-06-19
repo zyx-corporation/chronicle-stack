@@ -140,6 +140,20 @@ def run_ui_smoke(root: Path | None = None) -> UISmokeReport:
                     "ok" if detail is not None and "record" in detail else "missing detail record",
                 )
             )
+            if endpoint == "/api/review-queue" and detail is not None and "record" in detail:
+                record = detail["record"]
+                cli_parity = record.get("cli_parity")
+                checks.append(
+                    UISmokeCheck(
+                        f"{endpoint}/{record_id}#cli-parity",
+                        isinstance(cli_parity, dict) and cli_parity.get("status") == "aligned",
+                        (
+                            "ok"
+                            if isinstance(cli_parity, dict) and cli_parity.get("status") == "aligned"
+                            else "review detail missing aligned cli parity summary"
+                        ),
+                    )
+                )
 
         missing = service.detail_payload("/api/contexts/__chronicle_missing_context__")
         checks.append(
@@ -155,6 +169,7 @@ def run_ui_smoke(root: Path | None = None) -> UISmokeReport:
             marker in html_shell
             for marker in (
                 "Active view:",
+                "CLI Parity",
                 "Related Links",
                 "Review Queue",
                 "Runtime Records",

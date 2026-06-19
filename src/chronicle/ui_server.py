@@ -29,7 +29,7 @@ from chronicle.services.graph_export_service import GraphExportService
 from chronicle.services.integration_package_service import IntegrationPackageService
 from chronicle.services.lifecycle_service import LifecycleService
 from chronicle.services.package_review_service import PackageReviewService
-from chronicle.services.review_service import ReviewService
+from chronicle.services.review_service import ReviewService, review_action_commands
 from chronicle.services.runtime_service import RuntimeService
 from chronicle.services.vector_index_service import VectorIndexService
 
@@ -705,8 +705,6 @@ class ChronicleUIDataService:
 
     @staticmethod
     def _review_action_preview(target_event_id: str, capability: dict[str, Any]) -> dict[str, Any]:
-        reviewer_hint = "<name>"
-        note_hint = "<reason>"
         can_review_now = bool(capability.get("can_review_now", False))
         return {
             "status": "preview_only",
@@ -717,20 +715,57 @@ class ChronicleUIDataService:
                 if can_review_now
                 else "UI mutation is not enabled; boundary warnings still require CLI-led review."
             ),
-            "actions": [
-                {
-                    "label": "Approve",
-                    "command": f"chronicle review approve --event {target_event_id} --reviewer {reviewer_hint}",
-                },
-                {
-                    "label": "Reject",
-                    "command": f"chronicle review reject --event {target_event_id} --reviewer {reviewer_hint} --note {note_hint}",
-                },
-                {
-                    "label": "Request Changes",
-                    "command": f"chronicle review request-changes --event {target_event_id} --reviewer {reviewer_hint} --note {note_hint}",
-                },
-            ],
+            "actions": review_action_commands(target_event_id),
+        }
+
+    @staticmethod
+    def _review_cli_parity_summary(
+        target_event_id: str,
+        available_actions: list[str],
+        action_preview: dict[str, Any],
+    ) -> dict[str, Any]:
+        preview_actions = action_preview.get("actions", [])
+        preview_commands = [
+            str(item.get("command", ""))
+            for item in preview_actions
+            if isinstance(item, dict) and item.get("command")
+        ]
+        canonical_actions = review_action_commands(target_event_id)
+        expected_commands = [item["command"] for item in canonical_actions]
+        expected_action_ids = [item["action"] for item in canonical_actions]
+        queue_commands = [command for command in available_actions if isinstance(command, str)]
+        missing_preview_commands = [
+            command for command in expected_commands if command not in preview_commands
+        ]
+        missing_queue_commands = [
+            command for command in expected_commands if command not in queue_commands
+        ]
+        extra_preview_commands = [
+            command for command in preview_commands if command not in expected_commands
+        ]
+        extra_queue_commands = [command for command in queue_commands if command not in expected_commands]
+        aligned = (
+            not missing_preview_commands
+            and not missing_queue_commands
+            and not extra_preview_commands
+            and not extra_queue_commands
+        )
+        return {
+            "status": "aligned" if aligned else "drift_detected",
+            "preview_only": True,
+            "expected_actions": expected_action_ids,
+            "expected_commands": expected_commands,
+            "preview_command_count": len(preview_commands),
+            "queue_command_count": len(queue_commands),
+            "missing_preview_commands": missing_preview_commands,
+            "missing_queue_commands": missing_queue_commands,
+            "extra_preview_commands": extra_preview_commands,
+            "extra_queue_commands": extra_queue_commands,
+            "message": (
+                "UI preview commands match the current append-only review CLI contract."
+                if aligned
+                else "UI preview commands drifted from the append-only review CLI contract."
+            ),
         }
 
     def detail_payload(self, path: str) -> dict[str, Any] | None:
@@ -786,6 +821,11 @@ class ChronicleUIDataService:
                     row["action_preview"] = self._review_action_preview(
                         parts[2],
                         row.get("review_capability", {}),
+                    )
+                    row["cli_parity"] = self._review_cli_parity_summary(
+                        parts[2],
+                        row.get("available_actions", []),
+                        row["action_preview"],
                     )
                     row["ui_mutation_enabled"] = False
                     row["review_preview_only"] = True
@@ -1433,6 +1473,16 @@ async function loadDetail(endpoint) {{
       + '<p>Status: ' + esc(preview.status || '') + '</p>'
       + '<p><button disabled>Approve</button> <button disabled>Reject</button> <button disabled>Request Changes</button></p>'
       + '<ul>' + actions.map(item => '<li><strong>' + esc(item.label || '') + ':</strong> <span class="id">' + esc(item.command || '') + '</span></li>').join('') + '</ul>'
+      + '</div>';
+  }}
+  if (record.cli_parity) {{
+    const parity = record.cli_parity;
+    extra += '<div class="notice"><h3>CLI Parity</h3>'
+      + '<p>' + esc(parity.message || '') + '</p>'
+      + '<p>Status: ' + esc(parity.status || '') + '</p>'
+      + '<p>Expected actions: ' + esc((parity.expected_actions || []).join(', ') || '(none)') + '</p>'
+      + '<p>Missing preview commands: ' + esc((parity.missing_preview_commands || []).join(' | ') || '(none)') + '</p>'
+      + '<p>Missing queue commands: ' + esc((parity.missing_queue_commands || []).join(' | ') || '(none)') + '</p>'
       + '</div>';
   }}
   if (record.latest_identity_assurance) {{

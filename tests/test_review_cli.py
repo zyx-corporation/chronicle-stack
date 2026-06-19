@@ -6,6 +6,7 @@ from typer.testing import CliRunner
 
 from chronicle.cli import app
 from chronicle.services.audit_service import AuditService
+from chronicle.services.review_service import review_action_commands
 from chronicle.services.runtime_service import RuntimeService
 
 
@@ -30,7 +31,9 @@ def test_review_queue_lists_needs_review_target(tmp_path, monkeypatch):
     payload = json.loads(result.stdout)
     assert payload[0]["target_event_id"] == event_id
     assert payload[0]["pending"] is True
-    assert payload[0]["available_actions"]
+    assert payload[0]["available_actions"] == [
+        item["command"] for item in review_action_commands(event_id)
+    ]
 
 
 def test_review_approve_records_reviewer_event_and_resolves_queue(tmp_path, monkeypatch):

@@ -326,6 +326,14 @@ def test_ui_detail_assurance_can_align_with_configured_boundary(tmp_path):
     assert review_detail["action_preview"]["status"] == "preview_only"
     assert review_detail["action_preview"]["ui_mutation_enabled"] is False
     assert "chronicle review approve --event" in review_detail["action_preview"]["actions"][0]["command"]
+    assert review_detail["cli_parity"]["status"] == "aligned"
+    assert review_detail["cli_parity"]["expected_actions"] == [
+        "approve",
+        "reject",
+        "request_changes",
+    ]
+    assert review_detail["cli_parity"]["missing_preview_commands"] == []
+    assert review_detail["cli_parity"]["missing_queue_commands"] == []
     assert review_detail["review_capability"]["warning_details"] == []
     assert review_detail["latest_identity_assurance"]["status"] == "boundary_aligned"
     assert review_detail["history"][0]["identity_assurance"]["boundary_auth_mode"] == "loopback_local"
@@ -372,6 +380,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "Blockers:" in html
     assert "review_requested" in html
     assert "ready" in html
+    assert "CLI Parity" in html
     assert "Runtime kinds:" in html
     assert 'data-jump="/api/review-queue"' in html
     assert 'data-jump="/api/runtime-records"' in html

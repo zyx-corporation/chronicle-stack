@@ -21,6 +21,32 @@ from chronicle.services.audit_service import AuditService
 from chronicle.services.chronicle_service import ChronicleService
 
 
+def review_action_commands(
+    event_id: str,
+    *,
+    reviewer_hint: str = "<name>",
+    note_hint: str = "<reason>",
+) -> list[dict[str, str]]:
+    """Return canonical CLI command previews for review actions."""
+    return [
+        {
+            "action": "approve",
+            "label": "Approve",
+            "command": f"chronicle review approve --event {event_id} --reviewer {reviewer_hint}",
+        },
+        {
+            "action": "reject",
+            "label": "Reject",
+            "command": f"chronicle review reject --event {event_id} --reviewer {reviewer_hint} --note {note_hint}",
+        },
+        {
+            "action": "request_changes",
+            "label": "Request Changes",
+            "command": f"chronicle review request-changes --event {event_id} --reviewer {reviewer_hint} --note {note_hint}",
+        },
+    ]
+
+
 class ReviewTargetNotFoundError(ChronicleError):
     def __init__(self, event_id: str) -> None:
         super().__init__(
@@ -74,9 +100,7 @@ class ReviewService:
                     latest_audit_id=latest_review.payload.get("audit_id") if latest_review is not None else None,
                     history_count=len(grouped_reviews.get(event.event_id, [])),
                     available_actions=[
-                        f"chronicle review approve --event {event.event_id} --reviewer <name>",
-                        f"chronicle review reject --event {event.event_id} --reviewer <name>",
-                        f"chronicle review request-changes --event {event.event_id} --reviewer <name>",
+                        action["command"] for action in review_action_commands(event.event_id)
                     ],
                 )
             )
