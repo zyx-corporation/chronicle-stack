@@ -312,6 +312,7 @@ Related: `docs/adr/0018-local-ui-read-only-navigation-boundary.md`
 ```bash
 chronicle ui
 chronicle ui --host 127.0.0.1 --port 8765
+chronicle ui --mutation-capability-flag
 chronicle ui --auth-mode loopback_local --authorization-mode reviewer_declared
 chronicle ui --json
 chronicle ui-smoke
@@ -320,7 +321,7 @@ chronicle ui-smoke --json
 
 `chronicle ui` は明示起動型 foreground local web UI です。read-only であり、daemon、autostart、hosted service ではありません。
 
-現段階では auth/authz 未実装のため、bind host は loopback (`127.0.0.1`, `localhost`, `::1`) のみ許可されます。`--auth-mode` と `--authorization-mode` は placeholder boundary config であり、UI review detail の assurance 表示に反映されます。
+現段階では auth/authz 未実装のため、bind host は loopback (`127.0.0.1`, `localhost`, `::1`) のみ許可されます。`--auth-mode` と `--authorization-mode` は placeholder boundary config であり、UI review detail の assurance 表示に反映されます。`--mutation-capability-flag` は将来の GUI mutation work への preview intent を metadata に記録するだけで、write route は有効化しません。
 
 read-only endpoint:
 
@@ -347,7 +348,7 @@ read-only endpoint:
 
 `/api/review-queue` は `review_status=needs_review` の record を preview-only で返します。ここでは write action は有効化されず、`suggested_cli_family` で関連 CLI family の目安だけを表示します。
 
-`/api/ui-boundary` は bind scope, mutation capability flag, auth/authz mode を read-only で返します。現在は mutation disabled が前提ですが、placeholder config により `auth_mode` / `authorization_mode` / `session_gating` を明示できます。
+`/api/ui-boundary` は bind scope, mutation capability flag, auth/authz mode を read-only で返します。現在は mutation disabled が前提で、`mutation_capability_flag=true` でも write route は有効化されません。placeholder config により `auth_mode` / `authorization_mode` / `session_gating` を明示できます。
 
 ## chronicle runtime
 

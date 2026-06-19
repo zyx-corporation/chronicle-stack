@@ -80,6 +80,13 @@ def ui_cmd(
     port: Annotated[int, typer.Option("--port", help="Bind port for the local UI.")] = DEFAULT_UI_PORT,
     root: Annotated[Path, typer.Option("--root", help="Chronicle root. Defaults to current working directory.")] = Path("."),
     open_browser: Annotated[bool, typer.Option("--open", help="Open the local UI in the default browser.")] = False,
+    mutation_capability_flag: Annotated[
+        bool,
+        typer.Option(
+            "--mutation-capability-flag",
+            help="Record preview intent for future GUI mutation work without enabling any write route.",
+        ),
+    ] = False,
     auth_mode: Annotated[
         str,
         typer.Option("--auth-mode", help="UI boundary auth-mode placeholder metadata."),
@@ -98,6 +105,7 @@ def ui_cmd(
             host=host,
             port=port,
             root=root,
+            mutation_capability_flag=mutation_capability_flag,
             auth_mode=auth_mode,
             authorization_mode=authorization_mode,
         )
@@ -109,6 +117,7 @@ def ui_cmd(
             typer.echo(f"Serving: {metadata.url}")
             typer.echo(f"Bind scope: {metadata.bind_scope}")
             typer.echo("Mode: read-only, mutation disabled")
+            typer.echo(f"Mutation capability flag: {metadata.mutation_capability_flag} (preview intent only)")
             typer.echo(
                 f"Auth: {metadata.auth_mode}; Authorization: {metadata.authorization_mode}"
             )
@@ -119,6 +128,7 @@ def ui_cmd(
             port=port,
             root=root,
             open_browser=open_browser,
+            mutation_capability_flag=mutation_capability_flag,
             auth_mode=auth_mode,
             authorization_mode=authorization_mode,
         )

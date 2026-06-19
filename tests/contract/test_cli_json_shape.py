@@ -171,7 +171,7 @@ def test_ui_startup_metadata_json_shape(tmp_path):
     payload = json.loads(
         build_startup_metadata(host="127.0.0.1", port=8765, root=Path(tmp_path)).to_json()
     )
-    for key in ["host", "port", "url", "root", "bind_scope", "mutation_enabled", "ui_boundary"]:
+    for key in ["host", "port", "url", "root", "bind_scope", "mutation_enabled", "mutation_capability_flag", "ui_boundary"]:
         assert key in payload, f"Missing key '{key}' in ui startup metadata"
     for key in [
         "bind_scope",

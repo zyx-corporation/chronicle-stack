@@ -139,6 +139,7 @@ def test_startup_metadata(tmp_path):
     assert payload["runtime"] == "foreground-local-ui"
     assert payload["external_runtime"] is False
     assert payload["mutation_enabled"] is False
+    assert payload["mutation_capability_flag"] is False
     assert payload["auth_mode"] == "not_enabled"
     assert payload["authorization_mode"] == "not_enabled"
     assert payload["ui_boundary"]["loopback_only"] is True
@@ -160,6 +161,20 @@ def test_startup_metadata_with_configured_auth_mode(tmp_path):
     assert payload["ui_boundary"]["session_gating"] is True
 
 
+def test_startup_metadata_with_mutation_capability_flag(tmp_path):
+    metadata = build_startup_metadata(
+        host="127.0.0.1",
+        port=8765,
+        root=tmp_path,
+        mutation_capability_flag=True,
+    )
+    payload = json.loads(metadata.to_json())
+    assert payload["mutation_capability_flag"] is True
+    assert payload["mutation_enabled"] is False
+    assert payload["ui_boundary"]["mutation_capability_flag"] is True
+    assert "preview intent only" in payload["ui_boundary"]["mutation_readiness_message"]
+
+
 def test_ui_overview_data(tmp_path):
     _populate(tmp_path)
 
@@ -179,6 +194,7 @@ def test_ui_overview_data(tmp_path):
     assert overview["runtime_boundary"]["vector_db"] is False
     assert overview["runtime_boundary"]["graph_db"] is False
     assert overview["ui_boundary"]["mutation_enabled"] is False
+    assert overview["ui_boundary"]["mutation_capability_flag"] is False
     assert overview["ui_boundary"]["auth_mode"] == "not_enabled"
     assert overview["mutation_readiness"]["status"] == "preview_only"
     assert "Define explicit local auth boundary." in overview["mutation_readiness"]["next_steps"]
@@ -345,6 +361,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "relatedListButtons" in html
     assert "activeViewSummary" in html
     assert "Mutation Readiness" in html
+    assert "Mutation capability flag:" in html
     assert "currentTrailLabel" in html
     assert "currentTrailButtons" in html
     assert "humanizeDetailPath" in html

@@ -93,6 +93,7 @@ class UIStartupMetadata:
     runtime: str = "foreground-local-ui"
     external_runtime: bool = False
     mutation_enabled: bool = False
+    mutation_capability_flag: bool = False
     auth_mode: str = UIAuthMode.NOT_ENABLED
     authorization_mode: str = UIAuthorizationMode.NOT_ENABLED
     ui_boundary: UIBoundaryMetadata | None = None
@@ -106,12 +107,14 @@ def build_startup_metadata(
     host: str,
     port: int,
     root: Path,
+    mutation_capability_flag: bool = False,
     auth_mode: str = UIAuthMode.NOT_ENABLED,
     authorization_mode: str = UIAuthorizationMode.NOT_ENABLED,
 ) -> UIStartupMetadata:
     """Build local UI startup metadata without starting the server."""
     ui_boundary = build_ui_boundary_metadata(
         host=host,
+        mutation_capability_flag=mutation_capability_flag,
         auth_mode=auth_mode,
         authorization_mode=authorization_mode,
     )
@@ -122,6 +125,7 @@ def build_startup_metadata(
         root=str(root.resolve()),
         bind_scope=ui_boundary.bind_scope,
         mutation_enabled=ui_boundary.mutation_enabled,
+        mutation_capability_flag=ui_boundary.mutation_capability_flag,
         auth_mode=ui_boundary.auth_mode,
         authorization_mode=ui_boundary.authorization_mode,
         ui_boundary=ui_boundary,
@@ -131,15 +135,22 @@ def build_startup_metadata(
 def build_ui_boundary_metadata(
     *,
     host: str = DEFAULT_UI_HOST,
+    mutation_capability_flag: bool = False,
     auth_mode: str = UIAuthMode.NOT_ENABLED,
     authorization_mode: str = UIAuthorizationMode.NOT_ENABLED,
 ) -> UIBoundaryMetadata:
     """Build explicit UI boundary metadata."""
     return UIBoundaryMetadata(
         bind_scope=_bind_scope(host),
+        mutation_capability_flag=mutation_capability_flag,
         auth_mode=auth_mode,
         authorization_mode=authorization_mode,
         session_gating=auth_mode == UIAuthMode.LOOPBACK_LOCAL,
+        mutation_readiness_message=(
+            "GUI mutation remains disabled; capability flag is noted as preview intent only."
+            if mutation_capability_flag
+            else "GUI mutation remains disabled; read-only preview only."
+        ),
     )
 
 
@@ -176,11 +187,13 @@ class ChronicleUIDataService:
         root: Path | None = None,
         *,
         host: str = DEFAULT_UI_HOST,
+        mutation_capability_flag: bool = False,
         auth_mode: str = UIAuthMode.NOT_ENABLED,
         authorization_mode: str = UIAuthorizationMode.NOT_ENABLED,
     ) -> None:
         self.root = root or Path.cwd()
         self.host = host
+        self.mutation_capability_flag = mutation_capability_flag
         self.auth_mode = auth_mode
         self.authorization_mode = authorization_mode
         self.chronicle = ChronicleService(self.root)
@@ -552,6 +565,7 @@ class ChronicleUIDataService:
     def ui_boundary(self) -> dict[str, Any]:
         metadata = build_ui_boundary_metadata(
             host=self.host,
+            mutation_capability_flag=self.mutation_capability_flag,
             auth_mode=self.auth_mode,
             authorization_mode=self.authorization_mode,
         )
@@ -1126,6 +1140,7 @@ function renderOverview(payload) {{
     + '<h3>UI Boundary</h3>'
     + '<p>Bind scope: ' + esc(uiBoundary.bind_scope || '') + '</p>'
     + '<p>Mutation enabled: ' + esc(uiBoundary.mutation_enabled) + '</p>'
+    + '<p>Mutation capability flag: ' + esc(uiBoundary.mutation_capability_flag) + '</p>'
     + '<p>Auth mode: ' + esc(uiBoundary.auth_mode || '') + '</p>'
     + '<p>Authorization mode: ' + esc(uiBoundary.authorization_mode || '') + '</p>'
     + '<p>Session gating: ' + esc(uiBoundary.session_gating) + '</p>'
@@ -1512,12 +1527,14 @@ def create_handler(
     root: Path | None = None,
     *,
     host: str = DEFAULT_UI_HOST,
+    mutation_capability_flag: bool = False,
     auth_mode: str = UIAuthMode.NOT_ENABLED,
     authorization_mode: str = UIAuthorizationMode.NOT_ENABLED,
 ) -> type[BaseHTTPRequestHandler]:
     service = ChronicleUIDataService(
         root,
         host=host,
+        mutation_capability_flag=mutation_capability_flag,
         auth_mode=auth_mode,
         authorization_mode=authorization_mode,
     )
@@ -1566,6 +1583,7 @@ def make_server(
     host: str = DEFAULT_UI_HOST,
     port: int = DEFAULT_UI_PORT,
     root: Path | None = None,
+    mutation_capability_flag: bool = False,
     auth_mode: str = UIAuthMode.NOT_ENABLED,
     authorization_mode: str = UIAuthorizationMode.NOT_ENABLED,
 ) -> ThreadingHTTPServer:
@@ -1574,6 +1592,7 @@ def make_server(
         create_handler(
             root,
             host=host,
+            mutation_capability_flag=mutation_capability_flag,
             auth_mode=auth_mode,
             authorization_mode=authorization_mode,
         ),
@@ -1586,6 +1605,7 @@ def serve_ui(
     port: int = DEFAULT_UI_PORT,
     root: Path | None = None,
     open_browser: bool = False,
+    mutation_capability_flag: bool = False,
     auth_mode: str = UIAuthMode.NOT_ENABLED,
     authorization_mode: str = UIAuthorizationMode.NOT_ENABLED,
 ) -> UIStartupMetadata:
@@ -1596,6 +1616,7 @@ def serve_ui(
         host=host,
         port=port,
         root=root_path,
+        mutation_capability_flag=mutation_capability_flag,
         auth_mode=auth_mode,
         authorization_mode=authorization_mode,
     )
@@ -1603,6 +1624,7 @@ def serve_ui(
         host=host,
         port=port,
         root=root_path,
+        mutation_capability_flag=mutation_capability_flag,
         auth_mode=auth_mode,
         authorization_mode=authorization_mode,
     )
