@@ -76,6 +76,7 @@ def test_run_ui_smoke_success(tmp_path):
     assert "/api/review-queue" in check_names
     assert "/api/ui-boundary" in check_names
     assert "html-shell" in check_names
+    assert any(name.startswith("/api/review-queue/") for name in check_names)
     assert any(name.startswith("/api/contexts/") for name in check_names)
     assert "/api/contexts/__chronicle_missing_context__" in check_names
 

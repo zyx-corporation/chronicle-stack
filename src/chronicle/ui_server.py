@@ -658,6 +658,36 @@ class ChronicleUIDataService:
     def _warning_message(code: str) -> str:
         return REVIEW_WARNING_TEXT.get(code, code.replace("_", " "))
 
+    @staticmethod
+    def _review_action_preview(target_event_id: str, capability: dict[str, Any]) -> dict[str, Any]:
+        reviewer_hint = "<name>"
+        note_hint = "<reason>"
+        can_review_now = bool(capability.get("can_review_now", False))
+        return {
+            "status": "preview_only",
+            "ui_mutation_enabled": False,
+            "can_review_now": can_review_now,
+            "message": (
+                "UI mutation is not enabled; use the equivalent CLI command."
+                if can_review_now
+                else "UI mutation is not enabled; boundary warnings still require CLI-led review."
+            ),
+            "actions": [
+                {
+                    "label": "Approve",
+                    "command": f"chronicle review approve --event {target_event_id} --reviewer {reviewer_hint}",
+                },
+                {
+                    "label": "Reject",
+                    "command": f"chronicle review reject --event {target_event_id} --reviewer {reviewer_hint} --note {note_hint}",
+                },
+                {
+                    "label": "Request Changes",
+                    "command": f"chronicle review request-changes --event {target_event_id} --reviewer {reviewer_hint} --note {note_hint}",
+                },
+            ],
+        }
+
     def detail_payload(self, path: str) -> dict[str, Any] | None:
         parts = [unquote(part) for part in path.strip("/").split("/")]
         if len(parts) == 4 and parts[0] == "api" and parts[1] == "ai-index":
@@ -708,6 +738,10 @@ class ChronicleUIDataService:
                     ]
                     row["package_readiness"] = self.review_package_readiness(parts[2])
                     row["related_links"] = self.review_related_links(parts[2])
+                    row["action_preview"] = self._review_action_preview(
+                        parts[2],
+                        row.get("review_capability", {}),
+                    )
                     row["ui_mutation_enabled"] = False
                     row["review_preview_only"] = True
                     return {"record": row}
@@ -1333,6 +1367,16 @@ async function loadDetail(endpoint) {{
       + '<p>' + esc(capability.message || '') + '</p>'
       + '<p>Status: ' + esc(capability.status || '') + '</p>'
       + '<p>Warnings: ' + esc(warnDetails.map(item => item.message).join(' | ') || warnList.join(', ') || '(none)') + '</p></div>';
+  }}
+  if (record.action_preview) {{
+    const preview = record.action_preview;
+    const actions = Array.isArray(preview.actions) ? preview.actions : [];
+    extra += '<div class="notice"><h3>Action Preview</h3>'
+      + '<p>' + esc(preview.message || '') + '</p>'
+      + '<p>Status: ' + esc(preview.status || '') + '</p>'
+      + '<p><button disabled>Approve</button> <button disabled>Reject</button> <button disabled>Request Changes</button></p>'
+      + '<ul>' + actions.map(item => '<li><strong>' + esc(item.label || '') + ':</strong> <span class="id">' + esc(item.command || '') + '</span></li>').join('') + '</ul>'
+      + '</div>';
   }}
   if (record.latest_identity_assurance) {{
     const assurance = record.latest_identity_assurance;
