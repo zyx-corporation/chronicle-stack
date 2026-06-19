@@ -217,3 +217,5 @@ def test_ui_review_capability_shape(tmp_path):
 
     for key in ["status", "can_review_now", "warnings", "warning_details", "message"]:
         assert key in payload["review_capability"], f"Missing key '{key}' in review capability payload"
+    for key in ["status", "expected_actions", "expected_commands", "message"]:
+        assert key in payload["cli_parity_summary"], f"Missing key '{key}' in review parity payload"

@@ -376,6 +376,11 @@ class ChronicleUIDataService:
                 )
             readiness = self.review_package_readiness(entry.target_event_id)
             data["package_readiness_summary"] = self._package_readiness_summary(readiness)
+            data["cli_parity_summary"] = self._review_cli_parity_summary(
+                entry.target_event_id,
+                data.get("available_actions", []),
+                {"actions": review_action_commands(entry.target_event_id)},
+            )
             data["ui_mutation_enabled"] = False
             data["review_preview_only"] = True
             rows.append(data)
@@ -1284,26 +1289,28 @@ function renderTable(endpoint, rows) {{
           + '</tr>';
       }}).join('') + '</tbody></table>';
   }}
-  if (endpoint === '/api/review-queue') {{
-    const query = (window.__chronicleFilters && window.__chronicleFilters.reviewQueue || '').toLowerCase();
-    const filtered = filterRows(rows, row => {{
-      if (!query) return true;
-      const capability = row.review_capability || {{}};
-      const readiness = row.package_readiness_summary || {{}};
-      return JSON.stringify([
-        row.target_event_id || '',
-        row.target_summary || '',
-        row.review_kind || '',
-        capability.status || '',
-        readiness.label || '',
-        (row.latest_reviewer_identity && row.latest_reviewer_identity.label) || row.latest_reviewer || '',
-      ]).toLowerCase().includes(query);
-    }});
+    if (endpoint === '/api/review-queue') {{
+      const query = (window.__chronicleFilters && window.__chronicleFilters.reviewQueue || '').toLowerCase();
+      const filtered = filterRows(rows, row => {{
+        if (!query) return true;
+        const capability = row.review_capability || {{}};
+        const readiness = row.package_readiness_summary || {{}};
+        const parity = row.cli_parity_summary || {{}};
+        return JSON.stringify([
+          row.target_event_id || '',
+          row.target_summary || '',
+          row.review_kind || '',
+          capability.status || '',
+          readiness.label || '',
+          parity.status || '',
+          (row.latest_reviewer_identity && row.latest_reviewer_identity.label) || row.latest_reviewer || '',
+        ]).toLowerCase().includes(query);
+      }});
     const sorted = sortReviewRows(filtered);
     const emptyState = query && sorted.length === 0
       ? '<p>No matching review rows for current filter.</p>'
       : '';
-    return activeViewSummary(endpoint, 'list')
+      return activeViewSummary(endpoint, 'list')
       + textInput('reviewQueue', 'Filter review queue...')
       + sortSelect('reviewQueue', currentSortValue('/api/review-queue'), [
         {{ value: 'attention', label: 'Needs attention first' }},
@@ -1318,6 +1325,7 @@ function renderTable(endpoint, rows) {{
         const button = path ? '<button data-detail="' + esc(path) + '">JSON</button>' : '';
         const capability = row.review_capability || {{}};
         const readiness = row.package_readiness_summary || {{}};
+        const parity = row.cli_parity_summary || {{}};
         const warnList = Array.isArray(capability.warnings) ? capability.warnings : [];
         const warnDetails = Array.isArray(capability.warning_details) ? capability.warning_details : [];
         const reviewerBadge = reviewerIdentityBadge(row.latest_reviewer_identity);
@@ -1334,10 +1342,13 @@ function renderTable(endpoint, rows) {{
           : readiness.status === 'no_context_records'
             ? badge(readiness.label || 'Package Advisory', 'badge-warning')
             : badge(readiness.label || 'Package Unknown', 'badge-neutral');
+        const parityBadge = parity.status === 'aligned'
+          ? jumpBadge('CLI aligned', 'badge-ready', '/api/review-queue', 'reviewQueue', 'aligned')
+          : jumpBadge('CLI drift', 'badge-warning', '/api/review-queue', 'reviewQueue', 'drift_detected');
         return '<tr>'
           + '<td>' + button + '</td>'
           + '<td><span class="id">' + esc(row.target_event_id || '') + '</span><br>' + reviewKindBadge + (reviewKindBadge ? '<br>' : '') + esc(row.target_summary || '') + '</td>'
-          + '<td>' + statusBadge + '<br>' + readinessBadge + '</td>'
+          + '<td>' + statusBadge + '<br>' + readinessBadge + '<br>' + parityBadge + '</td>'
           + '<td>' + esc(warnDetails.map(item => item.message).join(' | ') || warnList.join(', ') || '(none)') + '</td>'
           + '<td>' + reviewerBadge + (reviewerBadge ? '<br>' : '') + esc((row.latest_reviewer_identity && row.latest_reviewer_identity.label) || row.latest_reviewer || '') + '</td>'
           + '</tr>';

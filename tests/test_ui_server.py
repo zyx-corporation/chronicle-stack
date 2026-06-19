@@ -226,6 +226,12 @@ def test_ui_data_service_read_endpoints(tmp_path):
     assert service.review_queue()["review_queue"][0]["review_capability"]["status"] == "advisory_only"
     assert service.review_queue()["review_queue"][0]["package_readiness_summary"]["label"].startswith("package:")
     assert service.review_queue()["review_queue"][0]["package_readiness_summary"]["message"]
+    assert service.review_queue()["review_queue"][0]["cli_parity_summary"]["status"] == "aligned"
+    assert service.review_queue()["review_queue"][0]["cli_parity_summary"]["expected_actions"] == [
+        "approve",
+        "reject",
+        "request_changes",
+    ]
     assert "ui_auth_not_enabled" in service.review_queue()["review_queue"][0]["review_capability"]["warnings"]
     assert service.review_queue()["review_queue"][0]["review_capability"]["warning_details"][0]["message"]
     assert "latest_identity_assurance" not in service.review_queue()["review_queue"][0]
@@ -395,6 +401,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "data-back-view" in html
     assert "No matching runtime records for current filter." in html
     assert "No matching review rows for current filter." in html
+    assert "CLI aligned" in html
     assert "Open Runtime Records" in html
     assert "Open Review Queue" in html
     assert "Open Package Review" in html
