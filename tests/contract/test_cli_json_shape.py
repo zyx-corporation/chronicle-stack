@@ -173,7 +173,17 @@ def test_ui_startup_metadata_json_shape(tmp_path):
     )
     for key in ["host", "port", "url", "root", "bind_scope", "mutation_enabled", "ui_boundary"]:
         assert key in payload, f"Missing key '{key}' in ui startup metadata"
-    for key in ["bind_scope", "loopback_only", "mutation_enabled", "auth_mode", "authorization_mode", "session_gating"]:
+    for key in [
+        "bind_scope",
+        "loopback_only",
+        "mutation_enabled",
+        "auth_mode",
+        "authorization_mode",
+        "session_gating",
+        "mutation_readiness_status",
+        "mutation_readiness_message",
+        "mutation_blockers",
+    ]:
         assert key in payload["ui_boundary"], f"Missing key '{key}' in ui boundary metadata"
 
 

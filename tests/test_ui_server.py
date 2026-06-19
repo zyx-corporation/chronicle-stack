@@ -142,6 +142,8 @@ def test_startup_metadata(tmp_path):
     assert payload["auth_mode"] == "not_enabled"
     assert payload["authorization_mode"] == "not_enabled"
     assert payload["ui_boundary"]["loopback_only"] is True
+    assert payload["ui_boundary"]["mutation_readiness_status"] == "preview_only"
+    assert "write_routes_disabled" in payload["ui_boundary"]["mutation_blockers"]
 
 
 def test_startup_metadata_with_configured_auth_mode(tmp_path):
@@ -178,6 +180,8 @@ def test_ui_overview_data(tmp_path):
     assert overview["runtime_boundary"]["graph_db"] is False
     assert overview["ui_boundary"]["mutation_enabled"] is False
     assert overview["ui_boundary"]["auth_mode"] == "not_enabled"
+    assert overview["mutation_readiness"]["status"] == "preview_only"
+    assert "Define explicit local auth boundary." in overview["mutation_readiness"]["next_steps"]
     assert overview["triage"]["needs_attention_reviews"] == 2
     assert overview["triage"]["runtime_record_kinds"]["summary"] == 1
     assert overview["triage"]["runtime_record_kinds"]["retrieval_plan"] == 1
@@ -340,6 +344,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "overviewJumpButton" in html
     assert "relatedListButtons" in html
     assert "activeViewSummary" in html
+    assert "Mutation Readiness" in html
     assert "currentTrailLabel" in html
     assert "currentTrailButtons" in html
     assert "humanizeDetailPath" in html
@@ -347,6 +352,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "__chronicleDetailTrail" in html
     assert "readinessBadge" in html
     assert "Needs attention:" in html
+    assert "Blockers:" in html
     assert "review_requested" in html
     assert "ready" in html
     assert "Runtime kinds:" in html

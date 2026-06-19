@@ -70,6 +70,14 @@ class UIBoundaryMetadata:
     review_queue_preview_only: bool = True
     future_write_requires_auth: bool = True
     primary_record_authoritative: bool = True
+    mutation_readiness_status: str = "preview_only"
+    mutation_readiness_message: str = "GUI mutation remains disabled; read-only preview only."
+    mutation_blockers: tuple[str, ...] = (
+        "write_routes_disabled",
+        "auth_not_enabled",
+        "authorization_not_enabled",
+        "audit_insertion_cli_only",
+    )
 
 
 @dataclass(frozen=True)
@@ -227,6 +235,7 @@ class ChronicleUIDataService:
             "triage": triage,
             "runtime_boundary": self.runtime_boundary(),
             "ui_boundary": self.ui_boundary()["ui_boundary"],
+            "mutation_readiness": self.mutation_readiness_summary(review_queue),
         }
 
     def overview_triage(
@@ -358,6 +367,28 @@ class ChronicleUIDataService:
             data["review_preview_only"] = True
             rows.append(data)
         return {"review_queue": rows}
+
+    def mutation_readiness_summary(self, review_queue: list[dict[str, Any]] | None = None) -> dict[str, Any]:
+        boundary = self.ui_boundary()["ui_boundary"]
+        queue = review_queue if review_queue is not None else self.review_queue()["review_queue"]
+        ready_rows = sum(1 for row in queue if row.get("review_capability", {}).get("can_review_now") is True)
+        advisory_rows = sum(1 for row in queue if row.get("review_capability", {}).get("can_review_now") is not True)
+        blockers = list(boundary.get("mutation_blockers", []))
+        next_steps = [
+            "Define explicit local auth boundary.",
+            "Define authorization semantics for reviewer actions.",
+            "Keep write routes disabled until audit insertion and CLI parity checks are explicit.",
+        ]
+        if ready_rows > 0:
+            next_steps.append("Preserve review-ready signals as preview-only until write-capable ADR work lands.")
+        return {
+            "status": boundary.get("mutation_readiness_status", "preview_only"),
+            "message": boundary.get("mutation_readiness_message", "GUI mutation remains disabled."),
+            "ready_row_count": ready_rows,
+            "advisory_row_count": advisory_rows,
+            "blockers": blockers,
+            "next_steps": next_steps,
+        }
 
     def ai_index_status(self) -> dict[str, Any]:
         vector_status = self.vector_index.status()
@@ -1064,6 +1095,7 @@ function renderOverview(payload) {{
   const uiBoundary = payload.ui_boundary || {{}};
   const aiIndex = payload.ai_index || {{}};
   const triage = payload.triage || {{}};
+  const mutationReadiness = payload.mutation_readiness || {{}};
   const countRows = Object.entries(counts).map(([key, value]) =>
     '<tr><th>' + esc(key) + '</th><td>' + esc(value ?? '') + '</td></tr>'
   ).join('');
@@ -1097,6 +1129,16 @@ function renderOverview(payload) {{
     + '<p>Auth mode: ' + esc(uiBoundary.auth_mode || '') + '</p>'
     + '<p>Authorization mode: ' + esc(uiBoundary.authorization_mode || '') + '</p>'
     + '<p>Session gating: ' + esc(uiBoundary.session_gating) + '</p>'
+    + '<p>Mutation readiness: ' + esc(uiBoundary.mutation_readiness_status || '') + '</p>'
+    + '</div>'
+    + '<div class="panel">'
+    + '<h3>Mutation Readiness</h3>'
+    + '<p>Status: ' + esc(mutationReadiness.status || '') + '</p>'
+    + '<p>' + esc(mutationReadiness.message || '') + '</p>'
+    + '<p>Ready rows: ' + esc(mutationReadiness.ready_row_count ?? 0) + '</p>'
+    + '<p>Advisory rows: ' + esc(mutationReadiness.advisory_row_count ?? 0) + '</p>'
+    + '<p>Blockers: ' + esc((mutationReadiness.blockers || []).join(' | ') || '(none)') + '</p>'
+    + '<p>Next steps: ' + esc((mutationReadiness.next_steps || []).join(' | ') || '(none)') + '</p>'
     + '</div>'
     + '<div class="panel">'
     + '<h3>AI Index Snapshot</h3>'
