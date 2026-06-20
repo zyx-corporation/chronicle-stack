@@ -43,6 +43,7 @@ def test_summary_create_records_pending_review_job_without_runtime(tmp_path: Pat
     assert data["version_id"].startswith("ver_")
     assert data["event_id"].startswith("evt_")
     assert data["provenance"]["generated_by"] == "manual"
+    assert data["provenance"]["invocation_mode"] == "explicit-manual"
     assert data["provenance"]["external_call_made"] is False
     assert data["provenance"]["runtime"]["provider_kind"] == "disabled"
     assert data["source_refs"][0]["record_type"] == "event"

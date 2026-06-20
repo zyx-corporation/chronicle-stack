@@ -42,11 +42,17 @@ def runtime_summarize_cmd(
     text: Annotated[str, typer.Option("--text", help="Source text to summarize locally.")],
     max_sentences: Annotated[int, typer.Option("--max-sentences", min=1, help="Maximum number of sentences to keep.")] = 3,
     record: Annotated[bool, typer.Option("--record", help="Persist the generated summary as an assistant_output event requiring review.")] = False,
+    draft_title: Annotated[str | None, typer.Option("--draft-title", help="Also persist the generated summary as a pending-review summary job with this title.")] = None,
     json_output: Annotated[bool, typer.Option("--json")] = False,
 ) -> None:
     """Generate a local placeholder summary with explicit manual invocation."""
     try:
-        result = RuntimeService().summarize(text=text, max_sentences=max_sentences, record=record)
+        result = RuntimeService().summarize(
+            text=text,
+            max_sentences=max_sentences,
+            record=record,
+            draft_title=draft_title,
+        )
         if json_output:
             _dump_json(result.model_dump(mode="json"))
             return
@@ -56,6 +62,8 @@ def runtime_summarize_cmd(
         typer.echo(f"Recorded: {result.recorded}")
         if result.event_id:
             typer.echo(f"Event: {result.event_id}")
+        if result.draft_summary_job_id:
+            typer.echo(f"Draft summary job: {result.draft_summary_job_id}")
         typer.echo("Boundary: no LLM, no external runtime, review required before trust.")
     except ChronicleError as exc:
         handle_error(exc, json_output)

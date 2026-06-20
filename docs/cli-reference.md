@@ -370,6 +370,7 @@ status は local placeholder runtime の境界を表示します。
 ```bash
 chronicle runtime summarize --text "Source text"
 chronicle runtime summarize --text "Source text" --max-sentences 2
+chronicle runtime summarize --text "Source text" --draft-title "Runtime Draft"
 chronicle runtime summarize --text "Source text" --record
 chronicle runtime summarize --text "Source text" --record --json
 ```
@@ -381,6 +382,8 @@ chronicle runtime summarize --text "Source text" --record --json
 - no external runtime call
 - generated output requires review
 - `--record` 指定時のみ `assistant_output` event として記録
+- `--draft-title` 指定時のみ pending-review の summary job / draft artifact としても保存
+- draft provenance には provider kind / model name / invocation mode / external_call_made が含まれる
 
 ### chronicle runtime retrieve-plan
 

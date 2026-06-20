@@ -35,6 +35,7 @@ class SummaryJobProvenance(BaseModel):
     """Generation provenance for a summary job."""
 
     runtime: RuntimeConfig = Field(default_factory=RuntimeConfig)
+    invocation_mode: str = "explicit-manual"
     prompt: str = ""
     operator: str = "user"
     generated_by: str = "manual"

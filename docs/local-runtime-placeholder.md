@@ -55,4 +55,13 @@ retrieval plan の detail view では、downstream runtime へ渡す前の hando
 
 `--record` を指定した場合のみ、`assistant_output` event として Chronicle に記録します。
 
-その場合も、記録された生成出力は正本ではなく、review 前提の補助出力です。
+`--draft-title` を指定した場合は、同じ explicit manual invocation の結果を pending-review の summary job / draft artifact としても保存できます。
+
+この draft persistence でも:
+
+- no external runtime invoked
+- external_call_made = false
+- invocation_mode = explicit-manual
+- generated output remains draft until reviewed
+
+`--record` / `--draft-title` のどちらを使っても、記録された生成出力は正本ではなく、review 前提の補助出力です。

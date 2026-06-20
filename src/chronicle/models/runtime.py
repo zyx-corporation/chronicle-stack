@@ -80,6 +80,9 @@ class RuntimeSummaryResult(BaseModel):
     generated_text: str
     recorded: bool = False
     event_id: str | None = None
+    draft_summary_job_id: str | None = None
+    draft_artifact_id: str | None = None
+    draft_version_id: str | None = None
 
 
 class RuntimeRetrievalHit(BaseModel):

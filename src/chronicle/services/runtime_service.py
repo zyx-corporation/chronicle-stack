@@ -17,6 +17,7 @@ from chronicle.models.source import SourceProvenance
 from chronicle.services.chronicle_service import ChronicleService
 from chronicle.services.graph_export_service import GraphExportService
 from chronicle.services.search_service import SearchService
+from chronicle.services.summary_job_service import SummaryJobService
 from chronicle.services.vector_index_service import VectorIndexService
 
 
@@ -28,17 +29,39 @@ class RuntimeService:
         self.vector_index = VectorIndexService(root)
         self.graph_export = GraphExportService(root)
         self.search = SearchService(root)
+        self.summary_jobs = SummaryJobService(root)
 
     def status(self) -> RuntimeStatus:
         return RuntimeStatus()
 
-    def summarize(self, *, text: str, max_sentences: int = 3, record: bool = False) -> RuntimeSummaryResult:
+    def summarize(
+        self,
+        *,
+        text: str,
+        max_sentences: int = 3,
+        record: bool = False,
+        draft_title: str | None = None,
+    ) -> RuntimeSummaryResult:
         generated_text = _summarize_text(text, max_sentences=max_sentences)
         result = RuntimeSummaryResult(
             source_text_length=len(text),
             generated_text=generated_text,
             recorded=record,
         )
+        if draft_title:
+            draft_job = self.summary_jobs.create_runtime_draft(
+                title=draft_title,
+                summary_text=generated_text,
+                runtime_config=self.status().model_dump(mode="json") and self._runtime_config(),
+                invocation_mode=result.invocation_mode,
+                prompt="runtime summarize",
+                operator="runtime",
+                tags=["runtime-summary-draft"],
+            )
+            result.draft_summary_job_id = draft_job.summary_job_id
+            result.draft_artifact_id = draft_job.artifact_id
+            result.draft_version_id = draft_job.version_id
+
         if not record:
             return result
 
@@ -62,6 +85,20 @@ class RuntimeService:
         result.recorded = True
         result.event_id = event.event_id
         return result
+
+    def _runtime_config(self):
+        status = self.status()
+        from chronicle.models.runtime import RuntimeCapability, RuntimeConfig
+
+        return RuntimeConfig(
+            provider_kind=status.provider_kind,
+            provider_name=status.provider_kind.value,
+            model_name=status.model_name,
+            capabilities=[RuntimeCapability(capability) for capability in status.capabilities],
+            allow_network=False,
+            allow_external_context=False,
+            review_required=True,
+        )
 
     def retrieve_plan(self, *, query: str, limit: int = 5, record: bool = False) -> RuntimeRetrievalPlan:
         self.chronicle.require_initialized()

@@ -33,31 +33,71 @@ class SummaryJobService:
         tags: list[str] | None = None,
     ) -> SummaryJob:
         """Create a local summary draft without invoking any AI runtime."""
-
-        metadata = self.chronicle.require_initialized()
-        now = datetime.now(timezone.utc).astimezone()
-        summary_job_id = generate_id("summary_job")
-
         runtime_status = disabled_runtime_status()
         runtime_config = RuntimeConfig.model_validate(runtime_status.config.model_dump(mode="json"))
-
-        provenance = SummaryJobProvenance(
-            runtime=runtime_config,
-            prompt=prompt,
-            operator=operator,
-            generated_by="manual",
-            external_call_made=False,
-            generated_at=now,
+        return self._create_draft_job(
+            title=title,
+            summary_text=summary_text,
+            source_refs=source_refs or [],
+            provenance=SummaryJobProvenance(
+                runtime=runtime_config,
+                invocation_mode="explicit-manual",
+                prompt=prompt,
+                operator=operator,
+                generated_by="manual",
+                external_call_made=False,
+                generated_at=datetime.now(timezone.utc).astimezone(),
+            ),
+            tags=tags or [],
         )
 
+    def create_runtime_draft(
+        self,
+        *,
+        title: str,
+        summary_text: str,
+        runtime_config: RuntimeConfig,
+        invocation_mode: str,
+        prompt: str = "",
+        operator: str = "runtime",
+        source_refs: list[SummarySourceRef] | None = None,
+        tags: list[str] | None = None,
+    ) -> SummaryJob:
+        """Create a local draft summary job from explicit runtime invocation."""
+        return self._create_draft_job(
+            title=title,
+            summary_text=summary_text,
+            source_refs=source_refs or [],
+            provenance=SummaryJobProvenance(
+                runtime=runtime_config,
+                invocation_mode=invocation_mode,
+                prompt=prompt,
+                operator=operator,
+                generated_by="runtime_manual",
+                external_call_made=False,
+                generated_at=datetime.now(timezone.utc).astimezone(),
+            ),
+            tags=tags or [],
+        )
+
+    def _create_draft_job(
+        self,
+        *,
+        title: str,
+        summary_text: str,
+        source_refs: list[SummarySourceRef],
+        provenance: SummaryJobProvenance,
+        tags: list[str],
+    ) -> SummaryJob:
+        metadata = self.chronicle.require_initialized()
+        summary_job_id = generate_id("summary_job")
         artifact, version = self.artifacts.create(
             title=title,
             artifact_type=ArtifactType.SUMMARY,
             content=summary_text,
-            tags=["summary-job", summary_job_id, *(tags or [])],
+            tags=["summary-job", summary_job_id, *tags],
             actor=Actor.USER,
         )
-
         event = self.chronicle.record_event(
             event_type=EventType.SUMMARY_JOB_CREATED,
             actor=Actor.USER,
@@ -80,12 +120,12 @@ class SummaryJobService:
             title=title,
             summary_text=summary_text,
             status=SummaryJobStatus.PENDING_REVIEW,
-            source_refs=source_refs or [],
+            source_refs=source_refs,
             provenance=provenance,
             artifact_id=artifact.artifact_id,
             version_id=version.version_id,
             event_id=event.event_id,
-            tags=tags or [],
+            tags=tags,
         )
 
         self.chronicle.paths.summary_jobs_dir.mkdir(parents=True, exist_ok=True)
