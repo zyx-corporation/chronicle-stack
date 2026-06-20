@@ -293,6 +293,7 @@ class ChronicleUIDataService:
         triage = self.overview_triage(runtime_records, review_queue)
         identity_boundary_summary = self.identity_boundary_summary(review_queue)
         summary_jobs_summary = self.summary_jobs_overview(summary_jobs)
+        auth_boundary_overview = self.auth_boundary_overview(review_queue)
         return {
             "chronicle": {
                 "id": metadata.chronicle_id,
@@ -324,9 +325,50 @@ class ChronicleUIDataService:
             "runtime_boundary": self.runtime_boundary(),
             "ui_boundary": self.ui_boundary()["ui_boundary"],
             "auth_boundary_summary": self.ui_boundary()["ui_boundary"]["auth_boundary_summary"],
+            "auth_boundary_overview": auth_boundary_overview,
             "identity_boundary_summary": identity_boundary_summary,
             "summary_jobs_summary": summary_jobs_summary,
             "mutation_readiness": self.mutation_readiness_summary(review_queue),
+        }
+
+    def auth_boundary_overview(self, review_queue: list[dict[str, Any]] | None = None) -> dict[str, Any]:
+        queue = review_queue if review_queue is not None else self.review_queue()["review_queue"]
+        auth_warning_count = 0
+        authorization_warning_count = 0
+        missing_identity_count = 0
+        declared_identity_count = 0
+        session_label_missing_count = 0
+        review_capability_counts: dict[str, int] = {}
+        assurance_counts: dict[str, int] = {}
+
+        for row in queue:
+            capability = row.get("review_capability", {})
+            capability_status = str(capability.get("status", "unknown"))
+            review_capability_counts[capability_status] = review_capability_counts.get(capability_status, 0) + 1
+            warnings = capability.get("warnings", [])
+            if "ui_auth_not_enabled" in warnings:
+                auth_warning_count += 1
+            if "ui_authorization_not_enabled" in warnings:
+                authorization_warning_count += 1
+            if "no_reviewer_identity_recorded" in warnings:
+                missing_identity_count += 1
+            if "reviewer_identity_declared_only" in warnings:
+                declared_identity_count += 1
+            if "reviewer_session_label_missing" in warnings:
+                session_label_missing_count += 1
+            assurance = row.get("latest_identity_assurance")
+            if isinstance(assurance, dict) and assurance.get("status"):
+                assurance_status = str(assurance.get("status", "unknown"))
+                assurance_counts[assurance_status] = assurance_counts.get(assurance_status, 0) + 1
+
+        return {
+            "auth_warning_count": auth_warning_count,
+            "authorization_warning_count": authorization_warning_count,
+            "missing_identity_count": missing_identity_count,
+            "declared_identity_count": declared_identity_count,
+            "session_label_missing_count": session_label_missing_count,
+            "review_capability_counts": review_capability_counts,
+            "identity_assurance_counts": assurance_counts,
         }
 
     def summary_jobs_overview(self, summary_jobs: list[dict[str, Any]] | None = None) -> dict[str, Any]:
@@ -1699,6 +1741,7 @@ function renderOverview(payload) {{
   const runtime = payload.runtime_boundary || {{}};
   const uiBoundary = payload.ui_boundary || {{}};
   const authBoundary = payload.auth_boundary_summary || uiBoundary.auth_boundary_summary || {{}};
+  const authBoundaryOverview = payload.auth_boundary_overview || {{}};
   const identityBoundary = payload.identity_boundary_summary || {{}};
   const aiIndex = payload.ai_index || {{}};
   const triage = payload.triage || {{}};
@@ -1764,15 +1807,26 @@ function renderOverview(payload) {{
     + '</div>'
     + '<div class="panel">'
     + panelTitle('Auth Boundary')
+    + '<p>'
+    + overviewJumpButton(sliceBadge('Auth warnings', esc(authBoundaryOverview.auth_warning_count ?? 0), 'badge-warning'), '/api/review-queue', 'reviewQueue', 'ui_auth_not_enabled')
+    + overviewJumpButton(sliceBadge('Authorization warnings', esc(authBoundaryOverview.authorization_warning_count ?? 0), 'badge-warning'), '/api/review-queue', 'reviewQueue', 'ui_authorization_not_enabled')
+    + overviewJumpButton(sliceBadge('Missing identity', esc(authBoundaryOverview.missing_identity_count ?? 0), 'badge-warning'), '/api/review-queue', 'reviewQueue', 'no_reviewer_identity_recorded')
+    + '</p>'
     + detailLine('Status', authBoundary.status || '')
     + '<p>' + esc(authBoundary.message || '') + '</p>'
     + detailLine('Session gating', authBoundary.session_gating)
     + detailLine('Shared machine safe', authBoundary.shared_machine_safe)
+    + summaryJsonLine('Auth review capability counts', authBoundaryOverview.review_capability_counts)
     + detailListLine('Auth blockers', authBoundary.blockers, ' | ')
     + detailListLine('Auth next steps', authBoundary.next_steps, ' | ')
     + '</div>'
     + '<div class="panel">'
     + panelTitle('Identity Boundary')
+    + '<p>'
+    + overviewJumpButton(sliceBadge('Identity declared', esc(identityBoundary.declared_identity_count ?? 0), 'badge-warning'), '/api/review-queue', 'reviewQueue', 'reviewer_identity_declared_only')
+    + overviewJumpButton(sliceBadge('Session label missing', esc(identityBoundary.session_label_missing_count ?? 0), 'badge-warning'), '/api/review-queue', 'reviewQueue', 'reviewer_session_label_missing')
+    + overviewJumpButton(sliceBadge('Identity aligned', esc((identityBoundary.assurance_counts && identityBoundary.assurance_counts.boundary_aligned) ?? 0), 'badge-ready'), '/api/review-queue', 'reviewQueue', 'boundary_aligned')
+    + '</p>'
     + detailLine('Status', identityBoundary.status || '')
     + '<p>' + esc(identityBoundary.message || '') + '</p>'
     + summaryJsonLine('Identity assurance counts', identityBoundary.assurance_counts)

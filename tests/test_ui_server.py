@@ -220,6 +220,10 @@ def test_ui_overview_data(tmp_path):
     assert overview["ui_boundary"]["auth_mode"] == "not_enabled"
     assert overview["auth_boundary_summary"]["status"] == "auth_not_enabled"
     assert "Define explicit local auth boundary." in overview["auth_boundary_summary"]["next_steps"]
+    assert overview["auth_boundary_overview"]["auth_warning_count"] == 3
+    assert overview["auth_boundary_overview"]["authorization_warning_count"] == 3
+    assert overview["auth_boundary_overview"]["missing_identity_count"] == 3
+    assert overview["auth_boundary_overview"]["review_capability_counts"]["advisory_only"] == 3
     assert overview["identity_boundary_summary"]["status"] == "identity_unavailable"
     assert overview["identity_boundary_summary"]["missing_identity_count"] == 3
     assert overview["mutation_readiness"]["status"] == "preview_only"
@@ -487,6 +491,10 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "Auth Boundary" in html
     assert "Identity Boundary" in html
     assert "Summary Jobs" in html
+    assert "Auth warnings" in html
+    assert "Authorization warnings" in html
+    assert "Missing identity" in html
+    assert "Session label missing" in html
     assert "Mutation capability flag:" in html
     assert "currentTrailLabel" in html
     assert "currentTrailButtons" in html
@@ -502,6 +510,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "summaryJsonLine" in html
     assert "detailListLine('Auth blockers', authBoundary.blockers, ' | ')" in html
     assert "summaryJsonLine('Identity assurance counts', identityBoundary.assurance_counts)" in html
+    assert "summaryJsonLine('Auth review capability counts', authBoundaryOverview.review_capability_counts)" in html
     assert "runtimeRecordsFilterChips" in html
     assert "reviewQueueFilterChips" in html
     assert "summaryJobsFilterChips" in html

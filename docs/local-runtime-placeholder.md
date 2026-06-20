@@ -135,6 +135,8 @@ overview でも summary job status / review capability / package readiness / pro
 
 summary job 一覧からは matching review target detail や review queue slice へ jump できます。
 
+overview の auth / identity panel からも auth warning, authorization warning, reviewer identity warning, boundary-aligned slice へ read-only jump できます。
+
 ## Summary job re-run
 
 `chronicle summary run --id sum_xxx` は、既存の summary job を explicit manual runtime boundary に通し直し、短縮結果を新しい pending-review draft として保存します。
