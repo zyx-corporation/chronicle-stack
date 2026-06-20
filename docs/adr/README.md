@@ -24,3 +24,4 @@ ADRs capture decisions that affect architecture, security boundaries, data contr
 - [ADR-0016: HTTP Bridge Auth Dependency Boundary](0016-http-bridge-auth-boundary.md)
 - [ADR-0017: Auxiliary CLI Integration Boundary](0017-auxiliary-cli-integration-boundary.md)
 - [ADR-0018: Local UI Read-only Navigation Boundary](0018-local-ui-read-only-navigation-boundary.md)
+- [ADR-0019: Local UI Review Semantics and CLI Parity Boundary](0019-local-ui-review-semantics-parity-boundary.md)
