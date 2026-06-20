@@ -1019,6 +1019,30 @@ function reviewWarningBadges(warnings) {{
     return jumpBadge(text, 'badge-warning', '/api/review-queue', 'reviewQueue', String(code || ''));
   }}).join('');
 }}
+function reviewCapabilityBadge(capability) {{
+  const status = String((capability && capability.status) || '');
+  if (status === 'ready') return badge('Ready', 'badge-ready');
+  if (status === 'resolved') return badge('Resolved', 'badge-neutral');
+  return badge('Advisory', 'badge-warning');
+}}
+function packageReadinessBadge(readiness) {{
+  const status = String((readiness && readiness.status) || '');
+  const label = String((readiness && readiness.label) || '');
+  if (status === 'package_context_available') {{
+    return badge(label || 'Package Ready', 'badge-ready');
+  }}
+  if (status === 'no_context_records') {{
+    return badge(label || 'Package Advisory', 'badge-warning');
+  }}
+  return badge(label || 'Package Unknown', 'badge-neutral');
+}}
+function reviewParityBadge(parity) {{
+  const status = String((parity && parity.status) || '');
+  if (status === 'aligned') {{
+    return jumpBadge('CLI aligned', 'badge-ready', '/api/review-queue', 'reviewQueue', 'aligned');
+  }}
+  return jumpBadge('CLI drift', 'badge-warning', '/api/review-queue', 'reviewQueue', 'drift_detected');
+}}
 function textInput(id, placeholder) {{
   return '<input id="' + esc(id) + '" data-filter-input="' + esc(id) + '" placeholder="' + esc(placeholder)
     + '" style="margin: 6px 6px 10px 0; padding: 6px 8px; width: 260px;">';
@@ -1482,19 +1506,9 @@ function renderTable(endpoint, rows) {{
         const reviewKindBadge = row.review_kind
           ? jumpBadge(row.review_kind, 'badge-neutral', '/api/review-queue', 'reviewQueue', row.review_kind)
           : '';
-        const statusBadge = capability.status === 'ready'
-          ? badge('Ready', 'badge-ready')
-          : capability.status === 'resolved'
-            ? badge('Resolved', 'badge-neutral')
-            : badge('Advisory', 'badge-warning');
-        const readinessBadge = readiness.status === 'package_context_available'
-          ? badge(readiness.label || 'Package Ready', 'badge-ready')
-          : readiness.status === 'no_context_records'
-            ? badge(readiness.label || 'Package Advisory', 'badge-warning')
-            : badge(readiness.label || 'Package Unknown', 'badge-neutral');
-        const parityBadge = parity.status === 'aligned'
-          ? jumpBadge('CLI aligned', 'badge-ready', '/api/review-queue', 'reviewQueue', 'aligned')
-          : jumpBadge('CLI drift', 'badge-warning', '/api/review-queue', 'reviewQueue', 'drift_detected');
+        const statusBadge = reviewCapabilityBadge(capability);
+        const readinessBadge = packageReadinessBadge(readiness);
+        const parityBadge = reviewParityBadge(parity);
         return '<tr>'
           + '<td>' + button + '</td>'
           + '<td><span class="id">' + esc(row.target_event_id || '') + '</span><br>' + reviewKindBadge + (reviewKindBadge ? '<br>' : '') + esc(row.target_summary || '') + '</td>'

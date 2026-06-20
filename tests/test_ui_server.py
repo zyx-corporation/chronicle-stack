@@ -400,6 +400,9 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "Related Links" in html
     assert "__chronicleDetailTrail" in html
     assert "readinessBadge" in html
+    assert "reviewCapabilityBadge" in html
+    assert "packageReadinessBadge" in html
+    assert "reviewParityBadge" in html
     assert "Blockers:" in html
     assert "review_requested" in html
     assert "ready" in html
