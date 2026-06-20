@@ -391,6 +391,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "Mutation capability flag:" in html
     assert "currentTrailLabel" in html
     assert "currentTrailButtons" in html
+    assert "runtimeRecordsFilterChips" in html
     assert "reviewQueueFilterChips" in html
     assert "humanizeDetailPath" in html
     assert "Related Links" in html

@@ -1176,6 +1176,14 @@ function reviewQueueFilterChips() {{
     + ' <button data-reset-filter="reviewQueue">Clear Slice</button>'
     + '</p>';
 }}
+function runtimeRecordsFilterChips() {{
+  const filterValue = String((window.__chronicleFilters && window.__chronicleFilters.runtimeRecords) || '');
+  if (!filterValue) return '';
+  return '<p>'
+    + badge('slice:' + filterValue, 'badge-neutral')
+    + ' <button data-reset-filter="runtimeRecords">Clear Slice</button>'
+    + '</p>';
+}}
 function activeViewSummary(endpoint, mode) {{
   const parts = [];
   const currentEndpoint = endpoint || window.__chronicleCurrentEndpoint || '/api/overview';
@@ -1392,6 +1400,7 @@ function renderTable(endpoint, rows) {{
         {{ value: 'latest', label: 'Latest first' }},
         {{ value: 'kind', label: 'Kind' }},
       ])
+      + runtimeRecordsFilterChips()
       + (query ? '<p><button data-reset-filter="runtimeRecords">Reset Filter</button></p>' : '')
       + emptyState
       + '<table><thead><tr><th>detail</th><th>event</th><th>kind</th><th>preview</th><th>source counts</th></tr></thead><tbody>'
