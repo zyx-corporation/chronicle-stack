@@ -1035,6 +1035,15 @@ function currentSortValue(endpoint) {{
   if (endpoint === '/api/review-queue') return window.__chronicleSorts.reviewQueue || 'attention';
   return '';
 }}
+function activeReviewWarningFilter() {{
+  const value = String((window.__chronicleFilters && window.__chronicleFilters.reviewQueue) || '');
+  if (!value) return '';
+  if (value.includes('warning')) return value;
+  if (value.startsWith('ui_')) return value;
+  if (value.startsWith('reviewer_')) return value;
+  if (value.startsWith('no_')) return value;
+  return '';
+}}
 function sortSelect(id, value, options) {{
   return '<label style="margin-right: 10px;">Sort: <select data-sort-input="' + esc(id)
     + '" style="margin: 6px 6px 10px 6px; padding: 6px 8px;">'
@@ -1065,6 +1074,12 @@ function reviewParityRank(row) {{
   if (parity.status === 'aligned') return 1;
   return 2;
 }}
+function reviewWarningFilterRank(row) {{
+  const warningFilter = activeReviewWarningFilter();
+  if (!warningFilter) return 0;
+  const warnings = ((row.review_capability || {{}}).warnings || []).map(value => String(value || ''));
+  return warnings.includes(warningFilter) ? 0 : 1;
+}}
 function sortRuntimeRows(rows) {{
   const sortValue = currentSortValue('/api/runtime-records');
   if (sortValue === 'kind') {{
@@ -1092,6 +1107,8 @@ function sortReviewRows(rows) {{
   }}
   if (sortValue === 'parity') {{
     return sortRows(rows, (left, right) => {{
+      const warningCompare = reviewWarningFilterRank(left) - reviewWarningFilterRank(right);
+      if (warningCompare !== 0) return warningCompare;
       const parityCompare = reviewParityRank(left) - reviewParityRank(right);
       if (parityCompare !== 0) return parityCompare;
       const attentionCompare = reviewAttentionRank(left) - reviewAttentionRank(right);
@@ -1100,6 +1117,8 @@ function sortReviewRows(rows) {{
     }});
   }}
   return sortRows(rows, (left, right) => {{
+    const warningCompare = reviewWarningFilterRank(left) - reviewWarningFilterRank(right);
+    if (warningCompare !== 0) return warningCompare;
     const rankCompare = reviewAttentionRank(left) - reviewAttentionRank(right);
     if (rankCompare !== 0) return rankCompare;
     return compareTextDesc(left.target_event_id, right.target_event_id);

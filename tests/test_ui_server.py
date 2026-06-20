@@ -380,6 +380,8 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "sortSelect" in html
     assert "sortRuntimeRows" in html
     assert "sortReviewRows" in html
+    assert "activeReviewWarningFilter" in html
+    assert "reviewWarningFilterRank" in html
     assert "reviewParityRank" in html
     assert "overviewJumpButton" in html
     assert "relatedListButtons" in html
