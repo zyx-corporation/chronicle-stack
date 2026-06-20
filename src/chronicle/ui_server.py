@@ -186,6 +186,23 @@ def _related_link(path: str, label: str) -> dict[str, str]:
     return {"path": path, "label": label}
 
 
+def _open_detail_label(resource: str, record_id: str) -> str:
+    labels = {
+        "contexts": "Open context",
+        "events": "Open event",
+    }
+    prefix = labels.get(resource, f"Open {resource.rstrip('s')}")
+    return f"{prefix} {record_id}".strip()
+
+
+def _open_matching_detail_label(resource: str) -> str:
+    labels = {
+        "review-queue": "Open matching review detail",
+        "runtime-records": "Open matching runtime record",
+    }
+    return labels.get(resource, f"Open matching {resource.rstrip('s')} detail")
+
+
 class ChronicleUIDataService:
     """Read-only data provider for the local UI."""
 
@@ -520,14 +537,29 @@ class ChronicleUIDataService:
         return payload
 
     def runtime_related_links(self, event_id: str, payload: dict[str, Any]) -> list[dict[str, str]]:
-        links = [_related_link(f"/api/review-queue/{event_id}", "Open matching review detail")]
+        links = [
+            _related_link(
+                f"/api/review-queue/{event_id}",
+                _open_matching_detail_label("review-queue"),
+            )
+        ]
         if "runtime_retrieval_plan" in payload:
             plan = RuntimeRetrievalPlan.model_validate(payload["runtime_retrieval_plan"])
             for record_id in _unique_list(plan):
                 if record_id.startswith("ctx_"):
-                    links.append(_related_link(f"/api/contexts/{record_id}", f"Open context {record_id}"))
+                    links.append(
+                        _related_link(
+                            f"/api/contexts/{record_id}",
+                            _open_detail_label("contexts", record_id),
+                        )
+                    )
                 elif record_id.startswith("evt_"):
-                    links.append(_related_link(f"/api/events/{record_id}", f"Open event {record_id}"))
+                    links.append(
+                        _related_link(
+                            f"/api/events/{record_id}",
+                            _open_detail_label("events", record_id),
+                        )
+                    )
         return links
 
     def review_package_readiness(self, target_event_id: str) -> dict[str, Any]:
@@ -588,11 +620,21 @@ class ChronicleUIDataService:
         }
 
     def review_related_links(self, target_event_id: str) -> list[dict[str, str]]:
-        links = [_related_link(f"/api/runtime-records/{target_event_id}", "Open matching runtime record")]
+        links = [
+            _related_link(
+                f"/api/runtime-records/{target_event_id}",
+                _open_matching_detail_label("runtime-records"),
+            )
+        ]
         readiness = self.review_package_readiness(target_event_id)
         for context_id in readiness.get("eligible_context_ids", []):
             if isinstance(context_id, str) and context_id.startswith("ctx_"):
-                links.append(_related_link(f"/api/contexts/{context_id}", f"Open context {context_id}"))
+                links.append(
+                    _related_link(
+                        f"/api/contexts/{context_id}",
+                        _open_detail_label("contexts", context_id),
+                    )
+                )
         return links
 
     def runtime_boundary(self) -> dict[str, Any]:

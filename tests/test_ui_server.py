@@ -279,6 +279,7 @@ def test_ui_data_service_detail_endpoints(tmp_path):
     assert runtime_detail["runtime_record_preview"]["record_kind"] == "summary"
     assert runtime_detail["suggested_cli_family"] == "chronicle runtime summarize --record"
     assert runtime_detail["related_links"][0]["path"] == f"/api/review-queue/{ids['runtime_summary_event_id']}"
+    assert runtime_detail["related_links"][0]["label"] == "Open matching review detail"
     retrieval_detail = service.detail_payload(f"/api/runtime-records/{ids['runtime_plan_event_id']}")["record"]
     assert "runtime_retrieval_plan" in retrieval_detail["payload"]
     assert retrieval_detail["runtime_record_preview"]["record_kind"] == "retrieval_plan"
@@ -290,6 +291,7 @@ def test_ui_data_service_detail_endpoints(tmp_path):
     assert retrieval_detail["package_handoff_preview"]["package_review"]["status"] in {"pass", "warning", "blocked"}
     assert ids["context_id"] in retrieval_detail["package_handoff_preview"]["package_manifest_preview"]["referenced_records"]
     assert any(link["path"] == f"/api/contexts/{ids['context_id']}" for link in retrieval_detail["related_links"])
+    assert any(link["label"] == f"Open context {ids['context_id']}" for link in retrieval_detail["related_links"])
     review_detail = service.detail_payload(f"/api/review-queue/{ids['runtime_summary_event_id']}")["record"]
     assert review_detail["target_event_id"] == ids["runtime_summary_event_id"]
     assert review_detail["review_preview_only"] is True
@@ -305,12 +307,14 @@ def test_ui_data_service_detail_endpoints(tmp_path):
     assert review_detail["history"][0]["identity_assurance"]["boundary_auth_mode"] == "not_enabled"
     assert review_detail["history"][0]["audit_summary"]
     assert review_detail["related_links"][0]["path"] == f"/api/runtime-records/{ids['runtime_summary_event_id']}"
+    assert review_detail["related_links"][0]["label"] == "Open matching runtime record"
     review_plan_detail = service.detail_payload(f"/api/review-queue/{ids['runtime_plan_event_id']}")["record"]
     assert review_plan_detail["package_readiness"]["status"] == "package_context_available"
     assert ids["context_id"] in review_plan_detail["package_readiness"]["eligible_context_ids"]
     assert review_plan_detail["package_readiness"]["package_review"]["status"] in {"pass", "warning", "blocked"}
     assert review_plan_detail["package_readiness_summary"]["status"] == "package_context_available"
     assert any(link["path"] == f"/api/contexts/{ids['context_id']}" for link in review_plan_detail["related_links"])
+    assert any(link["label"] == f"Open context {ids['context_id']}" for link in review_plan_detail["related_links"])
     assert service.detail_payload(f"/api/ai-index/vector/{ids['event_id']}")["record"]["record_id"] == ids["event_id"]
     graph_detail = service.detail_payload(f"/api/ai-index/graph-nodes/{ids['event_id']}")["record"]
     assert graph_detail["node_id"] == ids["event_id"]
