@@ -325,6 +325,8 @@ def test_ui_data_service_detail_endpoints(tmp_path):
     assert summary_detail["runtime_provider_kind"] == "disabled"
     assert summary_detail["review_target_event_id"].startswith("evt_")
     assert summary_detail["review_capability"]["status"] == "advisory_only"
+    assert summary_detail["auth_boundary_notice"]["status"] == "advisory_only"
+    assert "auth_not_enabled" in summary_detail["auth_boundary_notice"]["blockers"]
     assert summary_detail["package_readiness"]["status"] == "no_context_records"
     assert summary_detail["cli_parity"]["status"] == "aligned"
     assert summary_detail["action_preview"]["status"] == "preview_only"
@@ -356,6 +358,8 @@ def test_ui_data_service_detail_endpoints(tmp_path):
     assert review_detail["latest_reviewer_identity"]["kind"] == "local_operator"
     assert review_detail["review_capability"]["status"] == "advisory_only"
     assert review_detail["review_capability"]["warning_details"][0]["code"] == "ui_auth_not_enabled"
+    assert review_detail["auth_boundary_notice"]["status"] == "advisory_only"
+    assert "authorization_not_enabled" in review_detail["auth_boundary_notice"]["blockers"]
     assert review_detail["latest_identity_assurance"]["status"] == "local_session_unverified"
     assert review_detail["history"][0]["disposition"] == "request_changes"
     assert review_detail["history"][0]["reviewer_identity"]["session_label"] == "ui-test"
@@ -440,6 +444,8 @@ def test_ui_detail_assurance_can_align_with_configured_boundary(tmp_path):
     assert review_detail["cli_parity"]["missing_preview_commands"] == []
     assert review_detail["cli_parity"]["missing_queue_commands"] == []
     assert review_detail["review_capability"]["warning_details"] == []
+    assert review_detail["auth_boundary_notice"]["status"] == "boundary_aligned"
+    assert review_detail["auth_boundary_notice"]["blockers"] == []
     assert review_detail["latest_identity_assurance"]["status"] == "boundary_aligned"
     assert review_detail["history"][0]["identity_assurance"]["boundary_auth_mode"] == "loopback_local"
     overview = service.overview()
@@ -586,6 +592,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "__chronicleSorts" in html
     assert "Active view:" in html
     assert "jumpBadge(" in html
+    assert "Auth Readiness" in html
     assert "Review Capability" in html
     assert "Action Preview" in html
     assert "<button disabled>Approve</button>" in html

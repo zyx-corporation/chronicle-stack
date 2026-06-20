@@ -915,6 +915,58 @@ class ChronicleUIDataService:
         )
         return {"ui_boundary": asdict(metadata)}
 
+    @staticmethod
+    def _auth_boundary_notice(
+        boundary: dict[str, Any],
+        capability: dict[str, Any] | None,
+        assurance: dict[str, Any] | None,
+    ) -> dict[str, Any]:
+        capability = capability or {}
+        assurance = assurance or {}
+        warnings = [str(item) for item in capability.get("warnings", [])]
+        blockers: list[str] = []
+        next_steps: list[str] = []
+
+        if "ui_auth_not_enabled" in warnings:
+            blockers.append("auth_not_enabled")
+            next_steps.append("Define explicit local auth boundary.")
+        if "ui_authorization_not_enabled" in warnings:
+            blockers.append("authorization_not_enabled")
+            next_steps.append("Define authorization semantics for reviewer actions.")
+        if "no_reviewer_identity_recorded" in warnings:
+            blockers.append("reviewer_identity_missing")
+            next_steps.append("Record reviewer identity metadata before relying on GUI review signals.")
+        if "reviewer_identity_declared_only" in warnings:
+            blockers.append("reviewer_identity_declared_only")
+            next_steps.append("Strengthen reviewer identity beyond self-declared metadata.")
+        if "reviewer_session_label_missing" in warnings:
+            blockers.append("reviewer_session_label_missing")
+            next_steps.append("Require session labels when session-gated review is expected.")
+
+        assurance_status = str(assurance.get("status", "unknown"))
+        capability_status = str(capability.get("status", "unknown"))
+        if capability_status == "ready" and assurance_status == "boundary_aligned" and not blockers:
+            status = "boundary_aligned"
+            message = "Current review metadata is aligned with the preview auth boundary, while GUI mutation remains disabled."
+        elif blockers:
+            status = "advisory_only"
+            message = "Current review metadata remains advisory only until auth, authorization, and reviewer identity boundaries are explicit."
+        elif assurance_status != "unknown":
+            status = assurance_status
+            message = "Some reviewer identity metadata is present, but auth-boundary alignment remains incomplete."
+        else:
+            status = capability_status
+            message = "Auth-boundary readiness is not yet available in the current derived detail view."
+
+        return {
+            "status": status,
+            "message": message,
+            "blockers": blockers,
+            "next_steps": next_steps,
+            "capability_status": capability_status,
+            "identity_assurance_status": assurance_status,
+        }
+
     def _review_queue_row(self, target_event_id: str) -> dict[str, Any] | None:
         for row in self.review_queue()["review_queue"]:
             if row.get("target_event_id") == target_event_id:
@@ -1190,6 +1242,11 @@ class ChronicleUIDataService:
                         row.get("available_actions", []),
                         row["action_preview"],
                     )
+                    row["auth_boundary_notice"] = self._auth_boundary_notice(
+                        boundary,
+                        row.get("review_capability"),
+                        row.get("latest_identity_assurance"),
+                    )
                     row["ui_mutation_enabled"] = False
                     row["review_preview_only"] = True
                     return {"record": row}
@@ -1204,6 +1261,7 @@ class ChronicleUIDataService:
             if event_id.startswith("evt_"):
                 review_row = self._review_queue_row(event_id)
                 if review_row is not None:
+                    boundary = self.ui_boundary()["ui_boundary"]
                     job["review_target_event_id"] = event_id
                     job["review_kind"] = review_row.get("review_kind")
                     job["review_capability"] = review_row.get("review_capability")
@@ -1222,8 +1280,13 @@ class ChronicleUIDataService:
                         review_row.get("available_actions", []),
                         job["action_preview"],
                     )
+                    job["auth_boundary_notice"] = self._auth_boundary_notice(
+                        boundary,
+                        job.get("review_capability"),
+                        job.get("latest_identity_assurance"),
+                    )
                     job["history"] = [
-                        self._history_row(item, self.ui_boundary()["ui_boundary"])
+                        self._history_row(item, boundary)
                         for item in self.review.history(event_id=event_id)
                     ]
             job["related_links"] = self.summary_job_related_links(parts[2], job)
@@ -2227,6 +2290,22 @@ async function loadDetail(endpoint) {{
         + '</button>'
       ).join('')
       + '</p></div>';
+  }}
+  if (record.auth_boundary_notice) {{
+    const notice = record.auth_boundary_notice;
+    const noticeButtons = [];
+    if (notice.status) {{
+      noticeButtons.push(moreSliceButton(notice.status, '/api/review-queue', 'reviewQueue'));
+    }}
+    extra += '<div class="notice">' + noticeTitle('Auth Readiness')
+      + detailLine('Status', notice.status || '')
+      + (noticeButtons.length > 0 ? '<p>' + noticeButtons.join('') + '</p>' : '')
+      + '<p>' + esc(notice.message || '') + '</p>'
+      + detailLine('Review capability', notice.capability_status || '')
+      + detailLine('Identity assurance', notice.identity_assurance_status || '')
+      + detailListLine('Blockers', notice.blockers, ' | ')
+      + detailListLine('Next steps', notice.next_steps, ' | ')
+      + '</div>';
   }}
   if (record.review_capability) {{
     const capability = record.review_capability;
