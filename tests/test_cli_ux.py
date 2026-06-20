@@ -89,6 +89,7 @@ def test_ui_help_mentions_auth_mode_options(tmp_path):
     assert "auth-mode" in result.stdout
     assert "authorization-mode" in result.stdout
     assert "mutation-capability-flag" in result.stdout
+    assert "enable-ui-mutation" in result.stdout
 
 
 def test_invalid_export_format_exits_nonzero(tmp_path):

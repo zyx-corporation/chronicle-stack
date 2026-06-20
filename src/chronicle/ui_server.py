@@ -21,7 +21,7 @@ from urllib.parse import quote, unquote, urlparse
 from chronicle.errors import ChronicleError, UIHostNotLoopbackError
 from chronicle.exporters.html_exporter import HtmlDashboardExporter
 from chronicle.models.runtime import RuntimeInvocationPlan, RuntimeRetrievalPlan
-from chronicle.models.review import ReviewerIdentity
+from chronicle.models.review import ReviewerIdentity, ReviewerIdentityKind
 from chronicle.services.audit_service import AuditService
 from chronicle.services.chronicle_service import ChronicleService
 from chronicle.services.graph_index_service import GraphIndexService
@@ -152,6 +152,7 @@ def build_startup_metadata(
     port: int,
     root: Path,
     mutation_capability_flag: bool = False,
+    enable_ui_mutation: bool = False,
     auth_mode: str = UIAuthMode.NOT_ENABLED,
     authorization_mode: str = UIAuthorizationMode.NOT_ENABLED,
 ) -> UIStartupMetadata:
@@ -159,6 +160,7 @@ def build_startup_metadata(
     ui_boundary = build_ui_boundary_metadata(
         host=host,
         mutation_capability_flag=mutation_capability_flag,
+        enable_ui_mutation=enable_ui_mutation,
         auth_mode=auth_mode,
         authorization_mode=authorization_mode,
     )
@@ -180,20 +182,47 @@ def build_ui_boundary_metadata(
     *,
     host: str = DEFAULT_UI_HOST,
     mutation_capability_flag: bool = False,
+    enable_ui_mutation: bool = False,
     auth_mode: str = UIAuthMode.NOT_ENABLED,
     authorization_mode: str = UIAuthorizationMode.NOT_ENABLED,
 ) -> UIBoundaryMetadata:
     """Build explicit UI boundary metadata."""
+    mutation_enabled = (
+        enable_ui_mutation
+        and mutation_capability_flag
+        and auth_mode == UIAuthMode.LOOPBACK_LOCAL
+        and authorization_mode == UIAuthorizationMode.REVIEWER_DECLARED
+    )
+    blockers = []
+    if not mutation_enabled:
+        blockers.append("write_routes_disabled")
+    if auth_mode == UIAuthMode.NOT_ENABLED:
+        blockers.append("auth_not_enabled")
+    if authorization_mode == UIAuthorizationMode.NOT_ENABLED:
+        blockers.append("authorization_not_enabled")
+    if not mutation_capability_flag:
+        blockers.append("mutation_capability_flag_disabled")
+    if not enable_ui_mutation:
+        blockers.append("ui_mutation_enable_flag_disabled")
     metadata = UIBoundaryMetadata(
         bind_scope=_bind_scope(host),
+        read_only=not mutation_enabled,
+        mutation_enabled=mutation_enabled,
         mutation_capability_flag=mutation_capability_flag,
         auth_mode=auth_mode,
         authorization_mode=authorization_mode,
         session_gating=auth_mode == UIAuthMode.LOOPBACK_LOCAL,
+        shared_machine_safe=mutation_enabled,
+        mutation_blockers=tuple(blockers),
+        mutation_readiness_status="enabled" if mutation_enabled else "preview_only",
         mutation_readiness_message=(
-            "GUI mutation remains disabled; capability flag is noted as preview intent only."
-            if mutation_capability_flag
-            else "GUI mutation remains disabled; read-only preview only."
+            "GUI mutation is explicitly enabled for loopback-local reviewer-declared actions."
+            if mutation_enabled
+            else (
+                "GUI mutation remains disabled; capability flag is noted as preview intent only."
+                if mutation_capability_flag
+                else "GUI mutation remains disabled; read-only preview only."
+            )
         ),
     )
     return UIBoundaryMetadata(
@@ -255,12 +284,14 @@ class ChronicleUIDataService:
         *,
         host: str = DEFAULT_UI_HOST,
         mutation_capability_flag: bool = False,
+        enable_ui_mutation: bool = False,
         auth_mode: str = UIAuthMode.NOT_ENABLED,
         authorization_mode: str = UIAuthorizationMode.NOT_ENABLED,
     ) -> None:
         self.root = root or Path.cwd()
         self.host = host
         self.mutation_capability_flag = mutation_capability_flag
+        self.enable_ui_mutation = enable_ui_mutation
         self.auth_mode = auth_mode
         self.authorization_mode = authorization_mode
         self.chronicle = ChronicleService(self.root)
@@ -671,14 +702,15 @@ class ChronicleUIDataService:
             data["action_preview_summary"] = self._review_action_preview(
                 entry.target_event_id,
                 data.get("review_capability", {}),
+                mutation_enabled=bool(boundary.get("mutation_enabled", False)),
             )
             data["cli_parity_summary"] = self._review_cli_parity_summary(
                 entry.target_event_id,
                 data.get("available_actions", []),
                 data["action_preview_summary"],
             )
-            data["ui_mutation_enabled"] = False
-            data["review_preview_only"] = True
+            data["ui_mutation_enabled"] = bool(boundary.get("mutation_enabled", False))
+            data["review_preview_only"] = not bool(boundary.get("mutation_enabled", False))
             rows.append(data)
         return {"review_queue": rows}
 
@@ -964,6 +996,7 @@ class ChronicleUIDataService:
         metadata = build_ui_boundary_metadata(
             host=self.host,
             mutation_capability_flag=self.mutation_capability_flag,
+            enable_ui_mutation=self.enable_ui_mutation,
             auth_mode=self.auth_mode,
             authorization_mode=self.authorization_mode,
         )
@@ -1025,6 +1058,24 @@ class ChronicleUIDataService:
         for row in self.review_queue()["review_queue"]:
             if row.get("target_event_id") == target_event_id:
                 return row
+        return None
+
+    def _review_queue_row_including_resolved(self, target_event_id: str) -> dict[str, Any] | None:
+        boundary = self.ui_boundary()["ui_boundary"]
+        for entry in self.review.queue(include_resolved=True):
+            if entry.target_event_id != target_event_id:
+                continue
+            data = entry.model_dump(mode="json")
+            data["review_capability"] = self._review_capability(
+                pending=bool(data.get("pending")),
+                boundary=boundary,
+                identity=(
+                    ReviewerIdentity.model_validate(data["latest_reviewer_identity"])
+                    if data.get("latest_reviewer_identity") is not None
+                    else None
+                ),
+            )
+            return data
         return None
 
     @staticmethod
@@ -1166,7 +1217,12 @@ class ChronicleUIDataService:
         return REVIEW_WARNING_TEXT.get(code, code.replace("_", " "))
 
     @staticmethod
-    def _review_action_preview(target_event_id: str, capability: dict[str, Any]) -> dict[str, Any]:
+    def _review_action_preview(
+        target_event_id: str,
+        capability: dict[str, Any],
+        *,
+        mutation_enabled: bool = False,
+    ) -> dict[str, Any]:
         can_review_now = bool(capability.get("can_review_now", False))
         actions = []
         for item in review_action_commands(target_event_id):
@@ -1177,18 +1233,28 @@ class ChronicleUIDataService:
                     "post_path": (
                         f"/api/review-actions/{quote(target_event_id, safe='')}/{quote(route_action, safe='')}"
                     ),
-                    "post_expected_status": HTTPStatus.FORBIDDEN.value,
-                    "post_expected_error_code": "mutation_disabled",
+                    "post_expected_status": (
+                        HTTPStatus.OK.value if mutation_enabled else HTTPStatus.FORBIDDEN.value
+                    ),
+                    "post_expected_error_code": (None if mutation_enabled else "mutation_disabled"),
                 }
             )
         return {
-            "status": "preview_only",
-            "ui_mutation_enabled": False,
+            "status": "enabled" if mutation_enabled else "preview_only",
+            "ui_mutation_enabled": mutation_enabled,
             "can_review_now": can_review_now,
             "message": (
-                "UI mutation is not enabled; use the equivalent CLI command."
-                if can_review_now
-                else "UI mutation is not enabled; boundary warnings still require CLI-led review."
+                (
+                    "UI mutation is enabled for this local session; review actions still require explicit reviewer context."
+                    if can_review_now
+                    else "UI mutation is enabled, but boundary warnings still block review until reviewer context aligns."
+                )
+                if mutation_enabled
+                else (
+                    "UI mutation is not enabled; use the equivalent CLI command."
+                    if can_review_now
+                    else "UI mutation is not enabled; boundary warnings still require CLI-led review."
+                )
             ),
             "actions": actions,
         }
@@ -1309,6 +1375,7 @@ class ChronicleUIDataService:
                     row["action_preview"] = self._review_action_preview(
                         parts[2],
                         row.get("review_capability", {}),
+                        mutation_enabled=bool(boundary.get("mutation_enabled", False)),
                     )
                     row["cli_parity"] = self._review_cli_parity_summary(
                         parts[2],
@@ -1320,8 +1387,8 @@ class ChronicleUIDataService:
                         row.get("review_capability"),
                         row.get("latest_identity_assurance"),
                     )
-                    row["ui_mutation_enabled"] = False
-                    row["review_preview_only"] = True
+                    row["ui_mutation_enabled"] = bool(boundary.get("mutation_enabled", False))
+                    row["review_preview_only"] = not bool(boundary.get("mutation_enabled", False))
                     return {"record": row}
             return None
 
@@ -1351,6 +1418,7 @@ class ChronicleUIDataService:
                     job["action_preview"] = self._review_action_preview(
                         event_id,
                         job["review_capability"],
+                        mutation_enabled=bool(boundary.get("mutation_enabled", False)),
                     )
                     job["cli_parity"] = self._review_cli_parity_summary(
                         event_id,
@@ -1366,6 +1434,8 @@ class ChronicleUIDataService:
                         self._history_row(item, boundary)
                         for item in self.review.history(event_id=event_id)
                     ]
+                    job["ui_mutation_enabled"] = bool(boundary.get("mutation_enabled", False))
+                    job["review_preview_only"] = not bool(boundary.get("mutation_enabled", False))
             job["related_links"] = self.summary_job_related_links(parts[2], job)
             return {"record": job}
 
@@ -1446,6 +1516,158 @@ class ChronicleUIDataService:
                 "message": "GUI mutation remains disabled; use the CLI review command path.",
                 "mutation_enabled": False,
                 "cli_equivalent": f"chronicle review {action} --event {event_id}",
+            },
+        )
+
+    def review_action_response(
+        self,
+        path: str,
+        payload: dict[str, Any],
+    ) -> tuple[HTTPStatus, dict[str, Any]] | None:
+        parts = [unquote(part) for part in path.strip("/").split("/")]
+        if len(parts) != 4 or parts[0] != "api" or parts[1] != "review-actions":
+            return None
+        event_id, action = parts[2], parts[3]
+        action_map = {
+            "approve": self.review.approve,
+            "reject": self.review.reject,
+            "request-changes": self.review.request_changes,
+        }
+        review_action = action_map.get(action)
+        if review_action is None:
+            return None
+
+        boundary = self.ui_boundary()["ui_boundary"]
+        if not boundary.get("mutation_enabled", False):
+            return self.review_action_blocked_response(path)
+
+        reviewer_label = str(payload.get("reviewer_label", "")).strip()
+        reviewer_kind_value = str(payload.get("reviewer_kind", ReviewerIdentityKind.USER_DECLARED.value))
+        session_label = payload.get("session_label")
+        session_label_value = str(session_label).strip() if isinstance(session_label, str) else None
+        note = payload.get("note")
+        note_value = str(note).strip() if isinstance(note, str) and str(note).strip() else None
+        ui_intent = str(payload.get("ui_intent", "")).strip()
+
+        if not reviewer_label:
+            return (
+                HTTPStatus.BAD_REQUEST,
+                {
+                    "ok": False,
+                    "status": "blocked",
+                    "event_id": event_id,
+                    "action": action,
+                    "error_code": "reviewer_label_required",
+                    "message": "Reviewer label is required for GUI mutation.",
+                    "mutation_enabled": True,
+                },
+            )
+        if ui_intent != action:
+            return (
+                HTTPStatus.BAD_REQUEST,
+                {
+                    "ok": False,
+                    "status": "blocked",
+                    "event_id": event_id,
+                    "action": action,
+                    "error_code": "ui_intent_mismatch",
+                    "message": "UI intent must match the requested review action route.",
+                    "mutation_enabled": True,
+                },
+            )
+        try:
+            reviewer_kind = ReviewerIdentityKind(reviewer_kind_value)
+        except ValueError:
+            return (
+                HTTPStatus.BAD_REQUEST,
+                {
+                    "ok": False,
+                    "status": "blocked",
+                    "event_id": event_id,
+                    "action": action,
+                    "error_code": "invalid_reviewer_kind",
+                    "message": "Reviewer kind must be a supported local reviewer identity kind.",
+                    "mutation_enabled": True,
+                },
+            )
+
+        reviewer_identity = ReviewerIdentity(
+            label=reviewer_label,
+            kind=reviewer_kind,
+            auth_mode="loopback_local",
+            session_label=session_label_value,
+        )
+        capability = self._review_capability(
+            pending=True,
+            boundary=boundary,
+            identity=reviewer_identity,
+        )
+        assurance = self._identity_assurance(reviewer_identity, boundary)
+        if capability.get("can_review_now") is not True or assurance.get("status") != "boundary_aligned":
+            return (
+                HTTPStatus.FORBIDDEN,
+                {
+                    "ok": False,
+                    "status": "blocked",
+                    "event_id": event_id,
+                    "action": action,
+                    "error_code": "authorization_failed",
+                    "message": "Reviewer identity or session boundary is not aligned for GUI mutation.",
+                    "mutation_enabled": True,
+                    "warning_codes": capability.get("warnings", []),
+                    "identity_assurance_status": assurance.get("status"),
+                    "cli_equivalent": f"chronicle review {action} --event {event_id}",
+                },
+            )
+
+        review_row = self._review_queue_row_including_resolved(event_id)
+        if review_row is None:
+            return (
+                HTTPStatus.NOT_FOUND,
+                {
+                    "ok": False,
+                    "status": "blocked",
+                    "event_id": event_id,
+                    "action": action,
+                    "error_code": "review_target_not_found",
+                    "message": "Review target event was not found.",
+                    "mutation_enabled": True,
+                },
+            )
+        if review_row.get("pending") is not True:
+            return (
+                HTTPStatus.CONFLICT,
+                {
+                    "ok": False,
+                    "status": "blocked",
+                    "event_id": event_id,
+                    "action": action,
+                    "error_code": "review_not_pending",
+                    "message": "Review target is no longer pending.",
+                    "mutation_enabled": True,
+                    "cli_equivalent": f"chronicle review {action} --event {event_id}",
+                },
+            )
+
+        result = review_action(
+            event_id=event_id,
+            reviewer=reviewer_label,
+            reviewer_kind=reviewer_kind,
+            session_label=session_label_value,
+            note=note_value,
+        )
+        return (
+            HTTPStatus.OK,
+            {
+                "ok": True,
+                "status": "applied",
+                "event_id": event_id,
+                "action": action,
+                "audit_id": result.audit_id,
+                "decision_event_id": result.review_event_id,
+                "cli_equivalent": f"chronicle review {action} --event {event_id}",
+                "mutation_enabled": True,
+                "reviewer_identity": result.reviewer_identity.model_dump(mode="json"),
             },
         )
 
@@ -2492,25 +2714,49 @@ async function loadDetail(endpoint) {{
     const previewButtons = [];
     const capability = record.review_capability || {{}};
     const parity = record.cli_parity || {{}};
+    const mutationTargetEventId = record.target_event_id || record.review_target_event_id || record.event_id || '';
     if (capability.status) {{
       previewButtons.push(moreSliceButton(capability.status, '/api/review-queue', 'reviewQueue'));
     }}
     if (parity.status) {{
       previewButtons.push(moreSliceButton(parity.status, '/api/review-queue', 'reviewQueue'));
     }}
+    const activeActionButtons = actions.map(item =>
+      '<button data-submit-review-action="' + esc(item.post_path || '') + '" data-review-action="' + esc(item.action || '') + '" data-review-record="' + esc(mutationTargetEventId) + '">'
+      + esc(item.label || item.action || 'Apply')
+      + '</button>'
+    ).join(' ');
     extra += '<div class="notice">' + noticeTitle('Action Preview')
       + '<p>' + esc(preview.message || '') + '</p>'
       + detailLine('Status', preview.status || '')
       + (previewButtons.length > 0 ? '<p>' + previewButtons.join('') + '</p>' : '')
-      + '<p><button disabled>Approve</button> <button disabled>Reject</button> <button disabled>Request Changes</button></p>'
+      + (
+        preview.ui_mutation_enabled
+          ? '<p><label>Reviewer <input id="reviewer-label" value="local-ui" placeholder="alice"></label> '
+            + '<label>Kind <select id="reviewer-kind"><option value="local_operator">local_operator</option><option value="user_declared">user_declared</option></select></label> '
+            + '<label>Session <input id="reviewer-session-label" value="local-ui-session" placeholder="desk-session-1"></label></p>'
+            + '<p><label>Note <input id="reviewer-note" placeholder="optional review note"></label></p>'
+            + '<p>' + activeActionButtons + '</p>'
+          : '<p><button disabled>Approve</button> <button disabled>Reject</button> <button disabled>Request Changes</button></p>'
+      )
       + '<ul>' + actions.map(item =>
           '<li><strong>' + esc(item.label || '') + ':</strong> <span class="id">' + esc(item.command || '') + '</span>'
           + (item.post_path
-            ? '<br><span class="id">' + esc(item.post_path || '') + '</span> <button data-preview-post="' + esc(item.post_path || '') + '">Preview blocked route</button>'
+            ? (
+                preview.ui_mutation_enabled
+                  ? '<br><span class="id">' + esc(item.post_path || '') + '</span> <span class="id">POST enabled</span>'
+                  : '<br><span class="id">' + esc(item.post_path || '') + '</span> <button data-preview-post="' + esc(item.post_path || '') + '">Preview blocked route</button>'
+              )
             : '')
           + '</li>'
         ).join('') + '</ul>'
-      + '<div id="action-preview-response"><p>Blocked route preview stays read-only and returns the CLI fallback contract.</p></div>'
+      + '<div id="action-preview-response"><p>'
+      + (
+        preview.ui_mutation_enabled
+          ? 'Local mutation is enabled for this detail view. Every action still requires explicit reviewer context and writes audit-backed review history.'
+          : 'Blocked route preview stays read-only and returns the CLI fallback contract.'
+      )
+      + '</p></div>'
       + '</div>';
   }}
   if (record.cli_parity) {{
@@ -2582,6 +2828,47 @@ async function previewBlockedRoute(path, targetId = 'action-preview-response') {
     + detailLine('Mutation enabled', payload.mutation_enabled)
     + detailLine('CLI equivalent', payload.cli_equivalent || '');
 }}
+async function submitReviewAction(path, action, recordId, targetId = 'action-preview-response') {{
+  const target = document.getElementById(targetId);
+  if (!target) return;
+  const reviewerLabel = (document.getElementById('reviewer-label') || {{ value: '' }}).value || '';
+  const reviewerKind = (document.getElementById('reviewer-kind') || {{ value: 'local_operator' }}).value || 'local_operator';
+  const sessionLabel = (document.getElementById('reviewer-session-label') || {{ value: '' }}).value || '';
+  const note = (document.getElementById('reviewer-note') || {{ value: '' }}).value || '';
+  target.innerHTML = '<p>Applying review action…</p>';
+  const response = await fetch(path, {{
+    method: 'POST',
+    headers: {{ 'Content-Type': 'application/json' }},
+    body: JSON.stringify({{
+      reviewer_label: reviewerLabel,
+      reviewer_kind: reviewerKind,
+      session_label: sessionLabel,
+      note: note,
+      ui_intent: action || ''
+    }})
+  }});
+  let payload = {{}};
+  try {{
+    payload = await response.json();
+  }} catch (_error) {{
+    payload = {{}};
+  }}
+  target.innerHTML = ''
+    + '<p><strong>Review Action Result</strong></p>'
+    + '<p>Status: ' + esc(response.status) + '</p>'
+    + '<p>Route: <span class="id">' + esc(path) + '</span></p>'
+    + '<p>' + esc(payload.message || payload.status || 'No message returned.') + '</p>'
+    + detailLine('Action', payload.action || action || '')
+    + detailLine('Event', payload.event_id || recordId || '')
+    + detailLine('Error code', payload.error_code || '')
+    + detailLine('Audit ID', payload.audit_id || '')
+    + detailLine('Decision event', payload.decision_event_id || '')
+    + detailLine('CLI equivalent', payload.cli_equivalent || '');
+  if (response.ok) {{
+    if (window.__chronicleCurrentEndpoint) loadEndpoint(window.__chronicleCurrentEndpoint);
+    if (recordId) loadDetail('/api/review-queue/' + encodeURIComponent(recordId));
+  }}
+}}
 document.querySelectorAll('button[data-endpoint]').forEach(button => button.addEventListener('click', () => loadEndpoint(button.dataset.endpoint)));
 document.getElementById('view').addEventListener('click', event => {{
   if (event.target.dataset.detail) loadDetail(event.target.dataset.detail);
@@ -2604,6 +2891,13 @@ document.getElementById('view').addEventListener('click', event => {{
 }});
 document.getElementById('detail').addEventListener('click', event => {{
   if (event.target.dataset.previewPost) previewBlockedRoute(event.target.dataset.previewPost);
+  if (event.target.dataset.submitReviewAction) {{
+    submitReviewAction(
+      event.target.dataset.submitReviewAction,
+      event.target.dataset.reviewAction || '',
+      event.target.dataset.reviewRecord || '',
+    );
+  }}
   if (event.target.dataset.detailNav) loadDetail(event.target.dataset.detailNav);
   if (event.target.dataset.detailTrail) {{
     const target = event.target.dataset.detailTrail;
@@ -2668,6 +2962,7 @@ def create_handler(
     *,
     host: str = DEFAULT_UI_HOST,
     mutation_capability_flag: bool = False,
+    enable_ui_mutation: bool = False,
     auth_mode: str = UIAuthMode.NOT_ENABLED,
     authorization_mode: str = UIAuthorizationMode.NOT_ENABLED,
 ) -> type[BaseHTTPRequestHandler]:
@@ -2675,6 +2970,7 @@ def create_handler(
         root,
         host=host,
         mutation_capability_flag=mutation_capability_flag,
+        enable_ui_mutation=enable_ui_mutation,
         auth_mode=auth_mode,
         authorization_mode=authorization_mode,
     )
@@ -2698,9 +2994,37 @@ def create_handler(
 
         def do_POST(self) -> None:  # noqa: N802 - stdlib API
             parsed = urlparse(self.path)
-            blocked = service.review_action_blocked_response(parsed.path)
-            if blocked is not None:
-                status, payload = blocked
+            content_length = int(self.headers.get("Content-Length", "0") or 0)
+            raw_body = self.rfile.read(content_length) if content_length > 0 else b"{}"
+            try:
+                body = json.loads(raw_body.decode("utf-8"))
+            except json.JSONDecodeError:
+                self._send_json(
+                    {
+                        "ok": False,
+                        "status": "blocked",
+                        "error_code": "invalid_json",
+                        "message": "Request body must be valid JSON.",
+                        "mutation_enabled": service.ui_boundary()["ui_boundary"]["mutation_enabled"],
+                    },
+                    status=HTTPStatus.BAD_REQUEST,
+                )
+                return
+            if not isinstance(body, dict):
+                self._send_json(
+                    {
+                        "ok": False,
+                        "status": "blocked",
+                        "error_code": "invalid_request_body",
+                        "message": "Request body must be a JSON object.",
+                        "mutation_enabled": service.ui_boundary()["ui_boundary"]["mutation_enabled"],
+                    },
+                    status=HTTPStatus.BAD_REQUEST,
+                )
+                return
+            result = service.review_action_response(parsed.path, body)
+            if result is not None:
+                status, payload = result
                 self._send_json(payload, status=status)
                 return
             self.send_error(HTTPStatus.NOT_FOUND, "Not found")
@@ -2733,6 +3057,7 @@ def make_server(
     port: int = DEFAULT_UI_PORT,
     root: Path | None = None,
     mutation_capability_flag: bool = False,
+    enable_ui_mutation: bool = False,
     auth_mode: str = UIAuthMode.NOT_ENABLED,
     authorization_mode: str = UIAuthorizationMode.NOT_ENABLED,
 ) -> ThreadingHTTPServer:
@@ -2742,6 +3067,7 @@ def make_server(
             root,
             host=host,
             mutation_capability_flag=mutation_capability_flag,
+            enable_ui_mutation=enable_ui_mutation,
             auth_mode=auth_mode,
             authorization_mode=authorization_mode,
         ),
@@ -2755,6 +3081,7 @@ def serve_ui(
     root: Path | None = None,
     open_browser: bool = False,
     mutation_capability_flag: bool = False,
+    enable_ui_mutation: bool = False,
     auth_mode: str = UIAuthMode.NOT_ENABLED,
     authorization_mode: str = UIAuthorizationMode.NOT_ENABLED,
 ) -> UIStartupMetadata:
@@ -2766,6 +3093,7 @@ def serve_ui(
         port=port,
         root=root_path,
         mutation_capability_flag=mutation_capability_flag,
+        enable_ui_mutation=enable_ui_mutation,
         auth_mode=auth_mode,
         authorization_mode=authorization_mode,
     )
@@ -2774,6 +3102,7 @@ def serve_ui(
         port=port,
         root=root_path,
         mutation_capability_flag=mutation_capability_flag,
+        enable_ui_mutation=enable_ui_mutation,
         auth_mode=auth_mode,
         authorization_mode=authorization_mode,
     )

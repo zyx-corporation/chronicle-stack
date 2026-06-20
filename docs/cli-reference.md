@@ -313,15 +313,16 @@ Related: `docs/adr/0018-local-ui-read-only-navigation-boundary.md`
 chronicle ui
 chronicle ui --host 127.0.0.1 --port 8765
 chronicle ui --mutation-capability-flag
+chronicle ui --mutation-capability-flag --enable-ui-mutation --auth-mode loopback_local --authorization-mode reviewer_declared
 chronicle ui --auth-mode loopback_local --authorization-mode reviewer_declared
 chronicle ui --json
 chronicle ui-smoke
 chronicle ui-smoke --json
 ```
 
-`chronicle ui` は明示起動型 foreground local web UI です。read-only であり、daemon、autostart、hosted service ではありません。
+`chronicle ui` は明示起動型 foreground local web UI です。既定では read-only であり、daemon、autostart、hosted service ではありません。
 
-現段階では auth/authz 未実装のため、bind host は loopback (`127.0.0.1`, `localhost`, `::1`) のみ許可されます。`--auth-mode` と `--authorization-mode` は placeholder boundary config であり、UI review detail の assurance 表示に反映されます。`--mutation-capability-flag` は将来の GUI mutation work への preview intent を metadata に記録するだけで、write route は有効化しません。
+現段階でも bind host は loopback (`127.0.0.1`, `localhost`, `::1`) のみ許可されます。`--auth-mode` と `--authorization-mode` は boundary config であり、UI review detail の assurance 表示に反映されます。`--mutation-capability-flag` は preview intent を metadata に記録します。実際の write route は `--enable-ui-mutation` を追加し、さらに `--auth-mode loopback_local --authorization-mode reviewer_declared` が揃った場合にのみ有効化されます。詳細は [ADR-0022](adr/0022-explicit-local-ui-mutation-enable-flag.md) を参照してください。
 
 read-only endpoint:
 
@@ -346,9 +347,10 @@ read-only endpoint:
 
 `chronicle ui-smoke` はサーバーを起動せず、ブラウザも使わず、local UI の read-only データ面だけを検証します。
 
-`/api/review-queue` は `review_status=needs_review` の record を preview-only で返します。ここでは write action は有効化されず、`suggested_cli_family` で関連 CLI family の目安だけを表示します。
+`/api/review-queue` は `review_status=needs_review` の record を返します。既定では preview-only ですが、explicit enable 条件が揃うと GUI review mutation route の server-side gate が有効になります。review detail ではそのときだけ明示 reviewer context form と action buttons が現れます。`suggested_cli_family` では引き続き関連 CLI family の目安も表示します。
 
-`/api/ui-boundary` は bind scope, mutation capability flag, auth/authz mode を read-only で返します。現在は mutation disabled が前提で、`mutation_capability_flag=true` でも write route は有効化されません。placeholder config により `auth_mode` / `authorization_mode` / `session_gating` を明示できます。あわせて `auth_boundary_summary` で auth/authz placeholder の derived status / blockers / next steps も返します。overview ではさらに `auth_boundary_overview` / `identity_boundary_summary` により auth warning / reviewer identity / session alignment の集約状態も読めます。
+`/api/ui-boundary` は bind scope, mutation capability flag, explicit mutation enable flag 由来の `mutation_enabled`, auth/authz mode を read-only で返します。`mutation_enabled=true` は `--enable-ui-mutation` と required gate 条件がすべて揃ったときだけ成立します。placeholder / derived config により `auth_mode` / `authorization_mode` / `session_gating` を明示できます。あわせて `auth_boundary_summary` で auth/authz placeholder の derived status / blockers / next steps も返します。overview ではさらに `auth_boundary_overview` / `identity_boundary_summary` により auth warning / reviewer identity / session alignment の集約状態も読めます。
+- write-capable route family は `POST /api/review-actions/<event_id>/<action>` です。`reviewer_label`, `reviewer_kind`, `session_label`, `ui_intent` を JSON body で受け、gate 条件が崩れていれば fail closed で戻ります。
 - overview triage では `Identity aligned` などの quick slice から reviewer identity / assurance 系の review queue slice に直接 drilldown できますが、これは引き続き read-only filter state のみです。
 - overview の runtime records / summary jobs panel でも matching-review-derived auth readiness の集約状態を read-only で確認できます。
 - overview の summary jobs panel では matching-review-derived identity/session assurance 集約も read-only で確認できます。

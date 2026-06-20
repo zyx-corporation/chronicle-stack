@@ -47,10 +47,16 @@ def _http_get(host: str, port: int, path: str) -> tuple[int, str]:
         connection.close()
 
 
-def _http_post(host: str, port: int, path: str) -> tuple[int, str]:
+def _http_post(host: str, port: int, path: str, body: dict | None = None) -> tuple[int, str]:
     connection = http.client.HTTPConnection(host, port, timeout=5)
     try:
-        connection.request("POST", path)
+        payload = json.dumps(body or {}).encode("utf-8")
+        connection.request(
+            "POST",
+            path,
+            body=payload,
+            headers={"Content-Type": "application/json", "Content-Length": str(len(payload))},
+        )
         response = connection.getresponse()
         return response.status, response.read().decode("utf-8")
     finally:
@@ -195,6 +201,23 @@ def test_startup_metadata_with_mutation_capability_flag(tmp_path):
     assert payload["mutation_enabled"] is False
     assert payload["ui_boundary"]["mutation_capability_flag"] is True
     assert "preview intent only" in payload["ui_boundary"]["mutation_readiness_message"]
+
+
+def test_startup_metadata_with_enabled_ui_mutation(tmp_path):
+    metadata = build_startup_metadata(
+        host="127.0.0.1",
+        port=8765,
+        root=tmp_path,
+        mutation_capability_flag=True,
+        enable_ui_mutation=True,
+        auth_mode=UIAuthMode.LOOPBACK_LOCAL,
+        authorization_mode=UIAuthorizationMode.REVIEWER_DECLARED,
+    )
+    payload = json.loads(metadata.to_json())
+    assert payload["mutation_enabled"] is True
+    assert payload["ui_boundary"]["mutation_enabled"] is True
+    assert payload["ui_boundary"]["read_only"] is False
+    assert payload["ui_boundary"]["mutation_readiness_status"] == "enabled"
 
 
 def test_ui_overview_data(tmp_path):
@@ -488,6 +511,33 @@ def test_ui_detail_assurance_can_align_with_configured_boundary(tmp_path):
     assert "identity_assurance_status" in service.summary_jobs_list()["summary_jobs"][0]
 
 
+def test_ui_detail_exposes_enabled_mutation_preview_when_enabled(tmp_path):
+    ids = _populate(tmp_path)
+    ReviewService(tmp_path).request_changes(
+        event_id=ids["runtime_summary_event_id"],
+        reviewer="alice",
+        reviewer_kind=ReviewerIdentityKind.LOCAL_OPERATOR,
+        session_label="ui-test",
+        note="revise wording",
+    )
+    service = ChronicleUIDataService(
+        tmp_path,
+        mutation_capability_flag=True,
+        enable_ui_mutation=True,
+        auth_mode=UIAuthMode.LOOPBACK_LOCAL,
+        authorization_mode=UIAuthorizationMode.REVIEWER_DECLARED,
+    )
+
+    review_detail = service.detail_payload(f"/api/review-queue/{ids['runtime_summary_event_id']}")["record"]
+
+    assert review_detail["action_preview"]["status"] == "enabled"
+    assert review_detail["action_preview"]["ui_mutation_enabled"] is True
+    assert review_detail["action_preview"]["actions"][0]["post_expected_status"] == 200
+    assert review_detail["action_preview"]["actions"][0]["post_expected_error_code"] is None
+    assert review_detail["ui_mutation_enabled"] is True
+    assert review_detail["review_preview_only"] is False
+
+
 def test_ui_shell_contains_interactive_local_ui(tmp_path):
     ChronicleService(tmp_path).init("UI Shell")
 
@@ -654,6 +704,13 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "data-preview-post" in html
     assert "Blocked route preview stays read-only and returns the CLI fallback contract." in html
     assert "async function previewBlockedRoute(path, targetId = 'action-preview-response')" in html
+    assert "async function submitReviewAction(path, action, recordId, targetId = 'action-preview-response')" in html
+    assert "data-submit-review-action" in html
+    assert "Review Action Result" in html
+    assert "POST enabled" in html
+    assert "reviewer-label" in html
+    assert "reviewer-kind" in html
+    assert "reviewer-session-label" in html
     assert "Identity Assurance" in html
     assert "warning_details" in html
     assert "/api/events" in html
@@ -771,9 +828,58 @@ def test_http_root_and_read_only_endpoints(tmp_path):
         thread.join(timeout=5)
 
 
+def test_http_review_action_enabled_route_applies_decision(tmp_path):
+    ids = _populate(tmp_path)
+    try:
+        server = make_server(
+            host="127.0.0.1",
+            port=0,
+            root=tmp_path,
+            mutation_capability_flag=True,
+            enable_ui_mutation=True,
+            auth_mode=UIAuthMode.LOOPBACK_LOCAL,
+            authorization_mode=UIAuthorizationMode.REVIEWER_DECLARED,
+        )
+    except PermissionError as exc:
+        pytest.skip(f"local socket bind unavailable in this environment: {exc}")
+    host, port = server.server_address
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        status, body = _http_post(
+            host,
+            port,
+            f"/api/review-actions/{ids['runtime_summary_event_id']}/approve",
+            {
+                "reviewer_label": "alice",
+                "reviewer_kind": "local_operator",
+                "session_label": "ui-http-test",
+                "ui_intent": "approve",
+                "note": "approved from ui",
+            },
+        )
+        assert status == 200
+        payload = json.loads(body)
+        assert payload["ok"] is True
+        assert payload["status"] == "applied"
+        assert payload["mutation_enabled"] is True
+        assert payload["action"] == "approve"
+        assert payload["audit_id"].startswith("aud_")
+        assert payload["decision_event_id"].startswith("evt_")
+
+        history = ReviewService(tmp_path).history(event_id=ids["runtime_summary_event_id"])
+        assert history[0].disposition.value == "approve"
+        assert history[0].reviewer_identity.kind.value == "local_operator"
+        assert history[0].reviewer_identity.session_label == "ui-http-test"
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=5)
+
+
 def test_chronicle_ui_help():
     runner = CliRunner()
     result = runner.invoke(app, ["ui", "--help"])
     assert result.exit_code == 0
-    for option in ("host", "port", "open", "root", "json"):
+    for option in ("host", "port", "open", "root", "json", "enable-ui-mutation"):
         assert option in result.stdout.lower()

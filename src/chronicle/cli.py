@@ -87,6 +87,13 @@ def ui_cmd(
             help="Record preview intent for future GUI mutation work without enabling any write route.",
         ),
     ] = False,
+    enable_ui_mutation: Annotated[
+        bool,
+        typer.Option(
+            "--enable-ui-mutation",
+            help="Enable loopback-local GUI review mutation when auth/authorization gates are configured.",
+        ),
+    ] = False,
     auth_mode: Annotated[
         str,
         typer.Option("--auth-mode", help="UI boundary auth-mode placeholder metadata."),
@@ -106,6 +113,7 @@ def ui_cmd(
             port=port,
             root=root,
             mutation_capability_flag=mutation_capability_flag,
+            enable_ui_mutation=enable_ui_mutation,
             auth_mode=auth_mode,
             authorization_mode=authorization_mode,
         )
@@ -116,8 +124,13 @@ def ui_cmd(
             typer.echo(f"Root: {metadata.root}")
             typer.echo(f"Serving: {metadata.url}")
             typer.echo(f"Bind scope: {metadata.bind_scope}")
-            typer.echo("Mode: read-only, mutation disabled")
+            typer.echo(
+                "Mode: mutation enabled for loopback-local review"
+                if metadata.mutation_enabled
+                else "Mode: read-only, mutation disabled"
+            )
             typer.echo(f"Mutation capability flag: {metadata.mutation_capability_flag} (preview intent only)")
+            typer.echo(f"Enable UI mutation: {enable_ui_mutation}")
             typer.echo(
                 f"Auth: {metadata.auth_mode}; Authorization: {metadata.authorization_mode}"
             )
@@ -129,6 +142,7 @@ def ui_cmd(
             root=root,
             open_browser=open_browser,
             mutation_capability_flag=mutation_capability_flag,
+            enable_ui_mutation=enable_ui_mutation,
             auth_mode=auth_mode,
             authorization_mode=authorization_mode,
         )
