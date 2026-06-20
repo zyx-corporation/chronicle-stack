@@ -445,6 +445,7 @@ chronicle review approve --event evt_xxx --reviewer alice --json
 - review queue list は `CLI drift first` sort で parity drift 行を先頭に寄せられる
 - review queue list の warning codes は badge と説明文の両方で派生表示される
 - overview triage からも `ui_auth_not_enabled` など主要 warning slice へ直接 drilldown できる
+- overview triage の warning 集計は priority 順でも整形され、主要 blocker が上に出る
 - review queue detail は reviewer / audit timeline を read-only で表示する
 - review queue detail は current UI boundary と reviewer identity を照合した assurance も表示する
 - review queue は current boundary での capability/warning surface も表示する

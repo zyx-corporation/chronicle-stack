@@ -42,6 +42,13 @@ REVIEW_WARNING_TEXT: dict[str, str] = {
     "reviewer_identity_declared_only": "Reviewer identity is self-declared and has not been strengthened by a local auth boundary.",
     "reviewer_session_label_missing": "Session-gated review expects a local session label, but none was recorded.",
 }
+REVIEW_WARNING_PRIORITY: dict[str, int] = {
+    "ui_auth_not_enabled": 0,
+    "ui_authorization_not_enabled": 1,
+    "reviewer_session_label_missing": 2,
+    "reviewer_identity_declared_only": 3,
+    "no_reviewer_identity_recorded": 4,
+}
 
 
 class UIAuthMode:
@@ -301,6 +308,7 @@ class ChronicleUIDataService:
             "package_readiness_counts": readiness_counts,
             "cli_parity_counts": cli_parity_counts,
             "warning_counts": warning_counts,
+            "warning_summaries": self._warning_summaries(warning_counts),
             "ready_now_reviews": ready_now,
             "advisory_only_reviews": advisory_only,
             "package_ready_reviews": package_ready,
@@ -308,6 +316,20 @@ class ChronicleUIDataService:
             "cli_parity_drift_reviews": parity_drift,
             "needs_attention_reviews": len(review_queue),
         }
+
+    def _warning_summaries(self, warning_counts: dict[str, int]) -> list[dict[str, Any]]:
+        rows: list[dict[str, Any]] = []
+        for code, count in warning_counts.items():
+            rows.append(
+                {
+                    "code": code,
+                    "count": count,
+                    "priority": REVIEW_WARNING_PRIORITY.get(code, 99),
+                    "label": code.replace("_", " "),
+                    "message": self._warning_message(code),
+                }
+            )
+        return sorted(rows, key=lambda item: (item["priority"], -item["count"], item["code"]))
 
     def events(self, *, limit: int = 100) -> dict[str, Any]:
         self.chronicle.require_initialized()
@@ -1197,6 +1219,7 @@ function renderOverview(payload) {{
   const aiIndex = payload.ai_index || {{}};
   const triage = payload.triage || {{}};
   const mutationReadiness = payload.mutation_readiness || {{}};
+  const warningSummaries = Array.isArray(triage.warning_summaries) ? triage.warning_summaries : [];
   const countRows = Object.entries(counts).map(([key, value]) =>
     '<tr><th>' + esc(key) + '</th><td>' + esc(value ?? '') + '</td></tr>'
   ).join('');
@@ -1275,6 +1298,13 @@ function renderOverview(payload) {{
     + '<p>Package readiness counts: ' + esc(JSON.stringify(triage.package_readiness_counts || {{}})) + '</p>'
     + '<p>CLI parity counts: ' + esc(JSON.stringify(triage.cli_parity_counts || {{}})) + '</p>'
     + '<p>Warning counts: ' + esc(JSON.stringify(triage.warning_counts || {{}})) + '</p>'
+    + '<p>Warning priority: '
+    + (warningSummaries.length > 0
+      ? warningSummaries.map(item =>
+          badge((item.label || item.code || 'warning') + ': ' + (item.count ?? 0), 'badge-warning')
+        ).join('')
+      : '(none)')
+    + '</p>'
     + '<p><button data-jump="/api/review-queue">Open Review Queue</button>'
     + '<button data-jump="/api/runtime-records">Open Runtime Records</button>'
     + '<button data-jump="/api/package-review">Open Package Review</button>'

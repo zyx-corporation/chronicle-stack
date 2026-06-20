@@ -238,6 +238,8 @@ def test_ui_data_service_read_endpoints(tmp_path):
     assert overview["triage"]["cli_parity_counts"]["aligned"] == 2
     assert overview["triage"]["warning_counts"]["ui_auth_not_enabled"] == 2
     assert overview["triage"]["warning_counts"]["ui_authorization_not_enabled"] == 2
+    assert overview["triage"]["warning_summaries"][0]["code"] == "ui_auth_not_enabled"
+    assert overview["triage"]["warning_summaries"][1]["code"] == "ui_authorization_not_enabled"
     assert "ui_auth_not_enabled" in service.review_queue()["review_queue"][0]["review_capability"]["warnings"]
     assert service.review_queue()["review_queue"][0]["review_capability"]["warning_details"][0]["message"]
     assert "latest_identity_assurance" not in service.review_queue()["review_queue"][0]
@@ -400,6 +402,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "CLI drift first" in html
     assert "CLI parity counts:" in html
     assert "Warning counts:" in html
+    assert "Warning priority:" in html
     assert "Auth not enabled:" in html
     assert "Authz not enabled:" in html
     assert "Runtime kinds:" in html
