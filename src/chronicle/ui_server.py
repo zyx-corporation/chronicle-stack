@@ -1220,6 +1220,14 @@ function renderOverview(payload) {{
   const triage = payload.triage || {{}};
   const mutationReadiness = payload.mutation_readiness || {{}};
   const warningSummaries = Array.isArray(triage.warning_summaries) ? triage.warning_summaries : [];
+  const warningButtons = warningSummaries.map(item =>
+    overviewJumpButton(
+      badge((item.label || item.code || 'warning') + ': ' + (item.count ?? 0), 'badge-warning'),
+      '/api/review-queue',
+      'reviewQueue',
+      item.code || ''
+    )
+  ).join('');
   const countRows = Object.entries(counts).map(([key, value]) =>
     '<tr><th>' + esc(key) + '</th><td>' + esc(value ?? '') + '</td></tr>'
   ).join('');
@@ -1289,10 +1297,7 @@ function renderOverview(payload) {{
     + overviewJumpButton(badge('CLI aligned: ' + esc(triage.cli_parity_aligned_reviews ?? 0), 'badge-ready'), '/api/review-queue', 'reviewQueue', 'aligned')
     + overviewJumpButton(badge('CLI drift: ' + esc(triage.cli_parity_drift_reviews ?? 0), 'badge-warning'), '/api/review-queue', 'reviewQueue', 'drift_detected')
     + '</p>'
-    + '<p>'
-    + overviewJumpButton(badge('Auth not enabled: ' + esc((triage.warning_counts && triage.warning_counts.ui_auth_not_enabled) ?? 0), 'badge-warning'), '/api/review-queue', 'reviewQueue', 'ui_auth_not_enabled')
-    + overviewJumpButton(badge('Authz not enabled: ' + esc((triage.warning_counts && triage.warning_counts.ui_authorization_not_enabled) ?? 0), 'badge-warning'), '/api/review-queue', 'reviewQueue', 'ui_authorization_not_enabled')
-    + '</p>'
+    + '<p>' + (warningButtons || '') + '</p>'
     + '<p>Runtime kinds: ' + esc(JSON.stringify(triage.runtime_record_kinds || {{}})) + '</p>'
     + '<p>Review capability counts: ' + esc(JSON.stringify(triage.review_capability_counts || {{}})) + '</p>'
     + '<p>Package readiness counts: ' + esc(JSON.stringify(triage.package_readiness_counts || {{}})) + '</p>'
@@ -1313,6 +1318,7 @@ function renderOverview(payload) {{
     + '<button data-jump="/api/review-queue" data-filter-target="reviewQueue" data-filter-value="package:package_context_available">Package Ready Reviews</button>'
     + '<button data-jump="/api/review-queue" data-filter-target="reviewQueue" data-filter-value="aligned">CLI Aligned Reviews</button>'
     + '<button data-jump="/api/review-queue" data-filter-target="reviewQueue" data-filter-value="ui_auth_not_enabled">Auth Boundary Warnings</button>'
+    + '<button data-jump="/api/review-queue" data-filter-target="reviewQueue" data-filter-value="reviewer_identity_declared_only">Declared Identity Warnings</button>'
     + '<button data-jump="/api/runtime-records" data-filter-target="runtimeRecords" data-filter-value="retrieval_plan">Retrieval Plans</button></p>'
     + '</div>';
 }}

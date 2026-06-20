@@ -403,8 +403,6 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "CLI parity counts:" in html
     assert "Warning counts:" in html
     assert "Warning priority:" in html
-    assert "Auth not enabled:" in html
-    assert "Authz not enabled:" in html
     assert "Runtime kinds:" in html
     assert 'data-jump="/api/review-queue"' in html
     assert 'data-jump="/api/runtime-records"' in html
@@ -414,6 +412,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert 'data-filter-value="advisory"' in html
     assert 'data-filter-value="aligned"' in html
     assert 'data-filter-value="ui_auth_not_enabled"' in html
+    assert 'data-filter-value="reviewer_identity_declared_only"' in html
     assert 'data-filter-target="runtimeRecords"' in html
     assert 'data-filter-value="retrieval_plan"' in html
     assert "data-detail-nav" in html
@@ -427,6 +426,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "Open Package Review" in html
     assert "CLI Aligned Reviews" in html
     assert "Auth Boundary Warnings" in html
+    assert "Declared Identity Warnings" in html
     assert 'data-reset-filter="runtimeRecords"' in html
     assert 'data-reset-filter="reviewQueue"' in html
     assert "runtimeRecords" in html
