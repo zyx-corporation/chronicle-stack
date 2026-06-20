@@ -16,7 +16,7 @@ from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
-from urllib.parse import unquote, urlparse
+from urllib.parse import quote, unquote, urlparse
 
 from chronicle.errors import ChronicleError, UIHostNotLoopbackError
 from chronicle.exporters.html_exporter import HtmlDashboardExporter
@@ -1147,6 +1147,19 @@ class ChronicleUIDataService:
     @staticmethod
     def _review_action_preview(target_event_id: str, capability: dict[str, Any]) -> dict[str, Any]:
         can_review_now = bool(capability.get("can_review_now", False))
+        actions = []
+        for item in review_action_commands(target_event_id):
+            route_action = str(item.get("action", "")).replace("_", "-")
+            actions.append(
+                {
+                    **item,
+                    "post_path": (
+                        f"/api/review-actions/{quote(target_event_id, safe='')}/{quote(route_action, safe='')}"
+                    ),
+                    "post_expected_status": HTTPStatus.FORBIDDEN.value,
+                    "post_expected_error_code": "mutation_disabled",
+                }
+            )
         return {
             "status": "preview_only",
             "ui_mutation_enabled": False,
@@ -1156,7 +1169,7 @@ class ChronicleUIDataService:
                 if can_review_now
                 else "UI mutation is not enabled; boundary warnings still require CLI-led review."
             ),
-            "actions": review_action_commands(target_event_id),
+            "actions": actions,
         }
 
     @staticmethod
@@ -2429,7 +2442,14 @@ async function loadDetail(endpoint) {{
       + detailLine('Status', preview.status || '')
       + (previewButtons.length > 0 ? '<p>' + previewButtons.join('') + '</p>' : '')
       + '<p><button disabled>Approve</button> <button disabled>Reject</button> <button disabled>Request Changes</button></p>'
-      + '<ul>' + actions.map(item => '<li><strong>' + esc(item.label || '') + ':</strong> <span class="id">' + esc(item.command || '') + '</span></li>').join('') + '</ul>'
+      + '<ul>' + actions.map(item =>
+          '<li><strong>' + esc(item.label || '') + ':</strong> <span class="id">' + esc(item.command || '') + '</span>'
+          + (item.post_path
+            ? '<br><span class="id">' + esc(item.post_path || '') + '</span> <button data-preview-post="' + esc(item.post_path || '') + '">Preview blocked route</button>'
+            : '')
+          + '</li>'
+        ).join('') + '</ul>'
+      + '<div id="action-preview-response"><p>Blocked route preview stays read-only and returns the CLI fallback contract.</p></div>'
       + '</div>';
   }}
   if (record.cli_parity) {{
@@ -2481,6 +2501,26 @@ async function loadDetail(endpoint) {{
   document.getElementById('detail').innerHTML =
     '<h2>' + esc(endpoint) + '</h2>' + extra + '<pre>' + esc(JSON.stringify(payload, null, 2)) + '</pre>';
 }}
+async function previewBlockedRoute(path) {{
+  const target = document.getElementById('action-preview-response');
+  if (!target) return;
+  target.innerHTML = '<p>Loading blocked route preview…</p>';
+  const response = await fetch(path, {{ method: 'POST' }});
+  let payload = {{}};
+  try {{
+    payload = await response.json();
+  }} catch (_error) {{
+    payload = {{}};
+  }}
+  target.innerHTML = ''
+    + '<p><strong>Blocked Route Preview</strong></p>'
+    + '<p>Status: ' + esc(response.status) + '</p>'
+    + '<p>Route: <span class="id">' + esc(path) + '</span></p>'
+    + '<p>' + esc(payload.message || 'No message returned.') + '</p>'
+    + detailLine('Error code', payload.error_code || '')
+    + detailLine('Mutation enabled', payload.mutation_enabled)
+    + detailLine('CLI equivalent', payload.cli_equivalent || '');
+}}
 document.querySelectorAll('button[data-endpoint]').forEach(button => button.addEventListener('click', () => loadEndpoint(button.dataset.endpoint)));
 document.getElementById('view').addEventListener('click', event => {{
   if (event.target.dataset.detail) loadDetail(event.target.dataset.detail);
@@ -2502,6 +2542,7 @@ document.getElementById('view').addEventListener('click', event => {{
   }}
 }});
 document.getElementById('detail').addEventListener('click', event => {{
+  if (event.target.dataset.previewPost) previewBlockedRoute(event.target.dataset.previewPost);
   if (event.target.dataset.detailNav) loadDetail(event.target.dataset.detailNav);
   if (event.target.dataset.detailTrail) {{
     const target = event.target.dataset.detailTrail;

@@ -139,6 +139,8 @@ overview の auth / identity panel からも auth warning, authorization warning
 
 review detail / summary detail では、Phase H readiness をまとめた auth readiness notice から blocker と next step を read-only で確認できます。
 
+review detail の `Action Preview` では disabled approve / reject / request-changes buttons に加えて、fail-closed な `POST /api/review-actions/<event_id>/<action>` route preview を read-only で試せます。返るのは常に blocked response と CLI fallback contract だけで、mutation は有効化されません。
+
 review queue 一覧でも auth readiness badge を通じて advisory / boundary-aligned slice を read-only で辿れます。
 
 summary job 一覧でも matching review target 由来の auth readiness badge を read-only で確認できます。

@@ -454,6 +454,11 @@ def test_ui_detail_assurance_can_align_with_configured_boundary(tmp_path):
     assert review_detail["action_preview"]["status"] == "preview_only"
     assert review_detail["action_preview"]["ui_mutation_enabled"] is False
     assert "chronicle review approve --event" in review_detail["action_preview"]["actions"][0]["command"]
+    assert review_detail["action_preview"]["actions"][0]["post_path"] == (
+        f"/api/review-actions/{ids['runtime_summary_event_id']}/approve"
+    )
+    assert review_detail["action_preview"]["actions"][0]["post_expected_status"] == 403
+    assert review_detail["action_preview"]["actions"][0]["post_expected_error_code"] == "mutation_disabled"
     assert review_detail["cli_parity"]["status"] == "aligned"
     assert review_detail["cli_parity"]["expected_actions"] == [
         "approve",
@@ -626,6 +631,10 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "<button disabled>Approve</button>" in html
     assert "<button disabled>Reject</button>" in html
     assert "<button disabled>Request Changes</button>" in html
+    assert "Preview blocked route" in html
+    assert "data-preview-post" in html
+    assert "Blocked route preview stays read-only and returns the CLI fallback contract." in html
+    assert "async function previewBlockedRoute(path)" in html
     assert "Identity Assurance" in html
     assert "warning_details" in html
     assert "/api/events" in html
@@ -720,6 +729,18 @@ def test_http_root_and_read_only_endpoints(tmp_path):
         assert payload["mutation_enabled"] is False
         assert payload["cli_equivalent"] == (
             f"chronicle review approve --event {ids['runtime_summary_event_id']}"
+        )
+
+        status, body = _http_post(
+            host,
+            port,
+            f"/api/review-actions/{ids['runtime_summary_event_id']}/request-changes",
+        )
+        assert status == 403
+        payload = json.loads(body)
+        assert payload["action"] == "request-changes"
+        assert payload["cli_equivalent"] == (
+            f"chronicle review request-changes --event {ids['runtime_summary_event_id']}"
         )
 
         status, review_console = _http_get(host, port, "/review-console")

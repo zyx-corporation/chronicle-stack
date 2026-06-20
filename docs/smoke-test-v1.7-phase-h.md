@@ -94,6 +94,7 @@ surfaces remain descriptive only:
 - review queue list `auth` badges
 - summary jobs list `auth` badges
 - runtime / review / summary detail `Auth Readiness` notices
+- review detail `Action Preview` blocked-route preview buttons and CLI fallback response
 
 ## Warning classification
 
