@@ -1569,9 +1569,14 @@ async function loadDetail(endpoint) {{
     const readiness = record.package_readiness;
     const packageReview = readiness.package_review || {{}};
     const manifest = readiness.package_manifest_preview || {{}};
+    const readinessButtons = [];
+    if (readiness.status) {{
+      readinessButtons.push(overviewJumpButton('More ' + esc(readiness.status), '/api/review-queue', 'reviewQueue', 'package:' + readiness.status));
+    }}
     extra += '<div class="notice"><h3>Review Package Readiness</h3>'
       + '<p>Status: ' + esc(readiness.status || '') + '</p>'
       + '<p>' + esc(readiness.message || '') + '</p>'
+      + (readinessButtons.length > 0 ? '<p>' + readinessButtons.join('') + '</p>' : '')
       + '<p>Eligible contexts: ' + esc((readiness.eligible_context_ids || []).join(', ') || '(none)') + '</p>'
       + '<p>Suggested commands: ' + esc((readiness.suggested_commands || []).join(' | ') || '(none)') + '</p>'
       + '<p>Package review status: ' + esc(packageReview.status || '(not available)') + '</p>'
@@ -1611,9 +1616,14 @@ async function loadDetail(endpoint) {{
   }}
   if (record.cli_parity) {{
     const parity = record.cli_parity;
+    const parityButtons = [];
+    if (parity.status) {{
+      parityButtons.push(overviewJumpButton('More ' + esc(parity.status), '/api/review-queue', 'reviewQueue', parity.status));
+    }}
     extra += '<div class="notice"><h3>CLI Parity</h3>'
       + '<p>' + esc(parity.message || '') + '</p>'
       + '<p>Status: ' + esc(parity.status || '') + '</p>'
+      + (parityButtons.length > 0 ? '<p>' + parityButtons.join('') + '</p>' : '')
       + '<p>Expected actions: ' + esc((parity.expected_actions || []).join(', ') || '(none)') + '</p>'
       + '<p>Missing preview commands: ' + esc((parity.missing_preview_commands || []).join(' | ') || '(none)') + '</p>'
       + '<p>Missing queue commands: ' + esc((parity.missing_queue_commands || []).join(' | ') || '(none)') + '</p>'
@@ -1621,8 +1631,13 @@ async function loadDetail(endpoint) {{
   }}
   if (record.latest_identity_assurance) {{
     const assurance = record.latest_identity_assurance;
+    const assuranceButtons = [];
+    if (assurance.status) {{
+      assuranceButtons.push(overviewJumpButton('More ' + esc(assurance.status), '/api/review-queue', 'reviewQueue', assurance.status));
+    }}
     extra += '<div class="notice"><h3>Identity Assurance</h3>'
       + '<p>Status: ' + esc(assurance.status || '') + '</p>'
+      + (assuranceButtons.length > 0 ? '<p>' + assuranceButtons.join('') + '</p>' : '')
       + '<p>' + esc(assurance.message || '') + '</p></div>';
   }}
   if (Array.isArray(record.history) && record.history.length > 0) {{

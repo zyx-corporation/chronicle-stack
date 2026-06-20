@@ -430,6 +430,9 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "CLI Aligned Reviews" in html
     assert "Auth Boundary Warnings" in html
     assert "warnings.slice(0, 2).forEach" in html
+    assert "const parityButtons = [];" in html
+    assert "const assuranceButtons = [];" in html
+    assert "const readinessButtons = [];" in html
     assert "Declared Identity Warnings" in html
     assert 'data-reset-filter="runtimeRecords"' in html
     assert 'data-reset-filter="reviewQueue"' in html
