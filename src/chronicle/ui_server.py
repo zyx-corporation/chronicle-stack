@@ -1259,35 +1259,46 @@ function overviewJumpButton(label, endpoint, filterTarget, filterValue, variant)
   return '<button' + className + ' data-jump="' + esc(endpoint) + '"' + targetAttr + valueAttr + '>'
     + label + '</button>';
 }}
+function openListButton(label, endpoint) {{
+  return overviewJumpButton(esc(label), endpoint);
+}}
+function sliceActionButton(label, endpoint, filterTarget, filterValue, variant) {{
+  return overviewJumpButton(esc(label), endpoint, filterTarget, filterValue, variant);
+}}
+function moreSliceButton(filterValue, endpoint, filterTarget) {{
+  const value = String(filterValue || '');
+  if (!value) return '';
+  return sliceActionButton('More ' + value, endpoint, filterTarget, value);
+}}
 function relatedListButtons(detailEndpoint, record) {{
   const buttons = [];
   if (detailEndpoint.startsWith('/api/runtime-records/')) {{
-    buttons.push(overviewJumpButton('Open Runtime Records', '/api/runtime-records'));
+    buttons.push(openListButton('Open Runtime Records', '/api/runtime-records'));
     const runtimeKind = record.runtime_record_kind || (record.runtime_record_preview && record.runtime_record_preview.record_kind) || '';
     if (runtimeKind) {{
-      buttons.push(overviewJumpButton('More ' + esc(runtimeKind), '/api/runtime-records', 'runtimeRecords', runtimeKind));
+      buttons.push(moreSliceButton(runtimeKind, '/api/runtime-records', 'runtimeRecords'));
     }}
   }}
   if (detailEndpoint.startsWith('/api/review-queue/')) {{
-    buttons.push(overviewJumpButton('Open Review Queue', '/api/review-queue'));
+    buttons.push(openListButton('Open Review Queue', '/api/review-queue'));
     const capability = record.review_capability || {{}};
     const readiness = record.package_readiness || {{}};
     const warnings = Array.isArray(capability.warnings) ? capability.warnings : [];
     if (record.review_kind) {{
-      buttons.push(overviewJumpButton('More ' + esc(record.review_kind), '/api/review-queue', 'reviewQueue', record.review_kind));
+      buttons.push(moreSliceButton(record.review_kind, '/api/review-queue', 'reviewQueue'));
     }}
     if (capability.status) {{
-      buttons.push(overviewJumpButton('More ' + esc(capability.status), '/api/review-queue', 'reviewQueue', capability.status));
+      buttons.push(moreSliceButton(capability.status, '/api/review-queue', 'reviewQueue'));
     }}
     warnings.slice(0, 2).forEach(code => {{
-      buttons.push(overviewJumpButton('More ' + esc(code), '/api/review-queue', 'reviewQueue', code));
+      buttons.push(moreSliceButton(code, '/api/review-queue', 'reviewQueue'));
     }});
     if (readiness.status) {{
-      buttons.push(overviewJumpButton('More ' + esc(readiness.status), '/api/review-queue', 'reviewQueue', 'package:' + readiness.status));
+      buttons.push(sliceActionButton('More ' + readiness.status, '/api/review-queue', 'reviewQueue', 'package:' + readiness.status));
     }}
   }}
   if (record.package_handoff_preview || record.package_readiness) {{
-    buttons.push(overviewJumpButton('Open Package Review', '/api/package-review'));
+    buttons.push(openListButton('Open Package Review', '/api/package-review'));
   }}
   return buttons.join('');
 }}
@@ -1390,16 +1401,16 @@ function renderOverview(payload) {{
         ).join('')
       : '(none)')
     + '</p>'
-    + '<p><button data-jump="/api/review-queue">Open Review Queue</button>'
-    + '<button data-jump="/api/runtime-records">Open Runtime Records</button>'
-    + '<button data-jump="/api/package-review">Open Package Review</button>'
+    + '<p>' + openListButton('Open Review Queue', '/api/review-queue')
+    + openListButton('Open Runtime Records', '/api/runtime-records')
+    + openListButton('Open Package Review', '/api/package-review')
     + '<button data-reset-filters="all">Reset Filters</button></p>'
-    + '<p><button data-jump="/api/review-queue" data-filter-target="reviewQueue" data-filter-value="advisory">Advisory Reviews</button>'
-    + '<button data-jump="/api/review-queue" data-filter-target="reviewQueue" data-filter-value="package:package_context_available">Package Ready Reviews</button>'
-    + '<button data-jump="/api/review-queue" data-filter-target="reviewQueue" data-filter-value="aligned">CLI Aligned Reviews</button>'
-    + '<button data-jump="/api/review-queue" data-filter-target="reviewQueue" data-filter-value="ui_auth_not_enabled">Auth Boundary Warnings</button>'
-    + '<button data-jump="/api/review-queue" data-filter-target="reviewQueue" data-filter-value="reviewer_identity_declared_only">Declared Identity Warnings</button>'
-    + '<button data-jump="/api/runtime-records" data-filter-target="runtimeRecords" data-filter-value="retrieval_plan">Retrieval Plans</button></p>'
+    + '<p>' + sliceActionButton('Advisory Reviews', '/api/review-queue', 'reviewQueue', 'advisory')
+    + sliceActionButton('Package Ready Reviews', '/api/review-queue', 'reviewQueue', 'package:package_context_available')
+    + sliceActionButton('CLI Aligned Reviews', '/api/review-queue', 'reviewQueue', 'aligned')
+    + sliceActionButton('Auth Boundary Warnings', '/api/review-queue', 'reviewQueue', 'ui_auth_not_enabled')
+    + sliceActionButton('Declared Identity Warnings', '/api/review-queue', 'reviewQueue', 'reviewer_identity_declared_only')
+    + sliceActionButton('Retrieval Plans', '/api/runtime-records', 'runtimeRecords', 'retrieval_plan') + '</p>'
     + '</div>';
 }}
 function detailPath(endpoint, row) {{
@@ -1614,7 +1625,7 @@ async function loadDetail(endpoint) {{
     const manifest = readiness.package_manifest_preview || {{}};
     const readinessButtons = [];
     if (readiness.status) {{
-      readinessButtons.push(overviewJumpButton('More ' + esc(readiness.status), '/api/review-queue', 'reviewQueue', 'package:' + readiness.status));
+      readinessButtons.push(sliceActionButton('More ' + readiness.status, '/api/review-queue', 'reviewQueue', 'package:' + readiness.status));
     }}
     extra += '<div class="notice"><h3>Review Package Readiness</h3>'
       + '<p>Status: ' + esc(readiness.status || '') + '</p>'
@@ -1654,10 +1665,10 @@ async function loadDetail(endpoint) {{
     const capability = record.review_capability || {{}};
     const parity = record.cli_parity || {{}};
     if (capability.status) {{
-      previewButtons.push(overviewJumpButton('More ' + esc(capability.status), '/api/review-queue', 'reviewQueue', capability.status));
+      previewButtons.push(moreSliceButton(capability.status, '/api/review-queue', 'reviewQueue'));
     }}
     if (parity.status) {{
-      previewButtons.push(overviewJumpButton('More ' + esc(parity.status), '/api/review-queue', 'reviewQueue', parity.status));
+      previewButtons.push(moreSliceButton(parity.status, '/api/review-queue', 'reviewQueue'));
     }}
     extra += '<div class="notice"><h3>Action Preview</h3>'
       + '<p>' + esc(preview.message || '') + '</p>'
@@ -1671,7 +1682,7 @@ async function loadDetail(endpoint) {{
     const parity = record.cli_parity;
     const parityButtons = [];
     if (parity.status) {{
-      parityButtons.push(overviewJumpButton('More ' + esc(parity.status), '/api/review-queue', 'reviewQueue', parity.status));
+      parityButtons.push(moreSliceButton(parity.status, '/api/review-queue', 'reviewQueue'));
     }}
     extra += '<div class="notice"><h3>CLI Parity</h3>'
       + '<p>' + esc(parity.message || '') + '</p>'
@@ -1686,7 +1697,7 @@ async function loadDetail(endpoint) {{
     const assurance = record.latest_identity_assurance;
     const assuranceButtons = [];
     if (assurance.status) {{
-      assuranceButtons.push(overviewJumpButton('More ' + esc(assurance.status), '/api/review-queue', 'reviewQueue', assurance.status));
+      assuranceButtons.push(moreSliceButton(assurance.status, '/api/review-queue', 'reviewQueue'));
     }}
     extra += '<div class="notice"><h3>Identity Assurance</h3>'
       + '<p>Status: ' + esc(assurance.status || '') + '</p>'
@@ -1698,10 +1709,10 @@ async function loadDetail(endpoint) {{
       + record.history.map(item => {{
         const timelineButtons = [];
         if (item.disposition) {{
-          timelineButtons.push(overviewJumpButton('More ' + esc(item.disposition), '/api/review-queue', 'reviewQueue', item.disposition));
+          timelineButtons.push(moreSliceButton(item.disposition, '/api/review-queue', 'reviewQueue'));
         }}
         if (item.identity_assurance && item.identity_assurance.status) {{
-          timelineButtons.push(overviewJumpButton('More ' + esc(item.identity_assurance.status), '/api/review-queue', 'reviewQueue', item.identity_assurance.status));
+          timelineButtons.push(moreSliceButton(item.identity_assurance.status, '/api/review-queue', 'reviewQueue'));
         }}
         return '<li>'
           + esc(item.reviewed_at || '') + ' — '

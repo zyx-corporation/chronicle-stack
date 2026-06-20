@@ -394,6 +394,9 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "currentTrailButtons" in html
     assert "sliceBadge" in html
     assert "sliceChip" in html
+    assert "openListButton" in html
+    assert "sliceActionButton" in html
+    assert "moreSliceButton" in html
     assert "runtimeRecordsFilterChips" in html
     assert "reviewQueueFilterChips" in html
     assert "humanizeDetailPath" in html
@@ -412,17 +415,15 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "Warning counts:" in html
     assert "Warning priority:" in html
     assert "Runtime kinds:" in html
-    assert 'data-jump="/api/review-queue"' in html
-    assert 'data-jump="/api/runtime-records"' in html
-    assert 'data-jump="/api/package-review"' in html
+    assert "openListButton('Open Review Queue', '/api/review-queue')" in html
+    assert "openListButton('Open Runtime Records', '/api/runtime-records')" in html
+    assert "openListButton('Open Package Review', '/api/package-review')" in html
     assert 'data-reset-filters="all"' in html
-    assert 'data-filter-target="reviewQueue"' in html
-    assert 'data-filter-value="advisory"' in html
-    assert 'data-filter-value="aligned"' in html
-    assert 'data-filter-value="ui_auth_not_enabled"' in html
-    assert 'data-filter-value="reviewer_identity_declared_only"' in html
-    assert 'data-filter-target="runtimeRecords"' in html
-    assert 'data-filter-value="retrieval_plan"' in html
+    assert "sliceActionButton('Advisory Reviews', '/api/review-queue', 'reviewQueue', 'advisory')" in html
+    assert "sliceActionButton('CLI Aligned Reviews', '/api/review-queue', 'reviewQueue', 'aligned')" in html
+    assert "sliceActionButton('Auth Boundary Warnings', '/api/review-queue', 'reviewQueue', 'ui_auth_not_enabled')" in html
+    assert "sliceActionButton('Declared Identity Warnings', '/api/review-queue', 'reviewQueue', 'reviewer_identity_declared_only')" in html
+    assert "sliceActionButton('Retrieval Plans', '/api/runtime-records', 'runtimeRecords', 'retrieval_plan')" in html
     assert "data-detail-nav" in html
     assert "data-detail-trail" in html
     assert "data-back-view" in html
