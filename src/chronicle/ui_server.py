@@ -578,6 +578,20 @@ class ChronicleUIDataService:
             data["summary_source_count"] = len(job.source_refs)
             data["runtime_provider_kind"] = job.provenance.runtime.provider_kind.value
             data["suggested_cli_family"] = "chronicle summary show --id"
+            review_target_event_id = str(data.get("event_id", ""))
+            if review_target_event_id.startswith("evt_"):
+                review_row = self._review_queue_row(review_target_event_id)
+                if review_row is not None:
+                    data["review_target_event_id"] = review_target_event_id
+                    data["review_capability_status"] = str(
+                        review_row.get("review_capability", {}).get("status", "")
+                    )
+                    data["package_readiness_status"] = str(
+                        review_row.get("package_readiness_summary", {}).get("status", "")
+                    )
+                    data["cli_parity_status"] = str(
+                        review_row.get("cli_parity_summary", {}).get("status", "")
+                    )
             rows.append(data)
         return {"summary_jobs": rows}
 
@@ -790,6 +804,14 @@ class ChronicleUIDataService:
 
     def summary_job_related_links(self, summary_job_id: str, job: dict[str, Any]) -> list[dict[str, str]]:
         links: list[dict[str, str]] = []
+        event_id = str(job.get("event_id", ""))
+        if event_id.startswith("evt_"):
+            links.append(
+                _related_link(
+                    f"/api/review-queue/{event_id}",
+                    f"Open review target {event_id}",
+                )
+            )
         for ref in job.get("source_refs", []):
             record_type = str(ref.get("record_type", "event"))
             record_id = str(ref.get("record_id", ""))
@@ -823,6 +845,12 @@ class ChronicleUIDataService:
             authorization_mode=self.authorization_mode,
         )
         return {"ui_boundary": asdict(metadata)}
+
+    def _review_queue_row(self, target_event_id: str) -> dict[str, Any] | None:
+        for row in self.review_queue()["review_queue"]:
+            if row.get("target_event_id") == target_event_id:
+                return row
+        return None
 
     @staticmethod
     def _review_kind(payload: dict[str, Any]) -> str:
@@ -1103,6 +1131,32 @@ class ChronicleUIDataService:
             job["summary_source_count"] = len(job.get("source_refs", []))
             job["runtime_provider_kind"] = str(job.get("provenance", {}).get("runtime", {}).get("provider_kind", ""))
             job["suggested_cli_family"] = "chronicle summary show --id"
+            event_id = str(job.get("event_id", ""))
+            if event_id.startswith("evt_"):
+                review_row = self._review_queue_row(event_id)
+                if review_row is not None:
+                    job["review_target_event_id"] = event_id
+                    job["review_kind"] = review_row.get("review_kind")
+                    job["review_capability"] = review_row.get("review_capability")
+                    if review_row.get("latest_identity_assurance") is not None:
+                        job["latest_identity_assurance"] = review_row.get("latest_identity_assurance")
+                    if review_row.get("latest_reviewer_identity") is not None:
+                        job["latest_reviewer_identity"] = review_row.get("latest_reviewer_identity")
+                    job["package_readiness_summary"] = review_row.get("package_readiness_summary")
+                    job["package_readiness"] = self.review_package_readiness(event_id)
+                    job["action_preview"] = self._review_action_preview(
+                        event_id,
+                        job["review_capability"],
+                    )
+                    job["cli_parity"] = self._review_cli_parity_summary(
+                        event_id,
+                        review_row.get("available_actions", []),
+                        job["action_preview"],
+                    )
+                    job["history"] = [
+                        self._history_row(item, self.ui_boundary()["ui_boundary"])
+                        for item in self.review.history(event_id=event_id)
+                    ]
             job["related_links"] = self.summary_job_related_links(parts[2], job)
             return {"record": job}
 
@@ -1832,14 +1886,18 @@ function renderTable(endpoint, rows) {{
   }}
   if (endpoint === '/api/summary-jobs') {{
     return activeViewSummary(endpoint, 'list')
-      + '<table><thead><tr><th>detail</th><th>summary job</th><th>status</th><th>runtime</th><th>sources</th></tr></thead><tbody>'
+      + '<table><thead><tr><th>detail</th><th>summary job</th><th>status</th><th>review</th><th>package</th><th>runtime</th><th>sources</th></tr></thead><tbody>'
       + rows.map(row => {{
         const path = detailPath(endpoint, row);
         const button = path ? '<button data-detail="' + esc(path) + '">JSON</button>' : '';
+        const reviewStatus = row.review_capability_status || '';
+        const packageStatus = row.package_readiness_status || '';
         return '<tr>'
           + '<td>' + button + '</td>'
           + '<td><span class="id">' + esc(row.summary_job_id || '') + '</span><br>' + esc(row.title || '') + '</td>'
           + '<td>' + esc(row.status || '') + '</td>'
+          + '<td>' + esc(reviewStatus) + '</td>'
+          + '<td>' + esc(packageStatus) + '</td>'
           + '<td>' + esc(row.runtime_provider_kind || '') + '</td>'
           + '<td>' + esc(row.summary_source_count ?? 0) + '</td>'
           + '</tr>';

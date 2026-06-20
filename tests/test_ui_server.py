@@ -250,6 +250,9 @@ def test_ui_data_service_read_endpoints(tmp_path):
     assert len(service.review_queue()["review_queue"]) == 3
     assert len(service.summary_jobs_list()["summary_jobs"]) == 1
     assert service.summary_jobs_list()["summary_jobs"][0]["summary_job_id"].startswith("sum_")
+    assert service.summary_jobs_list()["summary_jobs"][0]["review_capability_status"] == "advisory_only"
+    assert service.summary_jobs_list()["summary_jobs"][0]["package_readiness_status"] == "no_context_records"
+    assert service.summary_jobs_list()["summary_jobs"][0]["cli_parity_status"] == "aligned"
     assert service.runtime_config_state()["runtime_config"]["config"]["provider_name"] == "ui-local"
     assert service.review_queue()["review_queue"][0]["review_preview_only"] is True
     assert service.review_queue()["review_queue"][0]["target_event_id"].startswith("evt_")
@@ -310,6 +313,12 @@ def test_ui_data_service_detail_endpoints(tmp_path):
     assert summary_detail["title"] == "UI Summary Draft"
     assert summary_detail["suggested_cli_family"] == "chronicle summary show --id"
     assert summary_detail["runtime_provider_kind"] == "disabled"
+    assert summary_detail["review_target_event_id"].startswith("evt_")
+    assert summary_detail["review_capability"]["status"] == "advisory_only"
+    assert summary_detail["package_readiness"]["status"] == "no_context_records"
+    assert summary_detail["cli_parity"]["status"] == "aligned"
+    assert summary_detail["action_preview"]["status"] == "preview_only"
+    assert any(link["path"] == f"/api/review-queue/{summary_detail['review_target_event_id']}" for link in summary_detail["related_links"])
     runtime_detail = service.detail_payload(f"/api/runtime-records/{ids['runtime_summary_event_id']}")["record"]
     assert "runtime_summary" in runtime_detail["payload"]
     assert runtime_detail["runtime_record_preview"]["record_kind"] == "summary"
@@ -512,6 +521,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "openListButton('Open Summary Jobs', '/api/summary-jobs')" in html
     assert "openListButton('Open Runtime Config', '/api/runtime-config')" in html
     assert "openListButton('Open Package Review', '/api/package-review')" in html
+    assert "<th>review</th><th>package</th>" in html
     assert 'data-reset-filters="all"' in html
     assert "sliceActionButton('Advisory Reviews', '/api/review-queue', 'reviewQueue', 'advisory')" in html
     assert "sliceActionButton('CLI Aligned Reviews', '/api/review-queue', 'reviewQueue', 'aligned')" in html
