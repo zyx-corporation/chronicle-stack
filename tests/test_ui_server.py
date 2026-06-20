@@ -429,6 +429,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "Open Package Review" in html
     assert "CLI Aligned Reviews" in html
     assert "Auth Boundary Warnings" in html
+    assert "warnings.slice(0, 2).forEach" in html
     assert "Declared Identity Warnings" in html
     assert 'data-reset-filter="runtimeRecords"' in html
     assert 'data-reset-filter="reviewQueue"' in html

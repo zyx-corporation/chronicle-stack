@@ -1221,12 +1221,16 @@ function relatedListButtons(detailEndpoint, record) {{
     buttons.push(overviewJumpButton('Open Review Queue', '/api/review-queue'));
     const capability = record.review_capability || {{}};
     const readiness = record.package_readiness || {{}};
+    const warnings = Array.isArray(capability.warnings) ? capability.warnings : [];
     if (record.review_kind) {{
       buttons.push(overviewJumpButton('More ' + esc(record.review_kind), '/api/review-queue', 'reviewQueue', record.review_kind));
     }}
     if (capability.status) {{
       buttons.push(overviewJumpButton('More ' + esc(capability.status), '/api/review-queue', 'reviewQueue', capability.status));
     }}
+    warnings.slice(0, 2).forEach(code => {{
+      buttons.push(overviewJumpButton('More ' + esc(code), '/api/review-queue', 'reviewQueue', code));
+    }});
     if (readiness.status) {{
       buttons.push(overviewJumpButton('More ' + esc(readiness.status), '/api/review-queue', 'reviewQueue', 'package:' + readiness.status));
     }}
@@ -1588,9 +1592,11 @@ async function loadDetail(endpoint) {{
     const capability = record.review_capability;
     const warnList = Array.isArray(capability.warnings) ? capability.warnings : [];
     const warnDetails = Array.isArray(capability.warning_details) ? capability.warning_details : [];
+    const warnBadges = reviewWarningBadges(warnList);
     extra += '<div class="notice"><h3>Review Capability</h3>'
       + '<p>' + esc(capability.message || '') + '</p>'
       + '<p>Status: ' + esc(capability.status || '') + '</p>'
+      + (warnBadges ? '<p>' + warnBadges + '</p>' : '')
       + '<p>Warnings: ' + esc(warnDetails.map(item => item.message).join(' | ') || warnList.join(', ') || '(none)') + '</p></div>';
   }}
   if (record.action_preview) {{

@@ -452,6 +452,7 @@ chronicle review approve --event evt_xxx --reviewer alice --json
 - その状態は active view の sort label にも `warning-first:<code>` として表示される
 - review queue detail は reviewer / audit timeline を read-only で表示する
 - review queue detail は current UI boundary と reviewer identity を照合した assurance も表示する
+- review queue detail の warning / capability 表示からも related review slices へ戻れる
 - review queue は current boundary での capability/warning surface も表示する
 - local UI shell は capability / assurance を notice と badge で目立つ形に描画する
 - warning codes are expanded into user-facing explanation text in the local UI
