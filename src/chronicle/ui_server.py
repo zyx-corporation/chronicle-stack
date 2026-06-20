@@ -726,6 +726,7 @@ class ChronicleUIDataService:
             if review_target_event_id.startswith("evt_"):
                 review_row = self._review_queue_row(review_target_event_id)
                 if review_row is not None:
+                    boundary = self.ui_boundary()["ui_boundary"]
                     data["review_target_event_id"] = review_target_event_id
                     data["review_capability_status"] = str(
                         review_row.get("review_capability", {}).get("status", "")
@@ -740,6 +741,8 @@ class ChronicleUIDataService:
                         review_row.get("cli_parity_summary", {}).get("status", "")
                     )
                     data["action_preview_summary"] = review_row.get("action_preview_summary", {})
+                    data["ui_mutation_enabled"] = bool(boundary.get("mutation_enabled", False))
+                    data["review_preview_only"] = not bool(boundary.get("mutation_enabled", False))
                     if review_row.get("latest_reviewer_identity") is not None:
                         data["latest_reviewer_identity"] = review_row.get("latest_reviewer_identity")
                     if review_row.get("latest_identity_assurance") is not None:
@@ -2404,6 +2407,7 @@ function renderTable(endpoint, rows) {{
         ]).toLowerCase().includes(query);
       }});
     const sorted = sortReviewRows(filtered);
+    const mutationEnabled = sorted.some(row => row.ui_mutation_enabled);
     const emptyState = query && sorted.length === 0
       ? '<p>No matching review rows for current filter.</p>'
       : '';
@@ -2418,7 +2422,21 @@ function renderTable(endpoint, rows) {{
       + reviewQueueFilterChips()
       + (query ? '<p><button data-reset-filter="reviewQueue">Reset Filter</button></p>' : '')
       + emptyState
-      + '<div id="review-queue-action-preview-response"><p>Review queue blocked-route preview stays read-only and returns the CLI fallback contract.</p></div>'
+      + (
+        mutationEnabled
+          ? '<div class="notice"><strong>Local Review Mutation</strong><p><label>Reviewer <input id="review-queue-reviewer-label" value="local-ui" placeholder="alice"></label> '
+            + '<label>Kind <select id="review-queue-reviewer-kind"><option value="local_operator">local_operator</option><option value="user_declared">user_declared</option></select></label> '
+            + '<label>Session <input id="review-queue-reviewer-session-label" value="local-ui-session" placeholder="desk-session-1"></label> '
+            + '<label>Note <input id="review-queue-reviewer-note" placeholder="optional review note"></label></p></div>'
+          : ''
+      )
+      + '<div id="review-queue-action-preview-response"><p>'
+      + (
+        mutationEnabled
+          ? 'Local mutation is enabled for this list view. Each action still requires explicit reviewer context and writes audit-backed review history.'
+          : 'Review queue blocked-route preview stays read-only and returns the CLI fallback contract.'
+      )
+      + '</p></div>'
       + '<table><thead><tr><th>detail</th><th>target</th><th>status</th><th>auth</th><th>preview</th><th>warnings</th><th>latest reviewer</th></tr></thead><tbody>'
       + sorted.map(row => {{
         const path = detailPath(endpoint, row);
@@ -2446,15 +2464,17 @@ function renderTable(endpoint, rows) {{
         const previewSummary = preview.status
           ? '<strong>' + esc(preview.status) + '</strong><br>' + esc(preview.message || '')
           : esc(preview.message || '');
-        const previewButton = previewAction.post_path
-          ? '<button data-preview-post="' + esc(previewAction.post_path || '') + '" data-preview-target="review-queue-action-preview-response">Preview blocked route</button>'
-          : '';
+        const previewButtons = previewActions.map(item =>
+          row.ui_mutation_enabled
+            ? '<button data-submit-review-action="' + esc(item.post_path || '') + '" data-review-action="' + esc(item.action || '') + '" data-review-record="' + esc(row.target_event_id || '') + '" data-review-fields="review-queue" data-success-detail="/api/review-queue/' + esc(row.target_event_id || '') + '" data-preview-target="review-queue-action-preview-response">' + esc(item.label || item.action || 'Apply') + '</button>'
+            : '<button data-preview-post="' + esc(item.post_path || '') + '" data-preview-target="review-queue-action-preview-response">Preview blocked route</button>'
+        ).join(' ');
         return '<tr>'
           + '<td>' + button + '</td>'
           + '<td><span class="id">' + esc(row.target_event_id || '') + '</span><br>' + reviewKindBadge + (reviewKindBadge ? '<br>' : '') + esc(row.target_summary || '') + '</td>'
           + '<td>' + statusBadge + '<br>' + readinessBadge + '<br>' + parityBadge + '</td>'
           + '<td>' + authBadge + '</td>'
-          + '<td>' + previewSummary + (previewButton ? '<br>' + previewButton : '') + '</td>'
+          + '<td>' + previewSummary + (previewButtons ? '<br>' + previewButtons : '') + '</td>'
           + '<td>' + (warnBadges ? warnBadges + '<br>' : '') + esc(warnDetails.map(item => item.message).join(' | ') || warnList.join(', ') || '(none)') + '</td>'
           + '<td>' + reviewerBadge + (reviewerBadge ? '<br>' : '') + esc((row.latest_reviewer_identity && row.latest_reviewer_identity.label) || row.latest_reviewer || '') + '</td>'
           + '</tr>';
@@ -2479,6 +2499,7 @@ function renderTable(endpoint, rows) {{
       ]).toLowerCase().includes(query);
     }});
     const sorted = sortSummaryJobRows(filtered);
+    const mutationEnabled = sorted.some(row => row.ui_mutation_enabled);
     const emptyState = query && sorted.length === 0
       ? '<p>No matching summary jobs for current filter.</p>'
       : '';
@@ -2492,7 +2513,21 @@ function renderTable(endpoint, rows) {{
       + summaryJobsFilterChips()
       + (query ? '<p><button data-reset-filter="summaryJobs">Reset Filter</button></p>' : '')
       + emptyState
-      + '<div id="summary-jobs-action-preview-response"><p>Summary jobs blocked-route preview stays read-only and returns the CLI fallback contract.</p></div>'
+      + (
+        mutationEnabled
+          ? '<div class="notice"><strong>Summary Review Mutation</strong><p><label>Reviewer <input id="summary-jobs-reviewer-label" value="local-ui" placeholder="alice"></label> '
+            + '<label>Kind <select id="summary-jobs-reviewer-kind"><option value="local_operator">local_operator</option><option value="user_declared">user_declared</option></select></label> '
+            + '<label>Session <input id="summary-jobs-reviewer-session-label" value="local-ui-session" placeholder="desk-session-1"></label> '
+            + '<label>Note <input id="summary-jobs-reviewer-note" placeholder="optional review note"></label></p></div>'
+          : ''
+      )
+      + '<div id="summary-jobs-action-preview-response"><p>'
+      + (
+        mutationEnabled
+          ? 'Local mutation is enabled for summary-backed review targets. Actions still require explicit reviewer context and write audit-backed review history.'
+          : 'Summary jobs blocked-route preview stays read-only and returns the CLI fallback contract.'
+      )
+      + '</p></div>'
       + '<table><thead><tr><th>detail</th><th>summary job</th><th>status</th><th>review</th><th>auth</th><th>identity</th><th>package</th><th>preview</th><th>runtime</th><th>sources</th></tr></thead><tbody>'
       + sorted.map(row => {{
         const path = detailPath(endpoint, row);
@@ -2526,9 +2561,11 @@ function renderTable(endpoint, rows) {{
         const previewSummary = preview.status
           ? '<strong>' + esc(preview.status) + '</strong><br>' + esc(preview.message || '')
           : esc(preview.message || '');
-        const previewButton = previewAction.post_path
-          ? '<button data-preview-post="' + esc(previewAction.post_path || '') + '" data-preview-target="summary-jobs-action-preview-response">Preview blocked route</button>'
-          : '';
+        const previewButtons = previewActions.map(item =>
+          row.ui_mutation_enabled
+            ? '<button data-submit-review-action="' + esc(item.post_path || '') + '" data-review-action="' + esc(item.action || '') + '" data-review-record="' + esc(row.review_target_event_id || '') + '" data-review-fields="summary-jobs" data-success-detail="/api/summary-jobs/' + esc(row.summary_job_id || '') + '" data-preview-target="summary-jobs-action-preview-response">' + esc(item.label || item.action || 'Apply') + '</button>'
+            : '<button data-preview-post="' + esc(item.post_path || '') + '" data-preview-target="summary-jobs-action-preview-response">Preview blocked route</button>'
+        ).join(' ');
         const targetButton = row.review_target_event_id
           ? '<button data-detail-nav="/api/review-queue/' + esc(row.review_target_event_id) + '">Open review</button>'
           : '';
@@ -2540,7 +2577,7 @@ function renderTable(endpoint, rows) {{
           + '<td>' + authBadge + '</td>'
           + '<td>' + identityBadge + (reviewerBadge ? '<br>' + reviewerBadge : '') + ((row.latest_reviewer_identity && row.latest_reviewer_identity.label) ? '<br>' + esc(row.latest_reviewer_identity.label || '') : '') + '</td>'
           + '<td>' + packageBadge + '</td>'
-          + '<td>' + previewSummary + (previewButton ? '<br>' + previewButton : '') + '</td>'
+          + '<td>' + previewSummary + (previewButtons ? '<br>' + previewButtons : '') + '</td>'
           + '<td>' + esc(row.runtime_provider_kind || '') + '</td>'
           + '<td>' + esc(row.summary_source_count ?? 0) + '</td>'
           + '</tr>';
@@ -2828,13 +2865,19 @@ async function previewBlockedRoute(path, targetId = 'action-preview-response') {
     + detailLine('Mutation enabled', payload.mutation_enabled)
     + detailLine('CLI equivalent', payload.cli_equivalent || '');
 }}
-async function submitReviewAction(path, action, recordId, targetId = 'action-preview-response') {{
+function reviewFieldValue(prefix, suffix, fallback = '') {{
+  const element = prefix === 'reviewer'
+    ? document.getElementById(suffix)
+    : document.getElementById(prefix + '-' + suffix);
+  return element && typeof element.value === 'string' ? element.value : fallback;
+}}
+async function submitReviewAction(path, action, recordId, targetId = 'action-preview-response', fieldPrefix = 'reviewer', successDetail = '') {{
   const target = document.getElementById(targetId);
   if (!target) return;
-  const reviewerLabel = (document.getElementById('reviewer-label') || {{ value: '' }}).value || '';
-  const reviewerKind = (document.getElementById('reviewer-kind') || {{ value: 'local_operator' }}).value || 'local_operator';
-  const sessionLabel = (document.getElementById('reviewer-session-label') || {{ value: '' }}).value || '';
-  const note = (document.getElementById('reviewer-note') || {{ value: '' }}).value || '';
+  const reviewerLabel = reviewFieldValue(fieldPrefix, 'reviewer-label', '');
+  const reviewerKind = reviewFieldValue(fieldPrefix, 'reviewer-kind', 'local_operator') || 'local_operator';
+  const sessionLabel = reviewFieldValue(fieldPrefix, 'reviewer-session-label', '');
+  const note = reviewFieldValue(fieldPrefix, 'reviewer-note', '');
   target.innerHTML = '<p>Applying review action…</p>';
   const response = await fetch(path, {{
     method: 'POST',
@@ -2866,7 +2909,11 @@ async function submitReviewAction(path, action, recordId, targetId = 'action-pre
     + detailLine('CLI equivalent', payload.cli_equivalent || '');
   if (response.ok) {{
     if (window.__chronicleCurrentEndpoint) loadEndpoint(window.__chronicleCurrentEndpoint);
-    if (recordId) loadDetail('/api/review-queue/' + encodeURIComponent(recordId));
+    if (successDetail) {{
+      loadDetail(successDetail);
+    }} else if (recordId) {{
+      loadDetail('/api/review-queue/' + encodeURIComponent(recordId));
+    }}
   }}
 }}
 document.querySelectorAll('button[data-endpoint]').forEach(button => button.addEventListener('click', () => loadEndpoint(button.dataset.endpoint)));
@@ -2896,6 +2943,9 @@ document.getElementById('detail').addEventListener('click', event => {{
       event.target.dataset.submitReviewAction,
       event.target.dataset.reviewAction || '',
       event.target.dataset.reviewRecord || '',
+      event.target.dataset.previewTarget || 'action-preview-response',
+      event.target.dataset.reviewFields || 'reviewer',
+      event.target.dataset.successDetail || '',
     );
   }}
   if (event.target.dataset.detailNav) loadDetail(event.target.dataset.detailNav);

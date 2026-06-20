@@ -538,6 +538,29 @@ def test_ui_detail_exposes_enabled_mutation_preview_when_enabled(tmp_path):
     assert review_detail["review_preview_only"] is False
 
 
+def test_summary_jobs_list_exposes_enabled_mutation_state_when_enabled(tmp_path):
+    ids = _populate(tmp_path)
+    ReviewService(tmp_path).request_changes(
+        event_id=ids["runtime_summary_event_id"],
+        reviewer="alice",
+        reviewer_kind=ReviewerIdentityKind.LOCAL_OPERATOR,
+        session_label="ui-test",
+        note="revise wording",
+    )
+    service = ChronicleUIDataService(
+        tmp_path,
+        mutation_capability_flag=True,
+        enable_ui_mutation=True,
+        auth_mode=UIAuthMode.LOOPBACK_LOCAL,
+        authorization_mode=UIAuthorizationMode.REVIEWER_DECLARED,
+    )
+
+    rows = service.summary_jobs_list()["summary_jobs"]
+    assert rows[0]["ui_mutation_enabled"] is True
+    assert rows[0]["review_preview_only"] is False
+    assert rows[0]["action_preview_summary"]["status"] == "enabled"
+
+
 def test_ui_shell_contains_interactive_local_ui(tmp_path):
     ChronicleService(tmp_path).init("UI Shell")
 
@@ -646,6 +669,14 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "<th>identity</th><th>package</th><th>preview</th>" in html
     assert "summary-jobs-action-preview-response" in html
     assert "Summary jobs blocked-route preview stays read-only and returns the CLI fallback contract." in html
+    assert "Local mutation is enabled for this list view. Each action still requires explicit reviewer context and writes audit-backed review history." in html
+    assert "Local mutation is enabled for summary-backed review targets. Actions still require explicit reviewer context and write audit-backed review history." in html
+    assert "review-queue-reviewer-label" in html
+    assert "summary-jobs-reviewer-label" in html
+    assert "reviewFieldValue(prefix, suffix, fallback = '')" in html
+    assert "data-review-fields=\"review-queue\"" in html
+    assert "data-review-fields=\"summary-jobs\"" in html
+    assert "data-success-detail" in html
     assert "textInput('summaryJobs', 'Filter summary jobs...')" in html
     assert "sortSelect('summaryJobs', currentSortValue('/api/summary-jobs')" in html
     assert "<th>auth</th>" in html
@@ -704,7 +735,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "data-preview-post" in html
     assert "Blocked route preview stays read-only and returns the CLI fallback contract." in html
     assert "async function previewBlockedRoute(path, targetId = 'action-preview-response')" in html
-    assert "async function submitReviewAction(path, action, recordId, targetId = 'action-preview-response')" in html
+    assert "async function submitReviewAction(path, action, recordId, targetId = 'action-preview-response', fieldPrefix = 'reviewer', successDetail = '')" in html
     assert "data-submit-review-action" in html
     assert "Review Action Result" in html
     assert "POST enabled" in html

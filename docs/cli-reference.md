@@ -347,7 +347,7 @@ read-only endpoint:
 
 `chronicle ui-smoke` はサーバーを起動せず、ブラウザも使わず、local UI の read-only データ面だけを検証します。
 
-`/api/review-queue` は `review_status=needs_review` の record を返します。既定では preview-only ですが、explicit enable 条件が揃うと GUI review mutation route の server-side gate が有効になります。review detail ではそのときだけ明示 reviewer context form と action buttons が現れます。`suggested_cli_family` では引き続き関連 CLI family の目安も表示します。
+`/api/review-queue` は `review_status=needs_review` の record を返します。既定では preview-only ですが、explicit enable 条件が揃うと GUI review mutation route の server-side gate が有効になります。review detail と review queue / summary jobs list の両方で、そのときだけ明示 reviewer context form と action buttons が現れます。`suggested_cli_family` では引き続き関連 CLI family の目安も表示します。
 
 `/api/ui-boundary` は bind scope, mutation capability flag, explicit mutation enable flag 由来の `mutation_enabled`, auth/authz mode を read-only で返します。`mutation_enabled=true` は `--enable-ui-mutation` と required gate 条件がすべて揃ったときだけ成立します。placeholder / derived config により `auth_mode` / `authorization_mode` / `session_gating` を明示できます。あわせて `auth_boundary_summary` で auth/authz placeholder の derived status / blockers / next steps も返します。overview ではさらに `auth_boundary_overview` / `identity_boundary_summary` により auth warning / reviewer identity / session alignment の集約状態も読めます。
 - write-capable route family は `POST /api/review-actions/<event_id>/<action>` です。`reviewer_label`, `reviewer_kind`, `session_label`, `ui_intent` を JSON body で受け、gate 条件が崩れていれば fail closed で戻ります。
