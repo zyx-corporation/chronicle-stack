@@ -157,6 +157,46 @@ def run_ui_smoke(root: Path | None = None) -> UISmokeReport:
                         ),
                     )
                 )
+                auth_notice = record.get("auth_boundary_notice")
+                checks.append(
+                    UISmokeCheck(
+                        f"{endpoint}/{record_id}#auth-readiness",
+                        isinstance(auth_notice, dict) and bool(auth_notice.get("status")),
+                        (
+                            "ok"
+                            if isinstance(auth_notice, dict) and bool(auth_notice.get("status"))
+                            else "review detail missing auth readiness notice"
+                        ),
+                    )
+                )
+            if endpoint == "/api/runtime-records" and detail is not None and "record" in detail:
+                record = detail["record"]
+                auth_notice = record.get("auth_boundary_notice")
+                checks.append(
+                    UISmokeCheck(
+                        f"{endpoint}/{record_id}#auth-readiness",
+                        isinstance(auth_notice, dict) and bool(auth_notice.get("status")),
+                        (
+                            "ok"
+                            if isinstance(auth_notice, dict) and bool(auth_notice.get("status"))
+                            else "runtime detail missing auth readiness notice"
+                        ),
+                    )
+                )
+            if endpoint == "/api/summary-jobs" and detail is not None and "record" in detail:
+                record = detail["record"]
+                auth_notice = record.get("auth_boundary_notice")
+                checks.append(
+                    UISmokeCheck(
+                        f"{endpoint}/{record_id}#auth-readiness",
+                        isinstance(auth_notice, dict) and bool(auth_notice.get("status")),
+                        (
+                            "ok"
+                            if isinstance(auth_notice, dict) and bool(auth_notice.get("status"))
+                            else "summary detail missing auth readiness notice"
+                        ),
+                    )
+                )
 
         missing = service.detail_payload("/api/contexts/__chronicle_missing_context__")
         checks.append(
@@ -172,10 +212,36 @@ def run_ui_smoke(root: Path | None = None) -> UISmokeReport:
             marker in html_shell
             for marker in (
                 "Active view:",
+                "Auth Readiness",
                 "CLI Parity",
                 "Related Links",
                 "Review Queue",
                 "Runtime Records",
+            )
+        )
+        overview = collection_payloads.get("/api/overview", {})
+        runtime_summary = overview.get("runtime_records_summary")
+        summary_jobs_summary = overview.get("summary_jobs_summary")
+        checks.append(
+            UISmokeCheck(
+                "/api/overview#runtime-auth-readiness",
+                isinstance(runtime_summary, dict) and isinstance(runtime_summary.get("auth_readiness_counts"), dict),
+                (
+                    "ok"
+                    if isinstance(runtime_summary, dict) and isinstance(runtime_summary.get("auth_readiness_counts"), dict)
+                    else "overview missing runtime auth readiness summary"
+                ),
+            )
+        )
+        checks.append(
+            UISmokeCheck(
+                "/api/overview#summary-auth-readiness",
+                isinstance(summary_jobs_summary, dict) and isinstance(summary_jobs_summary.get("auth_readiness_counts"), dict),
+                (
+                    "ok"
+                    if isinstance(summary_jobs_summary, dict) and isinstance(summary_jobs_summary.get("auth_readiness_counts"), dict)
+                    else "overview missing summary auth readiness summary"
+                ),
             )
         )
         checks.append(
