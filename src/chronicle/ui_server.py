@@ -1328,6 +1328,29 @@ class ChronicleUIDataService:
         return messages.get(error_code, error_code.replace("_", " "))
 
     @staticmethod
+    def _review_action_failure_summary(
+        *,
+        error_code: str,
+        warning_codes: list[str] | None = None,
+        identity_assurance_status: str | None = None,
+    ) -> str:
+        if error_code == "authorization_failed":
+            warning_text = ", ".join(warning_codes or [])
+            if warning_text and identity_assurance_status:
+                return f"authorization_failed; identity={identity_assurance_status}; warnings={warning_text}"
+            if identity_assurance_status:
+                return f"authorization_failed; identity={identity_assurance_status}"
+            if warning_text:
+                return f"authorization_failed; warnings={warning_text}"
+        if error_code == "review_not_pending":
+            return "review_not_pending; inspect resolved queue state before retry"
+        if error_code == "audit_insertion_failed":
+            return "audit_insertion_failed; inspect local audit surface before retry"
+        if error_code == "decision_persistence_failed":
+            return "decision_persistence_failed; inspect audit trail and primary record state"
+        return error_code
+
+    @staticmethod
     def _review_action_success_contract(
         *,
         cli_equivalent: str | None = None,
@@ -1787,6 +1810,11 @@ class ChronicleUIDataService:
                     "mutation_enabled": True,
                     "warning_codes": capability.get("warnings", []),
                     "identity_assurance_status": assurance.get("status"),
+                    "failure_summary": self._review_action_failure_summary(
+                        error_code="authorization_failed",
+                        warning_codes=capability.get("warnings", []),
+                        identity_assurance_status=str(assurance.get("status", "")),
+                    ),
                     "cli_equivalent": f"chronicle review {action} --event {event_id}",
                     "failure_contract": self._review_action_failure_contract(
                         mutation_enabled=True,
@@ -1830,6 +1858,9 @@ class ChronicleUIDataService:
                     "error_code": "review_not_pending",
                     "message": self._review_action_failure_message("review_not_pending"),
                     "mutation_enabled": True,
+                    "failure_summary": self._review_action_failure_summary(
+                        error_code="review_not_pending",
+                    ),
                     "cli_equivalent": f"chronicle review {action} --event {event_id}",
                     "failure_contract": self._review_action_failure_contract(
                         mutation_enabled=True,
@@ -1861,6 +1892,9 @@ class ChronicleUIDataService:
                     "message": self._review_action_failure_message("audit_insertion_failed"),
                     "mutation_enabled": True,
                     "detail": exc.hint,
+                    "failure_summary": self._review_action_failure_summary(
+                        error_code="audit_insertion_failed",
+                    ),
                     "cli_equivalent": f"chronicle review {action} --event {event_id}",
                     "failure_contract": self._review_action_failure_contract(
                         mutation_enabled=True,
@@ -1884,6 +1918,9 @@ class ChronicleUIDataService:
                     "mutation_enabled": True,
                     "detail": exc.hint,
                     "audit_id": exc.audit_id,
+                    "failure_summary": self._review_action_failure_summary(
+                        error_code="decision_persistence_failed",
+                    ),
                     "cli_equivalent": f"chronicle review {action} --event {event_id}",
                     "failure_contract": self._review_action_failure_contract(
                         mutation_enabled=True,
@@ -3118,6 +3155,7 @@ async function previewBlockedRoute(path, targetId = 'action-preview-response') {
     + detailLine('Error code', payload.error_code || '')
     + detailLine('Mutation enabled', payload.mutation_enabled)
     + detailLine('CLI equivalent', payload.cli_equivalent || '')
+    + detailLine('Failure summary', payload.failure_summary || '')
     + detailLine('Recovery path', (payload.failure_contract || {{}}).recovery_path || '')
     + detailLine('Rollback status', (payload.failure_contract || {{}}).rollback_status || '')
     + detailLine('Durable mutation on failure', (payload.failure_contract || {{}}).durable_mutation_reported_on_failure)
@@ -3194,6 +3232,7 @@ async function submitReviewAction(path, action, recordId, targetId = 'action-pre
     + detailLine('Audit ID', payload.audit_id || '')
     + detailLine('Decision event', payload.decision_event_id || '')
     + detailLine('CLI equivalent', payload.cli_equivalent || '')
+    + detailLine('Failure summary', payload.failure_summary || '')
     + detailLine('Recovery path', ((payload.success_contract || payload.failure_contract) || {{}}).recovery_path || '')
     + detailLine('Rollback status', ((payload.success_contract || payload.failure_contract) || {{}}).rollback_status || '')
     + detailLine('Transaction status', (payload.success_contract || {{}}).transaction_status || '')
