@@ -992,6 +992,32 @@ def test_http_review_action_enabled_route_handles_audit_failure(tmp_path, monkey
         thread.join(timeout=5)
 
 
+def test_review_action_failure_summary_uses_human_warning_text(tmp_path):
+    ids = _populate(tmp_path)
+    service = ChronicleUIDataService(
+        tmp_path,
+        mutation_capability_flag=True,
+        enable_ui_mutation=True,
+        auth_mode=UIAuthMode.LOOPBACK_LOCAL,
+        authorization_mode=UIAuthorizationMode.REVIEWER_DECLARED,
+    )
+
+    status, payload = service.review_action_response(
+        f"/api/review-actions/{ids['runtime_summary_event_id']}/approve",
+        {
+            "reviewer_label": "alice",
+            "reviewer_kind": "user_declared",
+            "ui_intent": "approve",
+        },
+    )
+
+    assert status == 403
+    assert payload["error_code"] == "authorization_failed"
+    assert payload["identity_assurance_status"] == "boundary_aligned"
+    assert "Reviewer identity is self-declared" in payload["failure_summary"]
+    assert "reviewer_identity_declared_only" not in payload["failure_summary"]
+
+
 def test_http_review_action_enabled_route_handles_decision_persistence_failure(tmp_path, monkeypatch):
     ids = _populate(tmp_path)
 

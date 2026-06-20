@@ -355,6 +355,7 @@ read-only endpoint:
 - local UI shell では `recovery_path` をそのまま copy できる button も表示されます。
 - failure kind に応じて `recovery_commands`、成功時には `follow_up_commands` も返り、UI shell から copy できます。
 - failure payload には `failure_summary` も含まれ、warning/identity 由来の主 blocker を短く確認できます。
+- `authorization_failed` の `failure_summary` では warning code が人間向けの boundary 文言に展開されます。
 - overview triage では `Identity aligned` などの quick slice から reviewer identity / assurance 系の review queue slice に直接 drilldown できますが、これは引き続き read-only filter state のみです。
 - overview の runtime records / summary jobs panel でも matching-review-derived auth readiness の集約状態を read-only で確認できます。
 - overview の summary jobs panel では matching-review-derived identity/session assurance 集約も read-only で確認できます。

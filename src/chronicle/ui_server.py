@@ -1335,7 +1335,11 @@ class ChronicleUIDataService:
         identity_assurance_status: str | None = None,
     ) -> str:
         if error_code == "authorization_failed":
-            warning_text = ", ".join(warning_codes or [])
+            warning_text = " | ".join(
+                ChronicleUIDataService._warning_message(code)
+                for code in (warning_codes or [])
+                if code
+            )
             if warning_text and identity_assurance_status:
                 return f"authorization_failed; identity={identity_assurance_status}; warnings={warning_text}"
             if identity_assurance_status:
