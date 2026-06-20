@@ -139,6 +139,8 @@ overview の auth / identity panel からも auth warning, authorization warning
 
 review detail / summary detail では、Phase H readiness をまとめた auth readiness notice から blocker と next step を read-only で確認できます。
 
+review queue 一覧でも auth readiness badge を通じて advisory / boundary-aligned slice を read-only で辿れます。
+
 ## Summary job re-run
 
 `chronicle summary run --id sum_xxx` は、既存の summary job を explicit manual runtime boundary に通し直し、短縮結果を新しい pending-review draft として保存します。

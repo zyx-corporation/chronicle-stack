@@ -628,6 +628,11 @@ class ChronicleUIDataService:
                     ReviewerIdentity.model_validate(data["latest_reviewer_identity"]),
                     boundary,
                 )
+            data["auth_boundary_notice"] = self._auth_boundary_notice(
+                boundary,
+                data.get("review_capability"),
+                data.get("latest_identity_assurance"),
+            )
             readiness = self.review_package_readiness(entry.target_event_id)
             data["package_readiness_summary"] = self._package_readiness_summary(readiness)
             data["cli_parity_summary"] = self._review_cli_parity_summary(
@@ -2046,6 +2051,7 @@ function renderTable(endpoint, rows) {{
         const capability = row.review_capability || {{}};
         const readiness = row.package_readiness_summary || {{}};
         const parity = row.cli_parity_summary || {{}};
+        const authReadiness = row.auth_boundary_notice || {{}};
         return JSON.stringify([
           row.target_event_id || '',
           row.target_summary || '',
@@ -2053,6 +2059,7 @@ function renderTable(endpoint, rows) {{
           capability.status || '',
           readiness.label || '',
           parity.status || '',
+          authReadiness.status || '',
           (row.latest_identity_assurance && row.latest_identity_assurance.status) || '',
           (row.latest_reviewer_identity && row.latest_reviewer_identity.kind) || '',
           (row.latest_reviewer_identity && row.latest_reviewer_identity.label) || row.latest_reviewer || '',
@@ -2073,13 +2080,14 @@ function renderTable(endpoint, rows) {{
       + reviewQueueFilterChips()
       + (query ? '<p><button data-reset-filter="reviewQueue">Reset Filter</button></p>' : '')
       + emptyState
-      + '<table><thead><tr><th>detail</th><th>target</th><th>status</th><th>warnings</th><th>latest reviewer</th></tr></thead><tbody>'
+      + '<table><thead><tr><th>detail</th><th>target</th><th>status</th><th>auth</th><th>warnings</th><th>latest reviewer</th></tr></thead><tbody>'
       + sorted.map(row => {{
         const path = detailPath(endpoint, row);
         const button = path ? '<button data-detail="' + esc(path) + '">JSON</button>' : '';
         const capability = row.review_capability || {{}};
         const readiness = row.package_readiness_summary || {{}};
         const parity = row.cli_parity_summary || {{}};
+        const authReadiness = row.auth_boundary_notice || {{}};
         const warnList = Array.isArray(capability.warnings) ? capability.warnings : [];
         const warnDetails = Array.isArray(capability.warning_details) ? capability.warning_details : [];
         const warnBadges = reviewWarningBadges(warnList);
@@ -2090,10 +2098,14 @@ function renderTable(endpoint, rows) {{
         const statusBadge = reviewCapabilityBadge(capability);
         const readinessBadge = packageReadinessBadge(readiness);
         const parityBadge = reviewParityBadge(parity);
+        const authBadge = authReadiness.status === 'boundary_aligned'
+          ? jumpBadge('Auth aligned', 'badge-ready', '/api/review-queue', 'reviewQueue', 'boundary_aligned')
+          : jumpBadge('Auth advisory', 'badge-warning', '/api/review-queue', 'reviewQueue', authReadiness.status || 'advisory_only');
         return '<tr>'
           + '<td>' + button + '</td>'
           + '<td><span class="id">' + esc(row.target_event_id || '') + '</span><br>' + reviewKindBadge + (reviewKindBadge ? '<br>' : '') + esc(row.target_summary || '') + '</td>'
           + '<td>' + statusBadge + '<br>' + readinessBadge + '<br>' + parityBadge + '</td>'
+          + '<td>' + authBadge + '</td>'
           + '<td>' + (warnBadges ? warnBadges + '<br>' : '') + esc(warnDetails.map(item => item.message).join(' | ') || warnList.join(', ') || '(none)') + '</td>'
           + '<td>' + reviewerBadge + (reviewerBadge ? '<br>' : '') + esc((row.latest_reviewer_identity && row.latest_reviewer_identity.label) || row.latest_reviewer || '') + '</td>'
           + '</tr>';

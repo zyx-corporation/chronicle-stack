@@ -267,6 +267,7 @@ def test_ui_data_service_read_endpoints(tmp_path):
     assert service.review_queue()["review_queue"][0]["review_preview_only"] is True
     assert service.review_queue()["review_queue"][0]["target_event_id"].startswith("evt_")
     assert service.review_queue()["review_queue"][0]["review_capability"]["status"] == "advisory_only"
+    assert service.review_queue()["review_queue"][0]["auth_boundary_notice"]["status"] == "advisory_only"
     assert service.review_queue()["review_queue"][0]["package_readiness_summary"]["label"].startswith("package:")
     assert service.review_queue()["review_queue"][0]["package_readiness_summary"]["message"]
     assert service.review_queue()["review_queue"][0]["cli_parity_summary"]["status"] == "aligned"
@@ -553,6 +554,9 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "<th>review</th><th>package</th>" in html
     assert "textInput('summaryJobs', 'Filter summary jobs...')" in html
     assert "sortSelect('summaryJobs', currentSortValue('/api/summary-jobs')" in html
+    assert "<th>auth</th>" in html
+    assert "Auth aligned" in html
+    assert "Auth advisory" in html
     assert "Open review" in html
     assert "package:no_context_records" in html
     assert 'data-reset-filters="all"' in html
