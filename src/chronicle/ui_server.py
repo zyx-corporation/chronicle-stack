@@ -85,6 +85,41 @@ class UIBoundaryMetadata:
         "authorization_not_enabled",
         "audit_insertion_cli_only",
     )
+    auth_boundary_summary: dict[str, Any] | None = None
+
+
+def _auth_boundary_summary(metadata: UIBoundaryMetadata) -> dict[str, Any]:
+    blockers: list[str] = []
+    next_steps: list[str] = []
+
+    if metadata.auth_mode == UIAuthMode.NOT_ENABLED:
+        blockers.append("auth_not_enabled")
+        next_steps.append("Define explicit local auth boundary.")
+    if metadata.authorization_mode == UIAuthorizationMode.NOT_ENABLED:
+        blockers.append("authorization_not_enabled")
+        next_steps.append("Define authorization semantics for reviewer actions.")
+    if metadata.session_gating and not metadata.shared_machine_safe:
+        blockers.append("shared_machine_session_unhardened")
+        next_steps.append("Clarify shared-machine expectations for session-gated review.")
+
+    if metadata.auth_mode == UIAuthMode.NOT_ENABLED:
+        status = "auth_not_enabled"
+        message = "UI auth boundary is not enabled; reviewer identity remains advisory only."
+    elif metadata.authorization_mode == UIAuthorizationMode.NOT_ENABLED:
+        status = "authorization_not_enabled"
+        message = "UI auth boundary is loopback-local, but reviewer authorization remains advisory only."
+    else:
+        status = "reviewer_declared_preview"
+        message = "UI auth/authz metadata is configured for preview, but GUI mutation remains disabled."
+
+    return {
+        "status": status,
+        "message": message,
+        "blockers": blockers,
+        "next_steps": next_steps,
+        "shared_machine_safe": metadata.shared_machine_safe,
+        "session_gating": metadata.session_gating,
+    }
 
 
 @dataclass(frozen=True)
@@ -147,7 +182,7 @@ def build_ui_boundary_metadata(
     authorization_mode: str = UIAuthorizationMode.NOT_ENABLED,
 ) -> UIBoundaryMetadata:
     """Build explicit UI boundary metadata."""
-    return UIBoundaryMetadata(
+    metadata = UIBoundaryMetadata(
         bind_scope=_bind_scope(host),
         mutation_capability_flag=mutation_capability_flag,
         auth_mode=auth_mode,
@@ -158,6 +193,12 @@ def build_ui_boundary_metadata(
             if mutation_capability_flag
             else "GUI mutation remains disabled; read-only preview only."
         ),
+    )
+    return UIBoundaryMetadata(
+        **{
+            **asdict(metadata),
+            "auth_boundary_summary": _auth_boundary_summary(metadata),
+        }
     )
 
 
@@ -272,6 +313,7 @@ class ChronicleUIDataService:
             "triage": triage,
             "runtime_boundary": self.runtime_boundary(),
             "ui_boundary": self.ui_boundary()["ui_boundary"],
+            "auth_boundary_summary": self.ui_boundary()["ui_boundary"]["auth_boundary_summary"],
             "mutation_readiness": self.mutation_readiness_summary(review_queue),
         }
 
@@ -1366,6 +1408,7 @@ function renderOverview(payload) {{
   const counts = payload.counts || {{}};
   const runtime = payload.runtime_boundary || {{}};
   const uiBoundary = payload.ui_boundary || {{}};
+  const authBoundary = payload.auth_boundary_summary || uiBoundary.auth_boundary_summary || {{}};
   const aiIndex = payload.ai_index || {{}};
   const triage = payload.triage || {{}};
   const mutationReadiness = payload.mutation_readiness || {{}};
@@ -1413,6 +1456,15 @@ function renderOverview(payload) {{
     + '<p>Authorization mode: ' + esc(uiBoundary.authorization_mode || '') + '</p>'
     + '<p>Session gating: ' + esc(uiBoundary.session_gating) + '</p>'
     + '<p>Mutation readiness: ' + esc(uiBoundary.mutation_readiness_status || '') + '</p>'
+    + '</div>'
+    + '<div class="panel">'
+    + panelTitle('Auth Boundary')
+    + detailLine('Status', authBoundary.status || '')
+    + '<p>' + esc(authBoundary.message || '') + '</p>'
+    + detailLine('Session gating', authBoundary.session_gating)
+    + detailLine('Shared machine safe', authBoundary.shared_machine_safe)
+    + detailListLine('Auth blockers', authBoundary.blockers, ' | ')
+    + detailListLine('Auth next steps', authBoundary.next_steps, ' | ')
     + '</div>'
     + '<div class="panel">'
     + panelTitle('Mutation Readiness')

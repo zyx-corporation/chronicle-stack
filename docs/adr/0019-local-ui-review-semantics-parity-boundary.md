@@ -56,11 +56,12 @@ descriptive, and CLI-parity-aware rather than authoritative or activating.
 This means:
 
 1. `ui_boundary` is the canonical read-only source for GUI mutation boundary metadata.
-2. `mutation_capability_flag` expresses preview intent only and must never imply enabled writes by itself.
-3. `mutation_enabled` remains the activation signal, and it stays false until a future ADR explicitly enables GUI writes.
-4. `available_actions` and `action_preview.actions` must describe the same review contract through shared derivation logic.
-5. `cli_parity.status == "aligned"` is the stable indicator that read-only UI preview semantics still match the current CLI review contract.
-6. Overview/list/detail labels for review semantics should be generated from shared helpers so wording drift does not silently change user interpretation.
+2. Derived auth/authz placeholder interpretation should be exposed from that same boundary metadata rather than recomputed inconsistently in each UI surface.
+3. `mutation_capability_flag` expresses preview intent only and must never imply enabled writes by itself.
+4. `mutation_enabled` remains the activation signal, and it stays false until a future ADR explicitly enables GUI writes.
+5. `available_actions` and `action_preview.actions` must describe the same review contract through shared derivation logic.
+6. `cli_parity.status == "aligned"` is the stable indicator that read-only UI preview semantics still match the current CLI review contract.
+7. Overview/list/detail labels for review semantics should be generated from shared helpers so wording drift does not silently change user interpretation.
 
 ## Boundary
 
