@@ -1390,6 +1390,27 @@ class ChronicleUIDataService:
             return handler()
         return self.detail_payload(path)
 
+    def review_action_blocked_response(self, path: str) -> tuple[HTTPStatus, dict[str, Any]] | None:
+        parts = [unquote(part) for part in path.strip("/").split("/")]
+        if len(parts) != 4 or parts[0] != "api" or parts[1] != "review-actions":
+            return None
+        event_id, action = parts[2], parts[3]
+        if action not in {"approve", "reject", "request-changes"}:
+            return None
+        return (
+            HTTPStatus.FORBIDDEN,
+            {
+                "ok": False,
+                "status": "blocked",
+                "event_id": event_id,
+                "action": action,
+                "error_code": "mutation_disabled",
+                "message": "GUI mutation remains disabled; use the CLI review command path.",
+                "mutation_enabled": False,
+                "cli_equivalent": f"chronicle review {action} --event {event_id}",
+            },
+        )
+
     def html_shell(self) -> str:
         metadata = self.chronicle.require_initialized()
         title = html.escape(metadata.title)
@@ -2565,6 +2586,15 @@ def create_handler(
                 return
             self.send_error(HTTPStatus.NOT_FOUND, "Not found")
 
+        def do_POST(self) -> None:  # noqa: N802 - stdlib API
+            parsed = urlparse(self.path)
+            blocked = service.review_action_blocked_response(parsed.path)
+            if blocked is not None:
+                status, payload = blocked
+                self._send_json(payload, status=status)
+                return
+            self.send_error(HTTPStatus.NOT_FOUND, "Not found")
+
         def log_message(self, format: str, *args: object) -> None:
             return
 
@@ -2576,9 +2606,9 @@ def create_handler(
             self.end_headers()
             self.wfile.write(payload)
 
-        def _send_json(self, body: dict[str, Any]) -> None:
+        def _send_json(self, body: dict[str, Any], *, status: HTTPStatus = HTTPStatus.OK) -> None:
             payload = json.dumps(body, ensure_ascii=False, indent=2).encode("utf-8")
-            self.send_response(HTTPStatus.OK)
+            self.send_response(status)
             self.send_header("Content-Type", "application/json; charset=utf-8")
             self.send_header("Content-Length", str(len(payload)))
             self.end_headers()

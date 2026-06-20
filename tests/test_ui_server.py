@@ -47,6 +47,16 @@ def _http_get(host: str, port: int, path: str) -> tuple[int, str]:
         connection.close()
 
 
+def _http_post(host: str, port: int, path: str) -> tuple[int, str]:
+    connection = http.client.HTTPConnection(host, port, timeout=5)
+    try:
+        connection.request("POST", path)
+        response = connection.getresponse()
+        return response.status, response.read().decode("utf-8")
+    finally:
+        connection.close()
+
+
 def _populate(root):
     ChronicleService(root).init("UI Test")
     context = ContextService(root).add_context(title="UI Context", visibility_hint=VisibilityHint.PUBLIC)
@@ -694,6 +704,23 @@ def test_http_root_and_read_only_endpoints(tmp_path):
 
         status, _body = _http_get(host, port, "/api/contexts/missing")
         assert status == 404
+
+        status, body = _http_post(
+            host,
+            port,
+            f"/api/review-actions/{ids['runtime_summary_event_id']}/approve",
+        )
+        assert status == 403
+        payload = json.loads(body)
+        assert payload["ok"] is False
+        assert payload["status"] == "blocked"
+        assert payload["event_id"] == ids["runtime_summary_event_id"]
+        assert payload["action"] == "approve"
+        assert payload["error_code"] == "mutation_disabled"
+        assert payload["mutation_enabled"] is False
+        assert payload["cli_equivalent"] == (
+            f"chronicle review approve --event {ids['runtime_summary_event_id']}"
+        )
 
         status, review_console = _http_get(host, port, "/review-console")
         assert status == 200
