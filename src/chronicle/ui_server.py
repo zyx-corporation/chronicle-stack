@@ -1607,9 +1607,19 @@ async function loadDetail(endpoint) {{
   if (record.action_preview) {{
     const preview = record.action_preview;
     const actions = Array.isArray(preview.actions) ? preview.actions : [];
+    const previewButtons = [];
+    const capability = record.review_capability || {{}};
+    const parity = record.cli_parity || {{}};
+    if (capability.status) {{
+      previewButtons.push(overviewJumpButton('More ' + esc(capability.status), '/api/review-queue', 'reviewQueue', capability.status));
+    }}
+    if (parity.status) {{
+      previewButtons.push(overviewJumpButton('More ' + esc(parity.status), '/api/review-queue', 'reviewQueue', parity.status));
+    }}
     extra += '<div class="notice"><h3>Action Preview</h3>'
       + '<p>' + esc(preview.message || '') + '</p>'
       + '<p>Status: ' + esc(preview.status || '') + '</p>'
+      + (previewButtons.length > 0 ? '<p>' + previewButtons.join('') + '</p>' : '')
       + '<p><button disabled>Approve</button> <button disabled>Reject</button> <button disabled>Request Changes</button></p>'
       + '<ul>' + actions.map(item => '<li><strong>' + esc(item.label || '') + ':</strong> <span class="id">' + esc(item.command || '') + '</span></li>').join('') + '</ul>'
       + '</div>';
