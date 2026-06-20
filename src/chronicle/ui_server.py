@@ -1168,6 +1168,14 @@ function currentTrailButtons() {{
     '<button data-detail-trail="' + esc(path) + '">' + esc(humanizeDetailPath(path)) + '</button>'
   ).join('');
 }}
+function reviewQueueFilterChips() {{
+  const filterValue = String((window.__chronicleFilters && window.__chronicleFilters.reviewQueue) || '');
+  if (!filterValue) return '';
+  return '<p>'
+    + badge('slice:' + filterValue, 'badge-warning')
+    + ' <button data-reset-filter="reviewQueue">Clear Slice</button>'
+    + '</p>';
+}}
 function activeViewSummary(endpoint, mode) {{
   const parts = [];
   const currentEndpoint = endpoint || window.__chronicleCurrentEndpoint || '/api/overview';
@@ -1437,6 +1445,7 @@ function renderTable(endpoint, rows) {{
         {{ value: 'latest', label: 'Latest first' }},
         {{ value: 'reviewer', label: 'Reviewer' }},
       ])
+      + reviewQueueFilterChips()
       + (query ? '<p><button data-reset-filter="reviewQueue">Reset Filter</button></p>' : '')
       + emptyState
       + '<table><thead><tr><th>detail</th><th>target</th><th>status</th><th>warnings</th><th>latest reviewer</th></tr></thead><tbody>'

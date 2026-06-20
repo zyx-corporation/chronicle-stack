@@ -450,6 +450,7 @@ chronicle review approve --event evt_xxx --reviewer alice --json
 - overview triage の warning badges は summary 駆動で並び、warning code ごとの review queue filter に直接つながる
 - warning code filter が有効な間は review queue sort もその warning を持つ rows を優先する
 - その状態は active view の sort label にも `warning-first:<code>` として表示される
+- review queue list header には現在の active slice が chip として表示され、その場で clear できる
 - review queue detail は reviewer / audit timeline を read-only で表示する
 - review queue detail は current UI boundary と reviewer identity を照合した assurance も表示する
 - review queue detail の warning / capability 表示からも related review slices へ戻れる
