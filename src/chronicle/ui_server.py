@@ -387,11 +387,15 @@ class ChronicleUIDataService:
         readiness_counts: dict[str, int] = {}
         cli_parity_counts: dict[str, int] = {}
         warning_counts: dict[str, int] = {}
+        identity_assurance_counts: dict[str, int] = {}
+        reviewer_kind_counts: dict[str, int] = {}
         ready_now = 0
         advisory_only = 0
         package_ready = 0
         parity_aligned = 0
         parity_drift = 0
+        identity_boundary_aligned = 0
+        identity_declared_only = 0
 
         for row in review_queue:
             capability_status = str(row.get("review_capability", {}).get("status", "unknown"))
@@ -416,6 +420,18 @@ class ChronicleUIDataService:
             for warning_code in row.get("review_capability", {}).get("warnings", []):
                 code = str(warning_code)
                 warning_counts[code] = warning_counts.get(code, 0) + 1
+                if code == "reviewer_identity_declared_only":
+                    identity_declared_only += 1
+
+            assurance = row.get("latest_identity_assurance") or {}
+            assurance_status = str(assurance.get("status", "unknown"))
+            identity_assurance_counts[assurance_status] = identity_assurance_counts.get(assurance_status, 0) + 1
+            if assurance_status == "boundary_aligned":
+                identity_boundary_aligned += 1
+
+            latest_identity = row.get("latest_reviewer_identity") or {}
+            reviewer_kind = str(latest_identity.get("kind", "unknown"))
+            reviewer_kind_counts[reviewer_kind] = reviewer_kind_counts.get(reviewer_kind, 0) + 1
 
         return {
             "runtime_record_kinds": runtime_by_kind,
@@ -423,12 +439,16 @@ class ChronicleUIDataService:
             "package_readiness_counts": readiness_counts,
             "cli_parity_counts": cli_parity_counts,
             "warning_counts": warning_counts,
+            "identity_assurance_counts": identity_assurance_counts,
+            "reviewer_kind_counts": reviewer_kind_counts,
             "warning_summaries": self._warning_summaries(warning_counts),
             "ready_now_reviews": ready_now,
             "advisory_only_reviews": advisory_only,
             "package_ready_reviews": package_ready,
             "cli_parity_aligned_reviews": parity_aligned,
             "cli_parity_drift_reviews": parity_drift,
+            "identity_boundary_aligned_reviews": identity_boundary_aligned,
+            "identity_declared_only_reviews": identity_declared_only,
             "needs_attention_reviews": len(review_queue),
         }
 
@@ -1567,11 +1587,17 @@ function renderOverview(payload) {{
     + overviewJumpButton(sliceBadge('CLI aligned', esc(triage.cli_parity_aligned_reviews ?? 0), 'badge-ready'), '/api/review-queue', 'reviewQueue', 'aligned')
     + overviewJumpButton(sliceBadge('CLI drift', esc(triage.cli_parity_drift_reviews ?? 0), 'badge-warning'), '/api/review-queue', 'reviewQueue', 'drift_detected')
     + '</p>'
+    + '<p>'
+    + overviewJumpButton(sliceBadge('Identity aligned', esc(triage.identity_boundary_aligned_reviews ?? 0), 'badge-ready'), '/api/review-queue', 'reviewQueue', 'boundary_aligned')
+    + overviewJumpButton(sliceBadge('Identity declared', esc(triage.identity_declared_only_reviews ?? 0), 'badge-warning'), '/api/review-queue', 'reviewQueue', 'reviewer_identity_declared_only')
+    + '</p>'
     + '<p>' + (warningButtons || '') + '</p>'
     + summaryJsonLine('Runtime kinds', triage.runtime_record_kinds)
     + summaryJsonLine('Review capability counts', triage.review_capability_counts)
     + summaryJsonLine('Package readiness counts', triage.package_readiness_counts)
     + summaryJsonLine('CLI parity counts', triage.cli_parity_counts)
+    + summaryJsonLine('Identity assurance counts', triage.identity_assurance_counts)
+    + summaryJsonLine('Reviewer kind counts', triage.reviewer_kind_counts)
     + summaryJsonLine('Warning counts', triage.warning_counts)
     + '<p>Warning priority: '
     + (warningSummaries.length > 0
@@ -1587,6 +1613,7 @@ function renderOverview(payload) {{
     + '<p>' + sliceActionButton('Advisory Reviews', '/api/review-queue', 'reviewQueue', 'advisory')
     + sliceActionButton('Package Ready Reviews', '/api/review-queue', 'reviewQueue', 'package:package_context_available')
     + sliceActionButton('CLI Aligned Reviews', '/api/review-queue', 'reviewQueue', 'aligned')
+    + sliceActionButton('Identity Aligned Reviews', '/api/review-queue', 'reviewQueue', 'boundary_aligned')
     + sliceActionButton('Auth Boundary Warnings', '/api/review-queue', 'reviewQueue', 'ui_auth_not_enabled')
     + sliceActionButton('Declared Identity Warnings', '/api/review-queue', 'reviewQueue', 'reviewer_identity_declared_only')
     + sliceActionButton('Retrieval Plans', '/api/runtime-records', 'runtimeRecords', 'retrieval_plan') + '</p>'
@@ -1664,6 +1691,8 @@ function renderTable(endpoint, rows) {{
           capability.status || '',
           readiness.label || '',
           parity.status || '',
+          (row.latest_identity_assurance && row.latest_identity_assurance.status) || '',
+          (row.latest_reviewer_identity && row.latest_reviewer_identity.kind) || '',
           (row.latest_reviewer_identity && row.latest_reviewer_identity.label) || row.latest_reviewer || '',
         ]).toLowerCase().includes(query);
       }});

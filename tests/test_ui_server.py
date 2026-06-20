@@ -243,6 +243,8 @@ def test_ui_data_service_read_endpoints(tmp_path):
     assert overview["triage"]["cli_parity_aligned_reviews"] == 2
     assert overview["triage"]["cli_parity_drift_reviews"] == 0
     assert overview["triage"]["cli_parity_counts"]["aligned"] == 2
+    assert overview["triage"]["identity_assurance_counts"]["unknown"] == 2
+    assert overview["triage"]["reviewer_kind_counts"]["unknown"] == 2
     assert overview["triage"]["warning_counts"]["ui_auth_not_enabled"] == 2
     assert overview["triage"]["warning_counts"]["ui_authorization_not_enabled"] == 2
     assert overview["triage"]["warning_summaries"][0]["code"] == "ui_auth_not_enabled"
@@ -365,6 +367,7 @@ def test_ui_detail_assurance_can_align_with_configured_boundary(tmp_path):
     overview = service.overview()
     assert overview["identity_boundary_summary"]["status"] == "partially_aligned"
     assert overview["identity_boundary_summary"]["assurance_counts"]["boundary_aligned"] >= 1
+    assert overview["triage"]["identity_assurance_counts"]["boundary_aligned"] >= 1
 
 
 def test_ui_shell_contains_interactive_local_ui(tmp_path):
@@ -435,6 +438,8 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "CLI Parity" in html
     assert "CLI drift first" in html
     assert "summaryJsonLine('CLI parity counts', triage.cli_parity_counts)" in html
+    assert "summaryJsonLine('Identity assurance counts', triage.identity_assurance_counts)" in html
+    assert "summaryJsonLine('Reviewer kind counts', triage.reviewer_kind_counts)" in html
     assert "summaryJsonLine('Warning counts', triage.warning_counts)" in html
     assert "Warning priority:" in html
     assert "summaryJsonLine('Runtime kinds', triage.runtime_record_kinds)" in html
@@ -446,6 +451,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert 'data-reset-filters="all"' in html
     assert "sliceActionButton('Advisory Reviews', '/api/review-queue', 'reviewQueue', 'advisory')" in html
     assert "sliceActionButton('CLI Aligned Reviews', '/api/review-queue', 'reviewQueue', 'aligned')" in html
+    assert "sliceActionButton('Identity Aligned Reviews', '/api/review-queue', 'reviewQueue', 'boundary_aligned')" in html
     assert "sliceActionButton('Auth Boundary Warnings', '/api/review-queue', 'reviewQueue', 'ui_auth_not_enabled')" in html
     assert "sliceActionButton('Declared Identity Warnings', '/api/review-queue', 'reviewQueue', 'reviewer_identity_declared_only')" in html
     assert "sliceActionButton('Retrieval Plans', '/api/runtime-records', 'runtimeRecords', 'retrieval_plan')" in html

@@ -150,6 +150,7 @@ additional parity summaries
 new warning drill-down labels
 new helper-based phrasing for read-only review notices
 read-only CLI-equivalent action previews
+overview drill-down for derived identity-alignment slices
 ```
 
 Examples that require a future ADR:
