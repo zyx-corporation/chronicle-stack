@@ -232,6 +232,19 @@ def run_ui_smoke(root: Path | None = None) -> UISmokeReport:
                         ),
                     )
                 )
+                checks.append(
+                    UISmokeCheck(
+                        f"{endpoint}/{record_id}#identity-assurance",
+                        bool(record.get("identity_assurance_status"))
+                        or isinstance(record.get("latest_identity_assurance"), dict),
+                        (
+                            "ok"
+                            if bool(record.get("identity_assurance_status"))
+                            or isinstance(record.get("latest_identity_assurance"), dict)
+                            else "summary detail missing identity/session assurance surface"
+                        ),
+                    )
+                )
                 preview = record.get("action_preview")
                 first_action = preview.get("actions", [None])[0] if isinstance(preview, dict) else None
                 checks.append(
@@ -295,6 +308,21 @@ def run_ui_smoke(root: Path | None = None) -> UISmokeReport:
                     "ok"
                     if isinstance(summary_jobs_summary, dict) and isinstance(summary_jobs_summary.get("auth_readiness_counts"), dict)
                     else "overview missing summary auth readiness summary"
+                ),
+            )
+        )
+        checks.append(
+            UISmokeCheck(
+                "/api/overview#summary-identity-readiness",
+                isinstance(summary_jobs_summary, dict)
+                and isinstance(summary_jobs_summary.get("identity_assurance_counts"), dict)
+                and isinstance(summary_jobs_summary.get("reviewer_kind_counts"), dict),
+                (
+                    "ok"
+                    if isinstance(summary_jobs_summary, dict)
+                    and isinstance(summary_jobs_summary.get("identity_assurance_counts"), dict)
+                    and isinstance(summary_jobs_summary.get("reviewer_kind_counts"), dict)
+                    else "overview missing summary identity/session readiness summary"
                 ),
             )
         )

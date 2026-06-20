@@ -1330,6 +1330,7 @@ class ChronicleUIDataService:
             job["summary_source_count"] = len(job.get("source_refs", []))
             job["runtime_provider_kind"] = str(job.get("provenance", {}).get("runtime", {}).get("provider_kind", ""))
             job["suggested_cli_family"] = "chronicle summary show --id"
+            job["identity_assurance_status"] = "unknown"
             event_id = str(job.get("event_id", ""))
             if event_id.startswith("evt_"):
                 review_row = self._review_queue_row(event_id)
@@ -1340,6 +1341,9 @@ class ChronicleUIDataService:
                     job["review_capability"] = review_row.get("review_capability")
                     if review_row.get("latest_identity_assurance") is not None:
                         job["latest_identity_assurance"] = review_row.get("latest_identity_assurance")
+                        job["identity_assurance_status"] = str(
+                            review_row.get("latest_identity_assurance", {}).get("status", "")
+                        )
                     if review_row.get("latest_reviewer_identity") is not None:
                         job["latest_reviewer_identity"] = review_row.get("latest_reviewer_identity")
                     job["package_readiness_summary"] = review_row.get("package_readiness_summary")
