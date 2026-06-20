@@ -292,6 +292,7 @@ class ChronicleUIDataService:
         runtime_config = self.runtime_config_state()["runtime_config"]
         triage = self.overview_triage(runtime_records, review_queue)
         identity_boundary_summary = self.identity_boundary_summary(review_queue)
+        summary_jobs_summary = self.summary_jobs_overview(summary_jobs)
         return {
             "chronicle": {
                 "id": metadata.chronicle_id,
@@ -324,7 +325,33 @@ class ChronicleUIDataService:
             "ui_boundary": self.ui_boundary()["ui_boundary"],
             "auth_boundary_summary": self.ui_boundary()["ui_boundary"]["auth_boundary_summary"],
             "identity_boundary_summary": identity_boundary_summary,
+            "summary_jobs_summary": summary_jobs_summary,
             "mutation_readiness": self.mutation_readiness_summary(review_queue),
+        }
+
+    def summary_jobs_overview(self, summary_jobs: list[dict[str, Any]] | None = None) -> dict[str, Any]:
+        rows = summary_jobs if summary_jobs is not None else self.summary_jobs_list()["summary_jobs"]
+        status_counts: dict[str, int] = {}
+        review_counts: dict[str, int] = {}
+        package_counts: dict[str, int] = {}
+        provider_counts: dict[str, int] = {}
+        source_count_total = 0
+        for row in rows:
+            status = str(row.get("status", "unknown"))
+            review_status = str(row.get("review_capability_status", "unknown"))
+            package_status = str(row.get("package_readiness_status", "unknown"))
+            provider_kind = str(row.get("runtime_provider_kind", "unknown"))
+            status_counts[status] = status_counts.get(status, 0) + 1
+            review_counts[review_status] = review_counts.get(review_status, 0) + 1
+            package_counts[package_status] = package_counts.get(package_status, 0) + 1
+            provider_counts[provider_kind] = provider_counts.get(provider_kind, 0) + 1
+            source_count_total += int(row.get("summary_source_count", 0) or 0)
+        return {
+            "status_counts": status_counts,
+            "review_capability_counts": review_counts,
+            "package_readiness_counts": package_counts,
+            "runtime_provider_counts": provider_counts,
+            "summary_source_total": source_count_total,
         }
 
     def identity_boundary_summary(self, review_queue: list[dict[str, Any]] | None = None) -> dict[str, Any]:
@@ -1678,6 +1705,7 @@ function renderOverview(payload) {{
   const mutationReadiness = payload.mutation_readiness || {{}};
   const runtimeConfig = payload.runtime_config || {{}};
   const runtimeConfigContract = runtimeConfig.config || {{}};
+  const summaryJobs = payload.summary_jobs_summary || {{}};
   const warningSummaries = Array.isArray(triage.warning_summaries) ? triage.warning_summaries : [];
   const warningButtons = warningSummaries.map(item =>
     overviewJumpButton(
@@ -1771,6 +1799,15 @@ function renderOverview(payload) {{
     + '<p>Runtime records: ' + esc(counts.runtime_records ?? 0) + '</p>'
     + '<p>Summary jobs: ' + esc(counts.summary_jobs ?? 0) + '</p>'
     + '<p>Needs-review records: ' + esc(counts.review_queue ?? 0) + '</p>'
+    + '</div>'
+    + '<div class="panel">'
+    + panelTitle('Summary Jobs')
+    + summaryJsonLine('Status counts', summaryJobs.status_counts)
+    + summaryJsonLine('Review capability counts', summaryJobs.review_capability_counts)
+    + summaryJsonLine('Package readiness counts', summaryJobs.package_readiness_counts)
+    + summaryJsonLine('Runtime provider counts', summaryJobs.runtime_provider_counts)
+    + detailLine('Source refs total', summaryJobs.summary_source_total ?? 0)
+    + '<p>' + openListButton('Open Summary Jobs', '/api/summary-jobs') + '</p>'
     + '</div>'
     + '<div class="panel">'
     + panelTitle('Triage')

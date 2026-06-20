@@ -224,6 +224,11 @@ def test_ui_overview_data(tmp_path):
     assert overview["identity_boundary_summary"]["missing_identity_count"] == 3
     assert overview["mutation_readiness"]["status"] == "preview_only"
     assert "Define explicit local auth boundary." in overview["mutation_readiness"]["next_steps"]
+    assert overview["summary_jobs_summary"]["status_counts"]["pending_review"] == 1
+    assert overview["summary_jobs_summary"]["review_capability_counts"]["advisory_only"] == 1
+    assert overview["summary_jobs_summary"]["package_readiness_counts"]["no_context_records"] == 1
+    assert overview["summary_jobs_summary"]["runtime_provider_counts"]["disabled"] == 1
+    assert overview["summary_jobs_summary"]["summary_source_total"] == 0
     assert overview["triage"]["needs_attention_reviews"] == 3
     assert overview["triage"]["runtime_record_kinds"]["summary"] == 1
     assert overview["triage"]["runtime_record_kinds"]["retrieval_plan"] == 1
@@ -480,6 +485,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "Summary Jobs" in html
     assert "Auth Boundary" in html
     assert "Identity Boundary" in html
+    assert "Summary Jobs" in html
     assert "Mutation capability flag:" in html
     assert "currentTrailLabel" in html
     assert "currentTrailButtons" in html
@@ -514,6 +520,8 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "summaryJsonLine('Identity assurance counts', triage.identity_assurance_counts)" in html
     assert "summaryJsonLine('Reviewer kind counts', triage.reviewer_kind_counts)" in html
     assert "summaryJsonLine('Warning counts', triage.warning_counts)" in html
+    assert "summaryJsonLine('Status counts', summaryJobs.status_counts)" in html
+    assert "summaryJsonLine('Runtime provider counts', summaryJobs.runtime_provider_counts)" in html
     assert "Warning priority:" in html
     assert "summaryJsonLine('Runtime kinds', triage.runtime_record_kinds)" in html
     assert "detailLine('Status', parity.status || '')" in html
