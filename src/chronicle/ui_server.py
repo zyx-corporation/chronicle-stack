@@ -1863,6 +1863,10 @@ function jumpBadge(text, cls, endpoint, filterTarget, filterValue) {{
   return '<button data-jump="' + esc(endpoint) + '"' + targetAttr + valueAttr + '>'
     + badge(text, cls) + '</button>';
 }}
+function copyCommandButton(command, targetId, label = 'Copy CLI') {{
+  if (!command) return '';
+  return '<button data-copy-command="' + esc(command) + '" data-copy-target="' + esc(targetId || 'action-preview-response') + '">' + esc(label) + '</button>';
+}}
 function sourceCountBadges(sourceCounts) {{
   return Object.entries(sourceCounts || {{}}).map(([key, value]) =>
     badge(key + ':' + value, 'badge-neutral')
@@ -2890,7 +2894,9 @@ async function loadDetail(endpoint) {{
       + (previewButtons.length > 0 ? '<p>' + previewButtons.join('') + '</p>' : '')
       + detailLine('Rollback status', failureContract.rollback_status || '')
       + detailLine('Durable mutation on failure', failureContract.durable_mutation_reported_on_failure)
+      + detailLine('Recovery path', failureContract.recovery_path || '')
       + detailListLine('Possible errors', failureContract.possible_error_codes, ' | ')
+      + (failureContract.recovery_path ? '<p>' + copyCommandButton(failureContract.recovery_path, 'action-preview-response', 'Copy Recovery CLI') + '</p>' : '')
       + (
         preview.ui_mutation_enabled
           ? '<p><label>Reviewer <input id="reviewer-label" value="local-ui" placeholder="alice"></label> '
@@ -2902,6 +2908,7 @@ async function loadDetail(endpoint) {{
       )
       + '<ul>' + actions.map(item =>
           '<li><strong>' + esc(item.label || '') + ':</strong> <span class="id">' + esc(item.command || '') + '</span>'
+          + (item.command ? ' ' + copyCommandButton(item.command, 'action-preview-response') : '')
           + (item.post_path
             ? (
                 preview.ui_mutation_enabled
@@ -2988,15 +2995,44 @@ async function previewBlockedRoute(path, targetId = 'action-preview-response') {
     + detailLine('Error code', payload.error_code || '')
     + detailLine('Mutation enabled', payload.mutation_enabled)
     + detailLine('CLI equivalent', payload.cli_equivalent || '')
+    + detailLine('Recovery path', (payload.failure_contract || {{}}).recovery_path || '')
     + detailLine('Rollback status', (payload.failure_contract || {{}}).rollback_status || '')
     + detailLine('Durable mutation on failure', (payload.failure_contract || {{}}).durable_mutation_reported_on_failure)
-    + detailListLine('Possible errors', (payload.failure_contract || {{}}).possible_error_codes, ' | ');
+    + detailListLine('Possible errors', (payload.failure_contract || {{}}).possible_error_codes, ' | ')
+    + ((payload.failure_contract || {{}}).recovery_path ? '<p>' + copyCommandButton((payload.failure_contract || {{}}).recovery_path, targetId, 'Copy Recovery CLI') + '</p>' : '');
 }}
 function reviewFieldValue(prefix, suffix, fallback = '') {{
   const element = prefix === 'reviewer'
     ? document.getElementById(suffix)
     : document.getElementById(prefix + '-' + suffix);
   return element && typeof element.value === 'string' ? element.value : fallback;
+}}
+async function copyCommand(command, targetId = 'action-preview-response') {{
+  const target = document.getElementById(targetId);
+  if (!command) return;
+  let copied = false;
+  if (navigator.clipboard && navigator.clipboard.writeText) {{
+    try {{
+      await navigator.clipboard.writeText(command);
+      copied = true;
+    }} catch (_error) {{
+      copied = false;
+    }}
+  }}
+  if (!copied) {{
+    const textArea = document.createElement('textarea');
+    textArea.value = command;
+    textArea.setAttribute('readonly', 'readonly');
+    textArea.style.position = 'absolute';
+    textArea.style.left = '-9999px';
+    document.body.appendChild(textArea);
+    textArea.select();
+    copied = document.execCommand('copy');
+    document.body.removeChild(textArea);
+  }}
+  if (target) {{
+    target.innerHTML += '<p>' + esc(copied ? 'Copied recovery CLI: ' : 'Copy failed; command: ') + '<span class="id">' + esc(command) + '</span></p>';
+  }}
 }}
 async function submitReviewAction(path, action, recordId, targetId = 'action-preview-response', fieldPrefix = 'reviewer', successDetail = '') {{
   const target = document.getElementById(targetId);
@@ -3034,10 +3070,12 @@ async function submitReviewAction(path, action, recordId, targetId = 'action-pre
     + detailLine('Audit ID', payload.audit_id || '')
     + detailLine('Decision event', payload.decision_event_id || '')
     + detailLine('CLI equivalent', payload.cli_equivalent || '')
+    + detailLine('Recovery path', ((payload.success_contract || payload.failure_contract) || {{}}).recovery_path || '')
     + detailLine('Rollback status', ((payload.success_contract || payload.failure_contract) || {{}}).rollback_status || '')
     + detailLine('Transaction status', (payload.success_contract || {{}}).transaction_status || '')
     + detailLine('Durable mutation on failure', (payload.failure_contract || {{}}).durable_mutation_reported_on_failure)
-    + detailListLine('Possible errors', (payload.failure_contract || {{}}).possible_error_codes, ' | ');
+    + detailListLine('Possible errors', (payload.failure_contract || {{}}).possible_error_codes, ' | ')
+    + (((payload.success_contract || payload.failure_contract) || {{}}).recovery_path ? '<p>' + copyCommandButton(((payload.success_contract || payload.failure_contract) || {{}}).recovery_path, targetId, 'Copy Recovery CLI') + '</p>' : '');
   if (response.ok) {{
     if (window.__chronicleCurrentEndpoint) loadEndpoint(window.__chronicleCurrentEndpoint);
     if (successDetail) {{
@@ -3049,6 +3087,12 @@ async function submitReviewAction(path, action, recordId, targetId = 'action-pre
 }}
 document.querySelectorAll('button[data-endpoint]').forEach(button => button.addEventListener('click', () => loadEndpoint(button.dataset.endpoint)));
 document.getElementById('view').addEventListener('click', event => {{
+  if (event.target.dataset.copyCommand) {{
+    copyCommand(
+      event.target.dataset.copyCommand,
+      event.target.dataset.copyTarget || 'review-queue-action-preview-response',
+    );
+  }}
   if (event.target.dataset.detail) loadDetail(event.target.dataset.detail);
   if (event.target.dataset.jump) {{
     const filterTarget = event.target.dataset.filterTarget;
@@ -3068,6 +3112,7 @@ document.getElementById('view').addEventListener('click', event => {{
   }}
 }});
 document.getElementById('detail').addEventListener('click', event => {{
+  if (event.target.dataset.copyCommand) copyCommand(event.target.dataset.copyCommand, event.target.dataset.copyTarget || 'action-preview-response');
   if (event.target.dataset.previewPost) previewBlockedRoute(event.target.dataset.previewPost);
   if (event.target.dataset.submitReviewAction) {{
     submitReviewAction(

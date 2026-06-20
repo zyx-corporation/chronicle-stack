@@ -741,9 +741,13 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "Durable mutation on failure" in html
     assert "Possible errors" in html
     assert "Transaction status" in html
+    assert "Recovery path" in html
     assert "async function previewBlockedRoute(path, targetId = 'action-preview-response')" in html
+    assert "async function copyCommand(command, targetId = 'action-preview-response')" in html
     assert "async function submitReviewAction(path, action, recordId, targetId = 'action-preview-response', fieldPrefix = 'reviewer', successDetail = '')" in html
     assert "data-submit-review-action" in html
+    assert "data-copy-command" in html
+    assert "Copy Recovery CLI" in html
     assert "Review Action Result" in html
     assert "POST enabled" in html
     assert "reviewer-label" in html
