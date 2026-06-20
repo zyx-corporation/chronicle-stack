@@ -169,6 +169,41 @@ def run_ui_smoke(root: Path | None = None) -> UISmokeReport:
                         ),
                     )
                 )
+                action_preview = record.get("action_preview")
+                first_action = action_preview.get("actions", [None])[0] if isinstance(action_preview, dict) else None
+                checks.append(
+                    UISmokeCheck(
+                        f"{endpoint}/{record_id}#blocked-route-preview",
+                        isinstance(first_action, dict)
+                        and first_action.get("post_expected_status") == 403
+                        and first_action.get("post_expected_error_code") == "mutation_disabled",
+                        (
+                            "ok"
+                            if isinstance(first_action, dict)
+                            and first_action.get("post_expected_status") == 403
+                            and first_action.get("post_expected_error_code") == "mutation_disabled"
+                            else "review detail missing blocked route preview contract"
+                        ),
+                    )
+                )
+                blocked = service.review_action_blocked_response(
+                    f"/api/review-actions/{record_id}/approve"
+                )
+                checks.append(
+                    UISmokeCheck(
+                        f"/api/review-actions/{record_id}/approve",
+                        blocked is not None
+                        and blocked[0].value == 403
+                        and blocked[1].get("error_code") == "mutation_disabled",
+                        (
+                            "ok"
+                            if blocked is not None
+                            and blocked[0].value == 403
+                            and blocked[1].get("error_code") == "mutation_disabled"
+                            else "blocked review action route contract missing"
+                        ),
+                    )
+                )
             if endpoint == "/api/runtime-records" and detail is not None and "record" in detail:
                 record = detail["record"]
                 auth_notice = record.get("auth_boundary_notice")
@@ -197,6 +232,23 @@ def run_ui_smoke(root: Path | None = None) -> UISmokeReport:
                         ),
                     )
                 )
+                preview = record.get("action_preview")
+                first_action = preview.get("actions", [None])[0] if isinstance(preview, dict) else None
+                checks.append(
+                    UISmokeCheck(
+                        f"{endpoint}/{record_id}#blocked-route-preview",
+                        isinstance(first_action, dict)
+                        and first_action.get("post_expected_status") == 403
+                        and first_action.get("post_expected_error_code") == "mutation_disabled",
+                        (
+                            "ok"
+                            if isinstance(first_action, dict)
+                            and first_action.get("post_expected_status") == 403
+                            and first_action.get("post_expected_error_code") == "mutation_disabled"
+                            else "summary detail missing blocked route preview contract"
+                        ),
+                    )
+                )
 
         missing = service.detail_payload("/api/contexts/__chronicle_missing_context__")
         checks.append(
@@ -217,6 +269,8 @@ def run_ui_smoke(root: Path | None = None) -> UISmokeReport:
                 "Related Links",
                 "Review Queue",
                 "Runtime Records",
+                "Summary jobs blocked-route preview stays read-only and returns the CLI fallback contract.",
+                "Review queue blocked-route preview stays read-only and returns the CLI fallback contract.",
             )
         )
         overview = collection_payloads.get("/api/overview", {})

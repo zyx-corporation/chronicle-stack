@@ -698,6 +698,7 @@ class ChronicleUIDataService:
                     data["cli_parity_status"] = str(
                         review_row.get("cli_parity_summary", {}).get("status", "")
                     )
+                    data["action_preview_summary"] = review_row.get("action_preview_summary", {})
             rows.append(data)
         return {"summary_jobs": rows}
 
@@ -2243,13 +2244,17 @@ function renderTable(endpoint, rows) {{
       + summaryJobsFilterChips()
       + (query ? '<p><button data-reset-filter="summaryJobs">Reset Filter</button></p>' : '')
       + emptyState
-      + '<table><thead><tr><th>detail</th><th>summary job</th><th>status</th><th>review</th><th>auth</th><th>package</th><th>runtime</th><th>sources</th></tr></thead><tbody>'
+      + '<div id="summary-jobs-action-preview-response"><p>Summary jobs blocked-route preview stays read-only and returns the CLI fallback contract.</p></div>'
+      + '<table><thead><tr><th>detail</th><th>summary job</th><th>status</th><th>review</th><th>auth</th><th>package</th><th>preview</th><th>runtime</th><th>sources</th></tr></thead><tbody>'
       + sorted.map(row => {{
         const path = detailPath(endpoint, row);
         const button = path ? '<button data-detail="' + esc(path) + '">JSON</button>' : '';
         const reviewStatus = row.review_capability_status || '';
         const authReadinessStatus = row.auth_readiness_status || '';
         const packageStatus = row.package_readiness_status || '';
+        const preview = row.action_preview_summary || {{}};
+        const previewActions = Array.isArray(preview.actions) ? preview.actions : [];
+        const previewAction = previewActions[0] || {{}};
         const reviewBadge = reviewStatus === 'ready'
           ? jumpBadge('Ready', 'badge-ready', '/api/review-queue', 'reviewQueue', 'ready')
           : reviewStatus === 'resolved'
@@ -2263,6 +2268,12 @@ function renderTable(endpoint, rows) {{
           : packageStatus === 'no_context_records'
             ? jumpBadge('Package Advisory', 'badge-warning', '/api/review-queue', 'reviewQueue', 'package:no_context_records')
             : badge(packageStatus || 'Package Unknown', 'badge-neutral');
+        const previewSummary = preview.status
+          ? '<strong>' + esc(preview.status) + '</strong><br>' + esc(preview.message || '')
+          : esc(preview.message || '');
+        const previewButton = previewAction.post_path
+          ? '<button data-preview-post="' + esc(previewAction.post_path || '') + '" data-preview-target="summary-jobs-action-preview-response">Preview blocked route</button>'
+          : '';
         const targetButton = row.review_target_event_id
           ? '<button data-detail-nav="/api/review-queue/' + esc(row.review_target_event_id) + '">Open review</button>'
           : '';
@@ -2273,6 +2284,7 @@ function renderTable(endpoint, rows) {{
           + '<td>' + reviewBadge + '</td>'
           + '<td>' + authBadge + '</td>'
           + '<td>' + packageBadge + '</td>'
+          + '<td>' + previewSummary + (previewButton ? '<br>' + previewButton : '') + '</td>'
           + '<td>' + esc(row.runtime_provider_kind || '') + '</td>'
           + '<td>' + esc(row.summary_source_count ?? 0) + '</td>'
           + '</tr>';

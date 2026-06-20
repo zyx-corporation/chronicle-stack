@@ -279,6 +279,7 @@ def test_ui_data_service_read_endpoints(tmp_path):
     assert service.summary_jobs_list()["summary_jobs"][0]["auth_readiness_status"] == "advisory_only"
     assert service.summary_jobs_list()["summary_jobs"][0]["package_readiness_status"] == "no_context_records"
     assert service.summary_jobs_list()["summary_jobs"][0]["cli_parity_status"] == "aligned"
+    assert service.summary_jobs_list()["summary_jobs"][0]["action_preview_summary"]["status"] == "preview_only"
     assert service.runtime_config_state()["runtime_config"]["config"]["provider_name"] == "ui-local"
     assert service.review_queue()["review_queue"][0]["review_preview_only"] is True
     assert service.review_queue()["review_queue"][0]["target_event_id"].startswith("evt_")
@@ -585,6 +586,8 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "buttons.push(openListButton('Open Review Queue', '/api/review-queue'));" in html
     assert "<th>review</th><th>auth</th><th>package</th>" in html
     assert "<th>preview</th>" in html
+    assert "summary-jobs-action-preview-response" in html
+    assert "Summary jobs blocked-route preview stays read-only and returns the CLI fallback contract." in html
     assert "textInput('summaryJobs', 'Filter summary jobs...')" in html
     assert "sortSelect('summaryJobs', currentSortValue('/api/summary-jobs')" in html
     assert "<th>auth</th>" in html
