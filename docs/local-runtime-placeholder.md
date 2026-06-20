@@ -141,7 +141,7 @@ review detail / summary detail では、Phase H readiness をまとめた auth r
 
 review detail の `Action Preview` では disabled approve / reject / request-changes buttons に加えて、fail-closed な `POST /api/review-actions/<event_id>/<action>` route preview を read-only で試せます。返るのは常に blocked response と CLI fallback contract だけで、mutation は有効化されません。
 
-review queue 一覧でも auth readiness badge を通じて advisory / boundary-aligned slice を read-only で辿れます。
+review queue 一覧でも auth readiness badge を通じて advisory / boundary-aligned slice を read-only で辿れます。また preview 列から blocked route preview を read-only で試せるため、detail を開かずに CLI fallback contract を確認できます。
 
 summary job 一覧でも matching review target 由来の auth readiness badge を read-only で確認できます。
 

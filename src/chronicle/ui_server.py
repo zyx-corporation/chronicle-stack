@@ -660,10 +660,14 @@ class ChronicleUIDataService:
             )
             readiness = self.review_package_readiness(entry.target_event_id)
             data["package_readiness_summary"] = self._package_readiness_summary(readiness)
+            data["action_preview_summary"] = self._review_action_preview(
+                entry.target_event_id,
+                data.get("review_capability", {}),
+            )
             data["cli_parity_summary"] = self._review_cli_parity_summary(
                 entry.target_event_id,
                 data.get("available_actions", []),
-                {"actions": review_action_commands(entry.target_event_id)},
+                data["action_preview_summary"],
             )
             data["ui_mutation_enabled"] = False
             data["review_preview_only"] = True
@@ -2168,13 +2172,17 @@ function renderTable(endpoint, rows) {{
       + reviewQueueFilterChips()
       + (query ? '<p><button data-reset-filter="reviewQueue">Reset Filter</button></p>' : '')
       + emptyState
-      + '<table><thead><tr><th>detail</th><th>target</th><th>status</th><th>auth</th><th>warnings</th><th>latest reviewer</th></tr></thead><tbody>'
+      + '<div id="review-queue-action-preview-response"><p>Review queue blocked-route preview stays read-only and returns the CLI fallback contract.</p></div>'
+      + '<table><thead><tr><th>detail</th><th>target</th><th>status</th><th>auth</th><th>preview</th><th>warnings</th><th>latest reviewer</th></tr></thead><tbody>'
       + sorted.map(row => {{
         const path = detailPath(endpoint, row);
         const button = path ? '<button data-detail="' + esc(path) + '">JSON</button>' : '';
         const capability = row.review_capability || {{}};
         const readiness = row.package_readiness_summary || {{}};
         const parity = row.cli_parity_summary || {{}};
+        const preview = row.action_preview_summary || {{}};
+        const previewActions = Array.isArray(preview.actions) ? preview.actions : [];
+        const previewAction = previewActions[0] || {{}};
         const authReadiness = row.auth_boundary_notice || {{}};
         const warnList = Array.isArray(capability.warnings) ? capability.warnings : [];
         const warnDetails = Array.isArray(capability.warning_details) ? capability.warning_details : [];
@@ -2189,11 +2197,18 @@ function renderTable(endpoint, rows) {{
         const authBadge = authReadiness.status === 'boundary_aligned'
           ? jumpBadge('Auth aligned', 'badge-ready', '/api/review-queue', 'reviewQueue', 'boundary_aligned')
           : jumpBadge('Auth advisory', 'badge-warning', '/api/review-queue', 'reviewQueue', authReadiness.status || 'advisory_only');
+        const previewSummary = preview.status
+          ? '<strong>' + esc(preview.status) + '</strong><br>' + esc(preview.message || '')
+          : esc(preview.message || '');
+        const previewButton = previewAction.post_path
+          ? '<button data-preview-post="' + esc(previewAction.post_path || '') + '" data-preview-target="review-queue-action-preview-response">Preview blocked route</button>'
+          : '';
         return '<tr>'
           + '<td>' + button + '</td>'
           + '<td><span class="id">' + esc(row.target_event_id || '') + '</span><br>' + reviewKindBadge + (reviewKindBadge ? '<br>' : '') + esc(row.target_summary || '') + '</td>'
           + '<td>' + statusBadge + '<br>' + readinessBadge + '<br>' + parityBadge + '</td>'
           + '<td>' + authBadge + '</td>'
+          + '<td>' + previewSummary + (previewButton ? '<br>' + previewButton : '') + '</td>'
           + '<td>' + (warnBadges ? warnBadges + '<br>' : '') + esc(warnDetails.map(item => item.message).join(' | ') || warnList.join(', ') || '(none)') + '</td>'
           + '<td>' + reviewerBadge + (reviewerBadge ? '<br>' : '') + esc((row.latest_reviewer_identity && row.latest_reviewer_identity.label) || row.latest_reviewer || '') + '</td>'
           + '</tr>';
@@ -2501,8 +2516,8 @@ async function loadDetail(endpoint) {{
   document.getElementById('detail').innerHTML =
     '<h2>' + esc(endpoint) + '</h2>' + extra + '<pre>' + esc(JSON.stringify(payload, null, 2)) + '</pre>';
 }}
-async function previewBlockedRoute(path) {{
-  const target = document.getElementById('action-preview-response');
+async function previewBlockedRoute(path, targetId = 'action-preview-response') {{
+  const target = document.getElementById(targetId);
   if (!target) return;
   target.innerHTML = '<p>Loading blocked route preview…</p>';
   const response = await fetch(path, {{ method: 'POST' }});
@@ -2565,6 +2580,14 @@ document.getElementById('detail').addEventListener('click', event => {{
     if (window.__chronicleCurrentEndpoint) loadEndpoint(window.__chronicleCurrentEndpoint);
   }}
   if (event.target.dataset.backView && window.__chronicleCurrentEndpoint) loadEndpoint(window.__chronicleCurrentEndpoint);
+}});
+document.getElementById('view').addEventListener('click', event => {{
+  if (event.target.dataset.previewPost) {{
+    previewBlockedRoute(
+      event.target.dataset.previewPost,
+      event.target.dataset.previewTarget || 'review-queue-action-preview-response',
+    );
+  }}
 }});
 window.__chronicleFilters = {{ runtimeRecords: '', reviewQueue: '', summaryJobs: '' }};
 window.__chronicleSorts = {{ runtimeRecords: 'latest', reviewQueue: 'attention', summaryJobs: 'latest' }};

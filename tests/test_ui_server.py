@@ -286,6 +286,10 @@ def test_ui_data_service_read_endpoints(tmp_path):
     assert service.review_queue()["review_queue"][0]["auth_boundary_notice"]["status"] == "advisory_only"
     assert service.review_queue()["review_queue"][0]["package_readiness_summary"]["label"].startswith("package:")
     assert service.review_queue()["review_queue"][0]["package_readiness_summary"]["message"]
+    assert service.review_queue()["review_queue"][0]["action_preview_summary"]["status"] == "preview_only"
+    assert service.review_queue()["review_queue"][0]["action_preview_summary"]["actions"][0]["post_path"].startswith(
+        "/api/review-actions/evt_"
+    )
     assert service.review_queue()["review_queue"][0]["cli_parity_summary"]["status"] == "aligned"
     assert service.review_queue()["review_queue"][0]["cli_parity_summary"]["expected_actions"] == [
         "approve",
@@ -580,6 +584,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "openListButton('Open Package Review', '/api/package-review')" in html
     assert "buttons.push(openListButton('Open Review Queue', '/api/review-queue'));" in html
     assert "<th>review</th><th>auth</th><th>package</th>" in html
+    assert "<th>preview</th>" in html
     assert "textInput('summaryJobs', 'Filter summary jobs...')" in html
     assert "sortSelect('summaryJobs', currentSortValue('/api/summary-jobs')" in html
     assert "<th>auth</th>" in html
@@ -619,6 +624,9 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "textInput('runtimeRecords'" in html
     assert "<th>auth</th>" in html
     assert "textInput('reviewQueue'" in html
+    assert "review-queue-action-preview-response" in html
+    assert "Review queue blocked-route preview stays read-only and returns the CLI fallback contract." in html
+    assert "data-preview-target=\"review-queue-action-preview-response\"" in html
     assert "__chronicleFilters" in html
     assert "summaryJobs: ''" in html
     assert "summaryJobs: 'latest'" in html
@@ -634,7 +642,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "Preview blocked route" in html
     assert "data-preview-post" in html
     assert "Blocked route preview stays read-only and returns the CLI fallback contract." in html
-    assert "async function previewBlockedRoute(path)" in html
+    assert "async function previewBlockedRoute(path, targetId = 'action-preview-response')" in html
     assert "Identity Assurance" in html
     assert "warning_details" in html
     assert "/api/events" in html
