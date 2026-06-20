@@ -230,6 +230,7 @@ def test_ui_overview_data(tmp_path):
     assert "Define explicit local auth boundary." in overview["mutation_readiness"]["next_steps"]
     assert overview["summary_jobs_summary"]["status_counts"]["pending_review"] == 1
     assert overview["summary_jobs_summary"]["review_capability_counts"]["advisory_only"] == 1
+    assert overview["summary_jobs_summary"]["auth_readiness_counts"]["advisory_only"] == 1
     assert overview["summary_jobs_summary"]["package_readiness_counts"]["no_context_records"] == 1
     assert overview["summary_jobs_summary"]["runtime_provider_counts"]["disabled"] == 1
     assert overview["summary_jobs_summary"]["summary_source_total"] == 0
@@ -539,8 +540,10 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "summaryJsonLine('Reviewer kind counts', triage.reviewer_kind_counts)" in html
     assert "summaryJsonLine('Warning counts', triage.warning_counts)" in html
     assert "summaryJsonLine('Status counts', summaryJobs.status_counts)" in html
+    assert "summaryJsonLine('Auth readiness counts', summaryJobs.auth_readiness_counts)" in html
     assert "summaryJsonLine('Runtime provider counts', summaryJobs.runtime_provider_counts)" in html
     assert "Summary advisory" in html
+    assert "Summary auth advisory" in html
     assert "Summary package ready" in html
     assert "Warning priority:" in html
     assert "summaryJsonLine('Runtime kinds', triage.runtime_record_kinds)" in html

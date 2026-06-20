@@ -375,22 +375,26 @@ class ChronicleUIDataService:
         rows = summary_jobs if summary_jobs is not None else self.summary_jobs_list()["summary_jobs"]
         status_counts: dict[str, int] = {}
         review_counts: dict[str, int] = {}
+        auth_counts: dict[str, int] = {}
         package_counts: dict[str, int] = {}
         provider_counts: dict[str, int] = {}
         source_count_total = 0
         for row in rows:
             status = str(row.get("status", "unknown"))
             review_status = str(row.get("review_capability_status", "unknown"))
+            auth_status = str(row.get("auth_readiness_status", "unknown"))
             package_status = str(row.get("package_readiness_status", "unknown"))
             provider_kind = str(row.get("runtime_provider_kind", "unknown"))
             status_counts[status] = status_counts.get(status, 0) + 1
             review_counts[review_status] = review_counts.get(review_status, 0) + 1
+            auth_counts[auth_status] = auth_counts.get(auth_status, 0) + 1
             package_counts[package_status] = package_counts.get(package_status, 0) + 1
             provider_counts[provider_kind] = provider_counts.get(provider_kind, 0) + 1
             source_count_total += int(row.get("summary_source_count", 0) or 0)
         return {
             "status_counts": status_counts,
             "review_capability_counts": review_counts,
+            "auth_readiness_counts": auth_counts,
             "package_readiness_counts": package_counts,
             "runtime_provider_counts": provider_counts,
             "summary_source_total": source_count_total,
@@ -1930,10 +1934,12 @@ function renderOverview(payload) {{
     + '<p>'
     + overviewJumpButton(sliceBadge('Summary jobs', esc(counts.summary_jobs ?? 0), 'badge-neutral'), '/api/summary-jobs')
     + overviewJumpButton(sliceBadge('Summary advisory', esc((summaryJobs.review_capability_counts && summaryJobs.review_capability_counts.advisory_only) ?? 0), 'badge-warning'), '/api/summary-jobs', 'summaryJobs', 'advisory_only')
+    + overviewJumpButton(sliceBadge('Summary auth advisory', esc((summaryJobs.auth_readiness_counts && summaryJobs.auth_readiness_counts.advisory_only) ?? 0), 'badge-warning'), '/api/summary-jobs', 'summaryJobs', 'advisory_only')
     + overviewJumpButton(sliceBadge('Summary package ready', esc((summaryJobs.package_readiness_counts && summaryJobs.package_readiness_counts.package_context_available) ?? 0), 'badge-ready'), '/api/summary-jobs', 'summaryJobs', 'package_context_available')
     + '</p>'
     + summaryJsonLine('Status counts', summaryJobs.status_counts)
     + summaryJsonLine('Review capability counts', summaryJobs.review_capability_counts)
+    + summaryJsonLine('Auth readiness counts', summaryJobs.auth_readiness_counts)
     + summaryJsonLine('Package readiness counts', summaryJobs.package_readiness_counts)
     + summaryJsonLine('Runtime provider counts', summaryJobs.runtime_provider_counts)
     + detailLine('Source refs total', summaryJobs.summary_source_total ?? 0)

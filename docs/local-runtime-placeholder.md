@@ -143,6 +143,8 @@ review queue 一覧でも auth readiness badge を通じて advisory / boundary-
 
 summary job 一覧でも matching review target 由来の auth readiness badge を read-only で確認できます。
 
+overview の summary jobs panel でも auth readiness の派生集計を read-only で確認できます。
+
 ## Summary job re-run
 
 `chronicle summary run --id sum_xxx` は、既存の summary job を explicit manual runtime boundary に通し直し、短縮結果を新しい pending-review draft として保存します。
