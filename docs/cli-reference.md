@@ -348,8 +348,10 @@ read-only endpoint:
 
 `/api/review-queue` は `review_status=needs_review` の record を preview-only で返します。ここでは write action は有効化されず、`suggested_cli_family` で関連 CLI family の目安だけを表示します。
 
-`/api/ui-boundary` は bind scope, mutation capability flag, auth/authz mode を read-only で返します。現在は mutation disabled が前提で、`mutation_capability_flag=true` でも write route は有効化されません。placeholder config により `auth_mode` / `authorization_mode` / `session_gating` を明示できます。あわせて `auth_boundary_summary` で auth/authz placeholder の derived status / blockers / next steps も返します。overview ではさらに `identity_boundary_summary` により reviewer identity / session alignment の集約状態も読めます。
+`/api/ui-boundary` は bind scope, mutation capability flag, auth/authz mode を read-only で返します。現在は mutation disabled が前提で、`mutation_capability_flag=true` でも write route は有効化されません。placeholder config により `auth_mode` / `authorization_mode` / `session_gating` を明示できます。あわせて `auth_boundary_summary` で auth/authz placeholder の derived status / blockers / next steps も返します。overview ではさらに `auth_boundary_overview` / `identity_boundary_summary` により auth warning / reviewer identity / session alignment の集約状態も読めます。
 - overview triage では `Identity aligned` などの quick slice から reviewer identity / assurance 系の review queue slice に直接 drilldown できますが、これは引き続き read-only filter state のみです。
+- review queue list では `auth` badge により `Auth advisory` / `Auth aligned` の slice を detail を開かずに辿れます。
+- review detail / summary detail では `Auth Readiness` notice により current preview auth boundary, reviewer identity assurance, blocker, next step を read-only で確認できます。
 この read-only semantic boundary と CLI parity の扱いは [ADR-0019](adr/0019-local-ui-review-semantics-parity-boundary.md) で固定しています。
 
 ## chronicle runtime
