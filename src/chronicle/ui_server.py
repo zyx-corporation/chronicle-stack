@@ -1318,6 +1318,14 @@ function panelTitle(text) {{
 function noticeTitle(text) {{
   return '<h3>' + esc(text) + '</h3>';
 }}
+function detailLine(label, value) {{
+  return '<p>' + esc(label) + ': ' + esc(value || '') + '</p>';
+}}
+function detailListLine(label, values, separator) {{
+  const items = Array.isArray(values) ? values : [];
+  const joiner = separator || ', ';
+  return detailLine(label, items.join(joiner) || '(none)');
+}}
 function summaryJsonLine(label, value) {{
   return '<p>' + esc(label) + ': ' + esc(JSON.stringify(value || {{}})) + '</p>';
 }}
@@ -1408,12 +1416,12 @@ function renderOverview(payload) {{
     + '</div>'
     + '<div class="panel">'
     + panelTitle('Mutation Readiness')
-    + '<p>Status: ' + esc(mutationReadiness.status || '') + '</p>'
+    + detailLine('Status', mutationReadiness.status || '')
     + '<p>' + esc(mutationReadiness.message || '') + '</p>'
-    + '<p>Ready rows: ' + esc(mutationReadiness.ready_row_count ?? 0) + '</p>'
-    + '<p>Advisory rows: ' + esc(mutationReadiness.advisory_row_count ?? 0) + '</p>'
-    + '<p>Blockers: ' + esc((mutationReadiness.blockers || []).join(' | ') || '(none)') + '</p>'
-    + '<p>Next steps: ' + esc((mutationReadiness.next_steps || []).join(' | ') || '(none)') + '</p>'
+    + detailLine('Ready rows', mutationReadiness.ready_row_count ?? 0)
+    + detailLine('Advisory rows', mutationReadiness.advisory_row_count ?? 0)
+    + detailListLine('Blockers', mutationReadiness.blockers, ' | ')
+    + detailListLine('Next steps', mutationReadiness.next_steps, ' | ')
     + '</div>'
     + '<div class="panel">'
     + panelTitle('AI Index Snapshot')
@@ -1638,22 +1646,22 @@ async function loadDetail(endpoint) {{
     extra += '<div class="notice">' + noticeTitle('Runtime Preview')
       + '<p><strong>' + esc(preview.title || '') + '</strong></p>'
       + '<p>' + esc(preview.preview_text || '') + '</p>'
-      + '<p>Kind: ' + esc(preview.record_kind || record.runtime_record_kind || '') + '</p>'
-      + '<p>Source counts: ' + esc(JSON.stringify(preview.source_counts || {{}})) + '</p>'
-      + '<p>Referenced IDs: ' + esc((preview.referenced_record_ids || []).join(', ') || '(none)') + '</p>'
-      + '<p>CLI: ' + esc(preview.suggested_cli_family || '') + '</p>'
+      + detailLine('Kind', preview.record_kind || record.runtime_record_kind || '')
+      + summaryJsonLine('Source counts', preview.source_counts)
+      + detailListLine('Referenced IDs', preview.referenced_record_ids)
+      + detailLine('CLI', preview.suggested_cli_family || '')
       + '</div>';
   }}
   if (record.retrieval_handoff) {{
     const handoff = record.retrieval_handoff;
     extra += '<div class="notice">' + noticeTitle('Retrieval Handoff')
-      + '<p>Query: ' + esc(handoff.query || '') + '</p>'
+      + detailLine('Query', handoff.query || '')
       + '<p>Hit counts: vector=' + esc(handoff.vector_hit_count || 0)
       + ', graph=' + esc(handoff.graph_hit_count || 0)
       + ', chronicle=' + esc(handoff.chronicle_hit_count || 0) + '</p>'
-      + '<p>Referenced IDs: ' + esc((handoff.referenced_record_ids || []).join(', ') || '(none)') + '</p>'
-      + '<p>Downstream commands: ' + esc((handoff.downstream_commands || []).join(' | ')) + '</p>'
-      + '<p>Notes: ' + esc((handoff.notes || []).join(' | ')) + '</p>'
+      + detailListLine('Referenced IDs', handoff.referenced_record_ids)
+      + detailListLine('Downstream commands', handoff.downstream_commands, ' | ')
+      + detailListLine('Notes', handoff.notes, ' | ')
       + '</div>';
   }}
   if (record.package_handoff_preview) {{
@@ -1661,13 +1669,13 @@ async function loadDetail(endpoint) {{
     const packageReview = preview.package_review || {{}};
     const manifest = preview.package_manifest_preview || {{}};
     extra += '<div class="notice">' + noticeTitle('Package Handoff Preview')
-      + '<p>Status: ' + esc(preview.status || '') + '</p>'
+      + detailLine('Status', preview.status || '')
       + '<p>' + esc(preview.message || '') + '</p>'
-      + '<p>Eligible contexts: ' + esc((preview.eligible_context_ids || []).join(', ') || '(none)') + '</p>'
-      + '<p>Skipped records: ' + esc((preview.skipped_record_ids || []).join(', ') || '(none)') + '</p>'
-      + '<p>Package review status: ' + esc(packageReview.status || '(not available)') + '</p>'
-      + '<p>Package warnings: ' + esc((packageReview.package_warnings || []).join(', ') || '(none)') + '</p>'
-      + '<p>Manifest refs: ' + esc((manifest.referenced_records || []).join(', ') || '(none)') + '</p>'
+      + detailListLine('Eligible contexts', preview.eligible_context_ids)
+      + detailListLine('Skipped records', preview.skipped_record_ids)
+      + detailLine('Package review status', packageReview.status || '(not available)')
+      + detailListLine('Package warnings', packageReview.package_warnings)
+      + detailListLine('Manifest refs', manifest.referenced_records)
       + '</div>';
   }}
   if (record.package_readiness) {{
@@ -1679,14 +1687,14 @@ async function loadDetail(endpoint) {{
       readinessButtons.push(sliceActionButton('More ' + readiness.status, '/api/review-queue', 'reviewQueue', 'package:' + readiness.status));
     }}
     extra += '<div class="notice">' + noticeTitle('Review Package Readiness')
-      + '<p>Status: ' + esc(readiness.status || '') + '</p>'
+      + detailLine('Status', readiness.status || '')
       + '<p>' + esc(readiness.message || '') + '</p>'
       + (readinessButtons.length > 0 ? '<p>' + readinessButtons.join('') + '</p>' : '')
-      + '<p>Eligible contexts: ' + esc((readiness.eligible_context_ids || []).join(', ') || '(none)') + '</p>'
-      + '<p>Suggested commands: ' + esc((readiness.suggested_commands || []).join(' | ') || '(none)') + '</p>'
-      + '<p>Package review status: ' + esc(packageReview.status || '(not available)') + '</p>'
-      + '<p>Package warnings: ' + esc((packageReview.package_warnings || []).join(', ') || '(none)') + '</p>'
-      + '<p>Manifest refs: ' + esc((manifest.referenced_records || []).join(', ') || '(none)') + '</p>'
+      + detailListLine('Eligible contexts', readiness.eligible_context_ids)
+      + detailListLine('Suggested commands', readiness.suggested_commands, ' | ')
+      + detailLine('Package review status', packageReview.status || '(not available)')
+      + detailListLine('Package warnings', packageReview.package_warnings)
+      + detailListLine('Manifest refs', manifest.referenced_records)
       + '</div>';
   }}
   if (Array.isArray(record.related_links) && record.related_links.length > 0) {{
@@ -1705,9 +1713,10 @@ async function loadDetail(endpoint) {{
     const warnBadges = reviewWarningBadges(warnList);
     extra += '<div class="notice">' + noticeTitle('Review Capability')
       + '<p>' + esc(capability.message || '') + '</p>'
-      + '<p>Status: ' + esc(capability.status || '') + '</p>'
+      + detailLine('Status', capability.status || '')
       + (warnBadges ? '<p>' + warnBadges + '</p>' : '')
-      + '<p>Warnings: ' + esc(warnDetails.map(item => item.message).join(' | ') || warnList.join(', ') || '(none)') + '</p></div>';
+      + detailLine('Warnings', warnDetails.map(item => item.message).join(' | ') || warnList.join(', ') || '(none)')
+      + '</div>';
   }}
   if (record.action_preview) {{
     const preview = record.action_preview;
@@ -1723,7 +1732,7 @@ async function loadDetail(endpoint) {{
     }}
     extra += '<div class="notice">' + noticeTitle('Action Preview')
       + '<p>' + esc(preview.message || '') + '</p>'
-      + '<p>Status: ' + esc(preview.status || '') + '</p>'
+      + detailLine('Status', preview.status || '')
       + (previewButtons.length > 0 ? '<p>' + previewButtons.join('') + '</p>' : '')
       + '<p><button disabled>Approve</button> <button disabled>Reject</button> <button disabled>Request Changes</button></p>'
       + '<ul>' + actions.map(item => '<li><strong>' + esc(item.label || '') + ':</strong> <span class="id">' + esc(item.command || '') + '</span></li>').join('') + '</ul>'
@@ -1737,11 +1746,11 @@ async function loadDetail(endpoint) {{
     }}
     extra += '<div class="notice">' + noticeTitle('CLI Parity')
       + '<p>' + esc(parity.message || '') + '</p>'
-      + '<p>Status: ' + esc(parity.status || '') + '</p>'
+      + detailLine('Status', parity.status || '')
       + (parityButtons.length > 0 ? '<p>' + parityButtons.join('') + '</p>' : '')
-      + '<p>Expected actions: ' + esc((parity.expected_actions || []).join(', ') || '(none)') + '</p>'
-      + '<p>Missing preview commands: ' + esc((parity.missing_preview_commands || []).join(' | ') || '(none)') + '</p>'
-      + '<p>Missing queue commands: ' + esc((parity.missing_queue_commands || []).join(' | ') || '(none)') + '</p>'
+      + detailListLine('Expected actions', parity.expected_actions)
+      + detailListLine('Missing preview commands', parity.missing_preview_commands, ' | ')
+      + detailListLine('Missing queue commands', parity.missing_queue_commands, ' | ')
       + '</div>';
   }}
   if (record.latest_identity_assurance) {{
@@ -1751,7 +1760,7 @@ async function loadDetail(endpoint) {{
       assuranceButtons.push(moreSliceButton(assurance.status, '/api/review-queue', 'reviewQueue'));
     }}
     extra += '<div class="notice">' + noticeTitle('Identity Assurance')
-      + '<p>Status: ' + esc(assurance.status || '') + '</p>'
+      + detailLine('Status', assurance.status || '')
       + (assuranceButtons.length > 0 ? '<p>' + assuranceButtons.join('') + '</p>' : '')
       + '<p>' + esc(assurance.message || '') + '</p></div>';
   }}

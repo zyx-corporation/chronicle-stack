@@ -403,6 +403,8 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "moreSliceButton" in html
     assert "panelTitle" in html
     assert "noticeTitle" in html
+    assert "detailLine" in html
+    assert "detailListLine" in html
     assert "summaryJsonLine" in html
     assert "runtimeRecordsFilterChips" in html
     assert "reviewQueueFilterChips" in html
@@ -413,7 +415,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "reviewCapabilityBadge" in html
     assert "packageReadinessBadge" in html
     assert "reviewParityBadge" in html
-    assert "Blockers:" in html
+    assert "detailListLine('Blockers', mutationReadiness.blockers, ' | ')" in html
     assert "review_requested" in html
     assert "ready" in html
     assert "CLI Parity" in html
@@ -422,6 +424,8 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "summaryJsonLine('Warning counts', triage.warning_counts)" in html
     assert "Warning priority:" in html
     assert "summaryJsonLine('Runtime kinds', triage.runtime_record_kinds)" in html
+    assert "detailLine('Status', parity.status || '')" in html
+    assert "detailListLine('Expected actions', parity.expected_actions)" in html
     assert "openListButton('Open Review Queue', '/api/review-queue')" in html
     assert "openListButton('Open Runtime Records', '/api/runtime-records')" in html
     assert "openListButton('Open Package Review', '/api/package-review')" in html
