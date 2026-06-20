@@ -294,6 +294,7 @@ class ChronicleUIDataService:
         identity_boundary_summary = self.identity_boundary_summary(review_queue)
         summary_jobs_summary = self.summary_jobs_overview(summary_jobs)
         auth_boundary_overview = self.auth_boundary_overview(review_queue)
+        runtime_records_summary = self.runtime_records_overview(runtime_records)
         return {
             "chronicle": {
                 "id": metadata.chronicle_id,
@@ -327,8 +328,23 @@ class ChronicleUIDataService:
             "auth_boundary_summary": self.ui_boundary()["ui_boundary"]["auth_boundary_summary"],
             "auth_boundary_overview": auth_boundary_overview,
             "identity_boundary_summary": identity_boundary_summary,
+            "runtime_records_summary": runtime_records_summary,
             "summary_jobs_summary": summary_jobs_summary,
             "mutation_readiness": self.mutation_readiness_summary(review_queue),
+        }
+
+    def runtime_records_overview(self, runtime_records: list[dict[str, Any]] | None = None) -> dict[str, Any]:
+        rows = runtime_records if runtime_records is not None else self.runtime_records()["runtime_records"]
+        kind_counts: dict[str, int] = {}
+        auth_counts: dict[str, int] = {}
+        for row in rows:
+            kind = str(row.get("runtime_record_kind", "unknown"))
+            auth_status = str(row.get("auth_readiness_status", "unknown"))
+            kind_counts[kind] = kind_counts.get(kind, 0) + 1
+            auth_counts[auth_status] = auth_counts.get(auth_status, 0) + 1
+        return {
+            "kind_counts": kind_counts,
+            "auth_readiness_counts": auth_counts,
         }
 
     def auth_boundary_overview(self, review_queue: list[dict[str, Any]] | None = None) -> dict[str, Any]:
@@ -1834,6 +1850,7 @@ function renderOverview(payload) {{
   const mutationReadiness = payload.mutation_readiness || {{}};
   const runtimeConfig = payload.runtime_config || {{}};
   const runtimeConfigContract = runtimeConfig.config || {{}};
+  const runtimeRecords = payload.runtime_records_summary || {{}};
   const summaryJobs = payload.summary_jobs_summary || {{}};
   const warningSummaries = Array.isArray(triage.warning_summaries) ? triage.warning_summaries : [];
   const warningButtons = warningSummaries.map(item =>
@@ -1939,6 +1956,16 @@ function renderOverview(payload) {{
     + '<p>Runtime records: ' + esc(counts.runtime_records ?? 0) + '</p>'
     + '<p>Summary jobs: ' + esc(counts.summary_jobs ?? 0) + '</p>'
     + '<p>Needs-review records: ' + esc(counts.review_queue ?? 0) + '</p>'
+    + '</div>'
+    + '<div class="panel">'
+    + panelTitle('Runtime Records')
+    + '<p>'
+    + overviewJumpButton(sliceBadge('Runtime records', esc(counts.runtime_records ?? 0), 'badge-neutral'), '/api/runtime-records')
+    + overviewJumpButton(sliceBadge('Runtime auth advisory', esc((runtimeRecords.auth_readiness_counts && runtimeRecords.auth_readiness_counts.advisory_only) ?? 0), 'badge-warning'), '/api/runtime-records', 'runtimeRecords', 'advisory_only')
+    + '</p>'
+    + summaryJsonLine('Runtime kinds', runtimeRecords.kind_counts)
+    + summaryJsonLine('Auth readiness counts', runtimeRecords.auth_readiness_counts)
+    + '<p>' + openListButton('Open Runtime Records', '/api/runtime-records') + '</p>'
     + '</div>'
     + '<div class="panel">'
     + panelTitle('Summary Jobs')

@@ -228,6 +228,9 @@ def test_ui_overview_data(tmp_path):
     assert overview["identity_boundary_summary"]["missing_identity_count"] == 3
     assert overview["mutation_readiness"]["status"] == "preview_only"
     assert "Define explicit local auth boundary." in overview["mutation_readiness"]["next_steps"]
+    assert overview["runtime_records_summary"]["kind_counts"]["summary"] == 1
+    assert overview["runtime_records_summary"]["kind_counts"]["retrieval_plan"] == 1
+    assert overview["runtime_records_summary"]["auth_readiness_counts"]["advisory_only"] == 2
     assert overview["summary_jobs_summary"]["status_counts"]["pending_review"] == 1
     assert overview["summary_jobs_summary"]["review_capability_counts"]["advisory_only"] == 1
     assert overview["summary_jobs_summary"]["auth_readiness_counts"]["advisory_only"] == 1
@@ -503,6 +506,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "Auth Boundary" in html
     assert "Identity Boundary" in html
     assert "Summary Jobs" in html
+    assert "Runtime Records" in html
     assert "Auth warnings" in html
     assert "Authorization warnings" in html
     assert "Missing identity" in html
@@ -543,8 +547,10 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "summaryJsonLine('Reviewer kind counts', triage.reviewer_kind_counts)" in html
     assert "summaryJsonLine('Warning counts', triage.warning_counts)" in html
     assert "summaryJsonLine('Status counts', summaryJobs.status_counts)" in html
+    assert "summaryJsonLine('Auth readiness counts', runtimeRecords.auth_readiness_counts)" in html
     assert "summaryJsonLine('Auth readiness counts', summaryJobs.auth_readiness_counts)" in html
     assert "summaryJsonLine('Runtime provider counts', summaryJobs.runtime_provider_counts)" in html
+    assert "Runtime auth advisory" in html
     assert "Summary advisory" in html
     assert "Summary auth advisory" in html
     assert "Summary package ready" in html

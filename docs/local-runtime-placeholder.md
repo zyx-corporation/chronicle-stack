@@ -147,6 +147,8 @@ overview の summary jobs panel でも auth readiness の派生集計を read-on
 
 runtime record 一覧 / detail でも matching review target 由来の auth readiness を read-only で確認できます。
 
+overview の runtime records panel でも auth readiness の派生集計を read-only で確認できます。
+
 ## Summary job re-run
 
 `chronicle summary run --id sum_xxx` は、既存の summary job を explicit manual runtime boundary に通し直し、短縮結果を新しい pending-review draft として保存します。
