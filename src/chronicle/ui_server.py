@@ -264,6 +264,7 @@ class ChronicleUIDataService:
         review_capability_counts: dict[str, int] = {}
         readiness_counts: dict[str, int] = {}
         cli_parity_counts: dict[str, int] = {}
+        warning_counts: dict[str, int] = {}
         ready_now = 0
         advisory_only = 0
         package_ready = 0
@@ -290,11 +291,16 @@ class ChronicleUIDataService:
             elif parity_status == "drift_detected":
                 parity_drift += 1
 
+            for warning_code in row.get("review_capability", {}).get("warnings", []):
+                code = str(warning_code)
+                warning_counts[code] = warning_counts.get(code, 0) + 1
+
         return {
             "runtime_record_kinds": runtime_by_kind,
             "review_capability_counts": review_capability_counts,
             "package_readiness_counts": readiness_counts,
             "cli_parity_counts": cli_parity_counts,
+            "warning_counts": warning_counts,
             "ready_now_reviews": ready_now,
             "advisory_only_reviews": advisory_only,
             "package_ready_reviews": package_ready,
@@ -1260,10 +1266,15 @@ function renderOverview(payload) {{
     + overviewJumpButton(badge('CLI aligned: ' + esc(triage.cli_parity_aligned_reviews ?? 0), 'badge-ready'), '/api/review-queue', 'reviewQueue', 'aligned')
     + overviewJumpButton(badge('CLI drift: ' + esc(triage.cli_parity_drift_reviews ?? 0), 'badge-warning'), '/api/review-queue', 'reviewQueue', 'drift_detected')
     + '</p>'
+    + '<p>'
+    + overviewJumpButton(badge('Auth not enabled: ' + esc((triage.warning_counts && triage.warning_counts.ui_auth_not_enabled) ?? 0), 'badge-warning'), '/api/review-queue', 'reviewQueue', 'ui_auth_not_enabled')
+    + overviewJumpButton(badge('Authz not enabled: ' + esc((triage.warning_counts && triage.warning_counts.ui_authorization_not_enabled) ?? 0), 'badge-warning'), '/api/review-queue', 'reviewQueue', 'ui_authorization_not_enabled')
+    + '</p>'
     + '<p>Runtime kinds: ' + esc(JSON.stringify(triage.runtime_record_kinds || {{}})) + '</p>'
     + '<p>Review capability counts: ' + esc(JSON.stringify(triage.review_capability_counts || {{}})) + '</p>'
     + '<p>Package readiness counts: ' + esc(JSON.stringify(triage.package_readiness_counts || {{}})) + '</p>'
     + '<p>CLI parity counts: ' + esc(JSON.stringify(triage.cli_parity_counts || {{}})) + '</p>'
+    + '<p>Warning counts: ' + esc(JSON.stringify(triage.warning_counts || {{}})) + '</p>'
     + '<p><button data-jump="/api/review-queue">Open Review Queue</button>'
     + '<button data-jump="/api/runtime-records">Open Runtime Records</button>'
     + '<button data-jump="/api/package-review">Open Package Review</button>'
@@ -1271,6 +1282,7 @@ function renderOverview(payload) {{
     + '<p><button data-jump="/api/review-queue" data-filter-target="reviewQueue" data-filter-value="advisory">Advisory Reviews</button>'
     + '<button data-jump="/api/review-queue" data-filter-target="reviewQueue" data-filter-value="package:package_context_available">Package Ready Reviews</button>'
     + '<button data-jump="/api/review-queue" data-filter-target="reviewQueue" data-filter-value="aligned">CLI Aligned Reviews</button>'
+    + '<button data-jump="/api/review-queue" data-filter-target="reviewQueue" data-filter-value="ui_auth_not_enabled">Auth Boundary Warnings</button>'
     + '<button data-jump="/api/runtime-records" data-filter-target="runtimeRecords" data-filter-value="retrieval_plan">Retrieval Plans</button></p>'
     + '</div>';
 }}
