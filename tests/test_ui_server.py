@@ -434,6 +434,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "const parityButtons = [];" in html
     assert "const assuranceButtons = [];" in html
     assert "const readinessButtons = [];" in html
+    assert "const timelineButtons = [];" in html
     assert "Declared Identity Warnings" in html
     assert 'data-reset-filter="runtimeRecords"' in html
     assert 'data-reset-filter="reviewQueue"' in html

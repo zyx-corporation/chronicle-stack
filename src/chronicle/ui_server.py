@@ -1652,12 +1652,22 @@ async function loadDetail(endpoint) {{
   }}
   if (Array.isArray(record.history) && record.history.length > 0) {{
     extra += '<div class="notice"><h3>Review Timeline</h3><ul>'
-      + record.history.map(item => '<li>'
-        + esc(item.reviewed_at || '') + ' — '
-        + esc(item.disposition || '') + ' by '
-        + esc((item.reviewer_identity && item.reviewer_identity.label) || item.reviewer || '')
-        + ' (' + esc((item.identity_assurance && item.identity_assurance.status) || '') + ')'
-        + '</li>').join('')
+      + record.history.map(item => {{
+        const timelineButtons = [];
+        if (item.disposition) {{
+          timelineButtons.push(overviewJumpButton('More ' + esc(item.disposition), '/api/review-queue', 'reviewQueue', item.disposition));
+        }}
+        if (item.identity_assurance && item.identity_assurance.status) {{
+          timelineButtons.push(overviewJumpButton('More ' + esc(item.identity_assurance.status), '/api/review-queue', 'reviewQueue', item.identity_assurance.status));
+        }}
+        return '<li>'
+          + esc(item.reviewed_at || '') + ' — '
+          + esc(item.disposition || '') + ' by '
+          + esc((item.reviewer_identity && item.reviewer_identity.label) || item.reviewer || '')
+          + ' (' + esc((item.identity_assurance && item.identity_assurance.status) || '') + ')'
+          + (timelineButtons.length > 0 ? '<br>' + timelineButtons.join('') : '')
+          + '</li>';
+      }}).join('')
       + '</ul></div>';
   }}
   document.getElementById('detail').innerHTML =

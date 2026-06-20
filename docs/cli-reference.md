@@ -455,6 +455,7 @@ chronicle review approve --event evt_xxx --reviewer alice --json
 - review queue detail の warning / capability 表示からも related review slices へ戻れる
 - review detail の parity / assurance / package readiness notices からも related review slices へ戻れる
 - review detail の action preview notice からも capability/parity の related review slices へ戻れる
+- review timeline の各履歴行からも disposition / identity-assurance の related review slices へ戻れる
 - review queue は current boundary での capability/warning surface も表示する
 - local UI shell は capability / assurance を notice と badge で目立つ形に描画する
 - warning codes are expanded into user-facing explanation text in the local UI
