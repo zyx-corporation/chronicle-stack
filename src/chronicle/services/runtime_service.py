@@ -13,6 +13,7 @@ from chronicle.models.runtime import (
     RuntimeStatus,
     RuntimeSummaryResult,
 )
+from chronicle.models.summary_job import SummarySourceRef
 from chronicle.models.source import SourceProvenance
 from chronicle.services.chronicle_service import ChronicleService
 from chronicle.services.graph_export_service import GraphExportService
@@ -41,6 +42,10 @@ class RuntimeService:
         max_sentences: int = 3,
         record: bool = False,
         draft_title: str | None = None,
+        source_refs: list[SummarySourceRef] | None = None,
+        tags: list[str] | None = None,
+        prompt: str = "runtime summarize",
+        operator: str = "runtime",
     ) -> RuntimeSummaryResult:
         generated_text = _summarize_text(text, max_sentences=max_sentences)
         result = RuntimeSummaryResult(
@@ -52,11 +57,12 @@ class RuntimeService:
             draft_job = self.summary_jobs.create_runtime_draft(
                 title=draft_title,
                 summary_text=generated_text,
-                runtime_config=self.status().model_dump(mode="json") and self._runtime_config(),
+                runtime_config=self._runtime_config(),
                 invocation_mode=result.invocation_mode,
-                prompt="runtime summarize",
-                operator="runtime",
-                tags=["runtime-summary-draft"],
+                prompt=prompt,
+                operator=operator,
+                source_refs=source_refs or [],
+                tags=["runtime-summary-draft", *(tags or [])],
             )
             result.draft_summary_job_id = draft_job.summary_job_id
             result.draft_artifact_id = draft_job.artifact_id

@@ -10,6 +10,7 @@ from typing import Annotated
 import typer
 
 from chronicle.models.summary_job import SummarySourceRef
+from chronicle.services.runtime_service import RuntimeService
 from chronicle.services.summary_job_service import SummaryJobService
 
 summary_app = typer.Typer(
@@ -92,6 +93,37 @@ def summary_show_cmd(
     typer.echo("Sources:")
     for ref in job.source_refs:
         typer.echo(f"  - {ref.record_type}:{ref.record_id}")
+
+
+@summary_app.command("run")
+def summary_run_cmd(
+    summary_job_id: Annotated[str, typer.Option("--id", help="Source summary job ID.")],
+    max_sentences: Annotated[int, typer.Option("--max-sentences", min=1, help="Maximum number of sentences to keep.")] = 3,
+    draft_title: Annotated[str | None, typer.Option("--draft-title", help="Override title for the generated runtime-backed draft summary job.")] = None,
+    json_output: Annotated[bool, typer.Option("--json")] = False,
+) -> None:
+    """Re-run a local draft through the explicit manual runtime boundary."""
+
+    source_job = SummaryJobService().get(summary_job_id)
+    result = RuntimeService().summarize(
+        text=source_job.summary_text,
+        max_sentences=max_sentences,
+        draft_title=draft_title or f"Runtime Draft: {source_job.title}",
+        source_refs=source_job.source_refs,
+        tags=["summary-run", summary_job_id],
+        prompt=source_job.provenance.prompt or f"summary run from {summary_job_id}",
+        operator="summary-run",
+    )
+    if json_output:
+        typer.echo(json.dumps(result.model_dump(mode="json"), ensure_ascii=False, indent=2))
+        return
+
+    typer.echo("Summary job re-run through explicit runtime boundary")
+    typer.echo(f"Source summary job: {summary_job_id}")
+    typer.echo(f"Generated: {result.generated_text}")
+    if result.draft_summary_job_id:
+        typer.echo(f"Draft summary job: {result.draft_summary_job_id}")
+    typer.echo("Boundary: explicit manual runtime only, no external model API, review remains required.")
 
 
 if __name__ == "__main__":

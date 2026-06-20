@@ -385,6 +385,24 @@ chronicle runtime summarize --text "Source text" --record --json
 - `--draft-title` 指定時のみ pending-review の summary job / draft artifact としても保存
 - draft provenance には provider kind / model name / invocation mode / external_call_made が含まれる
 
+### chronicle summary run
+
+```bash
+chronicle summary run --id sum_xxx
+chronicle summary run --id sum_xxx --max-sentences 2
+chronicle summary run --id sum_xxx --draft-title "Runtime Re-draft"
+chronicle summary run --id sum_xxx --json
+```
+
+方針:
+
+- 既存の pending-review summary job を explicit runtime boundary 経由で再実行する
+- source refs と prompt provenance を runtime-backed draft に引き継ぐ
+- no external model API
+- no hidden background execution
+- generated output remains pending review
+- 出力は `runtime_manual` provenance を持つ draft summary job / draft artifact として保存される
+
 ### chronicle runtime retrieve-plan
 
 ```bash

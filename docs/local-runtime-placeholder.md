@@ -65,3 +65,15 @@ retrieval plan の detail view では、downstream runtime へ渡す前の hando
 - generated output remains draft until reviewed
 
 `--record` / `--draft-title` のどちらを使っても、記録された生成出力は正本ではなく、review 前提の補助出力です。
+
+## Summary job re-run
+
+`chronicle summary run --id sum_xxx` は、既存の summary job を explicit manual runtime boundary に通し直し、短縮結果を新しい pending-review draft として保存します。
+
+この再実行でも:
+
+- no external runtime invoked
+- source refs are carried forward
+- prompt provenance is preserved
+- generated_by = runtime_manual
+- Primary Chronicle records remain authoritative

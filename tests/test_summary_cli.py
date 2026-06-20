@@ -79,3 +79,44 @@ def test_summary_list_and_show(tmp_path: Path) -> None:
     assert data["summary_job_id"] == summary_job_id
     assert data["status"] == "pending_review"
     assert data["provenance"]["external_call_made"] is False
+
+
+def test_summary_run_creates_runtime_backed_draft(tmp_path: Path) -> None:
+    os.chdir(str(tmp_path))
+    runner.invoke(app, ["init", "--title", "Summary Run Test"])
+
+    create_result = runner.invoke(
+        app,
+        [
+            "summary", "create",
+            "--title", "Source Draft",
+            "--text", "First sentence. Second sentence. Third sentence.",
+            "--source", "event:evt_source",
+            "--prompt", "Condense the source draft.",
+            "--json",
+        ],
+    )
+    assert create_result.exit_code == 0, create_result.stderr
+    source_job = json.loads(create_result.stdout)
+
+    run_result = runner.invoke(
+        app,
+        [
+            "summary", "run",
+            "--id", source_job["summary_job_id"],
+            "--max-sentences", "2",
+            "--json",
+        ],
+    )
+    assert run_result.exit_code == 0, run_result.stderr
+    result = json.loads(run_result.stdout)
+    assert result["draft_summary_job_id"].startswith("sum_")
+    assert result["generated_text"] == "First sentence. Second sentence."
+
+    show_result = runner.invoke(app, ["summary", "show", "--id", result["draft_summary_job_id"], "--json"])
+    assert show_result.exit_code == 0
+    draft_job = json.loads(show_result.stdout)
+    assert draft_job["provenance"]["generated_by"] == "runtime_manual"
+    assert draft_job["provenance"]["operator"] == "summary-run"
+    assert draft_job["provenance"]["prompt"] == "Condense the source draft."
+    assert draft_job["source_refs"][0]["record_id"] == "evt_source"
