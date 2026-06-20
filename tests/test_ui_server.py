@@ -492,6 +492,9 @@ def test_ui_detail_assurance_can_align_with_configured_boundary(tmp_path):
     assert review_detail["action_preview"]["actions"][0]["post_expected_error_code"] == "mutation_disabled"
     assert review_detail["action_preview"]["failure_contract"]["rollback_status"] == "fail_closed"
     assert review_detail["action_preview"]["failure_contract"]["durable_mutation_reported_on_failure"] is False
+    assert review_detail["action_preview"]["failure_contract"]["recovery_commands"] == [
+        f"chronicle review approve --event {ids['runtime_summary_event_id']}"
+    ]
     assert review_detail["cli_parity"]["status"] == "aligned"
     assert review_detail["cli_parity"]["expected_actions"] == [
         "approve",
@@ -537,6 +540,9 @@ def test_ui_detail_exposes_enabled_mutation_preview_when_enabled(tmp_path):
     assert review_detail["action_preview"]["actions"][0]["post_expected_status"] == 200
     assert review_detail["action_preview"]["actions"][0]["post_expected_error_code"] is None
     assert review_detail["action_preview"]["failure_contract"]["rollback_status"] == "fail_closed"
+    assert review_detail["action_preview"]["failure_contract"]["recovery_commands"] == [
+        f"chronicle review approve --event {ids['runtime_summary_event_id']}"
+    ]
     assert review_detail["ui_mutation_enabled"] is True
     assert review_detail["review_preview_only"] is False
 
@@ -740,6 +746,8 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "Rollback status" in html
     assert "Durable mutation on failure" in html
     assert "Possible errors" in html
+    assert "Recovery commands" in html
+    assert "Follow-up commands" in html
     assert "Transaction status" in html
     assert "Recovery path" in html
     assert "async function previewBlockedRoute(path, targetId = 'action-preview-response')" in html
@@ -847,6 +855,9 @@ def test_http_root_and_read_only_endpoints(tmp_path):
         assert payload["mutation_enabled"] is False
         assert payload["failure_contract"]["rollback_status"] == "fail_closed"
         assert payload["failure_contract"]["durable_mutation_reported_on_failure"] is False
+        assert payload["failure_contract"]["recovery_commands"] == [
+            f"chronicle review approve --event {ids['runtime_summary_event_id']}"
+        ]
         assert payload["cli_equivalent"] == (
             f"chronicle review approve --event {ids['runtime_summary_event_id']}"
         )
@@ -860,6 +871,9 @@ def test_http_root_and_read_only_endpoints(tmp_path):
         payload = json.loads(body)
         assert payload["action"] == "request-changes"
         assert payload["failure_contract"]["rollback_status"] == "fail_closed"
+        assert payload["failure_contract"]["recovery_commands"] == [
+            f"chronicle review request-changes --event {ids['runtime_summary_event_id']}"
+        ]
         assert payload["cli_equivalent"] == (
             f"chronicle review request-changes --event {ids['runtime_summary_event_id']}"
         )
@@ -913,6 +927,7 @@ def test_http_review_action_enabled_route_applies_decision(tmp_path):
         assert payload["decision_event_id"].startswith("evt_")
         assert payload["success_contract"]["transaction_status"] == "decision_and_audit_persisted"
         assert payload["success_contract"]["rollback_status"] == "not_required"
+        assert payload["success_contract"]["follow_up_commands"][0] == "chronicle review queue --include-resolved --json"
 
         history = ReviewService(tmp_path).history(event_id=ids["runtime_summary_event_id"])
         assert history[0].disposition.value == "approve"
@@ -964,6 +979,10 @@ def test_http_review_action_enabled_route_handles_audit_failure(tmp_path, monkey
         assert payload["error_code"] == "audit_insertion_failed"
         assert payload["failure_contract"]["rollback_status"] == "fail_closed"
         assert payload["failure_contract"]["durable_mutation_reported_on_failure"] is False
+        assert payload["failure_contract"]["recovery_commands"] == [
+            f"chronicle review approve --event {ids['runtime_summary_event_id']}",
+            "chronicle audit list --json",
+        ]
         assert ReviewService(tmp_path).history(event_id=ids["runtime_summary_event_id"]) == []
     finally:
         server.shutdown()
@@ -1011,6 +1030,8 @@ def test_http_review_action_enabled_route_handles_decision_persistence_failure(t
         assert payload["error_code"] == "decision_persistence_failed"
         assert payload["audit_id"].startswith("aud_")
         assert payload["failure_contract"]["rollback_status"] == "fail_closed"
+        assert payload["failure_contract"]["recovery_commands"][0] == "chronicle review queue --include-resolved --json"
+        assert payload["failure_contract"]["recovery_commands"][1] == f"chronicle audit show --id {payload['audit_id']} --json"
         assert len(AuditService(tmp_path).list_events()) == 2
         assert ReviewService(tmp_path).history(event_id=ids["runtime_summary_event_id"]) == []
     finally:

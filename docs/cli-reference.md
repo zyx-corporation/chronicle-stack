@@ -353,6 +353,7 @@ read-only endpoint:
 - write-capable route family は `POST /api/review-actions/<event_id>/<action>` です。`reviewer_label`, `reviewer_kind`, `session_label`, `ui_intent` を JSON body で受け、gate 条件が崩れていれば fail closed で戻ります。
 - preview payload / action response には `rollback_status`, `possible_error_codes`, `recovery_path` を含む fail-closed contract metadata も含まれます。
 - local UI shell では `recovery_path` をそのまま copy できる button も表示されます。
+- failure kind に応じて `recovery_commands`、成功時には `follow_up_commands` も返り、UI shell から copy できます。
 - overview triage では `Identity aligned` などの quick slice から reviewer identity / assurance 系の review queue slice に直接 drilldown できますが、これは引き続き read-only filter state のみです。
 - overview の runtime records / summary jobs panel でも matching-review-derived auth readiness の集約状態を read-only で確認できます。
 - overview の summary jobs panel では matching-review-derived identity/session assurance 集約も read-only で確認できます。
