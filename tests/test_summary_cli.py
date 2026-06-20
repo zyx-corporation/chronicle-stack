@@ -120,3 +120,52 @@ def test_summary_run_creates_runtime_backed_draft(tmp_path: Path) -> None:
     assert draft_job["provenance"]["operator"] == "summary-run"
     assert draft_job["provenance"]["prompt"] == "Condense the source draft."
     assert draft_job["source_refs"][0]["record_id"] == "evt_source"
+
+
+def test_summary_invoke_plan_carries_summary_context(tmp_path: Path) -> None:
+    os.chdir(str(tmp_path))
+    runner.invoke(app, ["init", "--title", "Summary Invoke Plan Test"])
+    runner.invoke(
+        app,
+        [
+            "runtime", "config", "set-local",
+            "--model", "summary-plan-model",
+            "--provider-name", "summary-plan-provider",
+        ],
+    )
+
+    create_result = runner.invoke(
+        app,
+        [
+            "summary", "create",
+            "--title", "Source Draft",
+            "--text", "First sentence. Second sentence. Third sentence.",
+            "--source", "event:evt_source",
+            "--prompt", "Condense the source draft.",
+            "--json",
+        ],
+    )
+    assert create_result.exit_code == 0, create_result.stderr
+    source_job = json.loads(create_result.stdout)
+
+    plan_result = runner.invoke(
+        app,
+        [
+            "summary", "invoke-plan",
+            "--id", source_job["summary_job_id"],
+            "--record",
+            "--json",
+        ],
+    )
+    assert plan_result.exit_code == 0, plan_result.stderr
+    payload = json.loads(plan_result.stdout)
+    assert payload["provider_kind"] == "local"
+    assert payload["invocation_ready"] is True
+    assert payload["recorded"] is True
+    assert payload["request_preview"]["summary_job_id"] == source_job["summary_job_id"]
+    assert payload["request_preview"]["summary_title"] == "Source Draft"
+    assert payload["request_preview"]["prompt"] == "Condense the source draft."
+    assert payload["request_preview"]["source_ref_count"] == "1"
+
+    search_result = runner.invoke(app, ["search", source_job["summary_job_id"], "--json"])
+    assert search_result.exit_code == 0

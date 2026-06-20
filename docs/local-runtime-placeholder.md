@@ -127,3 +127,14 @@ runtime invocation plan を記録した場合は、local UI の `/api/runtime-re
 - prompt provenance is preserved
 - generated_by = runtime_manual
 - Primary Chronicle records remain authoritative
+
+## Summary job invocation dry-run
+
+`chronicle summary invoke-plan --id sum_xxx` は、既存 summary draft を configured provider contract に接続する dry-run です。
+
+この surface でも:
+
+- no provider execution
+- no external call performed
+- summary job ID / title / prompt / source-ref count を request preview に含める
+- `--record` 指定時のみ review-oriented runtime invocation plan record として残せる

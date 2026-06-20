@@ -191,6 +191,45 @@ class RuntimeService:
         return plan
 
     def invocation_plan(self, *, text: str, operation: str = "summarize", record: bool = False) -> RuntimeInvocationPlan:
+        return self._invocation_plan(
+            text=text,
+            operation=operation,
+            record=record,
+        )
+
+    def invocation_plan_from_summary(
+        self,
+        *,
+        summary_job_id: str,
+        summary_title: str,
+        summary_text: str,
+        prompt: str = "",
+        source_ref_count: int = 0,
+        operation: str = "summarize",
+        record: bool = False,
+    ) -> RuntimeInvocationPlan:
+        return self._invocation_plan(
+            text=summary_text,
+            operation=operation,
+            record=record,
+            request_context={
+                "summary_job_id": summary_job_id,
+                "summary_title": summary_title,
+                "prompt": prompt,
+                "source_ref_count": str(source_ref_count),
+            },
+            summary_label=f"summary {summary_job_id} {operation}",
+        )
+
+    def _invocation_plan(
+        self,
+        *,
+        text: str,
+        operation: str,
+        record: bool,
+        request_context: dict[str, str] | None = None,
+        summary_label: str | None = None,
+    ) -> RuntimeInvocationPlan:
         config_state = self.runtime_config.show()
         config = config_state.config
         blocking_reasons: list[str] = []
@@ -205,7 +244,12 @@ class RuntimeService:
             blocking_reasons.append("model_not_configured")
 
         invocation_ready = len(blocking_reasons) == 0
-        request_preview = self._request_preview(config=config, operation=operation, text=text)
+        request_preview = self._request_preview(
+            config=config,
+            operation=operation,
+            text=text,
+            request_context=request_context or {},
+        )
         plan = RuntimeInvocationPlan(
             provider_kind=config.provider_kind,
             provider_name=config.provider_name,
@@ -226,7 +270,11 @@ class RuntimeService:
         event = self.chronicle.record_event(
             event_type=self._assistant_output_event_type(),
             actor=Actor.ASSISTANT,
-            summary=f"Runtime invocation plan generated: {config.provider_kind.value} {operation}",
+            summary=(
+                f"Runtime invocation plan generated: {summary_label}"
+                if summary_label
+                else f"Runtime invocation plan generated: {config.provider_kind.value} {operation}"
+            ),
             payload={
                 "runtime_invocation_plan": plan.model_dump(mode="json"),
                 "runtime_provider": config.provider_kind.value,
@@ -328,13 +376,20 @@ class RuntimeService:
         )
 
     @staticmethod
-    def _request_preview(*, config: RuntimeConfig, operation: str, text: str) -> dict[str, str]:
+    def _request_preview(
+        *,
+        config: RuntimeConfig,
+        operation: str,
+        text: str,
+        request_context: dict[str, str],
+    ) -> dict[str, str]:
         preview = {
             "operation": operation,
             "provider_kind": config.provider_kind.value,
             "model_name": config.model_name,
             "text_excerpt": _truncate_summary(text, limit=120),
         }
+        preview.update({key: value for key, value in request_context.items() if value})
         if config.base_url:
             preview["base_url"] = config.base_url
         if config.api_key_env:

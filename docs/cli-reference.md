@@ -403,6 +403,23 @@ chronicle summary run --id sum_xxx --json
 - generated output remains pending review
 - 出力は `runtime_manual` provenance を持つ draft summary job / draft artifact として保存される
 
+### chronicle summary invoke-plan
+
+```bash
+chronicle summary invoke-plan --id sum_xxx
+chronicle summary invoke-plan --id sum_xxx --operation summarize
+chronicle summary invoke-plan --id sum_xxx --record
+chronicle summary invoke-plan --id sum_xxx --json
+```
+
+方針:
+
+- 既存 summary draft を configured provider contract に接続する dry-run を作る
+- no provider execution
+- no external call performed
+- summary job ID / title / prompt / source-ref count を request preview に含める
+- `--record` 指定時のみ review-oriented `assistant_output` event として記録する
+
 ### chronicle runtime retrieve-plan
 
 ```bash

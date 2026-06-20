@@ -126,5 +126,39 @@ def summary_run_cmd(
     typer.echo("Boundary: explicit manual runtime only, no external model API, review remains required.")
 
 
+@summary_app.command("invoke-plan")
+def summary_invoke_plan_cmd(
+    summary_job_id: Annotated[str, typer.Option("--id", help="Source summary job ID.")],
+    operation: Annotated[str, typer.Option("--operation", help="Planned provider operation name.")] = "summarize",
+    record: Annotated[bool, typer.Option("--record", help="Persist the invocation dry-run plan as an assistant_output event requiring review.")] = False,
+    json_output: Annotated[bool, typer.Option("--json")] = False,
+) -> None:
+    """Create a provider invocation dry-run plan from an existing summary draft."""
+
+    source_job = SummaryJobService().get(summary_job_id)
+    result = RuntimeService().invocation_plan_from_summary(
+        summary_job_id=source_job.summary_job_id,
+        summary_title=source_job.title,
+        summary_text=source_job.summary_text,
+        prompt=source_job.provenance.prompt,
+        source_ref_count=len(source_job.source_refs),
+        operation=operation,
+        record=record,
+    )
+    if json_output:
+        typer.echo(json.dumps(result.model_dump(mode="json"), ensure_ascii=False, indent=2))
+        return
+
+    typer.echo("Summary job invocation plan created through explicit runtime boundary")
+    typer.echo(f"Source summary job: {summary_job_id}")
+    typer.echo(f"Operation: {result.operation}")
+    typer.echo(f"Invocation ready: {result.invocation_ready}")
+    if result.blocking_reasons:
+        typer.echo(f"Blocking reasons: {', '.join(result.blocking_reasons)}")
+    if result.event_id:
+        typer.echo(f"Event: {result.event_id}")
+    typer.echo("Boundary: dry-run contract only, no provider execution, review remains required.")
+
+
 if __name__ == "__main__":
     summary_app()
