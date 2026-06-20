@@ -608,6 +608,11 @@ class ChronicleUIDataService:
             preview = self.runtime.record_preview(event)
             data["runtime_record_kind"] = preview.record_kind
             data["runtime_record_preview"] = preview.model_dump(mode="json")
+            review_row = self._review_queue_row(event.event_id)
+            if review_row is not None:
+                data["auth_readiness_status"] = str(
+                    review_row.get("auth_boundary_notice", {}).get("status", "")
+                )
             rows.append(data)
         return {"runtime_records": rows}
 
@@ -1226,6 +1231,12 @@ class ChronicleUIDataService:
             record["runtime_record_preview"] = preview.model_dump(mode="json")
             record["suggested_cli_family"] = preview.suggested_cli_family
             record["related_links"] = self.runtime_related_links(parts[2], payload)
+            review_row = self._review_queue_row(parts[2])
+            if review_row is not None:
+                record["auth_boundary_notice"] = review_row.get("auth_boundary_notice")
+                record["auth_readiness_status"] = str(
+                    review_row.get("auth_boundary_notice", {}).get("status", "")
+                )
             if "runtime_retrieval_plan" in payload:
                 plan = RuntimeRetrievalPlan.model_validate(payload["runtime_retrieval_plan"])
                 record["retrieval_handoff"] = self.runtime.retrieval_handoff(plan).model_dump(mode="json")
@@ -2014,6 +2025,7 @@ function renderTable(endpoint, rows) {{
       return JSON.stringify([
         row.event_id || '',
         row.runtime_record_kind || '',
+        row.auth_readiness_status || '',
         preview.title || '',
         preview.preview_text || '',
       ]).toLowerCase().includes(query);
@@ -2031,12 +2043,17 @@ function renderTable(endpoint, rows) {{
       + runtimeRecordsFilterChips()
       + (query ? '<p><button data-reset-filter="runtimeRecords">Reset Filter</button></p>' : '')
       + emptyState
-      + '<table><thead><tr><th>detail</th><th>event</th><th>kind</th><th>preview</th><th>source counts</th></tr></thead><tbody>'
+      + '<table><thead><tr><th>detail</th><th>event</th><th>kind</th><th>auth</th><th>preview</th><th>source counts</th></tr></thead><tbody>'
       + sorted.map(row => {{
         const path = detailPath(endpoint, row);
         const button = path ? '<button data-detail="' + esc(path) + '">JSON</button>' : '';
         const preview = row.runtime_record_preview || {{}};
         const sourceBadges = sourceCountBadges(preview.source_counts || {{}});
+        const authBadge = row.auth_readiness_status === 'boundary_aligned'
+          ? jumpBadge('Auth aligned', 'badge-ready', '/api/review-queue', 'reviewQueue', 'boundary_aligned')
+          : row.auth_readiness_status
+            ? jumpBadge('Auth advisory', 'badge-warning', '/api/review-queue', 'reviewQueue', row.auth_readiness_status)
+            : badge('Auth n/a', 'badge-neutral');
         const kindBadge = jumpBadge(
           row.runtime_record_kind || 'unknown',
           'badge-neutral',
@@ -2048,6 +2065,7 @@ function renderTable(endpoint, rows) {{
           + '<td>' + button + '</td>'
           + '<td><span class="id">' + esc(row.event_id || '') + '</span></td>'
           + '<td>' + kindBadge + '</td>'
+          + '<td>' + authBadge + '</td>'
           + '<td><strong>' + esc(preview.title || '') + '</strong><br>' + esc(preview.preview_text || '') + '</td>'
           + '<td>' + sourceBadges + (sourceBadges ? '<br>' : '') + esc(JSON.stringify(preview.source_counts || {{}})) + '</td>'
           + '</tr>';
