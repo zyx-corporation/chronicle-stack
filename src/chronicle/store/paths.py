@@ -14,6 +14,7 @@ AI_INDEXES_DIR = "ai_indexes"
 REPORTS_DIR = "reports/rde"
 SUMMARY_JOBS_DIR = "summary_jobs"
 REVIEWS_DIR = "reviews"
+RUNTIME_CONFIG_FILE = "runtime.yaml"
 
 
 class ChroniclePaths:
@@ -31,6 +32,7 @@ class ChroniclePaths:
         self.reports_dir = self.chronicle_dir / REPORTS_DIR
         self.summary_jobs_dir = self.chronicle_dir / SUMMARY_JOBS_DIR
         self.reviews_dir = self.chronicle_dir / REVIEWS_DIR
+        self.runtime_config_file = self.chronicle_dir / RUNTIME_CONFIG_FILE
         self.artifact_index_file = self.indexes_dir / "artifact_index.json"
         self.context_index_file = self.indexes_dir / "context_index.json"
         self.decision_index_file = self.indexes_dir / "decision_index.json"

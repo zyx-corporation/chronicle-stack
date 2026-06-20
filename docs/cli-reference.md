@@ -431,6 +431,24 @@ chronicle runtime retrieve-plan --query "release note context" --json
 - visibility hintはredactionではないため、デフォルトでは隠蔽されません。
 - profile export は公開承認やアクセス制御ではありません。
 
+### chronicle runtime config show / set-local / set-http / disable
+
+```bash
+chronicle runtime config show
+chronicle runtime config show --json
+chronicle runtime config set-local --model local-placeholder
+chronicle runtime config set-http --base-url https://runtime.example.invalid/v1 --model manual-http-model --api-key-env OPENAI_API_KEY --allow-network
+chronicle runtime config disable
+```
+
+方針:
+
+- provider configuration は `.chronicle/runtime.yaml` に保存される
+- configuration alone does not invoke any model or external runtime
+- `set-http` は downstream contract を保存するだけで、その場で network call はしない
+- `runtime status` は actual local placeholder execution と configured provider contract を分けて表示する
+- generated output は引き続き explicit/manual invocation 後にだけ発生する
+
 ## chronicle review
 
 `review` は append-only review workflow の CLI skeleton です。

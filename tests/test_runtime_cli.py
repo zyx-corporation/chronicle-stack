@@ -15,14 +15,79 @@ runner = CliRunner()
 
 def test_runtime_status_json(tmp_path: Path) -> None:
     os.chdir(str(tmp_path))
+    runner.invoke(app, ["init", "--title", "Runtime Status"])
 
     result = runner.invoke(app, ["runtime", "status", "--json"])
 
     assert result.exit_code == 0
     payload = json.loads(result.stdout)
     assert payload["provider_kind"] == "local"
+    assert payload["configured_provider_kind"] == "local"
     assert payload["external_call_made"] is False
     assert payload["generated_output_requires_review"] is True
+
+
+def test_runtime_config_show_implicit_default(tmp_path: Path) -> None:
+    os.chdir(str(tmp_path))
+    runner.invoke(app, ["init", "--title", "Runtime Config"])
+
+    result = runner.invoke(app, ["runtime", "config", "show", "--json"])
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["source"] == "implicit-default"
+    assert payload["config"]["provider_kind"] == "local"
+    assert payload["config"]["allow_network"] is False
+    assert any("Configuration alone does not invoke" in item for item in payload["warnings"])
+
+
+def test_runtime_config_set_http_persists_contract_and_updates_status(tmp_path: Path) -> None:
+    os.chdir(str(tmp_path))
+    runner.invoke(app, ["init", "--title", "Runtime HTTP Config"])
+
+    result = runner.invoke(
+        app,
+        [
+            "runtime",
+            "config",
+            "set-http",
+            "--base-url",
+            "https://runtime.example.invalid/v1",
+            "--model",
+            "manual-http-model",
+            "--api-key-env",
+            "OPENAI_API_KEY",
+            "--allow-network",
+            "--json",
+        ],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["config"]["provider_kind"] == "http"
+    assert payload["config"]["base_url"] == "https://runtime.example.invalid/v1"
+    assert payload["config"]["api_key_env"] == "OPENAI_API_KEY"
+    assert payload["config"]["allow_network"] is True
+    assert any("stored contract only" in item for item in payload["warnings"])
+
+    status_result = runner.invoke(app, ["runtime", "status", "--json"])
+    assert status_result.exit_code == 0
+    status_payload = json.loads(status_result.stdout)
+    assert status_payload["provider_kind"] == "local"
+    assert status_payload["configured_provider_kind"] == "http"
+    assert status_payload["configured_model_name"] == "manual-http-model"
+
+
+def test_runtime_config_disable_persists_disabled_contract(tmp_path: Path) -> None:
+    os.chdir(str(tmp_path))
+    runner.invoke(app, ["init", "--title", "Runtime Disable Config"])
+
+    result = runner.invoke(app, ["runtime", "config", "disable", "--json"])
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["config"]["provider_kind"] == "disabled"
+    assert any("disabled" in item.lower() for item in payload["warnings"])
 
 
 def test_runtime_summarize_json_without_record(tmp_path: Path) -> None:

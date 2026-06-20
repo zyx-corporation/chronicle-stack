@@ -1,5 +1,6 @@
 """Local runtime boundary and explicit invocation models."""
 
+from datetime import datetime
 from enum import StrEnum
 
 from pydantic import BaseModel, Field
@@ -23,6 +24,8 @@ class RuntimeConfig(BaseModel):
     provider_kind: RuntimeProviderKind = RuntimeProviderKind.DISABLED
     provider_name: str = "disabled"
     model_name: str = "disabled"
+    base_url: str | None = None
+    api_key_env: str | None = None
     capabilities: list[RuntimeCapability] = Field(default_factory=list)
     allow_network: bool = False
     allow_external_context: bool = False
@@ -55,6 +58,8 @@ class RuntimeStatus(BaseModel):
     provider_kind: RuntimeProviderKind = RuntimeProviderKind.LOCAL
     default_enabled: bool = False
     model_name: str = "local-placeholder"
+    configured_provider_kind: RuntimeProviderKind = RuntimeProviderKind.LOCAL
+    configured_model_name: str = "local-placeholder"
     capabilities: list[RuntimeCapability] = Field(
         default_factory=lambda: [
             RuntimeCapability.LLM,
@@ -68,6 +73,14 @@ class RuntimeStatus(BaseModel):
     requires_explicit_invocation: bool = True
     generated_output_requires_review: bool = True
     primary_record_authoritative: bool = True
+
+
+class RuntimeConfigState(BaseModel):
+    source: str = "implicit-default"
+    configured_at: datetime | None = None
+    config: RuntimeConfig = Field(default_factory=RuntimeConfig)
+    boundary: RuntimeBoundary = Field(default_factory=RuntimeBoundary)
+    warnings: list[str] = Field(default_factory=list)
 
 
 class RuntimeSummaryResult(BaseModel):
@@ -132,3 +145,18 @@ class RuntimeRetrievalHandoff(BaseModel):
 
 def disabled_runtime_status() -> DisabledRuntimeStatus:
     return DisabledRuntimeStatus()
+
+
+def default_local_runtime_config() -> RuntimeConfig:
+    return RuntimeConfig(
+        provider_kind=RuntimeProviderKind.LOCAL,
+        provider_name="local-placeholder",
+        model_name="local-placeholder",
+        capabilities=[
+            RuntimeCapability.LLM,
+            RuntimeCapability.SUMMARIZATION,
+        ],
+        allow_network=False,
+        allow_external_context=False,
+        review_required=True,
+    )

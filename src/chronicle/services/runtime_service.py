@@ -17,6 +17,7 @@ from chronicle.models.summary_job import SummarySourceRef
 from chronicle.models.source import SourceProvenance
 from chronicle.services.chronicle_service import ChronicleService
 from chronicle.services.graph_export_service import GraphExportService
+from chronicle.services.runtime_config_service import RuntimeConfigService
 from chronicle.services.search_service import SearchService
 from chronicle.services.summary_job_service import SummaryJobService
 from chronicle.services.vector_index_service import VectorIndexService
@@ -31,9 +32,14 @@ class RuntimeService:
         self.graph_export = GraphExportService(root)
         self.search = SearchService(root)
         self.summary_jobs = SummaryJobService(root)
+        self.runtime_config = RuntimeConfigService(root)
 
     def status(self) -> RuntimeStatus:
-        return RuntimeStatus()
+        config_state = self.runtime_config.show()
+        return RuntimeStatus(
+            configured_provider_kind=config_state.config.provider_kind,
+            configured_model_name=config_state.config.model_name,
+        )
 
     def summarize(
         self,
