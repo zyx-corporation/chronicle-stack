@@ -245,6 +245,8 @@ def test_ui_overview_data(tmp_path):
     assert overview["summary_jobs_summary"]["review_capability_counts"]["advisory_only"] == 1
     assert overview["summary_jobs_summary"]["auth_readiness_counts"]["advisory_only"] == 1
     assert overview["summary_jobs_summary"]["package_readiness_counts"]["no_context_records"] == 1
+    assert overview["summary_jobs_summary"]["identity_assurance_counts"]["unknown"] == 1
+    assert overview["summary_jobs_summary"]["reviewer_kind_counts"]["unknown"] == 1
     assert overview["summary_jobs_summary"]["runtime_provider_counts"]["disabled"] == 1
     assert overview["summary_jobs_summary"]["summary_source_total"] == 0
     assert overview["triage"]["needs_attention_reviews"] == 3
@@ -280,6 +282,7 @@ def test_ui_data_service_read_endpoints(tmp_path):
     assert service.summary_jobs_list()["summary_jobs"][0]["package_readiness_status"] == "no_context_records"
     assert service.summary_jobs_list()["summary_jobs"][0]["cli_parity_status"] == "aligned"
     assert service.summary_jobs_list()["summary_jobs"][0]["action_preview_summary"]["status"] == "preview_only"
+    assert service.summary_jobs_list()["summary_jobs"][0]["identity_assurance_status"] == "unknown"
     assert service.runtime_config_state()["runtime_config"]["config"]["provider_name"] == "ui-local"
     assert service.review_queue()["review_queue"][0]["review_preview_only"] is True
     assert service.review_queue()["review_queue"][0]["target_event_id"].startswith("evt_")
@@ -481,6 +484,8 @@ def test_ui_detail_assurance_can_align_with_configured_boundary(tmp_path):
     assert overview["identity_boundary_summary"]["status"] == "partially_aligned"
     assert overview["identity_boundary_summary"]["assurance_counts"]["boundary_aligned"] >= 1
     assert overview["triage"]["identity_assurance_counts"]["boundary_aligned"] >= 1
+    assert "identity_assurance_counts" in overview["summary_jobs_summary"]
+    assert "identity_assurance_status" in service.summary_jobs_list()["summary_jobs"][0]
 
 
 def test_ui_shell_contains_interactive_local_ui(tmp_path):
@@ -569,11 +574,14 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "summaryJsonLine('Status counts', summaryJobs.status_counts)" in html
     assert "summaryJsonLine('Auth readiness counts', runtimeRecords.auth_readiness_counts)" in html
     assert "summaryJsonLine('Auth readiness counts', summaryJobs.auth_readiness_counts)" in html
+    assert "summaryJsonLine('Identity assurance counts', summaryJobs.identity_assurance_counts)" in html
+    assert "summaryJsonLine('Reviewer kind counts', summaryJobs.reviewer_kind_counts)" in html
     assert "summaryJsonLine('Runtime provider counts', summaryJobs.runtime_provider_counts)" in html
     assert "Runtime auth advisory" in html
     assert "Summary advisory" in html
     assert "Summary auth advisory" in html
     assert "Summary package ready" in html
+    assert "Summary identity aligned" in html
     assert "Warning priority:" in html
     assert "summaryJsonLine('Runtime kinds', triage.runtime_record_kinds)" in html
     assert "detailLine('Status', parity.status || '')" in html
@@ -584,8 +592,8 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "openListButton('Open Runtime Config', '/api/runtime-config')" in html
     assert "openListButton('Open Package Review', '/api/package-review')" in html
     assert "buttons.push(openListButton('Open Review Queue', '/api/review-queue'));" in html
-    assert "<th>review</th><th>auth</th><th>package</th>" in html
-    assert "<th>preview</th>" in html
+    assert "<th>review</th><th>auth</th><th>identity</th><th>package</th>" in html
+    assert "<th>identity</th><th>package</th><th>preview</th>" in html
     assert "summary-jobs-action-preview-response" in html
     assert "Summary jobs blocked-route preview stays read-only and returns the CLI fallback contract." in html
     assert "textInput('summaryJobs', 'Filter summary jobs...')" in html

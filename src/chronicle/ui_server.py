@@ -394,6 +394,8 @@ class ChronicleUIDataService:
         auth_counts: dict[str, int] = {}
         package_counts: dict[str, int] = {}
         provider_counts: dict[str, int] = {}
+        assurance_counts: dict[str, int] = {}
+        reviewer_kind_counts: dict[str, int] = {}
         source_count_total = 0
         for row in rows:
             status = str(row.get("status", "unknown"))
@@ -401,11 +403,15 @@ class ChronicleUIDataService:
             auth_status = str(row.get("auth_readiness_status", "unknown"))
             package_status = str(row.get("package_readiness_status", "unknown"))
             provider_kind = str(row.get("runtime_provider_kind", "unknown"))
+            assurance_status = str(row.get("identity_assurance_status", "unknown"))
+            reviewer_kind = str((row.get("latest_reviewer_identity") or {}).get("kind", "unknown"))
             status_counts[status] = status_counts.get(status, 0) + 1
             review_counts[review_status] = review_counts.get(review_status, 0) + 1
             auth_counts[auth_status] = auth_counts.get(auth_status, 0) + 1
             package_counts[package_status] = package_counts.get(package_status, 0) + 1
             provider_counts[provider_kind] = provider_counts.get(provider_kind, 0) + 1
+            assurance_counts[assurance_status] = assurance_counts.get(assurance_status, 0) + 1
+            reviewer_kind_counts[reviewer_kind] = reviewer_kind_counts.get(reviewer_kind, 0) + 1
             source_count_total += int(row.get("summary_source_count", 0) or 0)
         return {
             "status_counts": status_counts,
@@ -413,6 +419,8 @@ class ChronicleUIDataService:
             "auth_readiness_counts": auth_counts,
             "package_readiness_counts": package_counts,
             "runtime_provider_counts": provider_counts,
+            "identity_assurance_counts": assurance_counts,
+            "reviewer_kind_counts": reviewer_kind_counts,
             "summary_source_total": source_count_total,
         }
 
@@ -681,6 +689,7 @@ class ChronicleUIDataService:
             data["summary_source_count"] = len(job.source_refs)
             data["runtime_provider_kind"] = job.provenance.runtime.provider_kind.value
             data["suggested_cli_family"] = "chronicle summary show --id"
+            data["identity_assurance_status"] = "unknown"
             review_target_event_id = str(data.get("event_id", ""))
             if review_target_event_id.startswith("evt_"):
                 review_row = self._review_queue_row(review_target_event_id)
@@ -699,6 +708,13 @@ class ChronicleUIDataService:
                         review_row.get("cli_parity_summary", {}).get("status", "")
                     )
                     data["action_preview_summary"] = review_row.get("action_preview_summary", {})
+                    if review_row.get("latest_reviewer_identity") is not None:
+                        data["latest_reviewer_identity"] = review_row.get("latest_reviewer_identity")
+                    if review_row.get("latest_identity_assurance") is not None:
+                        data["latest_identity_assurance"] = review_row.get("latest_identity_assurance")
+                        data["identity_assurance_status"] = str(
+                            review_row.get("latest_identity_assurance", {}).get("status", "")
+                        )
             rows.append(data)
         return {"summary_jobs": rows}
 
@@ -2013,11 +2029,14 @@ function renderOverview(payload) {{
     + overviewJumpButton(sliceBadge('Summary advisory', esc((summaryJobs.review_capability_counts && summaryJobs.review_capability_counts.advisory_only) ?? 0), 'badge-warning'), '/api/summary-jobs', 'summaryJobs', 'advisory_only')
     + overviewJumpButton(sliceBadge('Summary auth advisory', esc((summaryJobs.auth_readiness_counts && summaryJobs.auth_readiness_counts.advisory_only) ?? 0), 'badge-warning'), '/api/summary-jobs', 'summaryJobs', 'advisory_only')
     + overviewJumpButton(sliceBadge('Summary package ready', esc((summaryJobs.package_readiness_counts && summaryJobs.package_readiness_counts.package_context_available) ?? 0), 'badge-ready'), '/api/summary-jobs', 'summaryJobs', 'package_context_available')
+    + overviewJumpButton(sliceBadge('Summary identity aligned', esc((summaryJobs.identity_assurance_counts && summaryJobs.identity_assurance_counts.boundary_aligned) ?? 0), 'badge-ready'), '/api/summary-jobs', 'summaryJobs', 'boundary_aligned')
     + '</p>'
     + summaryJsonLine('Status counts', summaryJobs.status_counts)
     + summaryJsonLine('Review capability counts', summaryJobs.review_capability_counts)
     + summaryJsonLine('Auth readiness counts', summaryJobs.auth_readiness_counts)
     + summaryJsonLine('Package readiness counts', summaryJobs.package_readiness_counts)
+    + summaryJsonLine('Identity assurance counts', summaryJobs.identity_assurance_counts)
+    + summaryJsonLine('Reviewer kind counts', summaryJobs.reviewer_kind_counts)
     + summaryJsonLine('Runtime provider counts', summaryJobs.runtime_provider_counts)
     + detailLine('Source refs total', summaryJobs.summary_source_total ?? 0)
     + '<p>' + openListButton('Open Summary Jobs', '/api/summary-jobs') + '</p>'
@@ -2226,6 +2245,9 @@ function renderTable(endpoint, rows) {{
         row.review_capability_status || '',
         row.auth_readiness_status || '',
         row.package_readiness_status || '',
+        row.identity_assurance_status || '',
+        (row.latest_reviewer_identity && row.latest_reviewer_identity.kind) || '',
+        (row.latest_reviewer_identity && row.latest_reviewer_identity.label) || '',
         row.cli_parity_status || '',
         row.runtime_provider_kind || '',
       ]).toLowerCase().includes(query);
@@ -2245,13 +2267,15 @@ function renderTable(endpoint, rows) {{
       + (query ? '<p><button data-reset-filter="summaryJobs">Reset Filter</button></p>' : '')
       + emptyState
       + '<div id="summary-jobs-action-preview-response"><p>Summary jobs blocked-route preview stays read-only and returns the CLI fallback contract.</p></div>'
-      + '<table><thead><tr><th>detail</th><th>summary job</th><th>status</th><th>review</th><th>auth</th><th>package</th><th>preview</th><th>runtime</th><th>sources</th></tr></thead><tbody>'
+      + '<table><thead><tr><th>detail</th><th>summary job</th><th>status</th><th>review</th><th>auth</th><th>identity</th><th>package</th><th>preview</th><th>runtime</th><th>sources</th></tr></thead><tbody>'
       + sorted.map(row => {{
         const path = detailPath(endpoint, row);
         const button = path ? '<button data-detail="' + esc(path) + '">JSON</button>' : '';
         const reviewStatus = row.review_capability_status || '';
         const authReadinessStatus = row.auth_readiness_status || '';
         const packageStatus = row.package_readiness_status || '';
+        const identityAssuranceStatus = row.identity_assurance_status || '';
+        const reviewerBadge = reviewerIdentityBadge(row.latest_reviewer_identity);
         const preview = row.action_preview_summary || {{}};
         const previewActions = Array.isArray(preview.actions) ? preview.actions : [];
         const previewAction = previewActions[0] || {{}};
@@ -2263,6 +2287,11 @@ function renderTable(endpoint, rows) {{
         const authBadge = authReadinessStatus === 'boundary_aligned'
           ? jumpBadge('Auth aligned', 'badge-ready', '/api/review-queue', 'reviewQueue', 'boundary_aligned')
           : jumpBadge('Auth advisory', 'badge-warning', '/api/review-queue', 'reviewQueue', authReadinessStatus || 'advisory_only');
+        const identityBadge = identityAssuranceStatus === 'boundary_aligned'
+          ? jumpBadge('Identity aligned', 'badge-ready', '/api/review-queue', 'reviewQueue', 'boundary_aligned')
+          : identityAssuranceStatus
+            ? jumpBadge('Identity advisory', 'badge-warning', '/api/review-queue', 'reviewQueue', identityAssuranceStatus)
+            : badge('Identity n/a', 'badge-neutral');
         const packageBadge = packageStatus === 'package_context_available'
           ? jumpBadge('Package Ready', 'badge-ready', '/api/review-queue', 'reviewQueue', 'package:package_context_available')
           : packageStatus === 'no_context_records'
@@ -2283,6 +2312,7 @@ function renderTable(endpoint, rows) {{
           + '<td>' + esc(row.status || '') + '</td>'
           + '<td>' + reviewBadge + '</td>'
           + '<td>' + authBadge + '</td>'
+          + '<td>' + identityBadge + (reviewerBadge ? '<br>' + reviewerBadge : '') + ((row.latest_reviewer_identity && row.latest_reviewer_identity.label) ? '<br>' + esc(row.latest_reviewer_identity.label || '') : '') + '</td>'
           + '<td>' + packageBadge + '</td>'
           + '<td>' + previewSummary + (previewButton ? '<br>' + previewButton : '') + '</td>'
           + '<td>' + esc(row.runtime_provider_kind || '') + '</td>'

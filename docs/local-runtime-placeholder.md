@@ -143,7 +143,7 @@ review detail の `Action Preview` では disabled approve / reject / request-ch
 
 review queue 一覧でも auth readiness badge を通じて advisory / boundary-aligned slice を read-only で辿れます。また preview 列から blocked route preview を read-only で試せるため、detail を開かずに CLI fallback contract を確認できます。
 
-summary job 一覧でも matching review target 由来の auth readiness badge を read-only で確認できます。また preview 列から同じ blocked route preview を read-only で試せるため、summary row からも CLI fallback contract を辿れます。
+summary job 一覧でも matching review target 由来の auth readiness badge を read-only で確認できます。さらに identity/session 由来の advisory/aligned 状態も read-only で辿れます。また preview 列から同じ blocked route preview を read-only で試せるため、summary row からも CLI fallback contract を辿れます。
 
 overview の summary jobs panel でも auth readiness の派生集計を read-only で確認できます。
 
