@@ -521,6 +521,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "openListButton('Open Summary Jobs', '/api/summary-jobs')" in html
     assert "openListButton('Open Runtime Config', '/api/runtime-config')" in html
     assert "openListButton('Open Package Review', '/api/package-review')" in html
+    assert "buttons.push(openListButton('Open Review Queue', '/api/review-queue'));" in html
     assert "<th>review</th><th>package</th>" in html
     assert 'data-reset-filters="all"' in html
     assert "sliceActionButton('Advisory Reviews', '/api/review-queue', 'reviewQueue', 'advisory')" in html

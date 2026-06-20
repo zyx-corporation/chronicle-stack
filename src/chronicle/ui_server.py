@@ -1604,6 +1604,21 @@ function relatedListButtons(detailEndpoint, record) {{
   }}
   if (detailEndpoint.startsWith('/api/summary-jobs/')) {{
     buttons.push(openListButton('Open Summary Jobs', '/api/summary-jobs'));
+    if (record.review_target_event_id) {{
+      buttons.push(openListButton('Open Review Queue', '/api/review-queue'));
+    }}
+    const capability = record.review_capability || {{}};
+    const readiness = record.package_readiness || {{}};
+    const parity = record.cli_parity || {{}};
+    if (capability.status) {{
+      buttons.push(moreSliceButton(capability.status, '/api/review-queue', 'reviewQueue'));
+    }}
+    if (readiness.status) {{
+      buttons.push(sliceActionButton('More ' + readiness.status, '/api/review-queue', 'reviewQueue', 'package:' + readiness.status));
+    }}
+    if (parity.status) {{
+      buttons.push(moreSliceButton(parity.status, '/api/review-queue', 'reviewQueue'));
+    }}
   }}
   if (record.package_handoff_preview || record.package_readiness) {{
     buttons.push(openListButton('Open Package Review', '/api/package-review'));
