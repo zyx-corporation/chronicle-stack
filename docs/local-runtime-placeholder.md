@@ -141,6 +141,8 @@ review detail / summary detail では、Phase H readiness をまとめた auth r
 
 review queue 一覧でも auth readiness badge を通じて advisory / boundary-aligned slice を read-only で辿れます。
 
+summary job 一覧でも matching review target 由来の auth readiness badge を read-only で確認できます。
+
 ## Summary job re-run
 
 `chronicle summary run --id sum_xxx` は、既存の summary job を explicit manual runtime boundary に通し直し、短縮結果を新しい pending-review draft として保存します。

@@ -261,6 +261,7 @@ def test_ui_data_service_read_endpoints(tmp_path):
     assert service.summary_jobs_list()["summary_jobs"][0]["summary_job_id"].startswith("sum_")
     assert service.summary_jobs_list()["summary_jobs"][0]["review_target_event_id"].startswith("evt_")
     assert service.summary_jobs_list()["summary_jobs"][0]["review_capability_status"] == "advisory_only"
+    assert service.summary_jobs_list()["summary_jobs"][0]["auth_readiness_status"] == "advisory_only"
     assert service.summary_jobs_list()["summary_jobs"][0]["package_readiness_status"] == "no_context_records"
     assert service.summary_jobs_list()["summary_jobs"][0]["cli_parity_status"] == "aligned"
     assert service.runtime_config_state()["runtime_config"]["config"]["provider_name"] == "ui-local"
@@ -551,7 +552,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "openListButton('Open Runtime Config', '/api/runtime-config')" in html
     assert "openListButton('Open Package Review', '/api/package-review')" in html
     assert "buttons.push(openListButton('Open Review Queue', '/api/review-queue'));" in html
-    assert "<th>review</th><th>package</th>" in html
+    assert "<th>review</th><th>auth</th><th>package</th>" in html
     assert "textInput('summaryJobs', 'Filter summary jobs...')" in html
     assert "sortSelect('summaryJobs', currentSortValue('/api/summary-jobs')" in html
     assert "<th>auth</th>" in html

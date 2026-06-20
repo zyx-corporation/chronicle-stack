@@ -660,6 +660,9 @@ class ChronicleUIDataService:
                     data["review_capability_status"] = str(
                         review_row.get("review_capability", {}).get("status", "")
                     )
+                    data["auth_readiness_status"] = str(
+                        review_row.get("auth_boundary_notice", {}).get("status", "")
+                    )
                     data["package_readiness_status"] = str(
                         review_row.get("package_readiness_summary", {}).get("status", "")
                     )
@@ -2120,6 +2123,7 @@ function renderTable(endpoint, rows) {{
         row.title || '',
         row.status || '',
         row.review_capability_status || '',
+        row.auth_readiness_status || '',
         row.package_readiness_status || '',
         row.cli_parity_status || '',
         row.runtime_provider_kind || '',
@@ -2139,17 +2143,21 @@ function renderTable(endpoint, rows) {{
       + summaryJobsFilterChips()
       + (query ? '<p><button data-reset-filter="summaryJobs">Reset Filter</button></p>' : '')
       + emptyState
-      + '<table><thead><tr><th>detail</th><th>summary job</th><th>status</th><th>review</th><th>package</th><th>runtime</th><th>sources</th></tr></thead><tbody>'
+      + '<table><thead><tr><th>detail</th><th>summary job</th><th>status</th><th>review</th><th>auth</th><th>package</th><th>runtime</th><th>sources</th></tr></thead><tbody>'
       + sorted.map(row => {{
         const path = detailPath(endpoint, row);
         const button = path ? '<button data-detail="' + esc(path) + '">JSON</button>' : '';
         const reviewStatus = row.review_capability_status || '';
+        const authReadinessStatus = row.auth_readiness_status || '';
         const packageStatus = row.package_readiness_status || '';
         const reviewBadge = reviewStatus === 'ready'
           ? jumpBadge('Ready', 'badge-ready', '/api/review-queue', 'reviewQueue', 'ready')
           : reviewStatus === 'resolved'
             ? jumpBadge('Resolved', 'badge-neutral', '/api/review-queue', 'reviewQueue', 'resolved')
             : jumpBadge('Advisory', 'badge-warning', '/api/review-queue', 'reviewQueue', 'advisory');
+        const authBadge = authReadinessStatus === 'boundary_aligned'
+          ? jumpBadge('Auth aligned', 'badge-ready', '/api/review-queue', 'reviewQueue', 'boundary_aligned')
+          : jumpBadge('Auth advisory', 'badge-warning', '/api/review-queue', 'reviewQueue', authReadinessStatus || 'advisory_only');
         const packageBadge = packageStatus === 'package_context_available'
           ? jumpBadge('Package Ready', 'badge-ready', '/api/review-queue', 'reviewQueue', 'package:package_context_available')
           : packageStatus === 'no_context_records'
@@ -2163,6 +2171,7 @@ function renderTable(endpoint, rows) {{
           + '<td><span class="id">' + esc(row.summary_job_id || '') + '</span><br>' + esc(row.title || '') + (targetButton ? '<br>' + targetButton : '') + '</td>'
           + '<td>' + esc(row.status || '') + '</td>'
           + '<td>' + reviewBadge + '</td>'
+          + '<td>' + authBadge + '</td>'
           + '<td>' + packageBadge + '</td>'
           + '<td>' + esc(row.runtime_provider_kind || '') + '</td>'
           + '<td>' + esc(row.summary_source_count ?? 0) + '</td>'
