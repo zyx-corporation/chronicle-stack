@@ -1016,7 +1016,7 @@ function reviewerIdentityBadge(identity) {{
 function reviewWarningBadges(warnings) {{
   return (warnings || []).map(code => {{
     const text = String(code || '').replaceAll('_', ' ');
-    return badge(text, 'badge-warning');
+    return jumpBadge(text, 'badge-warning', '/api/review-queue', 'reviewQueue', String(code || ''));
   }}).join('');
 }}
 function textInput(id, placeholder) {{

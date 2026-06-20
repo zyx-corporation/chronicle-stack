@@ -444,6 +444,7 @@ chronicle review approve --event evt_xxx --reviewer alice --json
 - overview triage からも `aligned` / `drift_detected` の parity slice へ直接 drilldown できる
 - review queue list は `CLI drift first` sort で parity drift 行を先頭に寄せられる
 - review queue list の warning codes は badge と説明文の両方で派生表示される
+- review queue list の warning badges 自体も clickable で、同じ warning code の slice へその場で絞り込める
 - overview triage からも `ui_auth_not_enabled` など主要 warning slice へ直接 drilldown できる
 - overview triage の warning 集計は priority 順でも整形され、主要 blocker が上に出る
 - overview triage の warning badges は summary 駆動で並び、warning code ごとの review queue filter に直接つながる
