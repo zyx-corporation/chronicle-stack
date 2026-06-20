@@ -443,6 +443,7 @@ chronicle review approve --event evt_xxx --reviewer alice --json
 - UI review queue list は CLI parity badge も派生表示し、detail を開かずに command drift の有無を確認できる
 - overview triage からも `aligned` / `drift_detected` の parity slice へ直接 drilldown できる
 - review queue list は `CLI drift first` sort で parity drift 行を先頭に寄せられる
+- review queue list の warning codes は badge と説明文の両方で派生表示される
 - review queue detail は reviewer / audit timeline を read-only で表示する
 - review queue detail は current UI boundary と reviewer identity を照合した assurance も表示する
 - review queue は current boundary での capability/warning surface も表示する

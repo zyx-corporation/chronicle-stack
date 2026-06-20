@@ -985,6 +985,12 @@ function reviewerIdentityBadge(identity) {{
   const label = identity.label || 'unknown';
   return badge(kind + ':' + label, 'badge-neutral');
 }}
+function reviewWarningBadges(warnings) {{
+  return (warnings || []).map(code => {{
+    const text = String(code || '').replaceAll('_', ' ');
+    return badge(text, 'badge-warning');
+  }}).join('');
+}}
 function textInput(id, placeholder) {{
   return '<input id="' + esc(id) + '" data-filter-input="' + esc(id) + '" placeholder="' + esc(placeholder)
     + '" style="margin: 6px 6px 10px 0; padding: 6px 8px; width: 260px;">';
@@ -1365,6 +1371,7 @@ function renderTable(endpoint, rows) {{
         const parity = row.cli_parity_summary || {{}};
         const warnList = Array.isArray(capability.warnings) ? capability.warnings : [];
         const warnDetails = Array.isArray(capability.warning_details) ? capability.warning_details : [];
+        const warnBadges = reviewWarningBadges(warnList);
         const reviewerBadge = reviewerIdentityBadge(row.latest_reviewer_identity);
         const reviewKindBadge = row.review_kind
           ? jumpBadge(row.review_kind, 'badge-neutral', '/api/review-queue', 'reviewQueue', row.review_kind)
@@ -1386,7 +1393,7 @@ function renderTable(endpoint, rows) {{
           + '<td>' + button + '</td>'
           + '<td><span class="id">' + esc(row.target_event_id || '') + '</span><br>' + reviewKindBadge + (reviewKindBadge ? '<br>' : '') + esc(row.target_summary || '') + '</td>'
           + '<td>' + statusBadge + '<br>' + readinessBadge + '<br>' + parityBadge + '</td>'
-          + '<td>' + esc(warnDetails.map(item => item.message).join(' | ') || warnList.join(', ') || '(none)') + '</td>'
+          + '<td>' + (warnBadges ? warnBadges + '<br>' : '') + esc(warnDetails.map(item => item.message).join(' | ') || warnList.join(', ') || '(none)') + '</td>'
           + '<td>' + reviewerBadge + (reviewerBadge ? '<br>' : '') + esc((row.latest_reviewer_identity && row.latest_reviewer_identity.label) || row.latest_reviewer || '') + '</td>'
           + '</tr>';
       }}).join('') + '</tbody></table>';
