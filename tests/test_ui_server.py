@@ -920,6 +920,101 @@ def test_http_review_action_enabled_route_applies_decision(tmp_path):
         thread.join(timeout=5)
 
 
+def test_http_review_action_enabled_route_handles_audit_failure(tmp_path, monkeypatch):
+    ids = _populate(tmp_path)
+
+    def _broken_audit_record(self, *args, **kwargs):
+        raise RuntimeError("audit insert boom")
+
+    monkeypatch.setattr(AuditService, "record", _broken_audit_record)
+    try:
+        server = make_server(
+            host="127.0.0.1",
+            port=0,
+            root=tmp_path,
+            mutation_capability_flag=True,
+            enable_ui_mutation=True,
+            auth_mode=UIAuthMode.LOOPBACK_LOCAL,
+            authorization_mode=UIAuthorizationMode.REVIEWER_DECLARED,
+        )
+    except PermissionError as exc:
+        pytest.skip(f"local socket bind unavailable in this environment: {exc}")
+    host, port = server.server_address
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        status, body = _http_post(
+            host,
+            port,
+            f"/api/review-actions/{ids['runtime_summary_event_id']}/approve",
+            {
+                "reviewer_label": "alice",
+                "reviewer_kind": "local_operator",
+                "session_label": "ui-http-test",
+                "ui_intent": "approve",
+                "note": "approved from ui",
+            },
+        )
+        assert status == 500
+        payload = json.loads(body)
+        assert payload["error_code"] == "audit_insertion_failed"
+        assert payload["failure_contract"]["rollback_status"] == "fail_closed"
+        assert payload["failure_contract"]["durable_mutation_reported_on_failure"] is False
+        assert ReviewService(tmp_path).history(event_id=ids["runtime_summary_event_id"]) == []
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=5)
+
+
+def test_http_review_action_enabled_route_handles_decision_persistence_failure(tmp_path, monkeypatch):
+    ids = _populate(tmp_path)
+
+    def _broken_append_event(self, event):
+        raise RuntimeError("append boom")
+
+    monkeypatch.setattr(ChronicleService, "append_event", _broken_append_event)
+    try:
+        server = make_server(
+            host="127.0.0.1",
+            port=0,
+            root=tmp_path,
+            mutation_capability_flag=True,
+            enable_ui_mutation=True,
+            auth_mode=UIAuthMode.LOOPBACK_LOCAL,
+            authorization_mode=UIAuthorizationMode.REVIEWER_DECLARED,
+        )
+    except PermissionError as exc:
+        pytest.skip(f"local socket bind unavailable in this environment: {exc}")
+    host, port = server.server_address
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        status, body = _http_post(
+            host,
+            port,
+            f"/api/review-actions/{ids['runtime_summary_event_id']}/approve",
+            {
+                "reviewer_label": "alice",
+                "reviewer_kind": "local_operator",
+                "session_label": "ui-http-test",
+                "ui_intent": "approve",
+                "note": "approved from ui",
+            },
+        )
+        assert status == 500
+        payload = json.loads(body)
+        assert payload["error_code"] == "decision_persistence_failed"
+        assert payload["audit_id"].startswith("aud_")
+        assert payload["failure_contract"]["rollback_status"] == "fail_closed"
+        assert len(AuditService(tmp_path).list_events()) == 2
+        assert ReviewService(tmp_path).history(event_id=ids["runtime_summary_event_id"]) == []
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=5)
+
+
 def test_chronicle_ui_help():
     runner = CliRunner()
     result = runner.invoke(app, ["ui", "--help"])

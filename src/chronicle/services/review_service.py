@@ -56,6 +56,25 @@ class ReviewTargetNotFoundError(ChronicleError):
         )
 
 
+class ReviewAuditInsertionError(ChronicleError):
+    def __init__(self, event_id: str, detail: str) -> None:
+        super().__init__(
+            code="REVIEW_AUDIT_INSERTION_FAILED",
+            message=f"Audit insertion failed for review target: {event_id}",
+            hint=detail,
+        )
+
+
+class ReviewDecisionPersistenceError(ChronicleError):
+    def __init__(self, event_id: str, detail: str, audit_id: str | None = None) -> None:
+        super().__init__(
+            code="REVIEW_DECISION_PERSISTENCE_FAILED",
+            message=f"Review decision persistence failed for target: {event_id}",
+            hint=detail,
+        )
+        self.audit_id = audit_id
+
+
 class ReviewService:
     """Manage append-only review decisions over Chronicle events."""
 
@@ -211,23 +230,26 @@ class ReviewService:
             auth_mode=ReviewerAuthMode.LOOPBACK_LOCAL,
             session_label=session_label,
         )
-        audit_event = self.audit.record(
-            operation=AuditOperation.REVIEW_DECISION,
-            actor=reviewer,
-            purpose=f"review decision: {disposition.value}",
-            target_environment=AuditTargetEnvironment.LOCAL,
-            referenced_records=[target.event_id, review_event_id],
-            source_event_id=review_event_id,
-            result=AuditSeverity.INFO,
-            summary=f"Review {disposition.value} recorded for {target.event_id}",
-            metadata={
-                "disposition": disposition.value,
-                "reviewer": reviewer,
-                "reviewer_kind": reviewer_kind.value,
-                "target_event_id": target.event_id,
-                "review_event_id": review_event_id,
-            },
-        )
+        try:
+            audit_event = self.audit.record(
+                operation=AuditOperation.REVIEW_DECISION,
+                actor=reviewer,
+                purpose=f"review decision: {disposition.value}",
+                target_environment=AuditTargetEnvironment.LOCAL,
+                referenced_records=[target.event_id, review_event_id],
+                source_event_id=review_event_id,
+                result=AuditSeverity.INFO,
+                summary=f"Review {disposition.value} recorded for {target.event_id}",
+                metadata={
+                    "disposition": disposition.value,
+                    "reviewer": reviewer,
+                    "reviewer_kind": reviewer_kind.value,
+                    "target_event_id": target.event_id,
+                    "review_event_id": review_event_id,
+                },
+            )
+        except Exception as exc:
+            raise ReviewAuditInsertionError(target.event_id, str(exc)) from exc
         event = ChronicleEvent(
             event_id=review_event_id,
             chronicle_id=metadata.chronicle_id,
@@ -252,7 +274,14 @@ class ReviewService:
                 source_model="human-review",
             ),
         )
-        self.chronicle.append_event(event)
+        try:
+            self.chronicle.append_event(event)
+        except Exception as exc:
+            raise ReviewDecisionPersistenceError(
+                target.event_id,
+                str(exc),
+                audit_id=audit_event.audit_id,
+            ) from exc
         return ReviewDecisionResult(
             target_event_id=target.event_id,
             disposition=disposition,

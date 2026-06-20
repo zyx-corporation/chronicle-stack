@@ -29,7 +29,12 @@ from chronicle.services.graph_export_service import GraphExportService
 from chronicle.services.integration_package_service import IntegrationPackageService
 from chronicle.services.lifecycle_service import LifecycleService
 from chronicle.services.package_review_service import PackageReviewService
-from chronicle.services.review_service import ReviewService, review_action_commands
+from chronicle.services.review_service import (
+    ReviewAuditInsertionError,
+    ReviewDecisionPersistenceError,
+    ReviewService,
+    review_action_commands,
+)
 from chronicle.services.runtime_config_service import RuntimeConfigService
 from chronicle.services.runtime_service import RuntimeService
 from chronicle.services.summary_job_service import SummaryJobService
@@ -1724,13 +1729,53 @@ class ChronicleUIDataService:
                 },
             )
 
-        result = review_action(
-            event_id=event_id,
-            reviewer=reviewer_label,
-            reviewer_kind=reviewer_kind,
-            session_label=session_label_value,
-            note=note_value,
-        )
+        try:
+            result = review_action(
+                event_id=event_id,
+                reviewer=reviewer_label,
+                reviewer_kind=reviewer_kind,
+                session_label=session_label_value,
+                note=note_value,
+            )
+        except ReviewAuditInsertionError as exc:
+            return (
+                HTTPStatus.INTERNAL_SERVER_ERROR,
+                {
+                    "ok": False,
+                    "status": "blocked",
+                    "event_id": event_id,
+                    "action": action,
+                    "error_code": "audit_insertion_failed",
+                    "message": "Audit insertion failed; GUI mutation was not reported as applied.",
+                    "mutation_enabled": True,
+                    "detail": exc.hint,
+                    "cli_equivalent": f"chronicle review {action} --event {event_id}",
+                    "failure_contract": self._review_action_failure_contract(
+                        mutation_enabled=True,
+                        cli_equivalent=f"chronicle review {action} --event {event_id}",
+                    ),
+                },
+            )
+        except ReviewDecisionPersistenceError as exc:
+            return (
+                HTTPStatus.INTERNAL_SERVER_ERROR,
+                {
+                    "ok": False,
+                    "status": "blocked",
+                    "event_id": event_id,
+                    "action": action,
+                    "error_code": "decision_persistence_failed",
+                    "message": "Review decision persistence failed after audit insertion; treat the route as fail-closed and inspect recovery from CLI.",
+                    "mutation_enabled": True,
+                    "detail": exc.hint,
+                    "audit_id": exc.audit_id,
+                    "cli_equivalent": f"chronicle review {action} --event {event_id}",
+                    "failure_contract": self._review_action_failure_contract(
+                        mutation_enabled=True,
+                        cli_equivalent=f"chronicle review {action} --event {event_id}",
+                    ),
+                },
+            )
         return (
             HTTPStatus.OK,
             {

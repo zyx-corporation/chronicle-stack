@@ -117,3 +117,23 @@ def test_review_history_tracks_multiple_decisions(tmp_path, monkeypatch):
     payload = json.loads(queue_result.stdout)
     assert payload[0]["history_count"] == 2
     assert payload[0]["latest_disposition"] == "approve"
+
+
+def test_review_approve_reports_audit_failure_as_chronicle_error(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    runner, event_id = _setup(tmp_path)
+
+    def _broken_audit_record(self, *args, **kwargs):
+        raise RuntimeError("audit insert boom")
+
+    monkeypatch.setattr(AuditService, "record", _broken_audit_record)
+
+    result = runner.invoke(
+        app,
+        ["review", "approve", "--event", event_id, "--reviewer", "alice", "--json"],
+        catch_exceptions=False,
+    )
+
+    assert result.exit_code == 1
+    payload = json.loads(result.stdout)
+    assert payload["error"]["code"] == "REVIEW_AUDIT_INSERTION_FAILED"
