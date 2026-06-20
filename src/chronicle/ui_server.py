@@ -1168,21 +1168,21 @@ function currentTrailButtons() {{
     '<button data-detail-trail="' + esc(path) + '">' + esc(humanizeDetailPath(path)) + '</button>'
   ).join('');
 }}
+function sliceChip(filterValue, cls, resetTarget) {{
+  const value = String(filterValue || '');
+  if (!value) return '';
+  return '<p>'
+    + badge('slice:' + value, cls)
+    + ' <button data-reset-filter="' + esc(resetTarget) + '">Clear Slice</button>'
+    + '</p>';
+}}
 function reviewQueueFilterChips() {{
   const filterValue = String((window.__chronicleFilters && window.__chronicleFilters.reviewQueue) || '');
-  if (!filterValue) return '';
-  return '<p>'
-    + badge('slice:' + filterValue, 'badge-warning')
-    + ' <button data-reset-filter="reviewQueue">Clear Slice</button>'
-    + '</p>';
+  return sliceChip(filterValue, 'badge-warning', 'reviewQueue');
 }}
 function runtimeRecordsFilterChips() {{
   const filterValue = String((window.__chronicleFilters && window.__chronicleFilters.runtimeRecords) || '');
-  if (!filterValue) return '';
-  return '<p>'
-    + badge('slice:' + filterValue, 'badge-neutral')
-    + ' <button data-reset-filter="runtimeRecords">Clear Slice</button>'
-    + '</p>';
+  return sliceChip(filterValue, 'badge-neutral', 'runtimeRecords');
 }}
 function activeViewSummary(endpoint, mode) {{
   const parts = [];
