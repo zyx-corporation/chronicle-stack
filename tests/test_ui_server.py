@@ -392,6 +392,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "Mutation capability flag:" in html
     assert "currentTrailLabel" in html
     assert "currentTrailButtons" in html
+    assert "sliceBadge" in html
     assert "sliceChip" in html
     assert "runtimeRecordsFilterChips" in html
     assert "reviewQueueFilterChips" in html
@@ -399,13 +400,10 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "Related Links" in html
     assert "__chronicleDetailTrail" in html
     assert "readinessBadge" in html
-    assert "Needs attention:" in html
     assert "Blockers:" in html
     assert "review_requested" in html
     assert "ready" in html
     assert "CLI Parity" in html
-    assert "CLI aligned:" in html
-    assert "CLI drift:" in html
     assert "CLI drift first" in html
     assert "CLI parity counts:" in html
     assert "Warning counts:" in html

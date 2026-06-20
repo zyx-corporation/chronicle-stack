@@ -1184,6 +1184,9 @@ function sliceChip(filterValue, cls, resetTarget) {{
     + ' <button data-reset-filter="' + esc(resetTarget) + '">Clear Slice</button>'
     + '</p>';
 }}
+function sliceBadge(text, count, cls) {{
+  return badge(text + ': ' + count, cls);
+}}
 function reviewQueueFilterChips() {{
   const filterValue = String((window.__chronicleFilters && window.__chronicleFilters.reviewQueue) || '');
   return sliceChip(filterValue, 'badge-warning', 'reviewQueue');
@@ -1275,7 +1278,7 @@ function renderOverview(payload) {{
   const warningSummaries = Array.isArray(triage.warning_summaries) ? triage.warning_summaries : [];
   const warningButtons = warningSummaries.map(item =>
     overviewJumpButton(
-      badge((item.label || item.code || 'warning') + ': ' + (item.count ?? 0), 'badge-warning'),
+      sliceBadge((item.label || item.code || 'warning'), item.count ?? 0, 'badge-warning'),
       '/api/review-queue',
       'reviewQueue',
       item.code || ''
@@ -1337,18 +1340,18 @@ function renderOverview(payload) {{
     + '<div class="panel">'
     + '<h3>Triage</h3>'
     + '<p>'
-    + overviewJumpButton(badge('Needs attention: ' + esc(triage.needs_attention_reviews ?? 0), 'badge-warning'), '/api/review-queue', 'reviewQueue', 'review_requested')
+    + overviewJumpButton(sliceBadge('Needs attention', esc(triage.needs_attention_reviews ?? 0), 'badge-warning'), '/api/review-queue', 'reviewQueue', 'review_requested')
     + '</p>'
     + '<p>'
-    + overviewJumpButton(badge('Review ready: ' + esc(triage.ready_now_reviews ?? 0), 'badge-ready'), '/api/review-queue', 'reviewQueue', 'ready')
-    + overviewJumpButton(badge('Review advisory: ' + esc(triage.advisory_only_reviews ?? 0), 'badge-warning'), '/api/review-queue', 'reviewQueue', 'advisory')
+    + overviewJumpButton(sliceBadge('Review ready', esc(triage.ready_now_reviews ?? 0), 'badge-ready'), '/api/review-queue', 'reviewQueue', 'ready')
+    + overviewJumpButton(sliceBadge('Review advisory', esc(triage.advisory_only_reviews ?? 0), 'badge-warning'), '/api/review-queue', 'reviewQueue', 'advisory')
     + '</p>'
     + '<p>'
-    + overviewJumpButton(badge('Package ready: ' + esc(triage.package_ready_reviews ?? 0), 'badge-ready'), '/api/review-queue', 'reviewQueue', 'package:package_context_available')
+    + overviewJumpButton(sliceBadge('Package ready', esc(triage.package_ready_reviews ?? 0), 'badge-ready'), '/api/review-queue', 'reviewQueue', 'package:package_context_available')
     + '</p>'
     + '<p>'
-    + overviewJumpButton(badge('CLI aligned: ' + esc(triage.cli_parity_aligned_reviews ?? 0), 'badge-ready'), '/api/review-queue', 'reviewQueue', 'aligned')
-    + overviewJumpButton(badge('CLI drift: ' + esc(triage.cli_parity_drift_reviews ?? 0), 'badge-warning'), '/api/review-queue', 'reviewQueue', 'drift_detected')
+    + overviewJumpButton(sliceBadge('CLI aligned', esc(triage.cli_parity_aligned_reviews ?? 0), 'badge-ready'), '/api/review-queue', 'reviewQueue', 'aligned')
+    + overviewJumpButton(sliceBadge('CLI drift', esc(triage.cli_parity_drift_reviews ?? 0), 'badge-warning'), '/api/review-queue', 'reviewQueue', 'drift_detected')
     + '</p>'
     + '<p>' + (warningButtons || '') + '</p>'
     + '<p>Runtime kinds: ' + esc(JSON.stringify(triage.runtime_record_kinds || {{}})) + '</p>'
