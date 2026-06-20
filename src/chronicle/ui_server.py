@@ -1016,12 +1016,20 @@ function compareTextDesc(left, right) {{
 function reviewAttentionRank(row) {{
   const capability = row.review_capability || {{}};
   const readiness = row.package_readiness_summary || {{}};
+  const parity = row.cli_parity_summary || {{}};
+  if (parity.status === 'drift_detected') return 0;
   if (row.review_kind === 'review_requested') return 0;
-  if (capability.status === 'advisory') return 1;
+  if (capability.status === 'advisory_only') return 1;
   if (capability.status === 'ready') return 2;
   if (readiness.status === 'package_context_available') return 3;
   if (capability.status === 'resolved') return 4;
   return 5;
+}}
+function reviewParityRank(row) {{
+  const parity = row.cli_parity_summary || {{}};
+  if (parity.status === 'drift_detected') return 0;
+  if (parity.status === 'aligned') return 1;
+  return 2;
 }}
 function sortRuntimeRows(rows) {{
   const sortValue = currentSortValue('/api/runtime-records');
@@ -1045,6 +1053,15 @@ function sortReviewRows(rows) {{
       const rightReviewer = (right.latest_reviewer_identity && right.latest_reviewer_identity.label) || right.latest_reviewer || '';
       const reviewerCompare = String(leftReviewer).localeCompare(String(rightReviewer));
       if (reviewerCompare !== 0) return reviewerCompare;
+      return compareTextDesc(left.target_event_id, right.target_event_id);
+    }});
+  }}
+  if (sortValue === 'parity') {{
+    return sortRows(rows, (left, right) => {{
+      const parityCompare = reviewParityRank(left) - reviewParityRank(right);
+      if (parityCompare !== 0) return parityCompare;
+      const attentionCompare = reviewAttentionRank(left) - reviewAttentionRank(right);
+      if (attentionCompare !== 0) return attentionCompare;
       return compareTextDesc(left.target_event_id, right.target_event_id);
     }});
   }}
@@ -1333,6 +1350,7 @@ function renderTable(endpoint, rows) {{
       + textInput('reviewQueue', 'Filter review queue...')
       + sortSelect('reviewQueue', currentSortValue('/api/review-queue'), [
         {{ value: 'attention', label: 'Needs attention first' }},
+        {{ value: 'parity', label: 'CLI drift first' }},
         {{ value: 'latest', label: 'Latest first' }},
         {{ value: 'reviewer', label: 'Reviewer' }},
       ])

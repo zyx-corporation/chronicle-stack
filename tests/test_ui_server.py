@@ -375,6 +375,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "sortSelect" in html
     assert "sortRuntimeRows" in html
     assert "sortReviewRows" in html
+    assert "reviewParityRank" in html
     assert "overviewJumpButton" in html
     assert "relatedListButtons" in html
     assert "activeViewSummary" in html
@@ -393,6 +394,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "CLI Parity" in html
     assert "CLI aligned:" in html
     assert "CLI drift:" in html
+    assert "CLI drift first" in html
     assert "CLI parity counts:" in html
     assert "Runtime kinds:" in html
     assert 'data-jump="/api/review-queue"' in html
