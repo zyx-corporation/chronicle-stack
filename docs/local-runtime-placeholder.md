@@ -38,6 +38,7 @@ runtime 記録は local UI の read-only endpoint から確認できます。
 
 - `/api/runtime-records`
 - `/api/runtime-records/<event_id>`
+- `/api/runtime-config`
 
 retrieval plan の detail view では、downstream runtime へ渡す前の handoff contract を read-only で確認できます。
 
@@ -49,6 +50,15 @@ retrieval plan の detail view では、downstream runtime へ渡す前の hando
 - derived package review snapshot before persistence or sharing
 
 この handoff 表示は GraphRAG runtime を実装するものではなく、どの local surface が候補になっているかを operator が確認するための dry-run です。
+
+`/api/runtime-config` では、stored provider contract を read-only で確認できます。
+
+- source (`implicit-default` / `stored`)
+- provider kind / provider name / model name
+- allow-network / allow-external-context intent
+- boundary warnings
+
+この表示も configuration only の境界を可視化するものであり、runtime 実行や network session を意味しません。
 
 ## Persistence
 

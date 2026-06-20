@@ -16,6 +16,7 @@ from chronicle.services.boundary_service import BoundaryService
 from chronicle.services.chronicle_service import ChronicleService
 from chronicle.services.context_service import ContextService
 from chronicle.services.lifecycle_service import LifecycleService
+from chronicle.services.runtime_config_service import RuntimeConfigService
 from chronicle.services.runtime_service import RuntimeService
 from chronicle.ui_smoke import run_ui_smoke
 
@@ -58,6 +59,7 @@ def _populate(root):
         text="Smoke runtime summary. It stays local.",
         record=True,
     )
+    RuntimeConfigService(root).set_local(model_name="smoke-local-model", provider_name="smoke-local")
 
 
 def test_run_ui_smoke_success(tmp_path):
@@ -75,6 +77,7 @@ def test_run_ui_smoke_success(tmp_path):
     assert "/api/overview" in check_names
     assert "/api/review-queue" in check_names
     assert "/api/ui-boundary" in check_names
+    assert "/api/runtime-config" in check_names
     assert "html-shell" in check_names
     assert any(name.startswith("/api/review-queue/") for name in check_names)
     assert any(name.endswith("#cli-parity") for name in check_names)

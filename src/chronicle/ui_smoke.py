@@ -67,6 +67,7 @@ _COLLECTION_CHECKS: tuple[tuple[str, str], ...] = (
     ("/api/runtime-records", "runtime_records"),
     ("/api/review-queue", "review_queue"),
     ("/api/ui-boundary", "ui_boundary"),
+    ("/api/runtime-config", "runtime_config"),
     ("/api/package-review", "package_review"),
     ("/api/graph-summary", "graph_summary"),
     ("/api/ai-index-status", "ai_index_status"),

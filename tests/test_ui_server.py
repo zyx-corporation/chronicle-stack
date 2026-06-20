@@ -22,6 +22,7 @@ from chronicle.services.decision_service import DecisionService
 from chronicle.services.graph_index_service import GraphIndexService
 from chronicle.services.lifecycle_service import LifecycleService
 from chronicle.services.review_service import ReviewService
+from chronicle.services.runtime_config_service import RuntimeConfigService
 from chronicle.services.runtime_service import RuntimeService
 from chronicle.services.vector_index_service import VectorIndexService
 from chronicle.models.review import ReviewerIdentityKind
@@ -180,6 +181,12 @@ def test_startup_metadata_with_mutation_capability_flag(tmp_path):
 
 def test_ui_overview_data(tmp_path):
     _populate(tmp_path)
+    RuntimeConfigService(tmp_path).set_http(
+        base_url="https://runtime.example.invalid/v1",
+        model_name="manual-http-model",
+        api_key_env="OPENAI_API_KEY",
+        allow_network=True,
+    )
 
     overview = ChronicleUIDataService(tmp_path).overview()
 
@@ -196,6 +203,9 @@ def test_ui_overview_data(tmp_path):
     assert overview["runtime_boundary"]["graphrag_runtime"] is False
     assert overview["runtime_boundary"]["vector_db"] is False
     assert overview["runtime_boundary"]["graph_db"] is False
+    assert overview["runtime_config"]["config"]["provider_kind"] == "http"
+    assert overview["runtime_config"]["config"]["model_name"] == "manual-http-model"
+    assert overview["runtime_config"]["config"]["allow_network"] is True
     assert overview["ui_boundary"]["mutation_enabled"] is False
     assert overview["ui_boundary"]["mutation_capability_flag"] is False
     assert overview["ui_boundary"]["auth_mode"] == "not_enabled"
@@ -214,6 +224,7 @@ def test_ui_overview_data(tmp_path):
 
 def test_ui_data_service_read_endpoints(tmp_path):
     _populate(tmp_path)
+    RuntimeConfigService(tmp_path).set_local(model_name="ui-local-model", provider_name="ui-local")
     service = ChronicleUIDataService(tmp_path)
 
     assert service.contexts()["contexts"][0]["title"] == "UI Context"
@@ -228,6 +239,7 @@ def test_ui_data_service_read_endpoints(tmp_path):
         "chronicle runtime"
     )
     assert len(service.review_queue()["review_queue"]) == 2
+    assert service.runtime_config_state()["runtime_config"]["config"]["provider_name"] == "ui-local"
     assert service.review_queue()["review_queue"][0]["review_preview_only"] is True
     assert service.review_queue()["review_queue"][0]["target_event_id"].startswith("evt_")
     assert service.review_queue()["review_queue"][0]["review_capability"]["status"] == "advisory_only"
@@ -406,6 +418,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "relatedListButtons" in html
     assert "activeViewSummary" in html
     assert "Mutation Readiness" in html
+    assert "Runtime Config" in html
     assert "Auth Boundary" in html
     assert "Identity Boundary" in html
     assert "Mutation capability flag:" in html
@@ -447,6 +460,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "detailListLine('Expected actions', parity.expected_actions)" in html
     assert "openListButton('Open Review Queue', '/api/review-queue')" in html
     assert "openListButton('Open Runtime Records', '/api/runtime-records')" in html
+    assert "openListButton('Open Runtime Config', '/api/runtime-config')" in html
     assert "openListButton('Open Package Review', '/api/package-review')" in html
     assert 'data-reset-filters="all"' in html
     assert "sliceActionButton('Advisory Reviews', '/api/review-queue', 'reviewQueue', 'advisory')" in html
@@ -492,6 +506,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "warning_details" in html
     assert "/api/events" in html
     assert "/api/runtime-records" in html
+    assert "/api/runtime-config" in html
     assert "/api/review-queue" in html
     assert "/api/ui-boundary" in html
     assert "/api/package-review" in html
@@ -523,6 +538,7 @@ def test_http_root_and_read_only_endpoints(tmp_path):
             "/api/runtime-records": "runtime_records",
             "/api/review-queue": "review_queue",
             "/api/ui-boundary": "ui_boundary",
+            "/api/runtime-config": "runtime_config",
             "/api/package-review": "package_review",
             "/api/graph-summary": "graph_summary",
             "/api/ai-index-status": "ai_index_status",

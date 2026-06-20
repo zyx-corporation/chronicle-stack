@@ -30,6 +30,7 @@ from chronicle.services.integration_package_service import IntegrationPackageSer
 from chronicle.services.lifecycle_service import LifecycleService
 from chronicle.services.package_review_service import PackageReviewService
 from chronicle.services.review_service import ReviewService, review_action_commands
+from chronicle.services.runtime_config_service import RuntimeConfigService
 from chronicle.services.runtime_service import RuntimeService
 from chronicle.services.vector_index_service import VectorIndexService
 
@@ -268,6 +269,7 @@ class ChronicleUIDataService:
         self.package_review = PackageReviewService(self.root)
         self.review = ReviewService(self.root)
         self.runtime = RuntimeService(self.root)
+        self.runtime_config = RuntimeConfigService(self.root)
         self.vector_index = VectorIndexService(self.root)
         self.graph_index = GraphIndexService(self.root)
 
@@ -284,6 +286,7 @@ class ChronicleUIDataService:
         runtime_records = self.runtime_records()["runtime_records"]
         review_queue = self.review_queue()["review_queue"]
         ai_index_status = self.ai_index_status()["ai_index_status"]
+        runtime_config = self.runtime_config_state()["runtime_config"]
         triage = self.overview_triage(runtime_records, review_queue)
         identity_boundary_summary = self.identity_boundary_summary(review_queue)
         return {
@@ -311,6 +314,7 @@ class ChronicleUIDataService:
             "package_review": self.package_review_snapshot(),
             "graph_summary": self.graph_summary(),
             "ai_index": ai_index_status,
+            "runtime_config": runtime_config,
             "triage": triage,
             "runtime_boundary": self.runtime_boundary(),
             "ui_boundary": self.ui_boundary()["ui_boundary"],
@@ -615,6 +619,10 @@ class ChronicleUIDataService:
     def ai_index_graph_edges(self) -> dict[str, Any]:
         snapshot = self.graph_index.snapshot()
         return {"graph_edges": [_dump_model(edge) for edge in snapshot.edges]}
+
+    def runtime_config_state(self) -> dict[str, Any]:
+        state = self.runtime_config.show()
+        return {"runtime_config": state.model_dump(mode="json")}
 
     def package_review_snapshot(self) -> dict[str, Any]:
         try:
@@ -1083,6 +1091,7 @@ class ChronicleUIDataService:
             "/api/runtime-records": self.runtime_records,
             "/api/review-queue": self.review_queue,
             "/api/ui-boundary": self.ui_boundary,
+            "/api/runtime-config": self.runtime_config_state,
             "/api/package-review": lambda: {"package_review": self.package_review_snapshot()},
             "/api/graph-summary": lambda: {"graph_summary": self.graph_summary()},
             "/api/ai-index-status": self.ai_index_status,
@@ -1142,6 +1151,7 @@ th, td {{ padding: 6px; border-bottom: 1px solid #e5e7eb; vertical-align: top; }
   <button data-endpoint="/api/runtime-records">Runtime Records</button>
   <button data-endpoint="/api/review-queue">Review Queue</button>
   <button data-endpoint="/api/ui-boundary">UI Boundary</button>
+  <button data-endpoint="/api/runtime-config">Runtime Config</button>
   <button data-endpoint="/api/package-review">Package Review</button>
   <button data-endpoint="/api/graph-summary">Graph Summary</button>
   <button data-endpoint="/api/ai-index-status">AI Index Status</button>
@@ -1401,6 +1411,7 @@ function humanizeDetailPath(path) {{
   const labels = {{
     'runtime-records': 'Runtime',
     'review-queue': 'Review',
+    'runtime-config': 'Runtime Config',
     'events': 'Event',
     'contexts': 'Context',
     'artifacts': 'Artifact',
@@ -1489,6 +1500,8 @@ function renderOverview(payload) {{
   const aiIndex = payload.ai_index || {{}};
   const triage = payload.triage || {{}};
   const mutationReadiness = payload.mutation_readiness || {{}};
+  const runtimeConfig = payload.runtime_config || {{}};
+  const runtimeConfigContract = runtimeConfig.config || {{}};
   const warningSummaries = Array.isArray(triage.warning_summaries) ? triage.warning_summaries : [];
   const warningButtons = warningSummaries.map(item =>
     overviewJumpButton(
@@ -1523,6 +1536,17 @@ function renderOverview(payload) {{
     + '<p>GraphRAG runtime: ' + esc(runtime.graphrag_runtime) + '</p>'
     + '<p>Vector DB: ' + esc(runtime.vector_db) + '</p>'
     + '<p>Graph DB: ' + esc(runtime.graph_db) + '</p>'
+    + '</div>'
+    + '<div class="panel">'
+    + panelTitle('Runtime Config')
+    + detailLine('Source', runtimeConfig.source || '')
+    + detailLine('Provider kind', runtimeConfigContract.provider_kind || '')
+    + detailLine('Provider name', runtimeConfigContract.provider_name || '')
+    + detailLine('Model', runtimeConfigContract.model_name || '')
+    + detailLine('Allow network', runtimeConfigContract.allow_network)
+    + detailLine('Allow external context', runtimeConfigContract.allow_external_context)
+    + detailListLine('Warnings', runtimeConfig.warnings, ' | ')
+    + '<p>' + openListButton('Open Runtime Config', '/api/runtime-config') + '</p>'
     + '</div>'
     + '<div class="panel">'
     + panelTitle('UI Boundary')
@@ -1608,6 +1632,7 @@ function renderOverview(payload) {{
     + '</p>'
     + '<p>' + openListButton('Open Review Queue', '/api/review-queue')
     + openListButton('Open Runtime Records', '/api/runtime-records')
+    + openListButton('Open Runtime Config', '/api/runtime-config')
     + openListButton('Open Package Review', '/api/package-review')
     + '<button data-reset-filters="all">Reset Filters</button></p>'
     + '<p>' + sliceActionButton('Advisory Reviews', '/api/review-queue', 'reviewQueue', 'advisory')
