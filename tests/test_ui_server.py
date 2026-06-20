@@ -4,6 +4,7 @@ import http.client
 import json
 import threading
 
+import pytest
 from typer.testing import CliRunner
 
 from chronicle.cli import app
@@ -24,6 +25,7 @@ from chronicle.services.lifecycle_service import LifecycleService
 from chronicle.services.review_service import ReviewService
 from chronicle.services.runtime_config_service import RuntimeConfigService
 from chronicle.services.runtime_service import RuntimeService
+from chronicle.services.summary_job_service import SummaryJobService
 from chronicle.services.vector_index_service import VectorIndexService
 from chronicle.models.review import ReviewerIdentityKind
 from chronicle.ui_server import (
@@ -115,6 +117,11 @@ def _populate(root):
         query="UI Context",
         record=True,
     )
+    summary_job = SummaryJobService(root).create_manual_draft(
+        title="UI Summary Draft",
+        summary_text="UI summary draft body.",
+        prompt="UI summary prompt.",
+    )
     return {
         "event_id": event_id,
         "context_id": context.context_id,
@@ -125,6 +132,7 @@ def _populate(root):
         "lifecycle_id": lifecycle_marker.lifecycle_id,
         "runtime_summary_event_id": runtime_summary.event_id,
         "runtime_plan_event_id": runtime_plan.event_id,
+        "summary_job_id": summary_job.summary_job_id,
     }
 
 
@@ -192,11 +200,12 @@ def test_ui_overview_data(tmp_path):
 
     assert overview["chronicle"]["title"] == "UI Test"
     assert overview["counts"]["contexts"] == 1
-    assert overview["counts"]["artifacts"] == 1
+    assert overview["counts"]["artifacts"] == 2
     assert overview["counts"]["decisions"] == 1
     assert overview["counts"]["boundary_rules"] == 1
     assert overview["counts"]["audit_events"] == 1
     assert overview["counts"]["lifecycle_markers"] == 1
+    assert overview["counts"]["summary_jobs"] == 1
     assert overview["runtime_boundary"]["read_only"] is True
     assert overview["runtime_boundary"]["daemon"] is False
     assert overview["runtime_boundary"]["external_model_api"] is False
@@ -212,13 +221,13 @@ def test_ui_overview_data(tmp_path):
     assert overview["auth_boundary_summary"]["status"] == "auth_not_enabled"
     assert "Define explicit local auth boundary." in overview["auth_boundary_summary"]["next_steps"]
     assert overview["identity_boundary_summary"]["status"] == "identity_unavailable"
-    assert overview["identity_boundary_summary"]["missing_identity_count"] == 2
+    assert overview["identity_boundary_summary"]["missing_identity_count"] == 3
     assert overview["mutation_readiness"]["status"] == "preview_only"
     assert "Define explicit local auth boundary." in overview["mutation_readiness"]["next_steps"]
-    assert overview["triage"]["needs_attention_reviews"] == 2
+    assert overview["triage"]["needs_attention_reviews"] == 3
     assert overview["triage"]["runtime_record_kinds"]["summary"] == 1
     assert overview["triage"]["runtime_record_kinds"]["retrieval_plan"] == 1
-    assert overview["triage"]["review_capability_counts"]["advisory_only"] == 2
+    assert overview["triage"]["review_capability_counts"]["advisory_only"] == 3
     assert overview["triage"]["package_readiness_counts"]["package_context_available"] >= 1
 
 
@@ -238,7 +247,9 @@ def test_ui_data_service_read_endpoints(tmp_path):
     assert service.runtime_records()["runtime_records"][0]["runtime_record_preview"]["suggested_cli_family"].startswith(
         "chronicle runtime"
     )
-    assert len(service.review_queue()["review_queue"]) == 2
+    assert len(service.review_queue()["review_queue"]) == 3
+    assert len(service.summary_jobs_list()["summary_jobs"]) == 1
+    assert service.summary_jobs_list()["summary_jobs"][0]["summary_job_id"].startswith("sum_")
     assert service.runtime_config_state()["runtime_config"]["config"]["provider_name"] == "ui-local"
     assert service.review_queue()["review_queue"][0]["review_preview_only"] is True
     assert service.review_queue()["review_queue"][0]["target_event_id"].startswith("evt_")
@@ -252,13 +263,13 @@ def test_ui_data_service_read_endpoints(tmp_path):
         "request_changes",
     ]
     overview = service.overview()
-    assert overview["triage"]["cli_parity_aligned_reviews"] == 2
+    assert overview["triage"]["cli_parity_aligned_reviews"] == 3
     assert overview["triage"]["cli_parity_drift_reviews"] == 0
-    assert overview["triage"]["cli_parity_counts"]["aligned"] == 2
-    assert overview["triage"]["identity_assurance_counts"]["unknown"] == 2
-    assert overview["triage"]["reviewer_kind_counts"]["unknown"] == 2
-    assert overview["triage"]["warning_counts"]["ui_auth_not_enabled"] == 2
-    assert overview["triage"]["warning_counts"]["ui_authorization_not_enabled"] == 2
+    assert overview["triage"]["cli_parity_counts"]["aligned"] == 3
+    assert overview["triage"]["identity_assurance_counts"]["unknown"] == 3
+    assert overview["triage"]["reviewer_kind_counts"]["unknown"] == 3
+    assert overview["triage"]["warning_counts"]["ui_auth_not_enabled"] == 3
+    assert overview["triage"]["warning_counts"]["ui_authorization_not_enabled"] == 3
     assert overview["triage"]["warning_summaries"][0]["code"] == "ui_auth_not_enabled"
     assert overview["triage"]["warning_summaries"][1]["code"] == "ui_authorization_not_enabled"
     assert "ui_auth_not_enabled" in service.review_queue()["review_queue"][0]["review_capability"]["warnings"]
@@ -295,6 +306,10 @@ def test_ui_data_service_detail_endpoints(tmp_path):
     assert service.detail_payload(f"/api/boundary/{ids['rule_id']}")["record"]["reason"] == "UI boundary"
     assert service.detail_payload(f"/api/audit/{ids['audit_id']}")["record"]["summary"] == "UI audit event"
     assert service.detail_payload(f"/api/lifecycle/{ids['lifecycle_id']}")["record"]["reason"] == "UI lifecycle marker"
+    summary_detail = service.detail_payload(f"/api/summary-jobs/{ids['summary_job_id']}")["record"]
+    assert summary_detail["title"] == "UI Summary Draft"
+    assert summary_detail["suggested_cli_family"] == "chronicle summary show --id"
+    assert summary_detail["runtime_provider_kind"] == "disabled"
     runtime_detail = service.detail_payload(f"/api/runtime-records/{ids['runtime_summary_event_id']}")["record"]
     assert "runtime_summary" in runtime_detail["payload"]
     assert runtime_detail["runtime_record_preview"]["record_kind"] == "summary"
@@ -350,8 +365,17 @@ def test_ui_runtime_detail_supports_invocation_plan(tmp_path):
         model_name="manual-http-model",
         api_key_env="OPENAI_API_KEY",
     )
-    invocation_plan = RuntimeService(tmp_path).invocation_plan(
-        text="Invocation plan detail text.",
+    summary_job = SummaryJobService(tmp_path).create_manual_draft(
+        title="Invocation Source Draft",
+        summary_text="Invocation plan detail text.",
+        prompt="Invocation summary prompt.",
+    )
+    invocation_plan = RuntimeService(tmp_path).invocation_plan_from_summary(
+        summary_job_id=summary_job.summary_job_id,
+        summary_title=summary_job.title,
+        summary_text=summary_job.summary_text,
+        prompt=summary_job.provenance.prompt,
+        source_ref_count=len(summary_job.source_refs),
         record=True,
     )
 
@@ -363,6 +387,7 @@ def test_ui_runtime_detail_supports_invocation_plan(tmp_path):
     assert detail["invocation_plan"]["provider_kind"] == "http"
     assert detail["invocation_plan"]["invocation_ready"] is False
     assert "network_not_allowed_by_contract" in detail["invocation_plan"]["blocking_reasons"]
+    assert any(link["path"].startswith("/api/summary-jobs/") for link in detail["related_links"])
 
 
 def test_ui_detail_assurance_can_align_with_configured_boundary(tmp_path):
@@ -442,6 +467,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "activeViewSummary" in html
     assert "Mutation Readiness" in html
     assert "Runtime Config" in html
+    assert "Summary Jobs" in html
     assert "Auth Boundary" in html
     assert "Identity Boundary" in html
     assert "Mutation capability flag:" in html
@@ -483,6 +509,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "detailListLine('Expected actions', parity.expected_actions)" in html
     assert "openListButton('Open Review Queue', '/api/review-queue')" in html
     assert "openListButton('Open Runtime Records', '/api/runtime-records')" in html
+    assert "openListButton('Open Summary Jobs', '/api/summary-jobs')" in html
     assert "openListButton('Open Runtime Config', '/api/runtime-config')" in html
     assert "openListButton('Open Package Review', '/api/package-review')" in html
     assert 'data-reset-filters="all"' in html
@@ -529,6 +556,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "warning_details" in html
     assert "/api/events" in html
     assert "/api/runtime-records" in html
+    assert "/api/summary-jobs" in html
     assert "/api/runtime-config" in html
     assert "/api/review-queue" in html
     assert "/api/ui-boundary" in html
@@ -539,7 +567,10 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
 
 def test_http_root_and_read_only_endpoints(tmp_path):
     ids = _populate(tmp_path)
-    server = make_server(host="127.0.0.1", port=0, root=tmp_path)
+    try:
+        server = make_server(host="127.0.0.1", port=0, root=tmp_path)
+    except PermissionError as exc:
+        pytest.skip(f"local socket bind unavailable in this environment: {exc}")
     host, port = server.server_address
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
@@ -560,6 +591,7 @@ def test_http_root_and_read_only_endpoints(tmp_path):
             "/api/lifecycle": "lifecycle_markers",
             "/api/runtime-records": "runtime_records",
             "/api/review-queue": "review_queue",
+            "/api/summary-jobs": "summary_jobs",
             "/api/ui-boundary": "ui_boundary",
             "/api/runtime-config": "runtime_config",
             "/api/package-review": "package_review",
@@ -586,6 +618,7 @@ def test_http_root_and_read_only_endpoints(tmp_path):
             f"/api/runtime-records/{ids['runtime_summary_event_id']}",
             f"/api/runtime-records/{ids['runtime_plan_event_id']}",
             f"/api/review-queue/{ids['runtime_summary_event_id']}",
+            f"/api/summary-jobs/{ids['summary_job_id']}",
             f"/api/ai-index/vector/{ids['event_id']}",
             f"/api/ai-index/graph-nodes/{ids['event_id']}",
         ]

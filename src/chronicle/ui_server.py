@@ -32,6 +32,7 @@ from chronicle.services.package_review_service import PackageReviewService
 from chronicle.services.review_service import ReviewService, review_action_commands
 from chronicle.services.runtime_config_service import RuntimeConfigService
 from chronicle.services.runtime_service import RuntimeService
+from chronicle.services.summary_job_service import SummaryJobService
 from chronicle.services.vector_index_service import VectorIndexService
 
 DEFAULT_UI_HOST = "127.0.0.1"
@@ -270,6 +271,7 @@ class ChronicleUIDataService:
         self.review = ReviewService(self.root)
         self.runtime = RuntimeService(self.root)
         self.runtime_config = RuntimeConfigService(self.root)
+        self.summary_jobs = SummaryJobService(self.root)
         self.vector_index = VectorIndexService(self.root)
         self.graph_index = GraphIndexService(self.root)
 
@@ -285,6 +287,7 @@ class ChronicleUIDataService:
         lifecycle_events = self.lifecycle.list_events()
         runtime_records = self.runtime_records()["runtime_records"]
         review_queue = self.review_queue()["review_queue"]
+        summary_jobs = self.summary_jobs_list()["summary_jobs"]
         ai_index_status = self.ai_index_status()["ai_index_status"]
         runtime_config = self.runtime_config_state()["runtime_config"]
         triage = self.overview_triage(runtime_records, review_queue)
@@ -307,6 +310,7 @@ class ChronicleUIDataService:
                 "lifecycle_markers": len(lifecycle_events),
                 "runtime_records": len(runtime_records),
                 "review_queue": len(review_queue),
+                "summary_jobs": len(summary_jobs),
                 "vector_index_entries": ai_index_status["vector"]["entry_count"],
                 "graph_index_nodes": ai_index_status["graph"]["node_count"],
                 "graph_index_edges": ai_index_status["graph"]["edge_count"],
@@ -567,6 +571,16 @@ class ChronicleUIDataService:
             rows.append(data)
         return {"review_queue": rows}
 
+    def summary_jobs_list(self, *, limit: int = 100) -> dict[str, Any]:
+        rows: list[dict[str, Any]] = []
+        for job in reversed(self.summary_jobs.list_jobs()[:limit]):
+            data = job.model_dump(mode="json")
+            data["summary_source_count"] = len(job.source_refs)
+            data["runtime_provider_kind"] = job.provenance.runtime.provider_kind.value
+            data["suggested_cli_family"] = "chronicle summary show --id"
+            rows.append(data)
+        return {"summary_jobs": rows}
+
     def mutation_readiness_summary(self, review_queue: list[dict[str, Any]] | None = None) -> dict[str, Any]:
         boundary = self.ui_boundary()["ui_boundary"]
         queue = review_queue if review_queue is not None else self.review_queue()["review_queue"]
@@ -670,6 +684,16 @@ class ChronicleUIDataService:
                 _open_matching_detail_label("review-queue"),
             )
         ]
+        if "runtime_invocation_plan" in payload:
+            request_preview = payload["runtime_invocation_plan"].get("request_preview", {})
+            summary_job_id = request_preview.get("summary_job_id")
+            if isinstance(summary_job_id, str) and summary_job_id.startswith("sum_"):
+                links.append(
+                    _related_link(
+                        f"/api/summary-jobs/{summary_job_id}",
+                        f"Open summary job {summary_job_id}",
+                    )
+                )
         if "runtime_retrieval_plan" in payload:
             plan = RuntimeRetrievalPlan.model_validate(payload["runtime_retrieval_plan"])
             for record_id in _unique_list(plan):
@@ -762,6 +786,20 @@ class ChronicleUIDataService:
                         _open_detail_label("contexts", context_id),
                     )
                 )
+        return links
+
+    def summary_job_related_links(self, summary_job_id: str, job: dict[str, Any]) -> list[dict[str, str]]:
+        links: list[dict[str, str]] = []
+        for ref in job.get("source_refs", []):
+            record_type = str(ref.get("record_type", "event"))
+            record_id = str(ref.get("record_id", ""))
+            if record_type == "event" and record_id.startswith("evt_"):
+                links.append(_related_link(f"/api/events/{record_id}", f"Open event {record_id}"))
+            elif record_id.startswith("ctx_"):
+                links.append(_related_link(f"/api/contexts/{record_id}", f"Open context {record_id}"))
+        artifact_id = str(job.get("artifact_id", ""))
+        if artifact_id.startswith("art_"):
+            links.append(_related_link(f"/api/artifacts/{artifact_id}", f"Open artifact {artifact_id}"))
         return links
 
     def runtime_boundary(self) -> dict[str, Any]:
@@ -1060,6 +1098,14 @@ class ChronicleUIDataService:
                     return {"record": row}
             return None
 
+        if len(parts) == 3 and parts[0] == "api" and parts[1] == "summary-jobs":
+            job = self.summary_jobs.get(parts[2]).model_dump(mode="json")
+            job["summary_source_count"] = len(job.get("source_refs", []))
+            job["runtime_provider_kind"] = str(job.get("provenance", {}).get("runtime", {}).get("provider_kind", ""))
+            job["suggested_cli_family"] = "chronicle summary show --id"
+            job["related_links"] = self.summary_job_related_links(parts[2], job)
+            return {"record": job}
+
         if len(parts) != 3 or parts[0] != "api":
             return None
         resource, record_id = parts[1], parts[2]
@@ -1104,6 +1150,7 @@ class ChronicleUIDataService:
             "/api/lifecycle": self.lifecycle_markers,
             "/api/runtime-records": self.runtime_records,
             "/api/review-queue": self.review_queue,
+            "/api/summary-jobs": self.summary_jobs_list,
             "/api/ui-boundary": self.ui_boundary,
             "/api/runtime-config": self.runtime_config_state,
             "/api/package-review": lambda: {"package_review": self.package_review_snapshot()},
@@ -1164,6 +1211,7 @@ th, td {{ padding: 6px; border-bottom: 1px solid #e5e7eb; vertical-align: top; }
   <button data-endpoint="/api/lifecycle">Lifecycle</button>
   <button data-endpoint="/api/runtime-records">Runtime Records</button>
   <button data-endpoint="/api/review-queue">Review Queue</button>
+  <button data-endpoint="/api/summary-jobs">Summary Jobs</button>
   <button data-endpoint="/api/ui-boundary">UI Boundary</button>
   <button data-endpoint="/api/runtime-config">Runtime Config</button>
   <button data-endpoint="/api/package-review">Package Review</button>
@@ -1176,7 +1224,7 @@ th, td {{ padding: 6px; border-bottom: 1px solid #e5e7eb; vertical-align: top; }
 <section id="view" class="panel"><p>Loading overview...</p></section>
 <section id="detail" class="panel"><p>Select JSON from a table row to inspect one record.</p></section>
 <script>
-const idFields = ['event_id', 'context_id', 'artifact_id', 'decision_id', 'rde_record_id', 'rule_id', 'audit_id', 'lifecycle_id', 'record_id', 'node_id'];
+const idFields = ['event_id', 'context_id', 'artifact_id', 'decision_id', 'rde_record_id', 'rule_id', 'audit_id', 'lifecycle_id', 'record_id', 'node_id', 'summary_job_id'];
 function esc(value) {{ return String(value).replace(/[&<>\"']/g, ch => ({{'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}}[ch])); }}
 function firstArray(payload) {{ for (const key of Object.keys(payload)) if (Array.isArray(payload[key])) return payload[key]; return null; }}
 function badge(text, cls) {{ return '<span class="badge ' + cls + '">' + esc(text) + '</span>'; }}
@@ -1425,6 +1473,7 @@ function humanizeDetailPath(path) {{
   const labels = {{
     'runtime-records': 'Runtime',
     'review-queue': 'Review',
+    'summary-jobs': 'Summary',
     'runtime-config': 'Runtime Config',
     'events': 'Event',
     'contexts': 'Context',
@@ -1498,6 +1547,9 @@ function relatedListButtons(detailEndpoint, record) {{
     if (readiness.status) {{
       buttons.push(sliceActionButton('More ' + readiness.status, '/api/review-queue', 'reviewQueue', 'package:' + readiness.status));
     }}
+  }}
+  if (detailEndpoint.startsWith('/api/summary-jobs/')) {{
+    buttons.push(openListButton('Open Summary Jobs', '/api/summary-jobs'));
   }}
   if (record.package_handoff_preview || record.package_readiness) {{
     buttons.push(openListButton('Open Package Review', '/api/package-review'));
@@ -1607,6 +1659,7 @@ function renderOverview(payload) {{
     + '<p>Graph nodes: ' + esc(graphNodeCount) + '</p>'
     + '<p>Graph edges: ' + esc(graphEdgeCount) + '</p>'
     + '<p>Runtime records: ' + esc(counts.runtime_records ?? 0) + '</p>'
+    + '<p>Summary jobs: ' + esc(counts.summary_jobs ?? 0) + '</p>'
     + '<p>Needs-review records: ' + esc(counts.review_queue ?? 0) + '</p>'
     + '</div>'
     + '<div class="panel">'
@@ -1646,6 +1699,7 @@ function renderOverview(payload) {{
     + '</p>'
     + '<p>' + openListButton('Open Review Queue', '/api/review-queue')
     + openListButton('Open Runtime Records', '/api/runtime-records')
+    + openListButton('Open Summary Jobs', '/api/summary-jobs')
     + openListButton('Open Runtime Config', '/api/runtime-config')
     + openListButton('Open Package Review', '/api/package-review')
     + '<button data-reset-filters="all">Reset Filters</button></p>'
@@ -1716,7 +1770,7 @@ function renderTable(endpoint, rows) {{
           + '</tr>';
       }}).join('') + '</tbody></table>';
   }}
-    if (endpoint === '/api/review-queue') {{
+  if (endpoint === '/api/review-queue') {{
       const query = (window.__chronicleFilters && window.__chronicleFilters.reviewQueue || '').toLowerCase();
       const filtered = filterRows(rows, row => {{
         if (!query) return true;
@@ -1773,6 +1827,21 @@ function renderTable(endpoint, rows) {{
           + '<td>' + statusBadge + '<br>' + readinessBadge + '<br>' + parityBadge + '</td>'
           + '<td>' + (warnBadges ? warnBadges + '<br>' : '') + esc(warnDetails.map(item => item.message).join(' | ') || warnList.join(', ') || '(none)') + '</td>'
           + '<td>' + reviewerBadge + (reviewerBadge ? '<br>' : '') + esc((row.latest_reviewer_identity && row.latest_reviewer_identity.label) || row.latest_reviewer || '') + '</td>'
+          + '</tr>';
+      }}).join('') + '</tbody></table>';
+  }}
+  if (endpoint === '/api/summary-jobs') {{
+    return activeViewSummary(endpoint, 'list')
+      + '<table><thead><tr><th>detail</th><th>summary job</th><th>status</th><th>runtime</th><th>sources</th></tr></thead><tbody>'
+      + rows.map(row => {{
+        const path = detailPath(endpoint, row);
+        const button = path ? '<button data-detail="' + esc(path) + '">JSON</button>' : '';
+        return '<tr>'
+          + '<td>' + button + '</td>'
+          + '<td><span class="id">' + esc(row.summary_job_id || '') + '</span><br>' + esc(row.title || '') + '</td>'
+          + '<td>' + esc(row.status || '') + '</td>'
+          + '<td>' + esc(row.runtime_provider_kind || '') + '</td>'
+          + '<td>' + esc(row.summary_source_count ?? 0) + '</td>'
           + '</tr>';
       }}).join('') + '</tbody></table>';
   }}

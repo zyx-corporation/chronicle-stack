@@ -66,6 +66,7 @@ _COLLECTION_CHECKS: tuple[tuple[str, str], ...] = (
     ("/api/lifecycle", "lifecycle_markers"),
     ("/api/runtime-records", "runtime_records"),
     ("/api/review-queue", "review_queue"),
+    ("/api/summary-jobs", "summary_jobs"),
     ("/api/ui-boundary", "ui_boundary"),
     ("/api/runtime-config", "runtime_config"),
     ("/api/package-review", "package_review"),
@@ -87,6 +88,7 @@ _DETAIL_ID_FIELDS: dict[str, str] = {
     "/api/lifecycle": "lifecycle_id",
     "/api/runtime-records": "event_id",
     "/api/review-queue": "target_event_id",
+    "/api/summary-jobs": "summary_job_id",
     "/api/ai-index-vector": "record_id",
     "/api/ai-index-graph-nodes": "node_id",
 }

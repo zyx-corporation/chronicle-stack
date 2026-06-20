@@ -40,6 +40,8 @@ runtime 記録は local UI の read-only endpoint から確認できます。
 - `/api/runtime-records`
 - `/api/runtime-records/<event_id>`
 - `/api/runtime-config`
+- `/api/summary-jobs`
+- `/api/summary-jobs/<summary_job_id>`
 
 retrieval plan の detail view では、downstream runtime へ渡す前の handoff contract を read-only で確認できます。
 
@@ -115,6 +117,16 @@ retrieval plan の detail view では、downstream runtime へ渡す前の hando
 - `--record` 指定時のみ runtime invocation plan を review-oriented record として残せる
 
 runtime invocation plan を記録した場合は、local UI の `/api/runtime-records/<event_id>` detail から read-only で確認できます。
+
+summary job 由来の invocation dry-run では、runtime record detail から対応する `/api/summary-jobs/<summary_job_id>` へ辿れます。
+
+`/api/summary-jobs` / `/api/summary-jobs/<summary_job_id>` では次を read-only で確認できます。
+
+- summary title / status
+- source-ref count
+- runtime provider kind
+- related Chronicle record links
+- suggested follow-up CLI family
 
 ## Summary job re-run
 

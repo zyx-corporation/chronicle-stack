@@ -18,6 +18,7 @@ from chronicle.services.context_service import ContextService
 from chronicle.services.lifecycle_service import LifecycleService
 from chronicle.services.runtime_config_service import RuntimeConfigService
 from chronicle.services.runtime_service import RuntimeService
+from chronicle.services.summary_job_service import SummaryJobService
 from chronicle.ui_smoke import run_ui_smoke
 
 
@@ -60,6 +61,11 @@ def _populate(root):
         record=True,
     )
     RuntimeConfigService(root).set_local(model_name="smoke-local-model", provider_name="smoke-local")
+    SummaryJobService(root).create_manual_draft(
+        title="Smoke Summary Draft",
+        summary_text="Smoke summary draft body.",
+        prompt="Smoke summary prompt.",
+    )
 
 
 def test_run_ui_smoke_success(tmp_path):
@@ -76,6 +82,7 @@ def test_run_ui_smoke_success(tmp_path):
     check_names = {check["name"] for check in payload["checks"]}
     assert "/api/overview" in check_names
     assert "/api/review-queue" in check_names
+    assert "/api/summary-jobs" in check_names
     assert "/api/ui-boundary" in check_names
     assert "/api/runtime-config" in check_names
     assert "html-shell" in check_names
