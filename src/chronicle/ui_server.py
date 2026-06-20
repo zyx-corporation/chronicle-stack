@@ -1135,8 +1135,14 @@ function currentFilterLabel() {{
   return '';
 }}
 function currentSortLabel(endpoint) {{
-  const sortValue = currentSortValue(endpoint || window.__chronicleCurrentEndpoint || '');
-  return sortValue ? 'sort=' + sortValue : '';
+  const currentEndpoint = endpoint || window.__chronicleCurrentEndpoint || '';
+  const sortValue = currentSortValue(currentEndpoint);
+  if (!sortValue) return '';
+  if (currentEndpoint === '/api/review-queue') {{
+    const warningFilter = activeReviewWarningFilter();
+    if (warningFilter) return 'sort=' + sortValue + ' (warning-first:' + warningFilter + ')';
+  }}
+  return 'sort=' + sortValue;
 }}
 function hasActiveFilters() {{
   if (!window.__chronicleFilters) return false;
