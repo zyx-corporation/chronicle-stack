@@ -118,8 +118,8 @@ def run_ui_smoke(root: Path | None = None) -> UISmokeReport:
                     endpoint,
                     expected_key in payload,
                     "ok" if expected_key in payload else f"missing key: {expected_key}",
-                )
-            )
+        )
+    )
 
         for endpoint, id_field in _DETAIL_ID_FIELDS.items():
             payload = collection_payloads.get(endpoint)

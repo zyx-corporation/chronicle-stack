@@ -104,6 +104,35 @@ def runtime_retrieve_plan_cmd(
         handle_error(exc, json_output)
 
 
+@runtime_app.command("invoke-plan")
+def runtime_invoke_plan_cmd(
+    text: Annotated[str, typer.Option("--text", help="Source text for a provider invocation dry-run plan.")],
+    operation: Annotated[str, typer.Option("--operation", help="Planned provider operation name.")] = "summarize",
+    record: Annotated[bool, typer.Option("--record", help="Persist the invocation dry-run plan as an assistant_output event requiring review.")] = False,
+    json_output: Annotated[bool, typer.Option("--json")] = False,
+) -> None:
+    """Show an explicit provider invocation dry-run plan without invoking it."""
+    try:
+        plan = RuntimeService().invocation_plan(text=text, operation=operation, record=record)
+        if json_output:
+            _dump_json(plan.model_dump(mode="json"))
+            return
+
+        typer.echo("Chronicle Runtime Invocation Plan")
+        typer.echo(f"Provider: {plan.provider_kind.value} / {plan.provider_name}")
+        typer.echo(f"Model: {plan.model_name}")
+        typer.echo(f"Operation: {plan.operation}")
+        typer.echo(f"Invocation ready: {plan.invocation_ready}")
+        typer.echo(f"Would use network: {plan.would_use_network}")
+        if plan.blocking_reasons:
+            typer.echo(f"Blocking reasons: {', '.join(plan.blocking_reasons)}")
+        if plan.event_id:
+            typer.echo(f"Event: {plan.event_id}")
+        typer.echo("Boundary: dry-run contract only, no provider execution, no external call performed.")
+    except ChronicleError as exc:
+        handle_error(exc, json_output)
+
+
 @runtime_config_app.command("show")
 def runtime_config_show_cmd(
     json_output: Annotated[bool, typer.Option("--json")] = False,

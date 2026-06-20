@@ -343,6 +343,28 @@ def test_ui_data_service_detail_endpoints(tmp_path):
     assert service.detail_payload("/api/contexts/missing") is None
 
 
+def test_ui_runtime_detail_supports_invocation_plan(tmp_path):
+    ChronicleService(tmp_path).init("UI Invocation Plan")
+    RuntimeConfigService(tmp_path).set_http(
+        base_url="https://runtime.example.invalid/v1",
+        model_name="manual-http-model",
+        api_key_env="OPENAI_API_KEY",
+    )
+    invocation_plan = RuntimeService(tmp_path).invocation_plan(
+        text="Invocation plan detail text.",
+        record=True,
+    )
+
+    service = ChronicleUIDataService(tmp_path)
+    detail = service.detail_payload(f"/api/runtime-records/{invocation_plan.event_id}")["record"]
+
+    assert detail["runtime_record_preview"]["record_kind"] == "invocation_plan"
+    assert detail["suggested_cli_family"] == "chronicle runtime invoke-plan --record"
+    assert detail["invocation_plan"]["provider_kind"] == "http"
+    assert detail["invocation_plan"]["invocation_ready"] is False
+    assert "network_not_allowed_by_contract" in detail["invocation_plan"]["blocking_reasons"]
+
+
 def test_ui_detail_assurance_can_align_with_configured_boundary(tmp_path):
     ids = _populate(tmp_path)
     ReviewService(tmp_path).request_changes(
@@ -392,6 +414,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "loadDetail" in html
     assert "Runtime Preview" in html
     assert "Retrieval Handoff" in html
+    assert "Invocation Plan" in html
     assert "Package Handoff Preview" in html
     assert "Review Package Readiness" in html
     assert "Related Links" in html

@@ -121,6 +121,25 @@ class RuntimeRetrievalPlan(BaseModel):
     event_id: str | None = None
 
 
+class RuntimeInvocationPlan(BaseModel):
+    provider_kind: RuntimeProviderKind
+    provider_name: str
+    model_name: str
+    operation: str = "summarize"
+    invocation_mode: str = "explicit-manual-plan"
+    external_call_made: bool = False
+    source_text_length: int = 0
+    would_use_network: bool = False
+    network_allowed_by_contract: bool = False
+    invocation_ready: bool = False
+    blocking_reasons: list[str] = Field(default_factory=list)
+    request_preview: dict[str, str] = Field(default_factory=dict)
+    downstream_commands: list[str] = Field(default_factory=list)
+    notes: list[str] = Field(default_factory=list)
+    recorded: bool = False
+    event_id: str | None = None
+
+
 class RuntimeRecordPreview(BaseModel):
     record_kind: str
     title: str

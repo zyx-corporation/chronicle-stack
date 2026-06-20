@@ -20,7 +20,7 @@ from urllib.parse import unquote, urlparse
 
 from chronicle.errors import ChronicleError, UIHostNotLoopbackError
 from chronicle.exporters.html_exporter import HtmlDashboardExporter
-from chronicle.models.runtime import RuntimeRetrievalPlan
+from chronicle.models.runtime import RuntimeInvocationPlan, RuntimeRetrievalPlan
 from chronicle.models.review import ReviewerIdentity
 from chronicle.services.audit_service import AuditService
 from chronicle.services.chronicle_service import ChronicleService
@@ -522,6 +522,7 @@ class ChronicleUIDataService:
             and (
                 "runtime_summary" in event.payload
                 or "runtime_retrieval_plan" in event.payload
+                or "runtime_invocation_plan" in event.payload
             )
         ]
         rows: list[dict[str, Any]] = []
@@ -791,6 +792,8 @@ class ChronicleUIDataService:
             return "runtime_summary"
         if "runtime_retrieval_plan" in payload:
             return "runtime_retrieval_plan"
+        if "runtime_invocation_plan" in payload:
+            return "runtime_invocation_plan"
         return "assistant_output"
 
     @staticmethod
@@ -799,6 +802,8 @@ class ChronicleUIDataService:
             return "chronicle runtime summarize --record"
         if "runtime_retrieval_plan" in payload:
             return "chronicle runtime retrieve-plan --record"
+        if "runtime_invocation_plan" in payload:
+            return "chronicle runtime invoke-plan --record"
         return "chronicle show --json"
 
     @staticmethod
@@ -807,6 +812,8 @@ class ChronicleUIDataService:
             return "chronicle runtime summarize --record"
         if review_kind == "runtime_retrieval_plan":
             return "chronicle runtime retrieve-plan --record"
+        if review_kind == "runtime_invocation_plan":
+            return "chronicle runtime invoke-plan --record"
         return "chronicle show --json"
 
     @staticmethod
@@ -1009,7 +1016,11 @@ class ChronicleUIDataService:
                 return None
             record = _dump_model(event)
             payload = record["payload"]
-            if "runtime_summary" not in payload and "runtime_retrieval_plan" not in payload:
+            if (
+                "runtime_summary" not in payload
+                and "runtime_retrieval_plan" not in payload
+                and "runtime_invocation_plan" not in payload
+            ):
                 return None
             preview = self.runtime.record_preview(event)
             record["runtime_record_kind"] = preview.record_kind
@@ -1020,6 +1031,9 @@ class ChronicleUIDataService:
                 plan = RuntimeRetrievalPlan.model_validate(payload["runtime_retrieval_plan"])
                 record["retrieval_handoff"] = self.runtime.retrieval_handoff(plan).model_dump(mode="json")
                 record["package_handoff_preview"] = self.runtime_package_handoff(plan)
+            if "runtime_invocation_plan" in payload:
+                plan = RuntimeInvocationPlan.model_validate(payload["runtime_invocation_plan"])
+                record["invocation_plan"] = plan.model_dump(mode="json")
             return {"record": record}
 
         if len(parts) == 3 and parts[0] == "api" and parts[1] == "review-queue":
@@ -1850,6 +1864,22 @@ async function loadDetail(endpoint) {{
       + detailLine('Package review status', packageReview.status || '(not available)')
       + detailListLine('Package warnings', packageReview.package_warnings)
       + detailListLine('Manifest refs', manifest.referenced_records)
+      + '</div>';
+  }}
+  if (record.invocation_plan) {{
+    const plan = record.invocation_plan;
+    const requestPreview = plan.request_preview || {{}};
+    extra += '<div class="notice">' + noticeTitle('Invocation Plan')
+      + detailLine('Provider', (plan.provider_kind || '') + ' / ' + (plan.provider_name || ''))
+      + detailLine('Model', plan.model_name || '')
+      + detailLine('Operation', plan.operation || '')
+      + detailLine('Invocation ready', plan.invocation_ready)
+      + detailLine('Would use network', plan.would_use_network)
+      + detailLine('Network allowed by contract', plan.network_allowed_by_contract)
+      + detailListLine('Blocking reasons', plan.blocking_reasons, ' | ')
+      + summaryJsonLine('Request preview', requestPreview)
+      + detailListLine('Downstream commands', plan.downstream_commands, ' | ')
+      + detailListLine('Notes', plan.notes, ' | ')
       + '</div>';
   }}
   if (record.package_readiness) {{

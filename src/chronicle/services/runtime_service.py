@@ -5,6 +5,8 @@ from pathlib import Path
 
 from chronicle.models.event import Actor, Confidence, ReviewStatus
 from chronicle.models.runtime import (
+    RuntimeConfig,
+    RuntimeInvocationPlan,
     RuntimeProviderKind,
     RuntimeRecordPreview,
     RuntimeRetrievalHandoff,
@@ -188,6 +190,60 @@ class RuntimeService:
         plan.event_id = event.event_id
         return plan
 
+    def invocation_plan(self, *, text: str, operation: str = "summarize", record: bool = False) -> RuntimeInvocationPlan:
+        config_state = self.runtime_config.show()
+        config = config_state.config
+        blocking_reasons: list[str] = []
+        would_use_network = config.provider_kind == RuntimeProviderKind.HTTP
+        network_allowed = bool(config.allow_network)
+
+        if config.provider_kind == RuntimeProviderKind.DISABLED:
+            blocking_reasons.append("runtime_provider_disabled")
+        if would_use_network and not network_allowed:
+            blocking_reasons.append("network_not_allowed_by_contract")
+        if not config.model_name or config.model_name == "disabled":
+            blocking_reasons.append("model_not_configured")
+
+        invocation_ready = len(blocking_reasons) == 0
+        request_preview = self._request_preview(config=config, operation=operation, text=text)
+        plan = RuntimeInvocationPlan(
+            provider_kind=config.provider_kind,
+            provider_name=config.provider_name,
+            model_name=config.model_name,
+            operation=operation,
+            source_text_length=len(text),
+            would_use_network=would_use_network,
+            network_allowed_by_contract=network_allowed,
+            invocation_ready=invocation_ready,
+            blocking_reasons=blocking_reasons,
+            request_preview=request_preview,
+            downstream_commands=self._invocation_downstream_commands(operation, invocation_ready),
+            notes=self._invocation_notes(config=config, invocation_ready=invocation_ready),
+        )
+        if not record:
+            return plan
+
+        event = self.chronicle.record_event(
+            event_type=self._assistant_output_event_type(),
+            actor=Actor.ASSISTANT,
+            summary=f"Runtime invocation plan generated: {config.provider_kind.value} {operation}",
+            payload={
+                "runtime_invocation_plan": plan.model_dump(mode="json"),
+                "runtime_provider": config.provider_kind.value,
+            },
+            source=SourceProvenance(
+                source_type="runtime",
+                source_ref="runtime-invocation-plan",
+                source_tool="chronicle-runtime",
+                source_model=config.model_name,
+            ),
+            review_status=ReviewStatus.NEEDS_REVIEW,
+            confidence=Confidence.LOW,
+        )
+        plan.recorded = True
+        plan.event_id = event.event_id
+        return plan
+
     def _assistant_output_event_type(self):
         from chronicle.models.event import EventType
 
@@ -228,6 +284,22 @@ class RuntimeService:
                 boundary_notes=plan.notes,
             )
 
+        if "runtime_invocation_plan" in payload:
+            plan = RuntimeInvocationPlan.model_validate(payload["runtime_invocation_plan"])
+            return RuntimeRecordPreview(
+                record_kind="invocation_plan",
+                title=f"Runtime invocation plan: {plan.provider_kind.value} {plan.operation}",
+                preview_text=f"{plan.provider_name} / {plan.model_name}",
+                source_counts={
+                    "source_text_length": plan.source_text_length,
+                    "blocking_reasons": len(plan.blocking_reasons),
+                    "downstream_commands": len(plan.downstream_commands),
+                },
+                referenced_record_ids=[],
+                suggested_cli_family="chronicle runtime invoke-plan --record",
+                boundary_notes=plan.notes,
+            )
+
         return RuntimeRecordPreview(
             record_kind="unknown",
             title="Runtime record",
@@ -254,6 +326,46 @@ class RuntimeService:
                 "no GraphRAG runtime is implied by this plan",
             ],
         )
+
+    @staticmethod
+    def _request_preview(*, config: RuntimeConfig, operation: str, text: str) -> dict[str, str]:
+        preview = {
+            "operation": operation,
+            "provider_kind": config.provider_kind.value,
+            "model_name": config.model_name,
+            "text_excerpt": _truncate_summary(text, limit=120),
+        }
+        if config.base_url:
+            preview["base_url"] = config.base_url
+        if config.api_key_env:
+            preview["api_key_env"] = config.api_key_env
+        return preview
+
+    @staticmethod
+    def _invocation_downstream_commands(operation: str, invocation_ready: bool) -> list[str]:
+        commands = [
+            "chronicle runtime config show --json",
+            "chronicle review queue --json",
+        ]
+        if invocation_ready:
+            commands.append(f"chronicle runtime {operation} --text ...")
+        return commands
+
+    @staticmethod
+    def _invocation_notes(*, config: RuntimeConfig, invocation_ready: bool) -> list[str]:
+        notes = [
+            "dry-run invocation contract only",
+            "configuration alone does not invoke any model or external runtime",
+            "primary Chronicle records remain authoritative",
+            "generated output still requires explicit/manual invocation and review",
+        ]
+        if config.provider_kind == RuntimeProviderKind.HTTP:
+            notes.append("HTTP provider configuration does not create an active network session.")
+        if invocation_ready:
+            notes.append("contract boundary is ready for future manual invocation work, but no provider execution happens here")
+        else:
+            notes.append("contract boundary is blocked until configuration warnings are resolved")
+        return notes
 
 
 def _summarize_text(text: str, *, max_sentences: int) -> str:

@@ -431,6 +431,24 @@ chronicle runtime retrieve-plan --query "release note context" --json
 - visibility hintはredactionではないため、デフォルトでは隠蔽されません。
 - profile export は公開承認やアクセス制御ではありません。
 
+### chronicle runtime invoke-plan
+
+```bash
+chronicle runtime invoke-plan --text "Source text"
+chronicle runtime invoke-plan --text "Source text" --operation summarize
+chronicle runtime invoke-plan --text "Source text" --record
+chronicle runtime invoke-plan --text "Source text" --json
+```
+
+方針:
+
+- stored provider contract を explicit/manual invocation dry-run に接続する
+- no provider execution
+- no external call performed
+- `invocation_ready` は contract boundary 上の ready / blocked を示すだけで、実行完了を意味しない
+- HTTP provider では `allow_network` が false の場合に block reason を返す
+- `--record` 指定時のみ review-oriented `assistant_output` event として記録する
+
 ### chronicle runtime config show / set-local / set-http / disable
 
 ```bash

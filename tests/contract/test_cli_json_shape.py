@@ -162,6 +162,19 @@ def test_runtime_retrieve_plan_json_shape(tmp_path):
         assert key in payload, f"Missing key '{key}' in runtime retrieve-plan"
 
 
+def test_runtime_invoke_plan_json_shape(tmp_path):
+    """chronicle runtime invoke-plan --json must expose stable invocation-plan keys."""
+    runner = _setup_cli(tmp_path)
+    runner.invoke(app, ["init", "--title", "Runtime Invoke Shape"])
+
+    result = runner.invoke(app, ["runtime", "invoke-plan", "--text", "shape", "--json"])
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    for key in ["provider_kind", "provider_name", "model_name", "operation", "invocation_ready", "blocking_reasons", "notes"]:
+        assert key in payload, f"Missing key '{key}' in runtime invoke-plan"
+
+
 def test_ui_startup_metadata_json_shape(tmp_path):
     """chronicle ui startup metadata builder must expose stable boundary keys."""
     from pathlib import Path

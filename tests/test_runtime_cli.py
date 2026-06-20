@@ -90,6 +90,68 @@ def test_runtime_config_disable_persists_disabled_contract(tmp_path: Path) -> No
     assert any("disabled" in item.lower() for item in payload["warnings"])
 
 
+def test_runtime_invoke_plan_blocks_http_without_network_permission(tmp_path: Path) -> None:
+    os.chdir(str(tmp_path))
+    runner.invoke(app, ["init", "--title", "Runtime Invocation Blocked"])
+    runner.invoke(
+        app,
+        [
+            "runtime", "config", "set-http",
+            "--base-url", "https://runtime.example.invalid/v1",
+            "--model", "manual-http-model",
+            "--api-key-env", "OPENAI_API_KEY",
+        ],
+    )
+
+    result = runner.invoke(
+        app,
+        [
+            "runtime", "invoke-plan",
+            "--text", "Invocation planning source text.",
+            "--json",
+        ],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["provider_kind"] == "http"
+    assert payload["would_use_network"] is True
+    assert payload["network_allowed_by_contract"] is False
+    assert payload["invocation_ready"] is False
+    assert "network_not_allowed_by_contract" in payload["blocking_reasons"]
+
+
+def test_runtime_invoke_plan_can_record_ready_local_contract(tmp_path: Path) -> None:
+    os.chdir(str(tmp_path))
+    runner.invoke(app, ["init", "--title", "Runtime Invocation Ready"])
+    runner.invoke(
+        app,
+        ["runtime", "config", "set-local", "--model", "local-ready-model", "--provider-name", "local-ready"],
+    )
+
+    result = runner.invoke(
+        app,
+        [
+            "runtime", "invoke-plan",
+            "--text", "Invocation planning source text. It stays explicit.",
+            "--record",
+            "--json",
+        ],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["provider_kind"] == "local"
+    assert payload["invocation_ready"] is True
+    assert payload["external_call_made"] is False
+    assert payload["recorded"] is True
+    assert re.match(r"evt_[a-f0-9]+", payload["event_id"])
+
+    search_result = runner.invoke(app, ["search", "Runtime invocation plan generated", "--json"])
+    search_payload = json.loads(search_result.stdout)
+    assert any(item["kind"] == "event" for item in search_payload)
+
+
 def test_runtime_summarize_json_without_record(tmp_path: Path) -> None:
     os.chdir(str(tmp_path))
 
