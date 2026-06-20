@@ -351,6 +351,7 @@ read-only endpoint:
 
 `/api/ui-boundary` は bind scope, mutation capability flag, explicit mutation enable flag 由来の `mutation_enabled`, auth/authz mode を read-only で返します。`mutation_enabled=true` は `--enable-ui-mutation` と required gate 条件がすべて揃ったときだけ成立します。placeholder / derived config により `auth_mode` / `authorization_mode` / `session_gating` を明示できます。あわせて `auth_boundary_summary` で auth/authz placeholder の derived status / blockers / next steps も返します。overview ではさらに `auth_boundary_overview` / `identity_boundary_summary` により auth warning / reviewer identity / session alignment の集約状態も読めます。
 - write-capable route family は `POST /api/review-actions/<event_id>/<action>` です。`reviewer_label`, `reviewer_kind`, `session_label`, `ui_intent` を JSON body で受け、gate 条件が崩れていれば fail closed で戻ります。
+- preview payload / action response には `rollback_status`, `possible_error_codes`, `recovery_path` を含む fail-closed contract metadata も含まれます。
 - overview triage では `Identity aligned` などの quick slice から reviewer identity / assurance 系の review queue slice に直接 drilldown できますが、これは引き続き read-only filter state のみです。
 - overview の runtime records / summary jobs panel でも matching-review-derived auth readiness の集約状態を read-only で確認できます。
 - overview の summary jobs panel では matching-review-derived identity/session assurance 集約も read-only で確認できます。

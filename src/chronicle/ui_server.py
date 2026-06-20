@@ -1220,6 +1220,46 @@ class ChronicleUIDataService:
         return REVIEW_WARNING_TEXT.get(code, code.replace("_", " "))
 
     @staticmethod
+    def _review_action_failure_contract(
+        *,
+        mutation_enabled: bool,
+        cli_equivalent: str | None = None,
+    ) -> dict[str, Any]:
+        possible_error_codes = [
+            "mutation_disabled",
+            "reviewer_label_required",
+            "ui_intent_mismatch",
+            "invalid_reviewer_kind",
+            "authorization_failed",
+            "review_target_not_found",
+            "review_not_pending",
+            "invalid_json",
+        ]
+        return {
+            "transaction_rule": (
+                "No durable GUI review result is reported as applied unless both review decision persistence and audit insertion succeed."
+            ),
+            "rollback_status": "fail_closed",
+            "durable_mutation_reported_on_failure": False,
+            "partial_failure_visible": True,
+            "possible_error_codes": possible_error_codes,
+            "recovery_path": cli_equivalent or "Use the equivalent chronicle review CLI command for recovery or inspection.",
+        }
+
+    @staticmethod
+    def _review_action_success_contract(
+        *,
+        cli_equivalent: str | None = None,
+    ) -> dict[str, Any]:
+        return {
+            "transaction_status": "decision_and_audit_persisted",
+            "rollback_status": "not_required",
+            "durable_mutation_reported": True,
+            "audit_insertion_required": True,
+            "recovery_path": cli_equivalent or "Use the equivalent chronicle review CLI command for follow-up inspection.",
+        }
+
+    @staticmethod
     def _review_action_preview(
         target_event_id: str,
         capability: dict[str, Any],
@@ -1258,6 +1298,10 @@ class ChronicleUIDataService:
                     if can_review_now
                     else "UI mutation is not enabled; boundary warnings still require CLI-led review."
                 )
+            ),
+            "failure_contract": ChronicleUIDataService._review_action_failure_contract(
+                mutation_enabled=mutation_enabled,
+                cli_equivalent=f"chronicle review approve --event {target_event_id}",
             ),
             "actions": actions,
         }
@@ -1519,6 +1563,10 @@ class ChronicleUIDataService:
                 "message": "GUI mutation remains disabled; use the CLI review command path.",
                 "mutation_enabled": False,
                 "cli_equivalent": f"chronicle review {action} --event {event_id}",
+                "failure_contract": self._review_action_failure_contract(
+                    mutation_enabled=False,
+                    cli_equivalent=f"chronicle review {action} --event {event_id}",
+                ),
             },
         )
 
@@ -1563,6 +1611,10 @@ class ChronicleUIDataService:
                     "error_code": "reviewer_label_required",
                     "message": "Reviewer label is required for GUI mutation.",
                     "mutation_enabled": True,
+                    "failure_contract": self._review_action_failure_contract(
+                        mutation_enabled=True,
+                        cli_equivalent=f"chronicle review {action} --event {event_id}",
+                    ),
                 },
             )
         if ui_intent != action:
@@ -1576,6 +1628,10 @@ class ChronicleUIDataService:
                     "error_code": "ui_intent_mismatch",
                     "message": "UI intent must match the requested review action route.",
                     "mutation_enabled": True,
+                    "failure_contract": self._review_action_failure_contract(
+                        mutation_enabled=True,
+                        cli_equivalent=f"chronicle review {action} --event {event_id}",
+                    ),
                 },
             )
         try:
@@ -1591,6 +1647,10 @@ class ChronicleUIDataService:
                     "error_code": "invalid_reviewer_kind",
                     "message": "Reviewer kind must be a supported local reviewer identity kind.",
                     "mutation_enabled": True,
+                    "failure_contract": self._review_action_failure_contract(
+                        mutation_enabled=True,
+                        cli_equivalent=f"chronicle review {action} --event {event_id}",
+                    ),
                 },
             )
 
@@ -1620,6 +1680,10 @@ class ChronicleUIDataService:
                     "warning_codes": capability.get("warnings", []),
                     "identity_assurance_status": assurance.get("status"),
                     "cli_equivalent": f"chronicle review {action} --event {event_id}",
+                    "failure_contract": self._review_action_failure_contract(
+                        mutation_enabled=True,
+                        cli_equivalent=f"chronicle review {action} --event {event_id}",
+                    ),
                 },
             )
 
@@ -1635,6 +1699,10 @@ class ChronicleUIDataService:
                     "error_code": "review_target_not_found",
                     "message": "Review target event was not found.",
                     "mutation_enabled": True,
+                    "failure_contract": self._review_action_failure_contract(
+                        mutation_enabled=True,
+                        cli_equivalent=f"chronicle review {action} --event {event_id}",
+                    ),
                 },
             )
         if review_row.get("pending") is not True:
@@ -1649,6 +1717,10 @@ class ChronicleUIDataService:
                     "message": "Review target is no longer pending.",
                     "mutation_enabled": True,
                     "cli_equivalent": f"chronicle review {action} --event {event_id}",
+                    "failure_contract": self._review_action_failure_contract(
+                        mutation_enabled=True,
+                        cli_equivalent=f"chronicle review {action} --event {event_id}",
+                    ),
                 },
             )
 
@@ -1671,6 +1743,9 @@ class ChronicleUIDataService:
                 "cli_equivalent": f"chronicle review {action} --event {event_id}",
                 "mutation_enabled": True,
                 "reviewer_identity": result.reviewer_identity.model_dump(mode="json"),
+                "success_contract": self._review_action_success_contract(
+                    cli_equivalent=f"chronicle review {action} --event {event_id}",
+                ),
             },
         )
 
@@ -2748,6 +2823,7 @@ async function loadDetail(endpoint) {{
   if (record.action_preview) {{
     const preview = record.action_preview;
     const actions = Array.isArray(preview.actions) ? preview.actions : [];
+    const failureContract = preview.failure_contract || {{}};
     const previewButtons = [];
     const capability = record.review_capability || {{}};
     const parity = record.cli_parity || {{}};
@@ -2767,6 +2843,9 @@ async function loadDetail(endpoint) {{
       + '<p>' + esc(preview.message || '') + '</p>'
       + detailLine('Status', preview.status || '')
       + (previewButtons.length > 0 ? '<p>' + previewButtons.join('') + '</p>' : '')
+      + detailLine('Rollback status', failureContract.rollback_status || '')
+      + detailLine('Durable mutation on failure', failureContract.durable_mutation_reported_on_failure)
+      + detailListLine('Possible errors', failureContract.possible_error_codes, ' | ')
       + (
         preview.ui_mutation_enabled
           ? '<p><label>Reviewer <input id="reviewer-label" value="local-ui" placeholder="alice"></label> '
@@ -2863,7 +2942,10 @@ async function previewBlockedRoute(path, targetId = 'action-preview-response') {
     + '<p>' + esc(payload.message || 'No message returned.') + '</p>'
     + detailLine('Error code', payload.error_code || '')
     + detailLine('Mutation enabled', payload.mutation_enabled)
-    + detailLine('CLI equivalent', payload.cli_equivalent || '');
+    + detailLine('CLI equivalent', payload.cli_equivalent || '')
+    + detailLine('Rollback status', (payload.failure_contract || {{}}).rollback_status || '')
+    + detailLine('Durable mutation on failure', (payload.failure_contract || {{}}).durable_mutation_reported_on_failure)
+    + detailListLine('Possible errors', (payload.failure_contract || {{}}).possible_error_codes, ' | ');
 }}
 function reviewFieldValue(prefix, suffix, fallback = '') {{
   const element = prefix === 'reviewer'
@@ -2906,7 +2988,11 @@ async function submitReviewAction(path, action, recordId, targetId = 'action-pre
     + detailLine('Error code', payload.error_code || '')
     + detailLine('Audit ID', payload.audit_id || '')
     + detailLine('Decision event', payload.decision_event_id || '')
-    + detailLine('CLI equivalent', payload.cli_equivalent || '');
+    + detailLine('CLI equivalent', payload.cli_equivalent || '')
+    + detailLine('Rollback status', ((payload.success_contract || payload.failure_contract) || {{}}).rollback_status || '')
+    + detailLine('Transaction status', (payload.success_contract || {{}}).transaction_status || '')
+    + detailLine('Durable mutation on failure', (payload.failure_contract || {{}}).durable_mutation_reported_on_failure)
+    + detailListLine('Possible errors', (payload.failure_contract || {{}}).possible_error_codes, ' | ');
   if (response.ok) {{
     if (window.__chronicleCurrentEndpoint) loadEndpoint(window.__chronicleCurrentEndpoint);
     if (successDetail) {{
@@ -3056,6 +3142,9 @@ def create_handler(
                         "error_code": "invalid_json",
                         "message": "Request body must be valid JSON.",
                         "mutation_enabled": service.ui_boundary()["ui_boundary"]["mutation_enabled"],
+                        "failure_contract": service._review_action_failure_contract(
+                            mutation_enabled=service.ui_boundary()["ui_boundary"]["mutation_enabled"],
+                        ),
                     },
                     status=HTTPStatus.BAD_REQUEST,
                 )

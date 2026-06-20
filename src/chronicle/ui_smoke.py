@@ -176,12 +176,16 @@ def run_ui_smoke(root: Path | None = None) -> UISmokeReport:
                         f"{endpoint}/{record_id}#blocked-route-preview",
                         isinstance(first_action, dict)
                         and first_action.get("post_expected_status") == 403
-                        and first_action.get("post_expected_error_code") == "mutation_disabled",
+                        and first_action.get("post_expected_error_code") == "mutation_disabled"
+                        and isinstance(action_preview.get("failure_contract"), dict)
+                        and action_preview.get("failure_contract", {}).get("rollback_status") == "fail_closed",
                         (
                             "ok"
                             if isinstance(first_action, dict)
                             and first_action.get("post_expected_status") == 403
                             and first_action.get("post_expected_error_code") == "mutation_disabled"
+                            and isinstance(action_preview.get("failure_contract"), dict)
+                            and action_preview.get("failure_contract", {}).get("rollback_status") == "fail_closed"
                             else "review detail missing blocked route preview contract"
                         ),
                     )
@@ -194,12 +198,16 @@ def run_ui_smoke(root: Path | None = None) -> UISmokeReport:
                         f"/api/review-actions/{record_id}/approve",
                         blocked is not None
                         and blocked[0].value == 403
-                        and blocked[1].get("error_code") == "mutation_disabled",
+                        and blocked[1].get("error_code") == "mutation_disabled"
+                        and isinstance(blocked[1].get("failure_contract"), dict)
+                        and blocked[1].get("failure_contract", {}).get("rollback_status") == "fail_closed",
                         (
                             "ok"
                             if blocked is not None
                             and blocked[0].value == 403
                             and blocked[1].get("error_code") == "mutation_disabled"
+                            and isinstance(blocked[1].get("failure_contract"), dict)
+                            and blocked[1].get("failure_contract", {}).get("rollback_status") == "fail_closed"
                             else "blocked review action route contract missing"
                         ),
                     )
@@ -252,12 +260,16 @@ def run_ui_smoke(root: Path | None = None) -> UISmokeReport:
                         f"{endpoint}/{record_id}#blocked-route-preview",
                         isinstance(first_action, dict)
                         and first_action.get("post_expected_status") == 403
-                        and first_action.get("post_expected_error_code") == "mutation_disabled",
+                        and first_action.get("post_expected_error_code") == "mutation_disabled"
+                        and isinstance(preview.get("failure_contract"), dict)
+                        and preview.get("failure_contract", {}).get("rollback_status") == "fail_closed",
                         (
                             "ok"
                             if isinstance(first_action, dict)
                             and first_action.get("post_expected_status") == 403
                             and first_action.get("post_expected_error_code") == "mutation_disabled"
+                            and isinstance(preview.get("failure_contract"), dict)
+                            and preview.get("failure_contract", {}).get("rollback_status") == "fail_closed"
                             else "summary detail missing blocked route preview contract"
                         ),
                     )

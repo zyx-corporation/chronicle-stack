@@ -490,6 +490,8 @@ def test_ui_detail_assurance_can_align_with_configured_boundary(tmp_path):
     )
     assert review_detail["action_preview"]["actions"][0]["post_expected_status"] == 403
     assert review_detail["action_preview"]["actions"][0]["post_expected_error_code"] == "mutation_disabled"
+    assert review_detail["action_preview"]["failure_contract"]["rollback_status"] == "fail_closed"
+    assert review_detail["action_preview"]["failure_contract"]["durable_mutation_reported_on_failure"] is False
     assert review_detail["cli_parity"]["status"] == "aligned"
     assert review_detail["cli_parity"]["expected_actions"] == [
         "approve",
@@ -534,6 +536,7 @@ def test_ui_detail_exposes_enabled_mutation_preview_when_enabled(tmp_path):
     assert review_detail["action_preview"]["ui_mutation_enabled"] is True
     assert review_detail["action_preview"]["actions"][0]["post_expected_status"] == 200
     assert review_detail["action_preview"]["actions"][0]["post_expected_error_code"] is None
+    assert review_detail["action_preview"]["failure_contract"]["rollback_status"] == "fail_closed"
     assert review_detail["ui_mutation_enabled"] is True
     assert review_detail["review_preview_only"] is False
 
@@ -734,6 +737,10 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "Preview blocked route" in html
     assert "data-preview-post" in html
     assert "Blocked route preview stays read-only and returns the CLI fallback contract." in html
+    assert "Rollback status" in html
+    assert "Durable mutation on failure" in html
+    assert "Possible errors" in html
+    assert "Transaction status" in html
     assert "async function previewBlockedRoute(path, targetId = 'action-preview-response')" in html
     assert "async function submitReviewAction(path, action, recordId, targetId = 'action-preview-response', fieldPrefix = 'reviewer', successDetail = '')" in html
     assert "data-submit-review-action" in html
@@ -834,6 +841,8 @@ def test_http_root_and_read_only_endpoints(tmp_path):
         assert payload["action"] == "approve"
         assert payload["error_code"] == "mutation_disabled"
         assert payload["mutation_enabled"] is False
+        assert payload["failure_contract"]["rollback_status"] == "fail_closed"
+        assert payload["failure_contract"]["durable_mutation_reported_on_failure"] is False
         assert payload["cli_equivalent"] == (
             f"chronicle review approve --event {ids['runtime_summary_event_id']}"
         )
@@ -846,6 +855,7 @@ def test_http_root_and_read_only_endpoints(tmp_path):
         assert status == 403
         payload = json.loads(body)
         assert payload["action"] == "request-changes"
+        assert payload["failure_contract"]["rollback_status"] == "fail_closed"
         assert payload["cli_equivalent"] == (
             f"chronicle review request-changes --event {ids['runtime_summary_event_id']}"
         )
@@ -897,6 +907,8 @@ def test_http_review_action_enabled_route_applies_decision(tmp_path):
         assert payload["action"] == "approve"
         assert payload["audit_id"].startswith("aud_")
         assert payload["decision_event_id"].startswith("evt_")
+        assert payload["success_contract"]["transaction_status"] == "decision_and_audit_persisted"
+        assert payload["success_contract"]["rollback_status"] == "not_required"
 
         history = ReviewService(tmp_path).history(event_id=ids["runtime_summary_event_id"])
         assert history[0].disposition.value == "approve"
