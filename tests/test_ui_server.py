@@ -977,6 +977,7 @@ def test_http_review_action_enabled_route_handles_audit_failure(tmp_path, monkey
         assert status == 500
         payload = json.loads(body)
         assert payload["error_code"] == "audit_insertion_failed"
+        assert "Audit insertion failed before the review decision could be reported as applied." in payload["message"]
         assert payload["failure_contract"]["rollback_status"] == "fail_closed"
         assert payload["failure_contract"]["durable_mutation_reported_on_failure"] is False
         assert payload["failure_contract"]["recovery_commands"] == [
@@ -1028,6 +1029,7 @@ def test_http_review_action_enabled_route_handles_decision_persistence_failure(t
         assert status == 500
         payload = json.loads(body)
         assert payload["error_code"] == "decision_persistence_failed"
+        assert "Chronicle primary-record append failed" in payload["message"]
         assert payload["audit_id"].startswith("aud_")
         assert payload["failure_contract"]["rollback_status"] == "fail_closed"
         assert payload["failure_contract"]["recovery_commands"][0] == "chronicle review queue --include-resolved --json"

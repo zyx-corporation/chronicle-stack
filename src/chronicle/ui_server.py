@@ -1312,6 +1312,22 @@ class ChronicleUIDataService:
         }
 
     @staticmethod
+    def _review_action_failure_message(error_code: str) -> str:
+        messages = {
+            "mutation_disabled": "GUI mutation remains disabled for this session; use the CLI review path instead.",
+            "reviewer_label_required": "Reviewer label is missing, so the UI cannot attribute the review action.",
+            "ui_intent_mismatch": "Requested route and submitted UI intent differ, so the action was rejected before mutation.",
+            "invalid_reviewer_kind": "Reviewer kind is not one of the supported local reviewer identity kinds.",
+            "authorization_failed": "Reviewer identity or session boundary is not aligned, so the action stays blocked.",
+            "review_target_not_found": "The target review event is no longer available from the current Chronicle state.",
+            "review_not_pending": "The review target is no longer pending; inspect the resolved queue before retrying.",
+            "invalid_json": "The request body could not be parsed as JSON, so no mutation path was attempted.",
+            "audit_insertion_failed": "Audit insertion failed before the review decision could be reported as applied.",
+            "decision_persistence_failed": "Audit insertion succeeded, but the Chronicle primary-record append failed, so treat the route as fail-closed.",
+        }
+        return messages.get(error_code, error_code.replace("_", " "))
+
+    @staticmethod
     def _review_action_success_contract(
         *,
         cli_equivalent: str | None = None,
@@ -1640,7 +1656,7 @@ class ChronicleUIDataService:
                 "event_id": event_id,
                 "action": action,
                 "error_code": "mutation_disabled",
-                "message": "GUI mutation remains disabled; use the CLI review command path.",
+                "message": self._review_action_failure_message("mutation_disabled"),
                 "mutation_enabled": False,
                 "cli_equivalent": f"chronicle review {action} --event {event_id}",
                 "failure_contract": self._review_action_failure_contract(
@@ -1692,7 +1708,7 @@ class ChronicleUIDataService:
                     "event_id": event_id,
                     "action": action,
                     "error_code": "reviewer_label_required",
-                    "message": "Reviewer label is required for GUI mutation.",
+                    "message": self._review_action_failure_message("reviewer_label_required"),
                     "mutation_enabled": True,
                     "failure_contract": self._review_action_failure_contract(
                         mutation_enabled=True,
@@ -1712,7 +1728,7 @@ class ChronicleUIDataService:
                     "event_id": event_id,
                     "action": action,
                     "error_code": "ui_intent_mismatch",
-                    "message": "UI intent must match the requested review action route.",
+                    "message": self._review_action_failure_message("ui_intent_mismatch"),
                     "mutation_enabled": True,
                     "failure_contract": self._review_action_failure_contract(
                         mutation_enabled=True,
@@ -1734,7 +1750,7 @@ class ChronicleUIDataService:
                     "event_id": event_id,
                     "action": action,
                     "error_code": "invalid_reviewer_kind",
-                    "message": "Reviewer kind must be a supported local reviewer identity kind.",
+                    "message": self._review_action_failure_message("invalid_reviewer_kind"),
                     "mutation_enabled": True,
                     "failure_contract": self._review_action_failure_contract(
                         mutation_enabled=True,
@@ -1767,7 +1783,7 @@ class ChronicleUIDataService:
                     "event_id": event_id,
                     "action": action,
                     "error_code": "authorization_failed",
-                    "message": "Reviewer identity or session boundary is not aligned for GUI mutation.",
+                    "message": self._review_action_failure_message("authorization_failed"),
                     "mutation_enabled": True,
                     "warning_codes": capability.get("warnings", []),
                     "identity_assurance_status": assurance.get("status"),
@@ -1792,7 +1808,7 @@ class ChronicleUIDataService:
                     "event_id": event_id,
                     "action": action,
                     "error_code": "review_target_not_found",
-                    "message": "Review target event was not found.",
+                    "message": self._review_action_failure_message("review_target_not_found"),
                     "mutation_enabled": True,
                     "failure_contract": self._review_action_failure_contract(
                         mutation_enabled=True,
@@ -1812,7 +1828,7 @@ class ChronicleUIDataService:
                     "event_id": event_id,
                     "action": action,
                     "error_code": "review_not_pending",
-                    "message": "Review target is no longer pending.",
+                    "message": self._review_action_failure_message("review_not_pending"),
                     "mutation_enabled": True,
                     "cli_equivalent": f"chronicle review {action} --event {event_id}",
                     "failure_contract": self._review_action_failure_contract(
@@ -1842,7 +1858,7 @@ class ChronicleUIDataService:
                     "event_id": event_id,
                     "action": action,
                     "error_code": "audit_insertion_failed",
-                    "message": "Audit insertion failed; GUI mutation was not reported as applied.",
+                    "message": self._review_action_failure_message("audit_insertion_failed"),
                     "mutation_enabled": True,
                     "detail": exc.hint,
                     "cli_equivalent": f"chronicle review {action} --event {event_id}",
@@ -1864,7 +1880,7 @@ class ChronicleUIDataService:
                     "event_id": event_id,
                     "action": action,
                     "error_code": "decision_persistence_failed",
-                    "message": "Review decision persistence failed after audit insertion; treat the route as fail-closed and inspect recovery from CLI.",
+                    "message": self._review_action_failure_message("decision_persistence_failed"),
                     "mutation_enabled": True,
                     "detail": exc.hint,
                     "audit_id": exc.audit_id,
@@ -3340,7 +3356,7 @@ def create_handler(
                         "ok": False,
                         "status": "blocked",
                         "error_code": "invalid_json",
-                        "message": "Request body must be valid JSON.",
+                        "message": service._review_action_failure_message("invalid_json"),
                         "mutation_enabled": service.ui_boundary()["ui_boundary"]["mutation_enabled"],
                         "failure_contract": service._review_action_failure_contract(
                             mutation_enabled=service.ui_boundary()["ui_boundary"]["mutation_enabled"],
