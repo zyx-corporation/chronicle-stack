@@ -459,6 +459,7 @@ chronicle review approve --event evt_xxx --reviewer alice --json
 - review queue list の status / package readiness / CLI parity badges も専用 helper に寄せ、同じ read-only badge vocabulary を維持している
 - overview shortcut buttons と detail notice の `Open ...` / `More ...` actions も helper 化し、list/detail 間の jump 文言 drift を抑えている
 - detail JSON の related link labels も helper 化し、`Open matching ...` / `Open context ...` の語彙を detail payload でも固定している
+- overview panel 見出し / detail notice 見出し / triage summary JSON 行も helper に寄せ、read-only UI の見出し語彙を揃えている
 - review queue detail は reviewer / audit timeline を read-only で表示する
 - review queue detail は current UI boundary と reviewer identity を照合した assurance も表示する
 - review queue detail の warning / capability 表示からも related review slices へ戻れる

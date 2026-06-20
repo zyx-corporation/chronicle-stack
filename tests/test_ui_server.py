@@ -401,6 +401,9 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "openListButton" in html
     assert "sliceActionButton" in html
     assert "moreSliceButton" in html
+    assert "panelTitle" in html
+    assert "noticeTitle" in html
+    assert "summaryJsonLine" in html
     assert "runtimeRecordsFilterChips" in html
     assert "reviewQueueFilterChips" in html
     assert "humanizeDetailPath" in html
@@ -415,10 +418,10 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "ready" in html
     assert "CLI Parity" in html
     assert "CLI drift first" in html
-    assert "CLI parity counts:" in html
-    assert "Warning counts:" in html
+    assert "summaryJsonLine('CLI parity counts', triage.cli_parity_counts)" in html
+    assert "summaryJsonLine('Warning counts', triage.warning_counts)" in html
     assert "Warning priority:" in html
-    assert "Runtime kinds:" in html
+    assert "summaryJsonLine('Runtime kinds', triage.runtime_record_kinds)" in html
     assert "openListButton('Open Review Queue', '/api/review-queue')" in html
     assert "openListButton('Open Runtime Records', '/api/runtime-records')" in html
     assert "openListButton('Open Package Review', '/api/package-review')" in html

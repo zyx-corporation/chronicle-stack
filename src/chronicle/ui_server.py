@@ -1312,6 +1312,15 @@ function moreSliceButton(filterValue, endpoint, filterTarget) {{
   if (!value) return '';
   return sliceActionButton('More ' + value, endpoint, filterTarget, value);
 }}
+function panelTitle(text) {{
+  return '<h3>' + esc(text) + '</h3>';
+}}
+function noticeTitle(text) {{
+  return '<h3>' + esc(text) + '</h3>';
+}}
+function summaryJsonLine(label, value) {{
+  return '<p>' + esc(label) + ': ' + esc(JSON.stringify(value || {{}})) + '</p>';
+}}
 function relatedListButtons(detailEndpoint, record) {{
   const buttons = [];
   if (detailEndpoint.startsWith('/api/runtime-records/')) {{
@@ -1376,11 +1385,11 @@ function renderOverview(payload) {{
     + '<p>Root: <span class="id">' + esc(chronicle.root || '') + '</span></p>'
     + '</div>'
     + '<div class="panel">'
-    + '<h3>Counts</h3>'
+    + panelTitle('Counts')
     + '<table><tbody>' + countRows + '</tbody></table>'
     + '</div>'
     + '<div class="panel">'
-    + '<h3>Runtime Boundary</h3>'
+    + panelTitle('Runtime Boundary')
     + '<p>Read-only: ' + esc(runtime.read_only) + '</p>'
     + '<p>External model API: ' + esc(runtime.external_model_api) + '</p>'
     + '<p>GraphRAG runtime: ' + esc(runtime.graphrag_runtime) + '</p>'
@@ -1388,7 +1397,7 @@ function renderOverview(payload) {{
     + '<p>Graph DB: ' + esc(runtime.graph_db) + '</p>'
     + '</div>'
     + '<div class="panel">'
-    + '<h3>UI Boundary</h3>'
+    + panelTitle('UI Boundary')
     + '<p>Bind scope: ' + esc(uiBoundary.bind_scope || '') + '</p>'
     + '<p>Mutation enabled: ' + esc(uiBoundary.mutation_enabled) + '</p>'
     + '<p>Mutation capability flag: ' + esc(uiBoundary.mutation_capability_flag) + '</p>'
@@ -1398,7 +1407,7 @@ function renderOverview(payload) {{
     + '<p>Mutation readiness: ' + esc(uiBoundary.mutation_readiness_status || '') + '</p>'
     + '</div>'
     + '<div class="panel">'
-    + '<h3>Mutation Readiness</h3>'
+    + panelTitle('Mutation Readiness')
     + '<p>Status: ' + esc(mutationReadiness.status || '') + '</p>'
     + '<p>' + esc(mutationReadiness.message || '') + '</p>'
     + '<p>Ready rows: ' + esc(mutationReadiness.ready_row_count ?? 0) + '</p>'
@@ -1407,7 +1416,7 @@ function renderOverview(payload) {{
     + '<p>Next steps: ' + esc((mutationReadiness.next_steps || []).join(' | ') || '(none)') + '</p>'
     + '</div>'
     + '<div class="panel">'
-    + '<h3>AI Index Snapshot</h3>'
+    + panelTitle('AI Index Snapshot')
     + '<p>Vector entries: ' + esc(vectorEntryCount) + '</p>'
     + '<p>Graph nodes: ' + esc(graphNodeCount) + '</p>'
     + '<p>Graph edges: ' + esc(graphEdgeCount) + '</p>'
@@ -1415,7 +1424,7 @@ function renderOverview(payload) {{
     + '<p>Needs-review records: ' + esc(counts.review_queue ?? 0) + '</p>'
     + '</div>'
     + '<div class="panel">'
-    + '<h3>Triage</h3>'
+    + panelTitle('Triage')
     + '<p>'
     + overviewJumpButton(sliceBadge('Needs attention', esc(triage.needs_attention_reviews ?? 0), 'badge-warning'), '/api/review-queue', 'reviewQueue', 'review_requested')
     + '</p>'
@@ -1431,11 +1440,11 @@ function renderOverview(payload) {{
     + overviewJumpButton(sliceBadge('CLI drift', esc(triage.cli_parity_drift_reviews ?? 0), 'badge-warning'), '/api/review-queue', 'reviewQueue', 'drift_detected')
     + '</p>'
     + '<p>' + (warningButtons || '') + '</p>'
-    + '<p>Runtime kinds: ' + esc(JSON.stringify(triage.runtime_record_kinds || {{}})) + '</p>'
-    + '<p>Review capability counts: ' + esc(JSON.stringify(triage.review_capability_counts || {{}})) + '</p>'
-    + '<p>Package readiness counts: ' + esc(JSON.stringify(triage.package_readiness_counts || {{}})) + '</p>'
-    + '<p>CLI parity counts: ' + esc(JSON.stringify(triage.cli_parity_counts || {{}})) + '</p>'
-    + '<p>Warning counts: ' + esc(JSON.stringify(triage.warning_counts || {{}})) + '</p>'
+    + summaryJsonLine('Runtime kinds', triage.runtime_record_kinds)
+    + summaryJsonLine('Review capability counts', triage.review_capability_counts)
+    + summaryJsonLine('Package readiness counts', triage.package_readiness_counts)
+    + summaryJsonLine('CLI parity counts', triage.cli_parity_counts)
+    + summaryJsonLine('Warning counts', triage.warning_counts)
     + '<p>Warning priority: '
     + (warningSummaries.length > 0
       ? warningSummaries.map(item =>
@@ -1610,7 +1619,7 @@ async function loadDetail(endpoint) {{
     : '';
   const trailLabel = currentTrailLabel();
   const trailButtons = currentTrailButtons();
-  let extra = '<div class="notice"><h3>Navigation</h3>'
+  let extra = '<div class="notice">' + noticeTitle('Navigation')
     + activeViewSummary(endpoint, 'detail')
     + '<p><button data-back-view="true">Back to current list</button> '
     + (previousDetail ? '<button data-back-detail="true">Back to previous detail</button> ' : '')
@@ -1626,7 +1635,7 @@ async function loadDetail(endpoint) {{
     + '</div>';
   if (record.runtime_record_preview) {{
     const preview = record.runtime_record_preview;
-    extra += '<div class="notice"><h3>Runtime Preview</h3>'
+    extra += '<div class="notice">' + noticeTitle('Runtime Preview')
       + '<p><strong>' + esc(preview.title || '') + '</strong></p>'
       + '<p>' + esc(preview.preview_text || '') + '</p>'
       + '<p>Kind: ' + esc(preview.record_kind || record.runtime_record_kind || '') + '</p>'
@@ -1637,7 +1646,7 @@ async function loadDetail(endpoint) {{
   }}
   if (record.retrieval_handoff) {{
     const handoff = record.retrieval_handoff;
-    extra += '<div class="notice"><h3>Retrieval Handoff</h3>'
+    extra += '<div class="notice">' + noticeTitle('Retrieval Handoff')
       + '<p>Query: ' + esc(handoff.query || '') + '</p>'
       + '<p>Hit counts: vector=' + esc(handoff.vector_hit_count || 0)
       + ', graph=' + esc(handoff.graph_hit_count || 0)
@@ -1651,7 +1660,7 @@ async function loadDetail(endpoint) {{
     const preview = record.package_handoff_preview;
     const packageReview = preview.package_review || {{}};
     const manifest = preview.package_manifest_preview || {{}};
-    extra += '<div class="notice"><h3>Package Handoff Preview</h3>'
+    extra += '<div class="notice">' + noticeTitle('Package Handoff Preview')
       + '<p>Status: ' + esc(preview.status || '') + '</p>'
       + '<p>' + esc(preview.message || '') + '</p>'
       + '<p>Eligible contexts: ' + esc((preview.eligible_context_ids || []).join(', ') || '(none)') + '</p>'
@@ -1669,7 +1678,7 @@ async function loadDetail(endpoint) {{
     if (readiness.status) {{
       readinessButtons.push(sliceActionButton('More ' + readiness.status, '/api/review-queue', 'reviewQueue', 'package:' + readiness.status));
     }}
-    extra += '<div class="notice"><h3>Review Package Readiness</h3>'
+    extra += '<div class="notice">' + noticeTitle('Review Package Readiness')
       + '<p>Status: ' + esc(readiness.status || '') + '</p>'
       + '<p>' + esc(readiness.message || '') + '</p>'
       + (readinessButtons.length > 0 ? '<p>' + readinessButtons.join('') + '</p>' : '')
@@ -1681,7 +1690,7 @@ async function loadDetail(endpoint) {{
       + '</div>';
   }}
   if (Array.isArray(record.related_links) && record.related_links.length > 0) {{
-    extra += '<div class="notice"><h3>Related Links</h3><p>'
+    extra += '<div class="notice">' + noticeTitle('Related Links') + '<p>'
       + record.related_links.map(item =>
         '<button data-detail-nav="' + esc(item.path || '') + '">'
         + esc(item.label || humanizeDetailPath(item.path || ''))
@@ -1694,7 +1703,7 @@ async function loadDetail(endpoint) {{
     const warnList = Array.isArray(capability.warnings) ? capability.warnings : [];
     const warnDetails = Array.isArray(capability.warning_details) ? capability.warning_details : [];
     const warnBadges = reviewWarningBadges(warnList);
-    extra += '<div class="notice"><h3>Review Capability</h3>'
+    extra += '<div class="notice">' + noticeTitle('Review Capability')
       + '<p>' + esc(capability.message || '') + '</p>'
       + '<p>Status: ' + esc(capability.status || '') + '</p>'
       + (warnBadges ? '<p>' + warnBadges + '</p>' : '')
@@ -1712,7 +1721,7 @@ async function loadDetail(endpoint) {{
     if (parity.status) {{
       previewButtons.push(moreSliceButton(parity.status, '/api/review-queue', 'reviewQueue'));
     }}
-    extra += '<div class="notice"><h3>Action Preview</h3>'
+    extra += '<div class="notice">' + noticeTitle('Action Preview')
       + '<p>' + esc(preview.message || '') + '</p>'
       + '<p>Status: ' + esc(preview.status || '') + '</p>'
       + (previewButtons.length > 0 ? '<p>' + previewButtons.join('') + '</p>' : '')
@@ -1726,7 +1735,7 @@ async function loadDetail(endpoint) {{
     if (parity.status) {{
       parityButtons.push(moreSliceButton(parity.status, '/api/review-queue', 'reviewQueue'));
     }}
-    extra += '<div class="notice"><h3>CLI Parity</h3>'
+    extra += '<div class="notice">' + noticeTitle('CLI Parity')
       + '<p>' + esc(parity.message || '') + '</p>'
       + '<p>Status: ' + esc(parity.status || '') + '</p>'
       + (parityButtons.length > 0 ? '<p>' + parityButtons.join('') + '</p>' : '')
@@ -1741,13 +1750,13 @@ async function loadDetail(endpoint) {{
     if (assurance.status) {{
       assuranceButtons.push(moreSliceButton(assurance.status, '/api/review-queue', 'reviewQueue'));
     }}
-    extra += '<div class="notice"><h3>Identity Assurance</h3>'
+    extra += '<div class="notice">' + noticeTitle('Identity Assurance')
       + '<p>Status: ' + esc(assurance.status || '') + '</p>'
       + (assuranceButtons.length > 0 ? '<p>' + assuranceButtons.join('') + '</p>' : '')
       + '<p>' + esc(assurance.message || '') + '</p></div>';
   }}
   if (Array.isArray(record.history) && record.history.length > 0) {{
-    extra += '<div class="notice"><h3>Review Timeline</h3><ul>'
+    extra += '<div class="notice">' + noticeTitle('Review Timeline') + '<ul>'
       + record.history.map(item => {{
         const timelineButtons = [];
         if (item.disposition) {{
