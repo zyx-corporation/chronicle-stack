@@ -348,7 +348,7 @@ read-only endpoint:
 
 `/api/review-queue` は `review_status=needs_review` の record を preview-only で返します。ここでは write action は有効化されず、`suggested_cli_family` で関連 CLI family の目安だけを表示します。
 
-`/api/ui-boundary` は bind scope, mutation capability flag, auth/authz mode を read-only で返します。現在は mutation disabled が前提で、`mutation_capability_flag=true` でも write route は有効化されません。placeholder config により `auth_mode` / `authorization_mode` / `session_gating` を明示できます。あわせて `auth_boundary_summary` で auth/authz placeholder の derived status / blockers / next steps も返します。
+`/api/ui-boundary` は bind scope, mutation capability flag, auth/authz mode を read-only で返します。現在は mutation disabled が前提で、`mutation_capability_flag=true` でも write route は有効化されません。placeholder config により `auth_mode` / `authorization_mode` / `session_gating` を明示できます。あわせて `auth_boundary_summary` で auth/authz placeholder の derived status / blockers / next steps も返します。overview ではさらに `identity_boundary_summary` により reviewer identity / session alignment の集約状態も読めます。
 この read-only semantic boundary と CLI parity の扱いは [ADR-0019](adr/0019-local-ui-review-semantics-parity-boundary.md) で固定しています。
 
 ## chronicle runtime

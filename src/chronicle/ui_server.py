@@ -285,6 +285,7 @@ class ChronicleUIDataService:
         review_queue = self.review_queue()["review_queue"]
         ai_index_status = self.ai_index_status()["ai_index_status"]
         triage = self.overview_triage(runtime_records, review_queue)
+        identity_boundary_summary = self.identity_boundary_summary(review_queue)
         return {
             "chronicle": {
                 "id": metadata.chronicle_id,
@@ -314,7 +315,62 @@ class ChronicleUIDataService:
             "runtime_boundary": self.runtime_boundary(),
             "ui_boundary": self.ui_boundary()["ui_boundary"],
             "auth_boundary_summary": self.ui_boundary()["ui_boundary"]["auth_boundary_summary"],
+            "identity_boundary_summary": identity_boundary_summary,
             "mutation_readiness": self.mutation_readiness_summary(review_queue),
+        }
+
+    def identity_boundary_summary(self, review_queue: list[dict[str, Any]] | None = None) -> dict[str, Any]:
+        queue = review_queue if review_queue is not None else self.review_queue()["review_queue"]
+        assurance_counts: dict[str, int] = {}
+        missing_identity_count = 0
+        declared_identity_count = 0
+        session_label_missing_count = 0
+
+        for row in queue:
+            assurance = row.get("latest_identity_assurance")
+            if isinstance(assurance, dict) and assurance.get("status"):
+                status = str(assurance["status"])
+                assurance_counts[status] = assurance_counts.get(status, 0) + 1
+            else:
+                missing_identity_count += 1
+
+            warnings = row.get("review_capability", {}).get("warnings", [])
+            if "reviewer_identity_declared_only" in warnings:
+                declared_identity_count += 1
+            if "reviewer_session_label_missing" in warnings:
+                session_label_missing_count += 1
+
+        blockers: list[str] = []
+        next_steps: list[str] = []
+        if missing_identity_count > 0:
+            blockers.append("reviewer_identity_missing")
+            next_steps.append("Record reviewer identity metadata before relying on GUI review signals.")
+        if declared_identity_count > 0:
+            blockers.append("reviewer_identity_declared_only")
+            next_steps.append("Strengthen reviewer identity beyond self-declared metadata.")
+        if session_label_missing_count > 0:
+            blockers.append("reviewer_session_label_missing")
+            next_steps.append("Require session labels when session-gated review is expected.")
+
+        if assurance_counts.get("boundary_aligned", 0) > 0 and not blockers:
+            status = "boundary_aligned"
+            message = "Recorded reviewer identity metadata is aligned with the current preview auth boundary."
+        elif assurance_counts:
+            status = "partially_aligned"
+            message = "Some reviewer identity metadata is present, but boundary alignment remains incomplete."
+        else:
+            status = "identity_unavailable"
+            message = "Reviewer identity assurance is not yet available in the current derived queue view."
+
+        return {
+            "status": status,
+            "message": message,
+            "assurance_counts": assurance_counts,
+            "missing_identity_count": missing_identity_count,
+            "declared_identity_count": declared_identity_count,
+            "session_label_missing_count": session_label_missing_count,
+            "blockers": blockers,
+            "next_steps": next_steps,
         }
 
     def overview_triage(
@@ -1409,6 +1465,7 @@ function renderOverview(payload) {{
   const runtime = payload.runtime_boundary || {{}};
   const uiBoundary = payload.ui_boundary || {{}};
   const authBoundary = payload.auth_boundary_summary || uiBoundary.auth_boundary_summary || {{}};
+  const identityBoundary = payload.identity_boundary_summary || {{}};
   const aiIndex = payload.ai_index || {{}};
   const triage = payload.triage || {{}};
   const mutationReadiness = payload.mutation_readiness || {{}};
@@ -1465,6 +1522,17 @@ function renderOverview(payload) {{
     + detailLine('Shared machine safe', authBoundary.shared_machine_safe)
     + detailListLine('Auth blockers', authBoundary.blockers, ' | ')
     + detailListLine('Auth next steps', authBoundary.next_steps, ' | ')
+    + '</div>'
+    + '<div class="panel">'
+    + panelTitle('Identity Boundary')
+    + detailLine('Status', identityBoundary.status || '')
+    + '<p>' + esc(identityBoundary.message || '') + '</p>'
+    + summaryJsonLine('Identity assurance counts', identityBoundary.assurance_counts)
+    + detailLine('Missing identity rows', identityBoundary.missing_identity_count ?? 0)
+    + detailLine('Declared-only rows', identityBoundary.declared_identity_count ?? 0)
+    + detailLine('Session-label-missing rows', identityBoundary.session_label_missing_count ?? 0)
+    + detailListLine('Identity blockers', identityBoundary.blockers, ' | ')
+    + detailListLine('Identity next steps', identityBoundary.next_steps, ' | ')
     + '</div>'
     + '<div class="panel">'
     + panelTitle('Mutation Readiness')

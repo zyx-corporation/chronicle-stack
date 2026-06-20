@@ -201,6 +201,8 @@ def test_ui_overview_data(tmp_path):
     assert overview["ui_boundary"]["auth_mode"] == "not_enabled"
     assert overview["auth_boundary_summary"]["status"] == "auth_not_enabled"
     assert "Define explicit local auth boundary." in overview["auth_boundary_summary"]["next_steps"]
+    assert overview["identity_boundary_summary"]["status"] == "identity_unavailable"
+    assert overview["identity_boundary_summary"]["missing_identity_count"] == 2
     assert overview["mutation_readiness"]["status"] == "preview_only"
     assert "Define explicit local auth boundary." in overview["mutation_readiness"]["next_steps"]
     assert overview["triage"]["needs_attention_reviews"] == 2
@@ -360,6 +362,9 @@ def test_ui_detail_assurance_can_align_with_configured_boundary(tmp_path):
     assert review_detail["review_capability"]["warning_details"] == []
     assert review_detail["latest_identity_assurance"]["status"] == "boundary_aligned"
     assert review_detail["history"][0]["identity_assurance"]["boundary_auth_mode"] == "loopback_local"
+    overview = service.overview()
+    assert overview["identity_boundary_summary"]["status"] == "partially_aligned"
+    assert overview["identity_boundary_summary"]["assurance_counts"]["boundary_aligned"] >= 1
 
 
 def test_ui_shell_contains_interactive_local_ui(tmp_path):
@@ -399,6 +404,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "activeViewSummary" in html
     assert "Mutation Readiness" in html
     assert "Auth Boundary" in html
+    assert "Identity Boundary" in html
     assert "Mutation capability flag:" in html
     assert "currentTrailLabel" in html
     assert "currentTrailButtons" in html
@@ -413,6 +419,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "detailListLine" in html
     assert "summaryJsonLine" in html
     assert "detailListLine('Auth blockers', authBoundary.blockers, ' | ')" in html
+    assert "summaryJsonLine('Identity assurance counts', identityBoundary.assurance_counts)" in html
     assert "runtimeRecordsFilterChips" in html
     assert "reviewQueueFilterChips" in html
     assert "humanizeDetailPath" in html
