@@ -468,6 +468,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "sortSelect" in html
     assert "sortRuntimeRows" in html
     assert "sortReviewRows" in html
+    assert "sortSummaryJobRows" in html
     assert "activeReviewWarningFilter" in html
     assert "reviewWarningFilterRank" in html
     assert "reviewParityRank" in html
@@ -496,6 +497,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "summaryJsonLine('Identity assurance counts', identityBoundary.assurance_counts)" in html
     assert "runtimeRecordsFilterChips" in html
     assert "reviewQueueFilterChips" in html
+    assert "summaryJobsFilterChips" in html
     assert "humanizeDetailPath" in html
     assert "Related Links" in html
     assert "__chronicleDetailTrail" in html
@@ -523,6 +525,8 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "openListButton('Open Package Review', '/api/package-review')" in html
     assert "buttons.push(openListButton('Open Review Queue', '/api/review-queue'));" in html
     assert "<th>review</th><th>package</th>" in html
+    assert "textInput('summaryJobs', 'Filter summary jobs...')" in html
+    assert "sortSelect('summaryJobs', currentSortValue('/api/summary-jobs')" in html
     assert 'data-reset-filters="all"' in html
     assert "sliceActionButton('Advisory Reviews', '/api/review-queue', 'reviewQueue', 'advisory')" in html
     assert "sliceActionButton('CLI Aligned Reviews', '/api/review-queue', 'reviewQueue', 'aligned')" in html
@@ -555,6 +559,8 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "textInput('runtimeRecords'" in html
     assert "textInput('reviewQueue'" in html
     assert "__chronicleFilters" in html
+    assert "summaryJobs: ''" in html
+    assert "summaryJobs: 'latest'" in html
     assert "__chronicleSorts" in html
     assert "Active view:" in html
     assert "jumpBadge(" in html

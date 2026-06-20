@@ -1343,6 +1343,7 @@ function currentSortValue(endpoint) {{
   if (!window.__chronicleSorts) return '';
   if (endpoint === '/api/runtime-records') return window.__chronicleSorts.runtimeRecords || 'latest';
   if (endpoint === '/api/review-queue') return window.__chronicleSorts.reviewQueue || 'attention';
+  if (endpoint === '/api/summary-jobs') return window.__chronicleSorts.summaryJobs || 'latest';
   return '';
 }}
 function stateLabel(kind, value, suffix) {{
@@ -1442,6 +1443,37 @@ function sortReviewRows(rows) {{
     return compareTextDesc(left.target_event_id, right.target_event_id);
   }});
 }}
+function summaryJobAttentionRank(row) {{
+  const reviewStatus = String(row.review_capability_status || '');
+  const packageStatus = String(row.package_readiness_status || '');
+  const parityStatus = String(row.cli_parity_status || '');
+  if (parityStatus === 'drift_detected') return 0;
+  if (reviewStatus === 'advisory_only') return 1;
+  if (reviewStatus === 'ready') return 2;
+  if (packageStatus === 'package_context_available') return 3;
+  if (reviewStatus === 'resolved') return 4;
+  return 5;
+}}
+function sortSummaryJobRows(rows) {{
+  const sortValue = currentSortValue('/api/summary-jobs');
+  if (sortValue === 'title') {{
+    return sortRows(rows, (left, right) => {{
+      const titleCompare = String(left.title || '').localeCompare(String(right.title || ''));
+      if (titleCompare !== 0) return titleCompare;
+      return compareTextDesc(left.summary_job_id, right.summary_job_id);
+    }});
+  }}
+  if (sortValue === 'review') {{
+    return sortRows(rows, (left, right) => {{
+      const rankCompare = summaryJobAttentionRank(left) - summaryJobAttentionRank(right);
+      if (rankCompare !== 0) return rankCompare;
+      const reviewCompare = String(left.review_capability_status || '').localeCompare(String(right.review_capability_status || ''));
+      if (reviewCompare !== 0) return reviewCompare;
+      return compareTextDesc(left.summary_job_id, right.summary_job_id);
+    }});
+  }}
+  return sortRows(rows, (left, right) => compareTextDesc(left.summary_job_id, right.summary_job_id));
+}}
 function currentFilterLabel() {{
   if (!window.__chronicleCurrentEndpoint || !window.__chronicleFilters) return '';
   if (window.__chronicleCurrentEndpoint === '/api/runtime-records' && window.__chronicleFilters.runtimeRecords) {{
@@ -1449,6 +1481,9 @@ function currentFilterLabel() {{
   }}
   if (window.__chronicleCurrentEndpoint === '/api/review-queue' && window.__chronicleFilters.reviewQueue) {{
     return stateLabel('filter', window.__chronicleFilters.reviewQueue);
+  }}
+  if (window.__chronicleCurrentEndpoint === '/api/summary-jobs' && window.__chronicleFilters.summaryJobs) {{
+    return stateLabel('filter', window.__chronicleFilters.summaryJobs);
   }}
   return '';
 }}
@@ -1464,17 +1499,19 @@ function currentSortLabel(endpoint) {{
 }}
 function hasActiveFilters() {{
   if (!window.__chronicleFilters) return false;
-  return Boolean(window.__chronicleFilters.runtimeRecords || window.__chronicleFilters.reviewQueue);
+  return Boolean(window.__chronicleFilters.runtimeRecords || window.__chronicleFilters.reviewQueue || window.__chronicleFilters.summaryJobs);
 }}
 function resetFilters(target) {{
   if (!window.__chronicleFilters) return;
   if (!target || target === 'all') {{
     window.__chronicleFilters.runtimeRecords = '';
     window.__chronicleFilters.reviewQueue = '';
+    window.__chronicleFilters.summaryJobs = '';
     return;
   }}
   if (target === 'runtimeRecords') window.__chronicleFilters.runtimeRecords = '';
   if (target === 'reviewQueue') window.__chronicleFilters.reviewQueue = '';
+  if (target === 'summaryJobs') window.__chronicleFilters.summaryJobs = '';
 }}
 function currentTrailLabel() {{
   if (!Array.isArray(window.__chronicleDetailTrail) || window.__chronicleDetailTrail.length === 0) return '';
@@ -1504,6 +1541,10 @@ function reviewQueueFilterChips() {{
 function runtimeRecordsFilterChips() {{
   const filterValue = String((window.__chronicleFilters && window.__chronicleFilters.runtimeRecords) || '');
   return sliceChip(filterValue, 'badge-neutral', 'runtimeRecords');
+}}
+function summaryJobsFilterChips() {{
+  const filterValue = String((window.__chronicleFilters && window.__chronicleFilters.summaryJobs) || '');
+  return sliceChip(filterValue, 'badge-neutral', 'summaryJobs');
 }}
 function activeViewSummary(endpoint, mode) {{
   const parts = [];
@@ -1900,9 +1941,35 @@ function renderTable(endpoint, rows) {{
       }}).join('') + '</tbody></table>';
   }}
   if (endpoint === '/api/summary-jobs') {{
+    const query = (window.__chronicleFilters && window.__chronicleFilters.summaryJobs || '').toLowerCase();
+    const filtered = filterRows(rows, row => {{
+      if (!query) return true;
+      return JSON.stringify([
+        row.summary_job_id || '',
+        row.title || '',
+        row.status || '',
+        row.review_capability_status || '',
+        row.package_readiness_status || '',
+        row.cli_parity_status || '',
+        row.runtime_provider_kind || '',
+      ]).toLowerCase().includes(query);
+    }});
+    const sorted = sortSummaryJobRows(filtered);
+    const emptyState = query && sorted.length === 0
+      ? '<p>No matching summary jobs for current filter.</p>'
+      : '';
     return activeViewSummary(endpoint, 'list')
+      + textInput('summaryJobs', 'Filter summary jobs...')
+      + sortSelect('summaryJobs', currentSortValue('/api/summary-jobs'), [
+        {{ value: 'latest', label: 'Latest first' }},
+        {{ value: 'review', label: 'Needs attention first' }},
+        {{ value: 'title', label: 'Title' }},
+      ])
+      + summaryJobsFilterChips()
+      + (query ? '<p><button data-reset-filter="summaryJobs">Reset Filter</button></p>' : '')
+      + emptyState
       + '<table><thead><tr><th>detail</th><th>summary job</th><th>status</th><th>review</th><th>package</th><th>runtime</th><th>sources</th></tr></thead><tbody>'
-      + rows.map(row => {{
+      + sorted.map(row => {{
         const path = detailPath(endpoint, row);
         const button = path ? '<button data-detail="' + esc(path) + '">JSON</button>' : '';
         const reviewStatus = row.review_capability_status || '';
@@ -2141,6 +2208,7 @@ document.getElementById('view').addEventListener('click', event => {{
     const filterValue = event.target.dataset.filterValue || '';
     if (filterTarget === 'runtimeRecords') window.__chronicleFilters.runtimeRecords = filterValue;
     if (filterTarget === 'reviewQueue') window.__chronicleFilters.reviewQueue = filterValue;
+    if (filterTarget === 'summaryJobs') window.__chronicleFilters.summaryJobs = filterValue;
     loadEndpoint(event.target.dataset.jump);
   }}
   if (event.target.dataset.resetFilter) {{
@@ -2176,14 +2244,15 @@ document.getElementById('detail').addEventListener('click', event => {{
   }}
   if (event.target.dataset.backView && window.__chronicleCurrentEndpoint) loadEndpoint(window.__chronicleCurrentEndpoint);
 }});
-window.__chronicleFilters = {{ runtimeRecords: '', reviewQueue: '' }};
-window.__chronicleSorts = {{ runtimeRecords: 'latest', reviewQueue: 'attention' }};
+window.__chronicleFilters = {{ runtimeRecords: '', reviewQueue: '', summaryJobs: '' }};
+window.__chronicleSorts = {{ runtimeRecords: 'latest', reviewQueue: 'attention', summaryJobs: 'latest' }};
 window.__chronicleDetailTrail = [];
 document.getElementById('view').addEventListener('input', event => {{
   const filterId = event.target.dataset.filterInput;
   if (!filterId) return;
   if (filterId === 'runtimeRecords') window.__chronicleFilters.runtimeRecords = event.target.value || '';
   if (filterId === 'reviewQueue') window.__chronicleFilters.reviewQueue = event.target.value || '';
+  if (filterId === 'summaryJobs') window.__chronicleFilters.summaryJobs = event.target.value || '';
   if (window.__chronicleCurrentEndpoint) loadEndpoint(window.__chronicleCurrentEndpoint);
 }});
 document.getElementById('view').addEventListener('change', event => {{
@@ -2191,6 +2260,7 @@ document.getElementById('view').addEventListener('change', event => {{
   if (!sortId || !window.__chronicleSorts) return;
   if (sortId === 'runtimeRecords') window.__chronicleSorts.runtimeRecords = event.target.value || 'latest';
   if (sortId === 'reviewQueue') window.__chronicleSorts.reviewQueue = event.target.value || 'attention';
+  if (sortId === 'summaryJobs') window.__chronicleSorts.summaryJobs = event.target.value || 'latest';
   if (window.__chronicleCurrentEndpoint) loadEndpoint(window.__chronicleCurrentEndpoint);
 }});
 loadEndpoint('/api/overview');
