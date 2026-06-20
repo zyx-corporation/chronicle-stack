@@ -372,6 +372,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "hasActiveFilters" in html
     assert "resetFilters" in html
     assert "currentSortValue" in html
+    assert "stateLabel" in html
     assert "currentSortLabel" in html
     assert "warning-first:" in html
     assert "jumpBadge" in html

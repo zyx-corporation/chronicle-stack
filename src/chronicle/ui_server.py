@@ -1035,6 +1035,14 @@ function currentSortValue(endpoint) {{
   if (endpoint === '/api/review-queue') return window.__chronicleSorts.reviewQueue || 'attention';
   return '';
 }}
+function stateLabel(kind, value, suffix) {{
+  const normalizedValue = String(value || '');
+  if (!normalizedValue) return '';
+  const normalizedSuffix = String(suffix || '');
+  return normalizedSuffix
+    ? kind + '=' + normalizedValue + ' (' + normalizedSuffix + ')'
+    : kind + '=' + normalizedValue;
+}}
 function activeReviewWarningFilter() {{
   const value = String((window.__chronicleFilters && window.__chronicleFilters.reviewQueue) || '');
   if (!value) return '';
@@ -1127,10 +1135,10 @@ function sortReviewRows(rows) {{
 function currentFilterLabel() {{
   if (!window.__chronicleCurrentEndpoint || !window.__chronicleFilters) return '';
   if (window.__chronicleCurrentEndpoint === '/api/runtime-records' && window.__chronicleFilters.runtimeRecords) {{
-    return 'filter=' + window.__chronicleFilters.runtimeRecords;
+    return stateLabel('filter', window.__chronicleFilters.runtimeRecords);
   }}
   if (window.__chronicleCurrentEndpoint === '/api/review-queue' && window.__chronicleFilters.reviewQueue) {{
-    return 'filter=' + window.__chronicleFilters.reviewQueue;
+    return stateLabel('filter', window.__chronicleFilters.reviewQueue);
   }}
   return '';
 }}
@@ -1140,9 +1148,9 @@ function currentSortLabel(endpoint) {{
   if (!sortValue) return '';
   if (currentEndpoint === '/api/review-queue') {{
     const warningFilter = activeReviewWarningFilter();
-    if (warningFilter) return 'sort=' + sortValue + ' (warning-first:' + warningFilter + ')';
+    if (warningFilter) return stateLabel('sort', sortValue, 'warning-first:' + warningFilter);
   }}
-  return 'sort=' + sortValue;
+  return stateLabel('sort', sortValue);
 }}
 function hasActiveFilters() {{
   if (!window.__chronicleFilters) return false;
