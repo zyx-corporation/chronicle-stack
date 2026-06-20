@@ -455,6 +455,7 @@ chronicle review approve --event evt_xxx --reviewer alice --json
 - review/runtime の active slice chips は共通 helper で描画され、語彙をそろえている
 - active view summary の `filter=` / `sort=` 表示も同じ helper 群に寄せている
 - overview triage button labels も同じ helper vocabulary に寄せている
+- overview の warning priority badges も同じ helper vocabulary に寄せている
 - review queue detail は reviewer / audit timeline を read-only で表示する
 - review queue detail は current UI boundary と reviewer identity を照合した assurance も表示する
 - review queue detail の warning / capability 表示からも related review slices へ戻れる

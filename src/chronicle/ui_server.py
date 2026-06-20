@@ -1362,7 +1362,7 @@ function renderOverview(payload) {{
     + '<p>Warning priority: '
     + (warningSummaries.length > 0
       ? warningSummaries.map(item =>
-          badge((item.label || item.code || 'warning') + ': ' + (item.count ?? 0), 'badge-warning')
+          sliceBadge((item.label || item.code || 'warning'), item.count ?? 0, 'badge-warning')
         ).join('')
       : '(none)')
     + '</p>'
