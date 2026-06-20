@@ -255,6 +255,7 @@ def test_ui_data_service_read_endpoints(tmp_path):
     assert len(service.review_queue()["review_queue"]) == 3
     assert len(service.summary_jobs_list()["summary_jobs"]) == 1
     assert service.summary_jobs_list()["summary_jobs"][0]["summary_job_id"].startswith("sum_")
+    assert service.summary_jobs_list()["summary_jobs"][0]["review_target_event_id"].startswith("evt_")
     assert service.summary_jobs_list()["summary_jobs"][0]["review_capability_status"] == "advisory_only"
     assert service.summary_jobs_list()["summary_jobs"][0]["package_readiness_status"] == "no_context_records"
     assert service.summary_jobs_list()["summary_jobs"][0]["cli_parity_status"] == "aligned"
@@ -522,6 +523,8 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "summaryJsonLine('Warning counts', triage.warning_counts)" in html
     assert "summaryJsonLine('Status counts', summaryJobs.status_counts)" in html
     assert "summaryJsonLine('Runtime provider counts', summaryJobs.runtime_provider_counts)" in html
+    assert "Summary advisory" in html
+    assert "Summary package ready" in html
     assert "Warning priority:" in html
     assert "summaryJsonLine('Runtime kinds', triage.runtime_record_kinds)" in html
     assert "detailLine('Status', parity.status || '')" in html
@@ -535,6 +538,8 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "<th>review</th><th>package</th>" in html
     assert "textInput('summaryJobs', 'Filter summary jobs...')" in html
     assert "sortSelect('summaryJobs', currentSortValue('/api/summary-jobs')" in html
+    assert "Open review" in html
+    assert "package:no_context_records" in html
     assert 'data-reset-filters="all"' in html
     assert "sliceActionButton('Advisory Reviews', '/api/review-queue', 'reviewQueue', 'advisory')" in html
     assert "sliceActionButton('CLI Aligned Reviews', '/api/review-queue', 'reviewQueue', 'aligned')" in html

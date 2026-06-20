@@ -1802,6 +1802,11 @@ function renderOverview(payload) {{
     + '</div>'
     + '<div class="panel">'
     + panelTitle('Summary Jobs')
+    + '<p>'
+    + overviewJumpButton(sliceBadge('Summary jobs', esc(counts.summary_jobs ?? 0), 'badge-neutral'), '/api/summary-jobs')
+    + overviewJumpButton(sliceBadge('Summary advisory', esc((summaryJobs.review_capability_counts && summaryJobs.review_capability_counts.advisory_only) ?? 0), 'badge-warning'), '/api/summary-jobs', 'summaryJobs', 'advisory_only')
+    + overviewJumpButton(sliceBadge('Summary package ready', esc((summaryJobs.package_readiness_counts && summaryJobs.package_readiness_counts.package_context_available) ?? 0), 'badge-ready'), '/api/summary-jobs', 'summaryJobs', 'package_context_available')
+    + '</p>'
     + summaryJsonLine('Status counts', summaryJobs.status_counts)
     + summaryJsonLine('Review capability counts', summaryJobs.review_capability_counts)
     + summaryJsonLine('Package readiness counts', summaryJobs.package_readiness_counts)
@@ -2011,12 +2016,25 @@ function renderTable(endpoint, rows) {{
         const button = path ? '<button data-detail="' + esc(path) + '">JSON</button>' : '';
         const reviewStatus = row.review_capability_status || '';
         const packageStatus = row.package_readiness_status || '';
+        const reviewBadge = reviewStatus === 'ready'
+          ? jumpBadge('Ready', 'badge-ready', '/api/review-queue', 'reviewQueue', 'ready')
+          : reviewStatus === 'resolved'
+            ? jumpBadge('Resolved', 'badge-neutral', '/api/review-queue', 'reviewQueue', 'resolved')
+            : jumpBadge('Advisory', 'badge-warning', '/api/review-queue', 'reviewQueue', 'advisory');
+        const packageBadge = packageStatus === 'package_context_available'
+          ? jumpBadge('Package Ready', 'badge-ready', '/api/review-queue', 'reviewQueue', 'package:package_context_available')
+          : packageStatus === 'no_context_records'
+            ? jumpBadge('Package Advisory', 'badge-warning', '/api/review-queue', 'reviewQueue', 'package:no_context_records')
+            : badge(packageStatus || 'Package Unknown', 'badge-neutral');
+        const targetButton = row.review_target_event_id
+          ? '<button data-detail-nav="/api/review-queue/' + esc(row.review_target_event_id) + '">Open review</button>'
+          : '';
         return '<tr>'
           + '<td>' + button + '</td>'
-          + '<td><span class="id">' + esc(row.summary_job_id || '') + '</span><br>' + esc(row.title || '') + '</td>'
+          + '<td><span class="id">' + esc(row.summary_job_id || '') + '</span><br>' + esc(row.title || '') + (targetButton ? '<br>' + targetButton : '') + '</td>'
           + '<td>' + esc(row.status || '') + '</td>'
-          + '<td>' + esc(reviewStatus) + '</td>'
-          + '<td>' + esc(packageStatus) + '</td>'
+          + '<td>' + reviewBadge + '</td>'
+          + '<td>' + packageBadge + '</td>'
           + '<td>' + esc(row.runtime_provider_kind || '') + '</td>'
           + '<td>' + esc(row.summary_source_count ?? 0) + '</td>'
           + '</tr>';
