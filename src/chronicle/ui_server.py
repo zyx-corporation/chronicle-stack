@@ -3515,22 +3515,26 @@ function detailNavigationOptions(endpoint, record) {{
     trailButtons: currentTrailButtons(),
   }};
 }}
+const detailNoticeRenderers = [
+  renderRuntimePreviewNotice,
+  renderRetrievalHandoffNotice,
+  renderPackageHandoffPreviewNotice,
+  renderInvocationPlanNotice,
+  renderPackageReadinessNotice,
+  renderRelatedLinksNotice,
+  renderAuthReadinessNotice,
+  renderReviewCapabilityNotice,
+  renderDetailActionPreviewNotice,
+  renderCliParityNotice,
+  renderIdentityAssuranceNotice,
+  renderReviewTimelineNotice,
+];
+function renderDetailNotices(record) {{
+  return detailNoticeRenderers.map(renderer => renderer(record)).join('');
+}}
 function detailNoticeBody(endpoint, record) {{
   const options = detailNavigationOptions(endpoint, record);
-  let extra = renderNavigationNotice(endpoint, record, options);
-  extra += renderRuntimePreviewNotice(record);
-  extra += renderRetrievalHandoffNotice(record);
-  extra += renderPackageHandoffPreviewNotice(record);
-  extra += renderInvocationPlanNotice(record);
-  extra += renderPackageReadinessNotice(record);
-  extra += renderRelatedLinksNotice(record);
-  extra += renderAuthReadinessNotice(record);
-  extra += renderReviewCapabilityNotice(record);
-  extra += renderDetailActionPreviewNotice(record);
-  extra += renderCliParityNotice(record);
-  extra += renderIdentityAssuranceNotice(record);
-  extra += renderReviewTimelineNotice(record);
-  return extra;
+  return renderNavigationNotice(endpoint, record, options) + renderDetailNotices(record);
 }}
 function detailBody(endpoint, payload) {{
   const record = payload.record || {{}};

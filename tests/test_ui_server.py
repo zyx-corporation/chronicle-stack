@@ -693,6 +693,8 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "const detailPathResolvers =" in html
     assert "function endpointBody(endpoint, payload)" in html
     assert "function detailNavigationOptions(endpoint, record)" in html
+    assert "const detailNoticeRenderers = [" in html
+    assert "function renderDetailNotices(record)" in html
     assert "function detailNoticeBody(endpoint, record)" in html
     assert "function detailBody(endpoint, payload)" in html
     assert "function previewButtonsConfig(row, config)" in html
