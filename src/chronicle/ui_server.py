@@ -2134,6 +2134,24 @@ function renderReviewMutationForm(title, prefix) {{
     + '<label>Session <input id="' + esc(prefix) + '-reviewer-session-label" value="local-ui-session" placeholder="desk-session-1"></label> '
     + '<label>Note <input id="' + esc(prefix) + '-reviewer-note" placeholder="optional review note"></label></p></div>';
 }}
+function renderPreviewSummary(preview) {{
+  return preview.status
+    ? '<strong>' + esc(preview.status) + '</strong><br>' + esc(preview.message || '')
+    : esc(preview.message || '');
+}}
+function renderPreviewButtons(previewActions, options = {{}}) {{
+  const actions = Array.isArray(previewActions) ? previewActions : [];
+  const mutationEnabled = Boolean(options.mutationEnabled);
+  const recordId = options.recordId || '';
+  const fieldPrefix = options.fieldPrefix || '';
+  const successDetail = options.successDetail || '';
+  const previewTarget = options.previewTarget || 'action-preview-response';
+  return actions.map(item =>
+    mutationEnabled
+      ? '<button data-submit-review-action="' + esc(item.post_path || '') + '" data-review-action="' + esc(item.action || '') + '" data-review-record="' + esc(recordId) + '" data-review-fields="' + esc(fieldPrefix) + '" data-success-detail="' + esc(successDetail) + '" data-preview-target="' + esc(previewTarget) + '">' + esc(item.label || item.action || 'Apply') + '</button>'
+      : '<button data-preview-post="' + esc(item.post_path || '') + '" data-preview-target="' + esc(previewTarget) + '">Preview blocked route</button>'
+  ).join(' ');
+}}
 function reviewerIdentityBadge(identity) {{
   if (!identity) return '';
   const kind = identity.kind || 'reviewer';
@@ -2844,14 +2862,14 @@ function renderTable(endpoint, rows) {{
         const authBadge = authReadiness.status === 'boundary_aligned'
           ? jumpBadge('Auth aligned', 'badge-ready', '/api/review-queue', 'reviewQueue', 'boundary_aligned')
           : jumpBadge('Auth advisory', 'badge-warning', '/api/review-queue', 'reviewQueue', authReadiness.status || 'advisory_only');
-        const previewSummary = preview.status
-          ? '<strong>' + esc(preview.status) + '</strong><br>' + esc(preview.message || '')
-          : esc(preview.message || '');
-        const previewButtons = previewActions.map(item =>
-          row.ui_mutation_enabled
-            ? '<button data-submit-review-action="' + esc(item.post_path || '') + '" data-review-action="' + esc(item.action || '') + '" data-review-record="' + esc(row.target_event_id || '') + '" data-review-fields="review-queue" data-success-detail="/api/review-queue/' + esc(row.target_event_id || '') + '" data-preview-target="review-queue-action-preview-response">' + esc(item.label || item.action || 'Apply') + '</button>'
-            : '<button data-preview-post="' + esc(item.post_path || '') + '" data-preview-target="review-queue-action-preview-response">Preview blocked route</button>'
-        ).join(' ');
+        const previewSummary = renderPreviewSummary(preview);
+        const previewButtons = renderPreviewButtons(previewActions, {{
+          mutationEnabled: row.ui_mutation_enabled,
+          recordId: row.target_event_id || '',
+          fieldPrefix: 'review-queue',
+          successDetail: '/api/review-queue/' + esc(row.target_event_id || ''),
+          previewTarget: 'review-queue-action-preview-response',
+        }});
         return '<tr>'
           + '<td>' + button + '</td>'
           + '<td><span class="id">' + esc(row.target_event_id || '') + '</span><br>' + reviewKindBadge + (reviewKindBadge ? '<br>' : '') + esc(row.target_summary || '') + '</td>'
@@ -2938,14 +2956,14 @@ function renderTable(endpoint, rows) {{
           : packageStatus === 'no_context_records'
             ? jumpBadge('Package Advisory', 'badge-warning', '/api/review-queue', 'reviewQueue', 'package:no_context_records')
             : badge(packageStatus || 'Package Unknown', 'badge-neutral');
-        const previewSummary = preview.status
-          ? '<strong>' + esc(preview.status) + '</strong><br>' + esc(preview.message || '')
-          : esc(preview.message || '');
-        const previewButtons = previewActions.map(item =>
-          row.ui_mutation_enabled
-            ? '<button data-submit-review-action="' + esc(item.post_path || '') + '" data-review-action="' + esc(item.action || '') + '" data-review-record="' + esc(row.review_target_event_id || '') + '" data-review-fields="summary-jobs" data-success-detail="/api/summary-jobs/' + esc(row.summary_job_id || '') + '" data-preview-target="summary-jobs-action-preview-response">' + esc(item.label || item.action || 'Apply') + '</button>'
-            : '<button data-preview-post="' + esc(item.post_path || '') + '" data-preview-target="summary-jobs-action-preview-response">Preview blocked route</button>'
-        ).join(' ');
+        const previewSummary = renderPreviewSummary(preview);
+        const previewButtons = renderPreviewButtons(previewActions, {{
+          mutationEnabled: row.ui_mutation_enabled,
+          recordId: row.review_target_event_id || '',
+          fieldPrefix: 'summary-jobs',
+          successDetail: '/api/summary-jobs/' + esc(row.summary_job_id || ''),
+          previewTarget: 'summary-jobs-action-preview-response',
+        }});
         const targetButton = row.review_target_event_id
           ? '<button data-detail-nav="/api/review-queue/' + esc(row.review_target_event_id) + '">Open review</button>'
           : '';

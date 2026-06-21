@@ -609,6 +609,8 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "function contractDetailLines(successContract, failureContract, targetId)" in html
     assert "function renderReviewActionResultPanel(title, responseStatus, path, payload, targetId, options = {})" in html
     assert "function renderReviewMutationForm(title, prefix)" in html
+    assert "function renderPreviewSummary(preview)" in html
+    assert "function renderPreviewButtons(previewActions, options = {})" in html
     assert "reviewerIdentityBadge" in html
     assert "sortSelect" in html
     assert "sortRuntimeRows" in html
@@ -699,8 +701,8 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "prefix) + '-reviewer-session-label" in html
     assert "prefix) + '-reviewer-note" in html
     assert "reviewFieldValue(prefix, suffix, fallback = '')" in html
-    assert "data-review-fields=\"review-queue\"" in html
-    assert "data-review-fields=\"summary-jobs\"" in html
+    assert "fieldPrefix: 'review-queue'" in html
+    assert "fieldPrefix: 'summary-jobs'" in html
     assert "data-success-detail" in html
     assert "textInput('summaryJobs', 'Filter summary jobs...')" in html
     assert "sortSelect('summaryJobs', currentSortValue('/api/summary-jobs')" in html
@@ -743,7 +745,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "textInput('reviewQueue'" in html
     assert "review-queue-action-preview-response" in html
     assert "Review queue blocked-route preview stays read-only and returns the CLI fallback contract." in html
-    assert "data-preview-target=\"review-queue-action-preview-response\"" in html
+    assert "previewTarget: 'review-queue-action-preview-response'" in html
     assert "__chronicleFilters" in html
     assert "summaryJobs: ''" in html
     assert "summaryJobs: 'latest'" in html

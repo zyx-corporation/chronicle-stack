@@ -364,6 +364,7 @@ read-only endpoint:
 - blocked-route preview / review-action result の contract 表示も shared helper を通すため、recovery path・rollback status・follow-up command の見え方を揃えます。
 - さらに panel 本体も shared render helper を通すため、preview/result 間で action/event/error/identity/failure summary の表示契約を揃えます。
 - review queue / summary jobs の reviewer 入力フォームも shared helper を通すため、local reviewer context 入力 UI の構造を揃えます。
+- review queue / summary jobs の preview summary と action button も shared helper を通すため、preview status と submit/blocked-route button 契約を揃えます。
 - overview triage では `Identity aligned` などの quick slice から reviewer identity / assurance 系の review queue slice に直接 drilldown できますが、これは引き続き read-only filter state のみです。
 - overview の runtime records / summary jobs panel でも matching-review-derived auth readiness の集約状態を read-only で確認できます。
 - overview の summary jobs panel では matching-review-derived identity/session assurance 集約も read-only で確認できます。
