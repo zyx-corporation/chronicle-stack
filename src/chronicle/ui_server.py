@@ -2817,6 +2817,12 @@ function moreStatusButtons(status, endpoint, filterTarget, prefix = '') {{
 function statusMessageBody(status, message, buttons = []) {{
   return detailLine('Status', status || '') + buttonRow(buttons) + messageParagraph(message);
 }}
+function routeHeading(endpoint) {{
+  return '<h2>' + esc(endpoint) + '</h2>';
+}}
+function prettyJsonPre(value) {{
+  return '<pre>' + esc(JSON.stringify(value, null, 2)) + '</pre>';
+}}
 function renderNotice(title, body) {{
   return '<div class="notice">' + sectionTitle(title) + body + '</div>';
 }}
@@ -3521,14 +3527,14 @@ function detailPath(endpoint, row) {{
   return null;
 }}
 function renderTable(endpoint, rows) {{
-  if (!rows || rows.length === 0) return '<p>No records.</p>';
+  if (!rows || rows.length === 0) return messageParagraph('No records.');
   const renderer = endpointRenderers[endpoint];
   return renderer ? renderer(endpoint, rows) : renderGenericTable(endpoint, rows);
 }}
 function endpointBody(endpoint, payload) {{
   if (endpoint === '/api/overview') return renderOverview(payload);
   const rows = firstArray(payload);
-  return rows ? '<h2>' + esc(endpoint) + '</h2>' + renderTable(endpoint, rows) : '<h2>' + esc(endpoint) + '</h2><pre>' + esc(JSON.stringify(payload, null, 2)) + '</pre>';
+  return rows ? routeHeading(endpoint) + renderTable(endpoint, rows) : routeHeading(endpoint) + prettyJsonPre(payload);
 }}
 function detailNavigationOptions(endpoint, record) {{
   const previousDetail = window.__chronicleDetailTrail.length > 0
@@ -3565,7 +3571,7 @@ function detailNoticeBody(endpoint, record) {{
 }}
 function detailBody(endpoint, payload) {{
   const record = payload.record || {{}};
-  return '<h2>' + esc(endpoint) + '</h2>' + detailNoticeBody(endpoint, record) + '<pre>' + esc(JSON.stringify(payload, null, 2)) + '</pre>';
+  return routeHeading(endpoint) + detailNoticeBody(endpoint, record) + prettyJsonPre(payload);
 }}
 async function loadEndpoint(endpoint) {{
   window.__chronicleCurrentEndpoint = endpoint;

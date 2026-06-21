@@ -388,6 +388,7 @@ read-only endpoint:
 - detail notice の status/message 本文も shared helper を通すため、readiness/auth/identity/package preview の共通段落責務を共通化します。
 - detail notice renderer 群も registry helper を通すため、detail notice 本体の逐次連結責務を renderer 配列へ寄せます。
 - overview panel 群も registry helper を通すため、overview 本体の逐次連結責務と warning button 生成責務を panel 配列/専用 helper へ寄せます。
+- endpoint/detail shell の heading / pretty JSON 表示も shared helper を通すため、view shell の表示責務を route helper へ寄せます。
 - overview triage では `Identity aligned` などの quick slice から reviewer identity / assurance 系の review queue slice に直接 drilldown できますが、これは引き続き read-only filter state のみです。
 - overview の runtime records / summary jobs panel でも matching-review-derived auth readiness の集約状態を read-only で確認できます。
 - overview の summary jobs panel では matching-review-derived identity/session assurance 集約も read-only で確認できます。

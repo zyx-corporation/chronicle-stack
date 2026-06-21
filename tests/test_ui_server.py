@@ -720,6 +720,8 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "summaryJsonLine" in html
     assert "messageParagraph" in html
     assert "statusMessageBody" in html
+    assert "routeHeading" in html
+    assert "prettyJsonPre" in html
     assert "detailListLine('Auth blockers', authBoundary.blockers, ' | ')" in html
     assert "summaryJsonLine('Identity assurance counts', identityBoundary.assurance_counts)" in html
     assert "summaryJsonLine('Auth review capability counts', authBoundaryOverview.review_capability_counts)" in html
