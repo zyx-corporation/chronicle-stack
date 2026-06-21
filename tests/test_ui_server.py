@@ -670,6 +670,12 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "function handleDetailClick(event)" in html
     assert "function handleViewInput(event)" in html
     assert "function handleViewChange(event)" in html
+    assert "function renderPanel(body)" in html
+    assert "function renderOverviewHeaderPanel(chronicle)" in html
+    assert "function renderOverviewCountsPanel(counts)" in html
+    assert "function renderOverviewRuntimeBoundaryPanel(runtime)" in html
+    assert "function renderOverviewAuthBoundaryPanel(authBoundary, authBoundaryOverview)" in html
+    assert "function renderOverviewIdentityBoundaryPanel(identityBoundary)" in html
     assert "function renderCliParityNotice(record)" in html
     assert "function renderReviewTimelineNotice(record)" in html
     assert "panelTitle" in html

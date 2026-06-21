@@ -3212,6 +3212,120 @@ function handleViewChange(event) {{
   updateSortState(sortId, event.target.value || '');
   reloadCurrentEndpoint();
 }}
+function renderPanel(body) {{
+  return '<div class="panel">' + body + '</div>';
+}}
+function renderOverviewHeaderPanel(chronicle) {{
+  return renderPanel(
+    '<p><strong>' + esc(chronicle.title || '') + '</strong></p>'
+    + '<p>Chronicle ID: <span class="id">' + esc(chronicle.id || '') + '</span></p>'
+    + '<p>Root: <span class="id">' + esc(chronicle.root || '') + '</span></p>'
+  );
+}}
+function renderOverviewCountsPanel(counts) {{
+  const countRows = Object.entries(counts || {{}}).map(([key, value]) =>
+    '<tr><th>' + esc(key) + '</th><td>' + esc(value ?? '') + '</td></tr>'
+  ).join('');
+  return renderPanel(
+    panelTitle('Counts')
+    + '<table><tbody>' + countRows + '</tbody></table>'
+  );
+}}
+function renderOverviewRuntimeBoundaryPanel(runtime) {{
+  return renderPanel(
+    panelTitle('Runtime Boundary')
+    + '<p>Read-only: ' + esc(runtime.read_only) + '</p>'
+    + '<p>External model API: ' + esc(runtime.external_model_api) + '</p>'
+    + '<p>GraphRAG runtime: ' + esc(runtime.graphrag_runtime) + '</p>'
+    + '<p>Vector DB: ' + esc(runtime.vector_db) + '</p>'
+    + '<p>Graph DB: ' + esc(runtime.graph_db) + '</p>'
+  );
+}}
+function renderOverviewRuntimeConfigPanel(runtimeConfig, runtimeConfigContract) {{
+  return renderPanel(
+    panelTitle('Runtime Config')
+    + detailLine('Source', runtimeConfig.source || '')
+    + detailLine('Provider kind', runtimeConfigContract.provider_kind || '')
+    + detailLine('Provider name', runtimeConfigContract.provider_name || '')
+    + detailLine('Model', runtimeConfigContract.model_name || '')
+    + detailLine('Allow network', runtimeConfigContract.allow_network)
+    + detailLine('Allow external context', runtimeConfigContract.allow_external_context)
+    + detailListLine('Warnings', runtimeConfig.warnings, ' | ')
+    + '<p>' + openListButton('Open Runtime Config', '/api/runtime-config') + '</p>'
+  );
+}}
+function renderOverviewUiBoundaryPanel(uiBoundary) {{
+  return renderPanel(
+    panelTitle('UI Boundary')
+    + '<p>Bind scope: ' + esc(uiBoundary.bind_scope || '') + '</p>'
+    + '<p>Mutation enabled: ' + esc(uiBoundary.mutation_enabled) + '</p>'
+    + '<p>Mutation capability flag: ' + esc(uiBoundary.mutation_capability_flag) + '</p>'
+    + '<p>Auth mode: ' + esc(uiBoundary.auth_mode || '') + '</p>'
+    + '<p>Authorization mode: ' + esc(uiBoundary.authorization_mode || '') + '</p>'
+    + '<p>Session gating: ' + esc(uiBoundary.session_gating) + '</p>'
+    + '<p>Mutation readiness: ' + esc(uiBoundary.mutation_readiness_status || '') + '</p>'
+  );
+}}
+function renderOverviewAuthBoundaryPanel(authBoundary, authBoundaryOverview) {{
+  return renderPanel(
+    panelTitle('Auth Boundary')
+    + '<p>'
+    + overviewJumpButton(sliceBadge('Auth warnings', esc(authBoundaryOverview.auth_warning_count ?? 0), 'badge-warning'), '/api/review-queue', 'reviewQueue', 'ui_auth_not_enabled')
+    + overviewJumpButton(sliceBadge('Authorization warnings', esc(authBoundaryOverview.authorization_warning_count ?? 0), 'badge-warning'), '/api/review-queue', 'reviewQueue', 'ui_authorization_not_enabled')
+    + overviewJumpButton(sliceBadge('Missing identity', esc(authBoundaryOverview.missing_identity_count ?? 0), 'badge-warning'), '/api/review-queue', 'reviewQueue', 'no_reviewer_identity_recorded')
+    + '</p>'
+    + detailLine('Status', authBoundary.status || '')
+    + '<p>' + esc(authBoundary.message || '') + '</p>'
+    + detailLine('Session gating', authBoundary.session_gating)
+    + detailLine('Shared machine safe', authBoundary.shared_machine_safe)
+    + summaryJsonLine('Auth review capability counts', authBoundaryOverview.review_capability_counts)
+    + detailListLine('Auth blockers', authBoundary.blockers, ' | ')
+    + detailListLine('Auth next steps', authBoundary.next_steps, ' | ')
+  );
+}}
+function renderOverviewIdentityBoundaryPanel(identityBoundary) {{
+  return renderPanel(
+    panelTitle('Identity Boundary')
+    + '<p>'
+    + overviewJumpButton(sliceBadge('Declared identity only', esc(identityBoundary.declared_identity_count ?? 0), 'badge-warning'), '/api/review-queue', 'reviewQueue', 'reviewer_identity_declared_only')
+    + overviewJumpButton(sliceBadge('Session label required', esc(identityBoundary.session_label_missing_count ?? 0), 'badge-warning'), '/api/review-queue', 'reviewQueue', 'reviewer_session_label_missing')
+    + overviewJumpButton(sliceBadge('Identity aligned', esc((identityBoundary.assurance_counts && identityBoundary.assurance_counts.boundary_aligned) ?? 0), 'badge-ready'), '/api/review-queue', 'reviewQueue', 'boundary_aligned')
+    + '</p>'
+    + detailLine('Status', identityBoundary.status || '')
+    + '<p>' + esc(identityBoundary.message || '') + '</p>'
+    + summaryJsonLine('Identity assurance counts', identityBoundary.assurance_counts)
+    + detailLine('Missing identity rows', identityBoundary.missing_identity_count ?? 0)
+    + detailLine('Declared-only rows', identityBoundary.declared_identity_count ?? 0)
+    + detailLine('Session-label-missing rows', identityBoundary.session_label_missing_count ?? 0)
+    + detailListLine('Identity blockers', identityBoundary.blockers, ' | ')
+    + detailListLine('Identity next steps', identityBoundary.next_steps, ' | ')
+  );
+}}
+function renderOverviewMutationReadinessPanel(mutationReadiness) {{
+  return renderPanel(
+    panelTitle('Mutation Readiness')
+    + detailLine('Status', mutationReadiness.status || '')
+    + '<p>' + esc(mutationReadiness.message || '') + '</p>'
+    + detailLine('Ready rows', mutationReadiness.ready_row_count ?? 0)
+    + detailLine('Advisory rows', mutationReadiness.advisory_row_count ?? 0)
+    + detailListLine('Blockers', mutationReadiness.blockers, ' | ')
+    + detailListLine('Next steps', mutationReadiness.next_steps, ' | ')
+  );
+}}
+function renderOverviewAiIndexPanel(aiIndex, counts) {{
+  const vectorEntryCount = aiIndex.vector && aiIndex.vector.entry_count ? aiIndex.vector.entry_count : 0;
+  const graphNodeCount = aiIndex.graph && aiIndex.graph.node_count ? aiIndex.graph.node_count : 0;
+  const graphEdgeCount = aiIndex.graph && aiIndex.graph.edge_count ? aiIndex.graph.edge_count : 0;
+  return renderPanel(
+    panelTitle('AI Index Snapshot')
+    + '<p>Vector entries: ' + esc(vectorEntryCount) + '</p>'
+    + '<p>Graph nodes: ' + esc(graphNodeCount) + '</p>'
+    + '<p>Graph edges: ' + esc(graphEdgeCount) + '</p>'
+    + '<p>Runtime records: ' + esc(counts.runtime_records ?? 0) + '</p>'
+    + '<p>Summary jobs: ' + esc(counts.summary_jobs ?? 0) + '</p>'
+    + '<p>Needs-review records: ' + esc(counts.review_queue ?? 0) + '</p>'
+  );
+}}
 function renderOverview(payload) {{
   const chronicle = payload.chronicle || {{}};
   const counts = payload.counts || {{}};
@@ -3236,102 +3350,18 @@ function renderOverview(payload) {{
       item.code || ''
     )
   ).join('');
-  const countRows = Object.entries(counts).map(([key, value]) =>
-    '<tr><th>' + esc(key) + '</th><td>' + esc(value ?? '') + '</td></tr>'
-  ).join('');
-  const vectorEntryCount = aiIndex.vector && aiIndex.vector.entry_count ? aiIndex.vector.entry_count : 0;
-  const graphNodeCount = aiIndex.graph && aiIndex.graph.node_count ? aiIndex.graph.node_count : 0;
-  const graphEdgeCount = aiIndex.graph && aiIndex.graph.edge_count ? aiIndex.graph.edge_count : 0;
   return ''
     + '<h2>/api/overview</h2>'
-    + '<div class="panel">' + activeViewSummary('/api/overview', 'overview') + '</div>'
-    + '<div class="panel">'
-    + '<p><strong>' + esc(chronicle.title || '') + '</strong></p>'
-    + '<p>Chronicle ID: <span class="id">' + esc(chronicle.id || '') + '</span></p>'
-    + '<p>Root: <span class="id">' + esc(chronicle.root || '') + '</span></p>'
-    + '</div>'
-    + '<div class="panel">'
-    + panelTitle('Counts')
-    + '<table><tbody>' + countRows + '</tbody></table>'
-    + '</div>'
-    + '<div class="panel">'
-    + panelTitle('Runtime Boundary')
-    + '<p>Read-only: ' + esc(runtime.read_only) + '</p>'
-    + '<p>External model API: ' + esc(runtime.external_model_api) + '</p>'
-    + '<p>GraphRAG runtime: ' + esc(runtime.graphrag_runtime) + '</p>'
-    + '<p>Vector DB: ' + esc(runtime.vector_db) + '</p>'
-    + '<p>Graph DB: ' + esc(runtime.graph_db) + '</p>'
-    + '</div>'
-    + '<div class="panel">'
-    + panelTitle('Runtime Config')
-    + detailLine('Source', runtimeConfig.source || '')
-    + detailLine('Provider kind', runtimeConfigContract.provider_kind || '')
-    + detailLine('Provider name', runtimeConfigContract.provider_name || '')
-    + detailLine('Model', runtimeConfigContract.model_name || '')
-    + detailLine('Allow network', runtimeConfigContract.allow_network)
-    + detailLine('Allow external context', runtimeConfigContract.allow_external_context)
-    + detailListLine('Warnings', runtimeConfig.warnings, ' | ')
-    + '<p>' + openListButton('Open Runtime Config', '/api/runtime-config') + '</p>'
-    + '</div>'
-    + '<div class="panel">'
-    + panelTitle('UI Boundary')
-    + '<p>Bind scope: ' + esc(uiBoundary.bind_scope || '') + '</p>'
-    + '<p>Mutation enabled: ' + esc(uiBoundary.mutation_enabled) + '</p>'
-    + '<p>Mutation capability flag: ' + esc(uiBoundary.mutation_capability_flag) + '</p>'
-    + '<p>Auth mode: ' + esc(uiBoundary.auth_mode || '') + '</p>'
-    + '<p>Authorization mode: ' + esc(uiBoundary.authorization_mode || '') + '</p>'
-    + '<p>Session gating: ' + esc(uiBoundary.session_gating) + '</p>'
-    + '<p>Mutation readiness: ' + esc(uiBoundary.mutation_readiness_status || '') + '</p>'
-    + '</div>'
-    + '<div class="panel">'
-    + panelTitle('Auth Boundary')
-    + '<p>'
-    + overviewJumpButton(sliceBadge('Auth warnings', esc(authBoundaryOverview.auth_warning_count ?? 0), 'badge-warning'), '/api/review-queue', 'reviewQueue', 'ui_auth_not_enabled')
-    + overviewJumpButton(sliceBadge('Authorization warnings', esc(authBoundaryOverview.authorization_warning_count ?? 0), 'badge-warning'), '/api/review-queue', 'reviewQueue', 'ui_authorization_not_enabled')
-    + overviewJumpButton(sliceBadge('Missing identity', esc(authBoundaryOverview.missing_identity_count ?? 0), 'badge-warning'), '/api/review-queue', 'reviewQueue', 'no_reviewer_identity_recorded')
-    + '</p>'
-    + detailLine('Status', authBoundary.status || '')
-    + '<p>' + esc(authBoundary.message || '') + '</p>'
-    + detailLine('Session gating', authBoundary.session_gating)
-    + detailLine('Shared machine safe', authBoundary.shared_machine_safe)
-    + summaryJsonLine('Auth review capability counts', authBoundaryOverview.review_capability_counts)
-    + detailListLine('Auth blockers', authBoundary.blockers, ' | ')
-    + detailListLine('Auth next steps', authBoundary.next_steps, ' | ')
-    + '</div>'
-    + '<div class="panel">'
-    + panelTitle('Identity Boundary')
-    + '<p>'
-    + overviewJumpButton(sliceBadge('Declared identity only', esc(identityBoundary.declared_identity_count ?? 0), 'badge-warning'), '/api/review-queue', 'reviewQueue', 'reviewer_identity_declared_only')
-    + overviewJumpButton(sliceBadge('Session label required', esc(identityBoundary.session_label_missing_count ?? 0), 'badge-warning'), '/api/review-queue', 'reviewQueue', 'reviewer_session_label_missing')
-    + overviewJumpButton(sliceBadge('Identity aligned', esc((identityBoundary.assurance_counts && identityBoundary.assurance_counts.boundary_aligned) ?? 0), 'badge-ready'), '/api/review-queue', 'reviewQueue', 'boundary_aligned')
-    + '</p>'
-    + detailLine('Status', identityBoundary.status || '')
-    + '<p>' + esc(identityBoundary.message || '') + '</p>'
-    + summaryJsonLine('Identity assurance counts', identityBoundary.assurance_counts)
-    + detailLine('Missing identity rows', identityBoundary.missing_identity_count ?? 0)
-    + detailLine('Declared-only rows', identityBoundary.declared_identity_count ?? 0)
-    + detailLine('Session-label-missing rows', identityBoundary.session_label_missing_count ?? 0)
-    + detailListLine('Identity blockers', identityBoundary.blockers, ' | ')
-    + detailListLine('Identity next steps', identityBoundary.next_steps, ' | ')
-    + '</div>'
-    + '<div class="panel">'
-    + panelTitle('Mutation Readiness')
-    + detailLine('Status', mutationReadiness.status || '')
-    + '<p>' + esc(mutationReadiness.message || '') + '</p>'
-    + detailLine('Ready rows', mutationReadiness.ready_row_count ?? 0)
-    + detailLine('Advisory rows', mutationReadiness.advisory_row_count ?? 0)
-    + detailListLine('Blockers', mutationReadiness.blockers, ' | ')
-    + detailListLine('Next steps', mutationReadiness.next_steps, ' | ')
-    + '</div>'
-    + '<div class="panel">'
-    + panelTitle('AI Index Snapshot')
-    + '<p>Vector entries: ' + esc(vectorEntryCount) + '</p>'
-    + '<p>Graph nodes: ' + esc(graphNodeCount) + '</p>'
-    + '<p>Graph edges: ' + esc(graphEdgeCount) + '</p>'
-    + '<p>Runtime records: ' + esc(counts.runtime_records ?? 0) + '</p>'
-    + '<p>Summary jobs: ' + esc(counts.summary_jobs ?? 0) + '</p>'
-    + '<p>Needs-review records: ' + esc(counts.review_queue ?? 0) + '</p>'
-    + '</div>'
+    + renderPanel(activeViewSummary('/api/overview', 'overview'))
+    + renderOverviewHeaderPanel(chronicle)
+    + renderOverviewCountsPanel(counts)
+    + renderOverviewRuntimeBoundaryPanel(runtime)
+    + renderOverviewRuntimeConfigPanel(runtimeConfig, runtimeConfigContract)
+    + renderOverviewUiBoundaryPanel(uiBoundary)
+    + renderOverviewAuthBoundaryPanel(authBoundary, authBoundaryOverview)
+    + renderOverviewIdentityBoundaryPanel(identityBoundary)
+    + renderOverviewMutationReadinessPanel(mutationReadiness)
+    + renderOverviewAiIndexPanel(aiIndex, counts)
     + '<div class="panel">'
     + panelTitle('Runtime Records')
     + '<p>'
