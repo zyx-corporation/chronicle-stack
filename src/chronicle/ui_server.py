@@ -146,13 +146,7 @@ def _auth_boundary_summary(metadata: UIBoundaryMetadata) -> dict[str, Any]:
         "status": status,
         "message": message,
         "blockers": blockers,
-        "blocker_details": [
-            {
-                "code": blocker,
-                "message": AUTH_BOUNDARY_BLOCKER_TEXT.get(blocker, blocker.replace("_", " ")),
-            }
-            for blocker in blockers
-        ],
+        "blocker_details": _serialize_auth_boundary_blocker_details(blockers),
         "next_steps": next_steps,
         "shared_machine_safe": metadata.shared_machine_safe,
         "session_gating": metadata.session_gating,
@@ -166,6 +160,26 @@ def _append_auth_boundary_blocker(
 ) -> None:
     blockers.append(blocker_code)
     next_steps.append(AUTH_BOUNDARY_BLOCKER_TEXT.get(blocker_code, blocker_code.replace("_", " ")))
+
+
+def _serialize_auth_boundary_blocker_details(blockers: list[str]) -> list[dict[str, str]]:
+    return [
+        {
+            "code": blocker,
+            "message": AUTH_BOUNDARY_BLOCKER_TEXT.get(blocker, blocker.replace("_", " ")),
+        }
+        for blocker in blockers
+    ]
+
+
+def _serialize_review_warning_details(warnings: list[str]) -> list[dict[str, str]]:
+    return [
+        {
+            "code": warning,
+            "message": REVIEW_WARNING_TEXT.get(warning, warning.replace("_", " ")),
+        }
+        for warning in warnings
+    ]
 
 
 @dataclass(frozen=True)
@@ -1086,13 +1100,7 @@ class ChronicleUIDataService:
             "status": status,
             "message": message,
             "blockers": blockers,
-            "blocker_details": [
-                {
-                    "code": blocker,
-                    "message": AUTH_BOUNDARY_BLOCKER_TEXT.get(blocker, blocker.replace("_", " ")),
-                }
-                for blocker in blockers
-            ],
+            "blocker_details": _serialize_auth_boundary_blocker_details(blockers),
             "next_steps": next_steps,
             "capability_status": capability_status,
             "identity_assurance_status": assurance_status,
@@ -1214,10 +1222,7 @@ class ChronicleUIDataService:
             "status": "ready" if can_review_now else "advisory_only",
             "can_review_now": can_review_now,
             "warnings": warnings,
-            "warning_details": [
-                {"code": warning, "message": self._warning_message(warning)}
-                for warning in warnings
-            ],
+            "warning_details": _serialize_review_warning_details(warnings),
             "message": message,
         }
 
@@ -2077,6 +2082,11 @@ function sourceCountBadges(sourceCounts) {{
   return Object.entries(sourceCounts || {{}}).map(([key, value]) =>
     badge(key + ':' + value, 'badge-neutral')
   ).join('');
+}}
+function detailMessages(items, fallbackItems = []) {{
+  const details = Array.isArray(items) ? items : [];
+  const fallback = Array.isArray(fallbackItems) ? fallbackItems : [];
+  return details.map(item => item.message).join(' | ') || fallback.join(' | ') || '';
 }}
 function reviewerIdentityBadge(identity) {{
   if (!identity) return '';
@@ -3060,7 +3070,7 @@ async function loadDetail(endpoint) {{
       + '<p>' + esc(notice.message || '') + '</p>'
       + detailLine('Review capability', notice.capability_status || '')
       + detailLine('Identity assurance', notice.identity_assurance_status || '')
-      + detailLine('Blockers', blockerDetails.map(item => item.message).join(' | ') || (Array.isArray(notice.blockers) ? notice.blockers.join(' | ') : ''))
+      + detailLine('Blockers', detailMessages(blockerDetails, notice.blockers))
       + detailListLine('Next steps', notice.next_steps, ' | ')
       + '</div>';
   }}
@@ -3073,7 +3083,7 @@ async function loadDetail(endpoint) {{
       + '<p>' + esc(capability.message || '') + '</p>'
       + detailLine('Status', capability.status || '')
       + (warnBadges ? '<p>' + warnBadges + '</p>' : '')
-      + detailLine('Warnings', warnDetails.map(item => item.message).join(' | ') || warnList.join(', ') || '(none)')
+      + detailLine('Warnings', detailMessages(warnDetails, warnList) || '(none)')
       + '</div>';
   }}
   if (record.action_preview) {{
@@ -3207,7 +3217,7 @@ async function previewBlockedRoute(path, targetId = 'action-preview-response') {
     + detailLine('Mutation enabled', payload.mutation_enabled)
     + detailLine('CLI equivalent', payload.cli_equivalent || '')
     + detailLine('Failure summary', payload.failure_summary || '')
-    + detailLine('Warnings', ((Array.isArray(payload.warning_details) ? payload.warning_details : []).map(item => item.message).join(' | ')) || ((payload.warning_codes || []).join(' | ')) || '')
+    + detailLine('Warnings', detailMessages(payload.warning_details, payload.warning_codes))
     + detailLine('Recovery path', (payload.failure_contract || {{}}).recovery_path || '')
     + detailLine('Rollback status', (payload.failure_contract || {{}}).rollback_status || '')
     + detailLine('Durable mutation on failure', (payload.failure_contract || {{}}).durable_mutation_reported_on_failure)
@@ -3287,7 +3297,7 @@ async function submitReviewAction(path, action, recordId, targetId = 'action-pre
     + detailLine('Decision event', payload.decision_event_id || '')
     + detailLine('CLI equivalent', payload.cli_equivalent || '')
     + detailLine('Failure summary', payload.failure_summary || '')
-    + detailLine('Warnings', ((Array.isArray(payload.warning_details) ? payload.warning_details : []).map(item => item.message).join(' | ')) || ((payload.warning_codes || []).join(' | ')) || '')
+    + detailLine('Warnings', detailMessages(payload.warning_details, payload.warning_codes))
     + detailLine('Recovery path', ((payload.success_contract || payload.failure_contract) || {{}}).recovery_path || '')
     + detailLine('Rollback status', ((payload.success_contract || payload.failure_contract) || {{}}).rollback_status || '')
     + detailLine('Transaction status', (payload.success_contract || {{}}).transaction_status || '')
