@@ -2178,6 +2178,32 @@ function packageStatusBadge(status) {{
       ? jumpBadge('Package Advisory', 'badge-warning', '/api/review-queue', 'reviewQueue', 'package:no_context_records')
       : badge(status || 'Package Unknown', 'badge-neutral');
 }}
+function renderRuntimeRecordRow(row, endpoint) {{
+  const path = detailPath(endpoint, row);
+  const button = path ? '<button data-detail="' + esc(path) + '">JSON</button>' : '';
+  const preview = row.runtime_record_preview || {{}};
+  const sourceBadges = sourceCountBadges(preview.source_counts || {{}});
+  const authBadge = row.auth_readiness_status === 'boundary_aligned'
+    ? jumpBadge('Auth aligned', 'badge-ready', '/api/review-queue', 'reviewQueue', 'boundary_aligned')
+    : row.auth_readiness_status
+      ? jumpBadge('Auth advisory', 'badge-warning', '/api/review-queue', 'reviewQueue', row.auth_readiness_status)
+      : badge('Auth n/a', 'badge-neutral');
+  const kindBadge = jumpBadge(
+    row.runtime_record_kind || 'unknown',
+    'badge-neutral',
+    '/api/runtime-records',
+    'runtimeRecords',
+    row.runtime_record_kind || 'unknown',
+  );
+  return '<tr>'
+    + '<td>' + button + '</td>'
+    + '<td><span class="id">' + esc(row.event_id || '') + '</span></td>'
+    + '<td>' + kindBadge + '</td>'
+    + '<td>' + authBadge + '</td>'
+    + '<td><strong>' + esc(preview.title || '') + '</strong><br>' + esc(preview.preview_text || '') + '</td>'
+    + '<td>' + sourceBadges + (sourceBadges ? '<br>' : '') + esc(JSON.stringify(preview.source_counts || {{}})) + '</td>'
+    + '</tr>';
+}}
 function renderReviewQueueRow(row, endpoint) {{
   const path = detailPath(endpoint, row);
   const button = path ? '<button data-detail="' + esc(path) + '">JSON</button>' : '';
@@ -2253,6 +2279,135 @@ function renderSummaryJobRow(row, endpoint) {{
     + '<td>' + esc(row.runtime_provider_kind || '') + '</td>'
     + '<td>' + esc(row.summary_source_count ?? 0) + '</td>'
     + '</tr>';
+}}
+function renderRuntimeRecordsTable(endpoint, rows) {{
+  const query = (window.__chronicleFilters && window.__chronicleFilters.runtimeRecords || '').toLowerCase();
+  const filtered = filterRows(rows, row => {{
+    if (!query) return true;
+    const preview = row.runtime_record_preview || {{}};
+    return JSON.stringify([
+      row.event_id || '',
+      row.runtime_record_kind || '',
+      row.auth_readiness_status || '',
+      preview.title || '',
+      preview.preview_text || '',
+    ]).toLowerCase().includes(query);
+  }});
+  const sorted = sortRuntimeRows(filtered);
+  const emptyState = query && sorted.length === 0
+    ? '<p>No matching runtime records for current filter.</p>'
+    : '';
+  return activeViewSummary(endpoint, 'list')
+    + textInput('runtimeRecords', 'Filter runtime records...')
+    + sortSelect('runtimeRecords', currentSortValue('/api/runtime-records'), [
+      {{ value: 'latest', label: 'Latest first' }},
+      {{ value: 'kind', label: 'Kind' }},
+    ])
+    + runtimeRecordsFilterChips()
+    + (query ? '<p><button data-reset-filter="runtimeRecords">Reset Filter</button></p>' : '')
+    + emptyState
+    + '<table><thead><tr><th>detail</th><th>event</th><th>kind</th><th>auth</th><th>preview</th><th>source counts</th></tr></thead><tbody>'
+    + sorted.map(row => renderRuntimeRecordRow(row, endpoint)).join('') + '</tbody></table>';
+}}
+function renderReviewQueueTable(endpoint, rows) {{
+  const query = (window.__chronicleFilters && window.__chronicleFilters.reviewQueue || '').toLowerCase();
+  const filtered = filterRows(rows, row => {{
+    if (!query) return true;
+    const capability = row.review_capability || {{}};
+    const readiness = row.package_readiness_summary || {{}};
+    const parity = row.cli_parity_summary || {{}};
+    const authReadiness = row.auth_boundary_notice || {{}};
+    return JSON.stringify([
+      row.target_event_id || '',
+      row.target_summary || '',
+      row.review_kind || '',
+      capability.status || '',
+      readiness.label || '',
+      parity.status || '',
+      authReadiness.status || '',
+      (row.latest_identity_assurance && row.latest_identity_assurance.status) || '',
+      (row.latest_reviewer_identity && row.latest_reviewer_identity.kind) || '',
+      (row.latest_reviewer_identity && row.latest_reviewer_identity.label) || row.latest_reviewer || '',
+    ]).toLowerCase().includes(query);
+  }});
+  const sorted = sortReviewRows(filtered);
+  const mutationEnabled = sorted.some(row => row.ui_mutation_enabled);
+  const emptyState = query && sorted.length === 0
+    ? '<p>No matching review rows for current filter.</p>'
+    : '';
+  return activeViewSummary(endpoint, 'list')
+    + textInput('reviewQueue', 'Filter review queue...')
+    + sortSelect('reviewQueue', currentSortValue('/api/review-queue'), [
+      {{ value: 'attention', label: 'Needs attention first' }},
+      {{ value: 'parity', label: 'CLI drift first' }},
+      {{ value: 'latest', label: 'Latest first' }},
+      {{ value: 'reviewer', label: 'Reviewer' }},
+    ])
+    + reviewQueueFilterChips()
+    + (query ? '<p><button data-reset-filter="reviewQueue">Reset Filter</button></p>' : '')
+    + emptyState
+    + (
+      mutationEnabled
+        ? renderReviewMutationForm('Local Review Mutation', 'review-queue')
+        : ''
+    )
+    + '<div id="review-queue-action-preview-response"><p>'
+    + (
+      mutationEnabled
+        ? 'Local mutation is enabled for this list view. Each action still requires explicit reviewer context and writes audit-backed review history.'
+        : 'Review queue blocked-route preview stays read-only and returns the CLI fallback contract.'
+    )
+    + '</p></div>'
+    + '<table><thead><tr><th>detail</th><th>target</th><th>status</th><th>auth</th><th>preview</th><th>warnings</th><th>latest reviewer</th></tr></thead><tbody>'
+    + sorted.map(row => renderReviewQueueRow(row, endpoint)).join('') + '</tbody></table>';
+}}
+function renderSummaryJobsTable(endpoint, rows) {{
+  const query = (window.__chronicleFilters && window.__chronicleFilters.summaryJobs || '').toLowerCase();
+  const filtered = filterRows(rows, row => {{
+    if (!query) return true;
+    return JSON.stringify([
+      row.summary_job_id || '',
+      row.title || '',
+      row.status || '',
+      row.review_capability_status || '',
+      row.auth_readiness_status || '',
+      row.package_readiness_status || '',
+      row.identity_assurance_status || '',
+      (row.latest_reviewer_identity && row.latest_reviewer_identity.kind) || '',
+      (row.latest_reviewer_identity && row.latest_reviewer_identity.label) || '',
+      row.cli_parity_status || '',
+      row.runtime_provider_kind || '',
+    ]).toLowerCase().includes(query);
+  }});
+  const sorted = sortSummaryJobRows(filtered);
+  const mutationEnabled = sorted.some(row => row.ui_mutation_enabled);
+  const emptyState = query && sorted.length === 0
+    ? '<p>No matching summary jobs for current filter.</p>'
+    : '';
+  return activeViewSummary(endpoint, 'list')
+    + textInput('summaryJobs', 'Filter summary jobs...')
+    + sortSelect('summaryJobs', currentSortValue('/api/summary-jobs'), [
+      {{ value: 'latest', label: 'Latest first' }},
+      {{ value: 'review', label: 'Needs attention first' }},
+      {{ value: 'title', label: 'Title' }},
+    ])
+    + summaryJobsFilterChips()
+    + (query ? '<p><button data-reset-filter="summaryJobs">Reset Filter</button></p>' : '')
+    + emptyState
+    + (
+      mutationEnabled
+        ? renderReviewMutationForm('Summary Review Mutation', 'summary-jobs')
+        : ''
+    )
+    + '<div id="summary-jobs-action-preview-response"><p>'
+    + (
+      mutationEnabled
+        ? 'Local mutation is enabled for summary-backed review targets. Actions still require explicit reviewer context and write audit-backed review history.'
+        : 'Summary jobs blocked-route preview stays read-only and returns the CLI fallback contract.'
+    )
+    + '</p></div>'
+    + '<table><thead><tr><th>detail</th><th>summary job</th><th>status</th><th>review</th><th>auth</th><th>identity</th><th>package</th><th>preview</th><th>runtime</th><th>sources</th></tr></thead><tbody>'
+    + sorted.map(row => renderSummaryJobRow(row, endpoint)).join('') + '</tbody></table>';
 }}
 function reviewerIdentityBadge(identity) {{
   if (!identity) return '';
@@ -2837,160 +2992,9 @@ function detailPath(endpoint, row) {{
 }}
 function renderTable(endpoint, rows) {{
   if (!rows || rows.length === 0) return '<p>No records.</p>';
-  if (endpoint === '/api/runtime-records') {{
-    const query = (window.__chronicleFilters && window.__chronicleFilters.runtimeRecords || '').toLowerCase();
-    const filtered = filterRows(rows, row => {{
-      if (!query) return true;
-      const preview = row.runtime_record_preview || {{}};
-      return JSON.stringify([
-        row.event_id || '',
-        row.runtime_record_kind || '',
-        row.auth_readiness_status || '',
-        preview.title || '',
-        preview.preview_text || '',
-      ]).toLowerCase().includes(query);
-    }});
-    const sorted = sortRuntimeRows(filtered);
-    const emptyState = query && sorted.length === 0
-      ? '<p>No matching runtime records for current filter.</p>'
-      : '';
-    return activeViewSummary(endpoint, 'list')
-      + textInput('runtimeRecords', 'Filter runtime records...')
-      + sortSelect('runtimeRecords', currentSortValue('/api/runtime-records'), [
-        {{ value: 'latest', label: 'Latest first' }},
-        {{ value: 'kind', label: 'Kind' }},
-      ])
-      + runtimeRecordsFilterChips()
-      + (query ? '<p><button data-reset-filter="runtimeRecords">Reset Filter</button></p>' : '')
-      + emptyState
-      + '<table><thead><tr><th>detail</th><th>event</th><th>kind</th><th>auth</th><th>preview</th><th>source counts</th></tr></thead><tbody>'
-      + sorted.map(row => {{
-        const path = detailPath(endpoint, row);
-        const button = path ? '<button data-detail="' + esc(path) + '">JSON</button>' : '';
-        const preview = row.runtime_record_preview || {{}};
-        const sourceBadges = sourceCountBadges(preview.source_counts || {{}});
-        const authBadge = row.auth_readiness_status === 'boundary_aligned'
-          ? jumpBadge('Auth aligned', 'badge-ready', '/api/review-queue', 'reviewQueue', 'boundary_aligned')
-          : row.auth_readiness_status
-            ? jumpBadge('Auth advisory', 'badge-warning', '/api/review-queue', 'reviewQueue', row.auth_readiness_status)
-            : badge('Auth n/a', 'badge-neutral');
-        const kindBadge = jumpBadge(
-          row.runtime_record_kind || 'unknown',
-          'badge-neutral',
-          '/api/runtime-records',
-          'runtimeRecords',
-          row.runtime_record_kind || 'unknown',
-        );
-        return '<tr>'
-          + '<td>' + button + '</td>'
-          + '<td><span class="id">' + esc(row.event_id || '') + '</span></td>'
-          + '<td>' + kindBadge + '</td>'
-          + '<td>' + authBadge + '</td>'
-          + '<td><strong>' + esc(preview.title || '') + '</strong><br>' + esc(preview.preview_text || '') + '</td>'
-          + '<td>' + sourceBadges + (sourceBadges ? '<br>' : '') + esc(JSON.stringify(preview.source_counts || {{}})) + '</td>'
-          + '</tr>';
-      }}).join('') + '</tbody></table>';
-  }}
-  if (endpoint === '/api/review-queue') {{
-      const query = (window.__chronicleFilters && window.__chronicleFilters.reviewQueue || '').toLowerCase();
-      const filtered = filterRows(rows, row => {{
-        if (!query) return true;
-        const capability = row.review_capability || {{}};
-        const readiness = row.package_readiness_summary || {{}};
-        const parity = row.cli_parity_summary || {{}};
-        const authReadiness = row.auth_boundary_notice || {{}};
-        return JSON.stringify([
-          row.target_event_id || '',
-          row.target_summary || '',
-          row.review_kind || '',
-          capability.status || '',
-          readiness.label || '',
-          parity.status || '',
-          authReadiness.status || '',
-          (row.latest_identity_assurance && row.latest_identity_assurance.status) || '',
-          (row.latest_reviewer_identity && row.latest_reviewer_identity.kind) || '',
-          (row.latest_reviewer_identity && row.latest_reviewer_identity.label) || row.latest_reviewer || '',
-        ]).toLowerCase().includes(query);
-      }});
-    const sorted = sortReviewRows(filtered);
-    const mutationEnabled = sorted.some(row => row.ui_mutation_enabled);
-    const emptyState = query && sorted.length === 0
-      ? '<p>No matching review rows for current filter.</p>'
-      : '';
-      return activeViewSummary(endpoint, 'list')
-      + textInput('reviewQueue', 'Filter review queue...')
-      + sortSelect('reviewQueue', currentSortValue('/api/review-queue'), [
-        {{ value: 'attention', label: 'Needs attention first' }},
-        {{ value: 'parity', label: 'CLI drift first' }},
-        {{ value: 'latest', label: 'Latest first' }},
-        {{ value: 'reviewer', label: 'Reviewer' }},
-      ])
-      + reviewQueueFilterChips()
-      + (query ? '<p><button data-reset-filter="reviewQueue">Reset Filter</button></p>' : '')
-      + emptyState
-      + (
-        mutationEnabled
-          ? renderReviewMutationForm('Local Review Mutation', 'review-queue')
-          : ''
-      )
-      + '<div id="review-queue-action-preview-response"><p>'
-      + (
-        mutationEnabled
-          ? 'Local mutation is enabled for this list view. Each action still requires explicit reviewer context and writes audit-backed review history.'
-          : 'Review queue blocked-route preview stays read-only and returns the CLI fallback contract.'
-      )
-      + '</p></div>'
-      + '<table><thead><tr><th>detail</th><th>target</th><th>status</th><th>auth</th><th>preview</th><th>warnings</th><th>latest reviewer</th></tr></thead><tbody>'
-      + sorted.map(row => renderReviewQueueRow(row, endpoint)).join('') + '</tbody></table>';
-  }}
-  if (endpoint === '/api/summary-jobs') {{
-    const query = (window.__chronicleFilters && window.__chronicleFilters.summaryJobs || '').toLowerCase();
-    const filtered = filterRows(rows, row => {{
-      if (!query) return true;
-      return JSON.stringify([
-        row.summary_job_id || '',
-        row.title || '',
-        row.status || '',
-        row.review_capability_status || '',
-        row.auth_readiness_status || '',
-        row.package_readiness_status || '',
-        row.identity_assurance_status || '',
-        (row.latest_reviewer_identity && row.latest_reviewer_identity.kind) || '',
-        (row.latest_reviewer_identity && row.latest_reviewer_identity.label) || '',
-        row.cli_parity_status || '',
-        row.runtime_provider_kind || '',
-      ]).toLowerCase().includes(query);
-    }});
-    const sorted = sortSummaryJobRows(filtered);
-    const mutationEnabled = sorted.some(row => row.ui_mutation_enabled);
-    const emptyState = query && sorted.length === 0
-      ? '<p>No matching summary jobs for current filter.</p>'
-      : '';
-    return activeViewSummary(endpoint, 'list')
-      + textInput('summaryJobs', 'Filter summary jobs...')
-      + sortSelect('summaryJobs', currentSortValue('/api/summary-jobs'), [
-        {{ value: 'latest', label: 'Latest first' }},
-        {{ value: 'review', label: 'Needs attention first' }},
-        {{ value: 'title', label: 'Title' }},
-      ])
-      + summaryJobsFilterChips()
-      + (query ? '<p><button data-reset-filter="summaryJobs">Reset Filter</button></p>' : '')
-      + emptyState
-      + (
-        mutationEnabled
-          ? renderReviewMutationForm('Summary Review Mutation', 'summary-jobs')
-          : ''
-      )
-      + '<div id="summary-jobs-action-preview-response"><p>'
-      + (
-        mutationEnabled
-          ? 'Local mutation is enabled for summary-backed review targets. Actions still require explicit reviewer context and write audit-backed review history.'
-          : 'Summary jobs blocked-route preview stays read-only and returns the CLI fallback contract.'
-      )
-      + '</p></div>'
-      + '<table><thead><tr><th>detail</th><th>summary job</th><th>status</th><th>review</th><th>auth</th><th>identity</th><th>package</th><th>preview</th><th>runtime</th><th>sources</th></tr></thead><tbody>'
-      + sorted.map(row => renderSummaryJobRow(row, endpoint)).join('') + '</tbody></table>';
-  }}
+  if (endpoint === '/api/runtime-records') return renderRuntimeRecordsTable(endpoint, rows);
+  if (endpoint === '/api/review-queue') return renderReviewQueueTable(endpoint, rows);
+  if (endpoint === '/api/summary-jobs') return renderSummaryJobsTable(endpoint, rows);
   const keys = Object.keys(rows[0]).slice(0, 8);
   return '<table><thead><tr><th>detail</th>' + keys.map(k => '<th>' + esc(k) + '</th>').join('') + '</tr></thead><tbody>' +
     rows.map(row => {{
