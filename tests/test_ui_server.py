@@ -701,6 +701,8 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "function detailNoticeBody(endpoint, record)" in html
     assert "function detailBody(endpoint, payload)" in html
     assert "function previewButtonsConfig(row, config)" in html
+    assert "function detailJsonButton(endpoint, row)" in html
+    assert "function stackedCell(parts, separator = '<br>')" in html
     assert "function previewCell(preview, previewActions, options)" in html
     assert "function reviewerCell(identity, fallbackLabel = '')" in html
     assert "function summaryIdentityCell(identityBadge, reviewerIdentity)" in html

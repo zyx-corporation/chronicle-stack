@@ -2187,6 +2187,13 @@ function previewButtonsConfig(row, config) {{
     previewTarget: config.previewTarget || 'action-preview-response',
   }};
 }}
+function detailJsonButton(endpoint, row) {{
+  const path = detailPath(endpoint, row);
+  return path ? '<button data-detail="' + esc(path) + '">JSON</button>' : '';
+}}
+function stackedCell(parts, separator = '<br>') {{
+  return parts.filter(part => part).join(separator);
+}}
 function previewCell(preview, previewActions, options) {{
   const previewSummary = renderPreviewSummary(preview || {{}});
   const previewButtons = renderPreviewButtons(previewActions, options);
@@ -2220,8 +2227,7 @@ function tableHtml(headers, body) {{
     + '</tr></thead><tbody>' + body + '</tbody></table>';
 }}
 function renderRuntimeRecordRow(row, endpoint) {{
-  const path = detailPath(endpoint, row);
-  const button = path ? '<button data-detail="' + esc(path) + '">JSON</button>' : '';
+  const button = detailJsonButton(endpoint, row);
   const preview = row.runtime_record_preview || {{}};
   const sourceBadges = sourceCountBadges(preview.source_counts || {{}});
   const authBadge = row.auth_readiness_status === 'boundary_aligned'
@@ -2241,13 +2247,12 @@ function renderRuntimeRecordRow(row, endpoint) {{
     + '<td><span class="id">' + esc(row.event_id || '') + '</span></td>'
     + '<td>' + kindBadge + '</td>'
     + '<td>' + authBadge + '</td>'
-    + '<td><strong>' + esc(preview.title || '') + '</strong><br>' + esc(preview.preview_text || '') + '</td>'
-    + '<td>' + sourceBadges + (sourceBadges ? '<br>' : '') + esc(JSON.stringify(preview.source_counts || {{}})) + '</td>'
+    + '<td>' + stackedCell(['<strong>' + esc(preview.title || '') + '</strong>', esc(preview.preview_text || '')]) + '</td>'
+    + '<td>' + stackedCell([sourceBadges, esc(JSON.stringify(preview.source_counts || {{}}))]) + '</td>'
     + '</tr>';
 }}
 function renderReviewQueueRow(row, endpoint) {{
-  const path = detailPath(endpoint, row);
-  const button = path ? '<button data-detail="' + esc(path) + '">JSON</button>' : '';
+  const button = detailJsonButton(endpoint, row);
   const capability = row.review_capability || {{}};
   const readiness = row.package_readiness_summary || {{}};
   const parity = row.cli_parity_summary || {{}};
@@ -2266,8 +2271,8 @@ function renderReviewQueueRow(row, endpoint) {{
   const authBadge = authReadinessBadge(authReadiness.status || '');
   return '<tr>'
     + '<td>' + button + '</td>'
-    + '<td><span class="id">' + esc(row.target_event_id || '') + '</span><br>' + reviewKindBadge + (reviewKindBadge ? '<br>' : '') + esc(row.target_summary || '') + '</td>'
-    + '<td>' + statusBadge + '<br>' + readinessBadge + '<br>' + parityBadge + '</td>'
+    + '<td>' + stackedCell(['<span class="id">' + esc(row.target_event_id || '') + '</span>', reviewKindBadge, esc(row.target_summary || '')]) + '</td>'
+    + '<td>' + stackedCell([statusBadge, readinessBadge, parityBadge]) + '</td>'
     + '<td>' + authBadge + '</td>'
     + '<td>' + previewCell(preview, previewActions, previewButtonsConfig(row, {{
       recordId: row.target_event_id || '',
@@ -2275,13 +2280,12 @@ function renderReviewQueueRow(row, endpoint) {{
       successDetail: '/api/review-queue/' + esc(row.target_event_id || ''),
       previewTarget: 'review-queue-action-preview-response',
     }})) + '</td>'
-    + '<td>' + (warnBadges ? warnBadges + '<br>' : '') + esc(warnDetails.map(item => item.message).join(' | ') || warnList.join(', ') || '(none)') + '</td>'
+    + '<td>' + stackedCell([warnBadges, esc(warnDetails.map(item => item.message).join(' | ') || warnList.join(', ') || '(none)')]) + '</td>'
     + '<td>' + reviewerCell(row.latest_reviewer_identity, row.latest_reviewer || '') + '</td>'
     + '</tr>';
 }}
 function renderSummaryJobRow(row, endpoint) {{
-  const path = detailPath(endpoint, row);
-  const button = path ? '<button data-detail="' + esc(path) + '">JSON</button>' : '';
+  const button = detailJsonButton(endpoint, row);
   const reviewStatus = row.review_capability_status || '';
   const authReadinessStatus = row.auth_readiness_status || '';
   const packageStatus = row.package_readiness_status || '';
@@ -2297,7 +2301,7 @@ function renderSummaryJobRow(row, endpoint) {{
     : '';
   return '<tr>'
     + '<td>' + button + '</td>'
-    + '<td><span class="id">' + esc(row.summary_job_id || '') + '</span><br>' + esc(row.title || '') + (targetButton ? '<br>' + targetButton : '') + '</td>'
+    + '<td>' + stackedCell(['<span class="id">' + esc(row.summary_job_id || '') + '</span>', esc(row.title || ''), targetButton]) + '</td>'
     + '<td>' + esc(row.status || '') + '</td>'
     + '<td>' + reviewBadge + '</td>'
     + '<td>' + authBadge + '</td>'
