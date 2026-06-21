@@ -611,6 +611,9 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "function renderReviewMutationForm(title, prefix)" in html
     assert "function renderPreviewSummary(preview)" in html
     assert "function renderPreviewButtons(previewActions, options = {})" in html
+    assert "function authReadinessBadge(status)" in html
+    assert "function identityAssuranceBadge(status)" in html
+    assert "function summaryReviewStatusBadge(status)" in html
     assert "reviewerIdentityBadge" in html
     assert "sortSelect" in html
     assert "sortRuntimeRows" in html

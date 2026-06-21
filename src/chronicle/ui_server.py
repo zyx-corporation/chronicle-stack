@@ -2152,6 +2152,25 @@ function renderPreviewButtons(previewActions, options = {{}}) {{
       : '<button data-preview-post="' + esc(item.post_path || '') + '" data-preview-target="' + esc(previewTarget) + '">Preview blocked route</button>'
   ).join(' ');
 }}
+function authReadinessBadge(status) {{
+  return status === 'boundary_aligned'
+    ? jumpBadge('Auth aligned', 'badge-ready', '/api/review-queue', 'reviewQueue', 'boundary_aligned')
+    : jumpBadge('Auth advisory', 'badge-warning', '/api/review-queue', 'reviewQueue', status || 'advisory_only');
+}}
+function identityAssuranceBadge(status) {{
+  return status === 'boundary_aligned'
+    ? jumpBadge('Identity aligned', 'badge-ready', '/api/review-queue', 'reviewQueue', 'boundary_aligned')
+    : status
+      ? jumpBadge('Identity advisory', 'badge-warning', '/api/review-queue', 'reviewQueue', status)
+      : badge('Identity n/a', 'badge-neutral');
+}}
+function summaryReviewStatusBadge(status) {{
+  return status === 'ready'
+    ? jumpBadge('Ready', 'badge-ready', '/api/review-queue', 'reviewQueue', 'ready')
+    : status === 'resolved'
+      ? jumpBadge('Resolved', 'badge-neutral', '/api/review-queue', 'reviewQueue', 'resolved')
+      : jumpBadge('Advisory', 'badge-warning', '/api/review-queue', 'reviewQueue', 'advisory');
+}}
 function reviewerIdentityBadge(identity) {{
   if (!identity) return '';
   const kind = identity.kind || 'reviewer';
@@ -2859,9 +2878,7 @@ function renderTable(endpoint, rows) {{
         const statusBadge = reviewCapabilityBadge(capability);
         const readinessBadge = packageReadinessBadge(readiness);
         const parityBadge = reviewParityBadge(parity);
-        const authBadge = authReadiness.status === 'boundary_aligned'
-          ? jumpBadge('Auth aligned', 'badge-ready', '/api/review-queue', 'reviewQueue', 'boundary_aligned')
-          : jumpBadge('Auth advisory', 'badge-warning', '/api/review-queue', 'reviewQueue', authReadiness.status || 'advisory_only');
+        const authBadge = authReadinessBadge(authReadiness.status || '');
         const previewSummary = renderPreviewSummary(preview);
         const previewButtons = renderPreviewButtons(previewActions, {{
           mutationEnabled: row.ui_mutation_enabled,
@@ -2938,19 +2955,9 @@ function renderTable(endpoint, rows) {{
         const preview = row.action_preview_summary || {{}};
         const previewActions = Array.isArray(preview.actions) ? preview.actions : [];
         const previewAction = previewActions[0] || {{}};
-        const reviewBadge = reviewStatus === 'ready'
-          ? jumpBadge('Ready', 'badge-ready', '/api/review-queue', 'reviewQueue', 'ready')
-          : reviewStatus === 'resolved'
-            ? jumpBadge('Resolved', 'badge-neutral', '/api/review-queue', 'reviewQueue', 'resolved')
-            : jumpBadge('Advisory', 'badge-warning', '/api/review-queue', 'reviewQueue', 'advisory');
-        const authBadge = authReadinessStatus === 'boundary_aligned'
-          ? jumpBadge('Auth aligned', 'badge-ready', '/api/review-queue', 'reviewQueue', 'boundary_aligned')
-          : jumpBadge('Auth advisory', 'badge-warning', '/api/review-queue', 'reviewQueue', authReadinessStatus || 'advisory_only');
-        const identityBadge = identityAssuranceStatus === 'boundary_aligned'
-          ? jumpBadge('Identity aligned', 'badge-ready', '/api/review-queue', 'reviewQueue', 'boundary_aligned')
-          : identityAssuranceStatus
-            ? jumpBadge('Identity advisory', 'badge-warning', '/api/review-queue', 'reviewQueue', identityAssuranceStatus)
-            : badge('Identity n/a', 'badge-neutral');
+        const reviewBadge = summaryReviewStatusBadge(reviewStatus);
+        const authBadge = authReadinessBadge(authReadinessStatus);
+        const identityBadge = identityAssuranceBadge(identityAssuranceStatus);
         const packageBadge = packageStatus === 'package_context_available'
           ? jumpBadge('Package Ready', 'badge-ready', '/api/review-queue', 'reviewQueue', 'package:package_context_available')
           : packageStatus === 'no_context_records'
