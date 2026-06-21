@@ -2748,6 +2748,9 @@ function detailListLine(label, values, separator) {{
 function summaryJsonLine(label, value) {{
   return '<p>' + esc(label) + ': ' + esc(JSON.stringify(value || {{}})) + '</p>';
 }}
+function renderNotice(title, body) {{
+  return '<div class="notice">' + noticeTitle(title) + body + '</div>';
+}}
 function relatedListButtons(detailEndpoint, record) {{
   const buttons = [];
   if (detailEndpoint.startsWith('/api/runtime-records/')) {{
@@ -2797,6 +2800,207 @@ function relatedListButtons(detailEndpoint, record) {{
     buttons.push(openListButton('Open Package Review', '/api/package-review'));
   }}
   return buttons.join('');
+}}
+function renderNavigationNotice(endpoint, record, options = {{}}) {{
+  const filterLabel = options.filterLabel || '';
+  const previousDetail = options.previousDetail || '';
+  const trailLabel = options.trailLabel || '';
+  const trailButtons = options.trailButtons || '';
+  const listButtons = options.listButtons || relatedListButtons(endpoint, record);
+  return renderNotice(
+    'Navigation',
+    activeViewSummary(endpoint, 'detail')
+      + '<p><button data-back-view="true">Back to current list</button> '
+      + (previousDetail ? '<button data-back-detail="true">Back to previous detail</button> ' : '')
+      + (hasActiveFilters() ? '<button data-reset-filters="all">Reset Filters</button> ' : '')
+      + '<span class="id">' + esc(window.__chronicleCurrentEndpoint || '/api/overview') + '</span> → '
+      + '<span class="id">' + esc(endpoint) + '</span>'
+      + (filterLabel ? ' <span class="id">(' + esc(filterLabel) + ')</span>' : '')
+      + (previousDetail ? ' <span class="id">prev=' + esc(previousDetail) + '</span>' : '')
+      + '</p>'
+      + (trailLabel ? '<p><span class="id">trail=' + esc(trailLabel) + '</span></p>' : '')
+      + (trailButtons ? '<p>' + trailButtons + '</p>' : '')
+      + (listButtons ? '<p>' + listButtons + '</p>' : '')
+  );
+}}
+function renderRuntimePreviewNotice(record) {{
+  if (!record.runtime_record_preview) return '';
+  const preview = record.runtime_record_preview;
+  return renderNotice(
+    'Runtime Preview',
+    '<p><strong>' + esc(preview.title || '') + '</strong></p>'
+      + '<p>' + esc(preview.preview_text || '') + '</p>'
+      + detailLine('Kind', preview.record_kind || record.runtime_record_kind || '')
+      + summaryJsonLine('Source counts', preview.source_counts)
+      + detailListLine('Referenced IDs', preview.referenced_record_ids)
+      + detailLine('CLI', preview.suggested_cli_family || '')
+  );
+}}
+function renderRetrievalHandoffNotice(record) {{
+  if (!record.retrieval_handoff) return '';
+  const handoff = record.retrieval_handoff;
+  return renderNotice(
+    'Retrieval Handoff',
+    detailLine('Query', handoff.query || '')
+      + '<p>Hit counts: vector=' + esc(handoff.vector_hit_count || 0)
+      + ', graph=' + esc(handoff.graph_hit_count || 0)
+      + ', chronicle=' + esc(handoff.chronicle_hit_count || 0) + '</p>'
+      + detailListLine('Referenced IDs', handoff.referenced_record_ids)
+      + detailListLine('Downstream commands', handoff.downstream_commands, ' | ')
+      + detailListLine('Notes', handoff.notes, ' | ')
+  );
+}}
+function renderPackageHandoffPreviewNotice(record) {{
+  if (!record.package_handoff_preview) return '';
+  const preview = record.package_handoff_preview;
+  const packageReview = preview.package_review || {{}};
+  const manifest = preview.package_manifest_preview || {{}};
+  return renderNotice(
+    'Package Handoff Preview',
+    detailLine('Status', preview.status || '')
+      + '<p>' + esc(preview.message || '') + '</p>'
+      + detailListLine('Eligible contexts', preview.eligible_context_ids)
+      + detailListLine('Skipped records', preview.skipped_record_ids)
+      + detailLine('Package review status', packageReview.status || '(not available)')
+      + detailListLine('Package warnings', packageReview.package_warnings)
+      + detailListLine('Manifest refs', manifest.referenced_records)
+  );
+}}
+function renderInvocationPlanNotice(record) {{
+  if (!record.invocation_plan) return '';
+  const plan = record.invocation_plan;
+  const requestPreview = plan.request_preview || {{}};
+  return renderNotice(
+    'Invocation Plan',
+    detailLine('Provider', (plan.provider_kind || '') + ' / ' + (plan.provider_name || ''))
+      + detailLine('Model', plan.model_name || '')
+      + detailLine('Operation', plan.operation || '')
+      + detailLine('Invocation ready', plan.invocation_ready)
+      + detailLine('Would use network', plan.would_use_network)
+      + detailLine('Network allowed by contract', plan.network_allowed_by_contract)
+      + detailListLine('Blocking reasons', plan.blocking_reasons, ' | ')
+      + summaryJsonLine('Request preview', requestPreview)
+      + detailListLine('Downstream commands', plan.downstream_commands, ' | ')
+      + detailListLine('Notes', plan.notes, ' | ')
+  );
+}}
+function renderPackageReadinessNotice(record) {{
+  if (!record.package_readiness) return '';
+  const readiness = record.package_readiness;
+  const packageReview = readiness.package_review || {{}};
+  const manifest = readiness.package_manifest_preview || {{}};
+  const readinessButtons = [];
+  if (readiness.status) {{
+    readinessButtons.push(sliceActionButton('More ' + readiness.status, '/api/review-queue', 'reviewQueue', 'package:' + readiness.status));
+  }}
+  return renderNotice(
+    'Review Package Readiness',
+    detailLine('Status', readiness.status || '')
+      + '<p>' + esc(readiness.message || '') + '</p>'
+      + (readinessButtons.length > 0 ? '<p>' + readinessButtons.join('') + '</p>' : '')
+      + detailListLine('Eligible contexts', readiness.eligible_context_ids)
+      + detailListLine('Suggested commands', readiness.suggested_commands, ' | ')
+      + detailLine('Package review status', packageReview.status || '(not available)')
+      + detailListLine('Package warnings', packageReview.package_warnings)
+      + detailListLine('Manifest refs', manifest.referenced_records)
+  );
+}}
+function renderRelatedLinksNotice(record) {{
+  if (!Array.isArray(record.related_links) || record.related_links.length === 0) return '';
+  return renderNotice(
+    'Related Links',
+    '<p>' + record.related_links.map(item =>
+      '<button data-detail-nav="' + esc(item.path || '') + '">'
+      + esc(item.label || humanizeDetailPath(item.path || ''))
+      + '</button>'
+    ).join('') + '</p>'
+  );
+}}
+function renderAuthReadinessNotice(record) {{
+  if (!record.auth_boundary_notice) return '';
+  const notice = record.auth_boundary_notice;
+  const noticeButtons = [];
+  const blockerDetails = Array.isArray(notice.blocker_details) ? notice.blocker_details : [];
+  if (notice.status) {{
+    noticeButtons.push(moreSliceButton(notice.status, '/api/review-queue', 'reviewQueue'));
+  }}
+  return renderNotice(
+    'Auth Readiness',
+    detailLine('Status', notice.status || '')
+      + (noticeButtons.length > 0 ? '<p>' + noticeButtons.join('') + '</p>' : '')
+      + '<p>' + esc(notice.message || '') + '</p>'
+      + detailLine('Review capability', notice.capability_status || '')
+      + detailLine('Identity assurance', notice.identity_assurance_status || '')
+      + detailLine('Blockers', detailMessages(blockerDetails, notice.blockers))
+      + detailListLine('Next steps', notice.next_steps, ' | ')
+  );
+}}
+function renderReviewCapabilityNotice(record) {{
+  if (!record.review_capability) return '';
+  const capability = record.review_capability;
+  const warnList = Array.isArray(capability.warnings) ? capability.warnings : [];
+  const warnDetails = Array.isArray(capability.warning_details) ? capability.warning_details : [];
+  const warnBadges = reviewWarningBadges(warnList);
+  return renderNotice(
+    'Review Capability',
+    '<p>' + esc(capability.message || '') + '</p>'
+      + detailLine('Status', capability.status || '')
+      + (warnBadges ? '<p>' + warnBadges + '</p>' : '')
+      + detailLine('Warnings', detailMessages(warnDetails, warnList) || '(none)')
+  );
+}}
+function renderCliParityNotice(record) {{
+  if (!record.cli_parity) return '';
+  const parity = record.cli_parity;
+  const parityButtons = [];
+  if (parity.status) {{
+    parityButtons.push(moreSliceButton(parity.status, '/api/review-queue', 'reviewQueue'));
+  }}
+  return renderNotice(
+    'CLI Parity',
+    '<p>' + esc(parity.message || '') + '</p>'
+      + detailLine('Status', parity.status || '')
+      + (parityButtons.length > 0 ? '<p>' + parityButtons.join('') + '</p>' : '')
+      + detailListLine('Expected actions', parity.expected_actions)
+      + detailListLine('Missing preview commands', parity.missing_preview_commands, ' | ')
+      + detailListLine('Missing queue commands', parity.missing_queue_commands, ' | ')
+  );
+}}
+function renderIdentityAssuranceNotice(record) {{
+  if (!record.latest_identity_assurance) return '';
+  const assurance = record.latest_identity_assurance;
+  const assuranceButtons = [];
+  if (assurance.status) {{
+    assuranceButtons.push(moreSliceButton(assurance.status, '/api/review-queue', 'reviewQueue'));
+  }}
+  return renderNotice(
+    'Identity Assurance',
+    detailLine('Status', assurance.status || '')
+      + (assuranceButtons.length > 0 ? '<p>' + assuranceButtons.join('') + '</p>' : '')
+      + '<p>' + esc(assurance.message || '') + '</p>'
+  );
+}}
+function renderReviewTimelineNotice(record) {{
+  if (!Array.isArray(record.history) || record.history.length === 0) return '';
+  return renderNotice(
+    'Review Timeline',
+    '<ul>' + record.history.map(item => {{
+      const timelineButtons = [];
+      if (item.disposition) {{
+        timelineButtons.push(moreSliceButton(item.disposition, '/api/review-queue', 'reviewQueue'));
+      }}
+      if (item.identity_assurance && item.identity_assurance.status) {{
+        timelineButtons.push(moreSliceButton(item.identity_assurance.status, '/api/review-queue', 'reviewQueue'));
+      }}
+      return '<li>'
+        + esc(item.reviewed_at || '') + ' — '
+        + esc(item.disposition || '') + ' by '
+        + esc((item.reviewer_identity && item.reviewer_identity.label) || item.reviewer || '')
+        + ' (' + esc((item.identity_assurance && item.identity_assurance.status) || '') + ')'
+        + (timelineButtons.length > 0 ? '<br>' + timelineButtons.join('') : '')
+        + '</li>';
+    }}).join('') + '</ul>'
+  );
 }}
 function renderOverview(payload) {{
   const chronicle = payload.chronicle || {{}};
@@ -3042,130 +3246,21 @@ async function loadDetail(endpoint) {{
     : '';
   const trailLabel = currentTrailLabel();
   const trailButtons = currentTrailButtons();
-  let extra = '<div class="notice">' + noticeTitle('Navigation')
-    + activeViewSummary(endpoint, 'detail')
-    + '<p><button data-back-view="true">Back to current list</button> '
-    + (previousDetail ? '<button data-back-detail="true">Back to previous detail</button> ' : '')
-    + (hasActiveFilters() ? '<button data-reset-filters="all">Reset Filters</button> ' : '')
-    + '<span class="id">' + esc(window.__chronicleCurrentEndpoint || '/api/overview') + '</span> → '
-    + '<span class="id">' + esc(endpoint) + '</span>'
-    + (filterLabel ? ' <span class="id">(' + esc(filterLabel) + ')</span>' : '')
-    + (previousDetail ? ' <span class="id">prev=' + esc(previousDetail) + '</span>' : '')
-    + '</p>'
-    + (trailLabel ? '<p><span class="id">trail=' + esc(trailLabel) + '</span></p>' : '')
-    + (trailButtons ? '<p>' + trailButtons + '</p>' : '')
-    + (listButtons ? '<p>' + listButtons + '</p>' : '')
-    + '</div>';
-  if (record.runtime_record_preview) {{
-    const preview = record.runtime_record_preview;
-    extra += '<div class="notice">' + noticeTitle('Runtime Preview')
-      + '<p><strong>' + esc(preview.title || '') + '</strong></p>'
-      + '<p>' + esc(preview.preview_text || '') + '</p>'
-      + detailLine('Kind', preview.record_kind || record.runtime_record_kind || '')
-      + summaryJsonLine('Source counts', preview.source_counts)
-      + detailListLine('Referenced IDs', preview.referenced_record_ids)
-      + detailLine('CLI', preview.suggested_cli_family || '')
-      + '</div>';
-  }}
-  if (record.retrieval_handoff) {{
-    const handoff = record.retrieval_handoff;
-    extra += '<div class="notice">' + noticeTitle('Retrieval Handoff')
-      + detailLine('Query', handoff.query || '')
-      + '<p>Hit counts: vector=' + esc(handoff.vector_hit_count || 0)
-      + ', graph=' + esc(handoff.graph_hit_count || 0)
-      + ', chronicle=' + esc(handoff.chronicle_hit_count || 0) + '</p>'
-      + detailListLine('Referenced IDs', handoff.referenced_record_ids)
-      + detailListLine('Downstream commands', handoff.downstream_commands, ' | ')
-      + detailListLine('Notes', handoff.notes, ' | ')
-      + '</div>';
-  }}
-  if (record.package_handoff_preview) {{
-    const preview = record.package_handoff_preview;
-    const packageReview = preview.package_review || {{}};
-    const manifest = preview.package_manifest_preview || {{}};
-    extra += '<div class="notice">' + noticeTitle('Package Handoff Preview')
-      + detailLine('Status', preview.status || '')
-      + '<p>' + esc(preview.message || '') + '</p>'
-      + detailListLine('Eligible contexts', preview.eligible_context_ids)
-      + detailListLine('Skipped records', preview.skipped_record_ids)
-      + detailLine('Package review status', packageReview.status || '(not available)')
-      + detailListLine('Package warnings', packageReview.package_warnings)
-      + detailListLine('Manifest refs', manifest.referenced_records)
-      + '</div>';
-  }}
-  if (record.invocation_plan) {{
-    const plan = record.invocation_plan;
-    const requestPreview = plan.request_preview || {{}};
-    extra += '<div class="notice">' + noticeTitle('Invocation Plan')
-      + detailLine('Provider', (plan.provider_kind || '') + ' / ' + (plan.provider_name || ''))
-      + detailLine('Model', plan.model_name || '')
-      + detailLine('Operation', plan.operation || '')
-      + detailLine('Invocation ready', plan.invocation_ready)
-      + detailLine('Would use network', plan.would_use_network)
-      + detailLine('Network allowed by contract', plan.network_allowed_by_contract)
-      + detailListLine('Blocking reasons', plan.blocking_reasons, ' | ')
-      + summaryJsonLine('Request preview', requestPreview)
-      + detailListLine('Downstream commands', plan.downstream_commands, ' | ')
-      + detailListLine('Notes', plan.notes, ' | ')
-      + '</div>';
-  }}
-  if (record.package_readiness) {{
-    const readiness = record.package_readiness;
-    const packageReview = readiness.package_review || {{}};
-    const manifest = readiness.package_manifest_preview || {{}};
-    const readinessButtons = [];
-    if (readiness.status) {{
-      readinessButtons.push(sliceActionButton('More ' + readiness.status, '/api/review-queue', 'reviewQueue', 'package:' + readiness.status));
-    }}
-    extra += '<div class="notice">' + noticeTitle('Review Package Readiness')
-      + detailLine('Status', readiness.status || '')
-      + '<p>' + esc(readiness.message || '') + '</p>'
-      + (readinessButtons.length > 0 ? '<p>' + readinessButtons.join('') + '</p>' : '')
-      + detailListLine('Eligible contexts', readiness.eligible_context_ids)
-      + detailListLine('Suggested commands', readiness.suggested_commands, ' | ')
-      + detailLine('Package review status', packageReview.status || '(not available)')
-      + detailListLine('Package warnings', packageReview.package_warnings)
-      + detailListLine('Manifest refs', manifest.referenced_records)
-      + '</div>';
-  }}
-  if (Array.isArray(record.related_links) && record.related_links.length > 0) {{
-    extra += '<div class="notice">' + noticeTitle('Related Links') + '<p>'
-      + record.related_links.map(item =>
-        '<button data-detail-nav="' + esc(item.path || '') + '">'
-        + esc(item.label || humanizeDetailPath(item.path || ''))
-        + '</button>'
-      ).join('')
-      + '</p></div>';
-  }}
-  if (record.auth_boundary_notice) {{
-    const notice = record.auth_boundary_notice;
-    const noticeButtons = [];
-    const blockerDetails = Array.isArray(notice.blocker_details) ? notice.blocker_details : [];
-    if (notice.status) {{
-      noticeButtons.push(moreSliceButton(notice.status, '/api/review-queue', 'reviewQueue'));
-    }}
-    extra += '<div class="notice">' + noticeTitle('Auth Readiness')
-      + detailLine('Status', notice.status || '')
-      + (noticeButtons.length > 0 ? '<p>' + noticeButtons.join('') + '</p>' : '')
-      + '<p>' + esc(notice.message || '') + '</p>'
-      + detailLine('Review capability', notice.capability_status || '')
-      + detailLine('Identity assurance', notice.identity_assurance_status || '')
-      + detailLine('Blockers', detailMessages(blockerDetails, notice.blockers))
-      + detailListLine('Next steps', notice.next_steps, ' | ')
-      + '</div>';
-  }}
-  if (record.review_capability) {{
-    const capability = record.review_capability;
-    const warnList = Array.isArray(capability.warnings) ? capability.warnings : [];
-    const warnDetails = Array.isArray(capability.warning_details) ? capability.warning_details : [];
-    const warnBadges = reviewWarningBadges(warnList);
-    extra += '<div class="notice">' + noticeTitle('Review Capability')
-      + '<p>' + esc(capability.message || '') + '</p>'
-      + detailLine('Status', capability.status || '')
-      + (warnBadges ? '<p>' + warnBadges + '</p>' : '')
-      + detailLine('Warnings', detailMessages(warnDetails, warnList) || '(none)')
-      + '</div>';
-  }}
+  let extra = renderNavigationNotice(endpoint, record, {{
+    filterLabel: filterLabel,
+    previousDetail: previousDetail,
+    trailLabel: trailLabel,
+    trailButtons: trailButtons,
+    listButtons: listButtons,
+  }});
+  extra += renderRuntimePreviewNotice(record);
+  extra += renderRetrievalHandoffNotice(record);
+  extra += renderPackageHandoffPreviewNotice(record);
+  extra += renderInvocationPlanNotice(record);
+  extra += renderPackageReadinessNotice(record);
+  extra += renderRelatedLinksNotice(record);
+  extra += renderAuthReadinessNotice(record);
+  extra += renderReviewCapabilityNotice(record);
   if (record.action_preview) {{
     const preview = record.action_preview;
     const actions = Array.isArray(preview.actions) ? preview.actions : [];
@@ -3226,52 +3321,9 @@ async function loadDetail(endpoint) {{
       + '</p></div>'
       + '</div>';
   }}
-  if (record.cli_parity) {{
-    const parity = record.cli_parity;
-    const parityButtons = [];
-    if (parity.status) {{
-      parityButtons.push(moreSliceButton(parity.status, '/api/review-queue', 'reviewQueue'));
-    }}
-    extra += '<div class="notice">' + noticeTitle('CLI Parity')
-      + '<p>' + esc(parity.message || '') + '</p>'
-      + detailLine('Status', parity.status || '')
-      + (parityButtons.length > 0 ? '<p>' + parityButtons.join('') + '</p>' : '')
-      + detailListLine('Expected actions', parity.expected_actions)
-      + detailListLine('Missing preview commands', parity.missing_preview_commands, ' | ')
-      + detailListLine('Missing queue commands', parity.missing_queue_commands, ' | ')
-      + '</div>';
-  }}
-  if (record.latest_identity_assurance) {{
-    const assurance = record.latest_identity_assurance;
-    const assuranceButtons = [];
-    if (assurance.status) {{
-      assuranceButtons.push(moreSliceButton(assurance.status, '/api/review-queue', 'reviewQueue'));
-    }}
-    extra += '<div class="notice">' + noticeTitle('Identity Assurance')
-      + detailLine('Status', assurance.status || '')
-      + (assuranceButtons.length > 0 ? '<p>' + assuranceButtons.join('') + '</p>' : '')
-      + '<p>' + esc(assurance.message || '') + '</p></div>';
-  }}
-  if (Array.isArray(record.history) && record.history.length > 0) {{
-    extra += '<div class="notice">' + noticeTitle('Review Timeline') + '<ul>'
-      + record.history.map(item => {{
-        const timelineButtons = [];
-        if (item.disposition) {{
-          timelineButtons.push(moreSliceButton(item.disposition, '/api/review-queue', 'reviewQueue'));
-        }}
-        if (item.identity_assurance && item.identity_assurance.status) {{
-          timelineButtons.push(moreSliceButton(item.identity_assurance.status, '/api/review-queue', 'reviewQueue'));
-        }}
-        return '<li>'
-          + esc(item.reviewed_at || '') + ' — '
-          + esc(item.disposition || '') + ' by '
-          + esc((item.reviewer_identity && item.reviewer_identity.label) || item.reviewer || '')
-          + ' (' + esc((item.identity_assurance && item.identity_assurance.status) || '') + ')'
-          + (timelineButtons.length > 0 ? '<br>' + timelineButtons.join('') : '')
-          + '</li>';
-      }}).join('')
-      + '</ul></div>';
-  }}
+  extra += renderCliParityNotice(record);
+  extra += renderIdentityAssuranceNotice(record);
+  extra += renderReviewTimelineNotice(record);
   document.getElementById('detail').innerHTML =
     '<h2>' + esc(endpoint) + '</h2>' + extra + '<pre>' + esc(JSON.stringify(payload, null, 2)) + '</pre>';
 }}

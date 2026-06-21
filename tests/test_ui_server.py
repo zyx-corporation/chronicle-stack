@@ -653,6 +653,12 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "openListButton" in html
     assert "sliceActionButton" in html
     assert "moreSliceButton" in html
+    assert "function renderNotice(title, body)" in html
+    assert "function renderNavigationNotice(endpoint, record, options = {})" in html
+    assert "function renderRuntimePreviewNotice(record)" in html
+    assert "function renderAuthReadinessNotice(record)" in html
+    assert "function renderCliParityNotice(record)" in html
+    assert "function renderReviewTimelineNotice(record)" in html
     assert "panelTitle" in html
     assert "noticeTitle" in html
     assert "detailLine" in html
