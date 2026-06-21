@@ -665,6 +665,11 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "function appendCommandFeedback(target, command, copied)" in html
     assert "async function tryCopyText(command)" in html
     assert "function reviewActionRequestBody(action, fieldPrefix = 'reviewer')" in html
+    assert "function reloadCurrentEndpoint()" in html
+    assert "function handleViewClick(event)" in html
+    assert "function handleDetailClick(event)" in html
+    assert "function handleViewInput(event)" in html
+    assert "function handleViewChange(event)" in html
     assert "function renderCliParityNotice(record)" in html
     assert "function renderReviewTimelineNotice(record)" in html
     assert "panelTitle" in html

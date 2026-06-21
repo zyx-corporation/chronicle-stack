@@ -3118,6 +3118,100 @@ function reviewActionRequestBody(action, fieldPrefix = 'reviewer') {{
     ui_intent: action || '',
   }};
 }}
+function reloadCurrentEndpoint() {{
+  if (window.__chronicleCurrentEndpoint) loadEndpoint(window.__chronicleCurrentEndpoint);
+}}
+function applyJumpFilter(filterTarget, filterValue) {{
+  if (filterTarget === 'runtimeRecords') window.__chronicleFilters.runtimeRecords = filterValue;
+  if (filterTarget === 'reviewQueue') window.__chronicleFilters.reviewQueue = filterValue;
+  if (filterTarget === 'summaryJobs') window.__chronicleFilters.summaryJobs = filterValue;
+}}
+function updateFilterState(filterId, value) {{
+  if (filterId === 'runtimeRecords') window.__chronicleFilters.runtimeRecords = value || '';
+  if (filterId === 'reviewQueue') window.__chronicleFilters.reviewQueue = value || '';
+  if (filterId === 'summaryJobs') window.__chronicleFilters.summaryJobs = value || '';
+}}
+function updateSortState(sortId, value) {{
+  if (sortId === 'runtimeRecords') window.__chronicleSorts.runtimeRecords = value || 'latest';
+  if (sortId === 'reviewQueue') window.__chronicleSorts.reviewQueue = value || 'attention';
+  if (sortId === 'summaryJobs') window.__chronicleSorts.summaryJobs = value || 'latest';
+}}
+function handleDetailTrailNavigation(target) {{
+  if (!target) return;
+  const index = window.__chronicleDetailTrail.lastIndexOf(target);
+  if (index >= 0) window.__chronicleDetailTrail = window.__chronicleDetailTrail.slice(0, index);
+  window.__chronicleLastDetail = '';
+  loadDetail(target);
+}}
+function handleBackDetail() {{
+  if (window.__chronicleDetailTrail.length <= 0) return;
+  const previousDetail = window.__chronicleDetailTrail.pop();
+  if (!previousDetail) return;
+  window.__chronicleLastDetail = '';
+  loadDetail(previousDetail);
+}}
+function handleViewClick(event) {{
+  if (event.target.dataset.copyCommand) {{
+    copyCommand(
+      event.target.dataset.copyCommand,
+      event.target.dataset.copyTarget || 'review-queue-action-preview-response',
+    );
+  }}
+  if (event.target.dataset.detail) loadDetail(event.target.dataset.detail);
+  if (event.target.dataset.jump) {{
+    applyJumpFilter(event.target.dataset.filterTarget, event.target.dataset.filterValue || '');
+    loadEndpoint(event.target.dataset.jump);
+  }}
+  if (event.target.dataset.resetFilter) {{
+    resetFilters(event.target.dataset.resetFilter);
+    reloadCurrentEndpoint();
+  }}
+  if (event.target.dataset.resetFilters) {{
+    resetFilters(event.target.dataset.resetFilters);
+    reloadCurrentEndpoint();
+  }}
+}}
+function handleDetailClick(event) {{
+  if (event.target.dataset.copyCommand) copyCommand(event.target.dataset.copyCommand, event.target.dataset.copyTarget || 'action-preview-response');
+  if (event.target.dataset.previewPost) previewBlockedRoute(event.target.dataset.previewPost);
+  if (event.target.dataset.submitReviewAction) {{
+    submitReviewAction(
+      event.target.dataset.submitReviewAction,
+      event.target.dataset.reviewAction || '',
+      event.target.dataset.reviewRecord || '',
+      event.target.dataset.previewTarget || 'action-preview-response',
+      event.target.dataset.reviewFields || 'reviewer',
+      event.target.dataset.successDetail || '',
+    );
+  }}
+  if (event.target.dataset.detailNav) loadDetail(event.target.dataset.detailNav);
+  if (event.target.dataset.detailTrail) handleDetailTrailNavigation(event.target.dataset.detailTrail);
+  if (event.target.dataset.backDetail) handleBackDetail();
+  if (event.target.dataset.resetFilters) {{
+    resetFilters(event.target.dataset.resetFilters);
+    reloadCurrentEndpoint();
+  }}
+  if (event.target.dataset.backView) reloadCurrentEndpoint();
+}}
+function handleViewPreviewPost(event) {{
+  if (!event.target.dataset.previewPost) return;
+  previewBlockedRoute(
+    event.target.dataset.previewPost,
+    event.target.dataset.previewTarget || 'review-queue-action-preview-response',
+  );
+}}
+function handleViewInput(event) {{
+  const filterId = event.target.dataset.filterInput;
+  if (!filterId) return;
+  updateFilterState(filterId, event.target.value || '');
+  reloadCurrentEndpoint();
+}}
+function handleViewChange(event) {{
+  const sortId = event.target.dataset.sortInput;
+  if (!sortId || !window.__chronicleSorts) return;
+  updateSortState(sortId, event.target.value || '');
+  reloadCurrentEndpoint();
+}}
 function renderOverview(payload) {{
   const chronicle = payload.chronicle || {{}};
   const counts = payload.counts || {{}};
@@ -3442,94 +3536,14 @@ async function submitReviewAction(path, action, recordId, targetId = 'action-pre
   }}
 }}
 document.querySelectorAll('button[data-endpoint]').forEach(button => button.addEventListener('click', () => loadEndpoint(button.dataset.endpoint)));
-document.getElementById('view').addEventListener('click', event => {{
-  if (event.target.dataset.copyCommand) {{
-    copyCommand(
-      event.target.dataset.copyCommand,
-      event.target.dataset.copyTarget || 'review-queue-action-preview-response',
-    );
-  }}
-  if (event.target.dataset.detail) loadDetail(event.target.dataset.detail);
-  if (event.target.dataset.jump) {{
-    const filterTarget = event.target.dataset.filterTarget;
-    const filterValue = event.target.dataset.filterValue || '';
-    if (filterTarget === 'runtimeRecords') window.__chronicleFilters.runtimeRecords = filterValue;
-    if (filterTarget === 'reviewQueue') window.__chronicleFilters.reviewQueue = filterValue;
-    if (filterTarget === 'summaryJobs') window.__chronicleFilters.summaryJobs = filterValue;
-    loadEndpoint(event.target.dataset.jump);
-  }}
-  if (event.target.dataset.resetFilter) {{
-    resetFilters(event.target.dataset.resetFilter);
-    if (window.__chronicleCurrentEndpoint) loadEndpoint(window.__chronicleCurrentEndpoint);
-  }}
-  if (event.target.dataset.resetFilters) {{
-    resetFilters(event.target.dataset.resetFilters);
-    if (window.__chronicleCurrentEndpoint) loadEndpoint(window.__chronicleCurrentEndpoint);
-  }}
-}});
-document.getElementById('detail').addEventListener('click', event => {{
-  if (event.target.dataset.copyCommand) copyCommand(event.target.dataset.copyCommand, event.target.dataset.copyTarget || 'action-preview-response');
-  if (event.target.dataset.previewPost) previewBlockedRoute(event.target.dataset.previewPost);
-  if (event.target.dataset.submitReviewAction) {{
-    submitReviewAction(
-      event.target.dataset.submitReviewAction,
-      event.target.dataset.reviewAction || '',
-      event.target.dataset.reviewRecord || '',
-      event.target.dataset.previewTarget || 'action-preview-response',
-      event.target.dataset.reviewFields || 'reviewer',
-      event.target.dataset.successDetail || '',
-    );
-  }}
-  if (event.target.dataset.detailNav) loadDetail(event.target.dataset.detailNav);
-  if (event.target.dataset.detailTrail) {{
-    const target = event.target.dataset.detailTrail;
-    if (target) {{
-      const index = window.__chronicleDetailTrail.lastIndexOf(target);
-      if (index >= 0) window.__chronicleDetailTrail = window.__chronicleDetailTrail.slice(0, index);
-      window.__chronicleLastDetail = '';
-      loadDetail(target);
-    }}
-  }}
-  if (event.target.dataset.backDetail && window.__chronicleDetailTrail.length > 0) {{
-    const previousDetail = window.__chronicleDetailTrail.pop();
-    if (previousDetail) {{
-      window.__chronicleLastDetail = '';
-      loadDetail(previousDetail);
-    }}
-  }}
-  if (event.target.dataset.resetFilters) {{
-    resetFilters(event.target.dataset.resetFilters);
-    if (window.__chronicleCurrentEndpoint) loadEndpoint(window.__chronicleCurrentEndpoint);
-  }}
-  if (event.target.dataset.backView && window.__chronicleCurrentEndpoint) loadEndpoint(window.__chronicleCurrentEndpoint);
-}});
-document.getElementById('view').addEventListener('click', event => {{
-  if (event.target.dataset.previewPost) {{
-    previewBlockedRoute(
-      event.target.dataset.previewPost,
-      event.target.dataset.previewTarget || 'review-queue-action-preview-response',
-    );
-  }}
-}});
+document.getElementById('view').addEventListener('click', handleViewClick);
+document.getElementById('detail').addEventListener('click', handleDetailClick);
+document.getElementById('view').addEventListener('click', handleViewPreviewPost);
 window.__chronicleFilters = {{ runtimeRecords: '', reviewQueue: '', summaryJobs: '' }};
 window.__chronicleSorts = {{ runtimeRecords: 'latest', reviewQueue: 'attention', summaryJobs: 'latest' }};
 window.__chronicleDetailTrail = [];
-document.getElementById('view').addEventListener('input', event => {{
-  const filterId = event.target.dataset.filterInput;
-  if (!filterId) return;
-  if (filterId === 'runtimeRecords') window.__chronicleFilters.runtimeRecords = event.target.value || '';
-  if (filterId === 'reviewQueue') window.__chronicleFilters.reviewQueue = event.target.value || '';
-  if (filterId === 'summaryJobs') window.__chronicleFilters.summaryJobs = event.target.value || '';
-  if (window.__chronicleCurrentEndpoint) loadEndpoint(window.__chronicleCurrentEndpoint);
-}});
-document.getElementById('view').addEventListener('change', event => {{
-  const sortId = event.target.dataset.sortInput;
-  if (!sortId || !window.__chronicleSorts) return;
-  if (sortId === 'runtimeRecords') window.__chronicleSorts.runtimeRecords = event.target.value || 'latest';
-  if (sortId === 'reviewQueue') window.__chronicleSorts.reviewQueue = event.target.value || 'attention';
-  if (sortId === 'summaryJobs') window.__chronicleSorts.summaryJobs = event.target.value || 'latest';
-  if (window.__chronicleCurrentEndpoint) loadEndpoint(window.__chronicleCurrentEndpoint);
-}});
+document.getElementById('view').addEventListener('input', handleViewInput);
+document.getElementById('view').addEventListener('change', handleViewChange);
 loadEndpoint('/api/overview');
 </script>
 </body>
