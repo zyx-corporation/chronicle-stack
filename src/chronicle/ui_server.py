@@ -2409,6 +2409,22 @@ function renderSummaryJobsTable(endpoint, rows) {{
     + '<table><thead><tr><th>detail</th><th>summary job</th><th>status</th><th>review</th><th>auth</th><th>identity</th><th>package</th><th>preview</th><th>runtime</th><th>sources</th></tr></thead><tbody>'
     + sorted.map(row => renderSummaryJobRow(row, endpoint)).join('') + '</tbody></table>';
 }}
+function renderGenericTable(endpoint, rows) {{
+  const keys = Object.keys(rows[0]).slice(0, 8);
+  return '<table><thead><tr><th>detail</th>' + keys.map(k => '<th>' + esc(k) + '</th>').join('') + '</tr></thead><tbody>'
+    + rows.map(row => {{
+      const path = detailPath(endpoint, row);
+      const button = path ? '<button data-detail="' + esc(path) + '">JSON</button>' : '';
+      return '<tr><td>' + button + '</td>'
+        + keys.map(k => '<td>' + esc(typeof row[k] === 'object' ? JSON.stringify(row[k]) : row[k] ?? '') + '</td>').join('')
+        + '</tr>';
+    }}).join('') + '</tbody></table>';
+}}
+const endpointRenderers = {{
+  '/api/runtime-records': renderRuntimeRecordsTable,
+  '/api/review-queue': renderReviewQueueTable,
+  '/api/summary-jobs': renderSummaryJobsTable,
+}};
 function reviewerIdentityBadge(identity) {{
   if (!identity) return '';
   const kind = identity.kind || 'reviewer';
@@ -2992,16 +3008,8 @@ function detailPath(endpoint, row) {{
 }}
 function renderTable(endpoint, rows) {{
   if (!rows || rows.length === 0) return '<p>No records.</p>';
-  if (endpoint === '/api/runtime-records') return renderRuntimeRecordsTable(endpoint, rows);
-  if (endpoint === '/api/review-queue') return renderReviewQueueTable(endpoint, rows);
-  if (endpoint === '/api/summary-jobs') return renderSummaryJobsTable(endpoint, rows);
-  const keys = Object.keys(rows[0]).slice(0, 8);
-  return '<table><thead><tr><th>detail</th>' + keys.map(k => '<th>' + esc(k) + '</th>').join('') + '</tr></thead><tbody>' +
-    rows.map(row => {{
-      const path = detailPath(endpoint, row);
-      const button = path ? '<button data-detail="' + esc(path) + '">JSON</button>' : '';
-      return '<tr><td>' + button + '</td>' + keys.map(k => '<td>' + esc(typeof row[k] === 'object' ? JSON.stringify(row[k]) : row[k] ?? '') + '</td>').join('') + '</tr>';
-    }}).join('') + '</tbody></table>';
+  const renderer = endpointRenderers[endpoint];
+  return renderer ? renderer(endpoint, rows) : renderGenericTable(endpoint, rows);
 }}
 async function loadEndpoint(endpoint) {{
   window.__chronicleCurrentEndpoint = endpoint;

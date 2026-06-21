@@ -620,6 +620,8 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "function renderRuntimeRecordsTable(endpoint, rows)" in html
     assert "function renderReviewQueueTable(endpoint, rows)" in html
     assert "function renderSummaryJobsTable(endpoint, rows)" in html
+    assert "function renderGenericTable(endpoint, rows)" in html
+    assert "const endpointRenderers =" in html
     assert "reviewerIdentityBadge" in html
     assert "sortSelect" in html
     assert "sortRuntimeRows" in html
