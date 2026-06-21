@@ -2088,6 +2088,18 @@ function detailMessages(items, fallbackItems = []) {{
   const fallback = Array.isArray(fallbackItems) ? fallbackItems : [];
   return details.map(item => item.message).join(' | ') || fallback.join(' | ') || '';
 }}
+function contractDetailLines(successContract, failureContract, targetId) {{
+  const resolvedContract = (successContract || failureContract) || {{}};
+  const lines = []
+    + detailLine('Recovery path', resolvedContract.recovery_path || '')
+    + detailLine('Rollback status', resolvedContract.rollback_status || '')
+    + detailLine('Transaction status', (successContract || {{}}).transaction_status || '')
+    + detailLine('Durable mutation on failure', (failureContract || {{}}).durable_mutation_reported_on_failure)
+    + detailListLine('Possible errors', (failureContract || {{}}).possible_error_codes, ' | ')
+    + detailListLine('Recovery commands', (failureContract || {{}}).recovery_commands, ' | ')
+    + detailListLine('Follow-up commands', (successContract || {{}}).follow_up_commands, ' | ');
+  return lines + (resolvedContract.recovery_path ? '<p>' + copyCommandButton(resolvedContract.recovery_path, targetId, 'Copy Recovery CLI') + '</p>' : '');
+}}
 function reviewerIdentityBadge(identity) {{
   if (!identity) return '';
   const kind = identity.kind || 'reviewer';
@@ -3218,12 +3230,7 @@ async function previewBlockedRoute(path, targetId = 'action-preview-response') {
     + detailLine('CLI equivalent', payload.cli_equivalent || '')
     + detailLine('Failure summary', payload.failure_summary || '')
     + detailLine('Warnings', detailMessages(payload.warning_details, payload.warning_codes))
-    + detailLine('Recovery path', (payload.failure_contract || {{}}).recovery_path || '')
-    + detailLine('Rollback status', (payload.failure_contract || {{}}).rollback_status || '')
-    + detailLine('Durable mutation on failure', (payload.failure_contract || {{}}).durable_mutation_reported_on_failure)
-    + detailListLine('Possible errors', (payload.failure_contract || {{}}).possible_error_codes, ' | ')
-    + detailListLine('Recovery commands', (payload.failure_contract || {{}}).recovery_commands, ' | ')
-    + ((payload.failure_contract || {{}}).recovery_path ? '<p>' + copyCommandButton((payload.failure_contract || {{}}).recovery_path, targetId, 'Copy Recovery CLI') + '</p>' : '');
+    + contractDetailLines(null, payload.failure_contract, targetId);
 }}
 function reviewFieldValue(prefix, suffix, fallback = '') {{
   const element = prefix === 'reviewer'
@@ -3298,14 +3305,7 @@ async function submitReviewAction(path, action, recordId, targetId = 'action-pre
     + detailLine('CLI equivalent', payload.cli_equivalent || '')
     + detailLine('Failure summary', payload.failure_summary || '')
     + detailLine('Warnings', detailMessages(payload.warning_details, payload.warning_codes))
-    + detailLine('Recovery path', ((payload.success_contract || payload.failure_contract) || {{}}).recovery_path || '')
-    + detailLine('Rollback status', ((payload.success_contract || payload.failure_contract) || {{}}).rollback_status || '')
-    + detailLine('Transaction status', (payload.success_contract || {{}}).transaction_status || '')
-    + detailLine('Durable mutation on failure', (payload.failure_contract || {{}}).durable_mutation_reported_on_failure)
-    + detailListLine('Possible errors', (payload.failure_contract || {{}}).possible_error_codes, ' | ')
-    + detailListLine('Recovery commands', (payload.failure_contract || {{}}).recovery_commands, ' | ')
-    + detailListLine('Follow-up commands', (payload.success_contract || {{}}).follow_up_commands, ' | ')
-    + (((payload.success_contract || payload.failure_contract) || {{}}).recovery_path ? '<p>' + copyCommandButton(((payload.success_contract || payload.failure_contract) || {{}}).recovery_path, targetId, 'Copy Recovery CLI') + '</p>' : '');
+    + contractDetailLines(payload.success_contract, payload.failure_contract, targetId);
   if (response.ok) {{
     if (window.__chronicleCurrentEndpoint) loadEndpoint(window.__chronicleCurrentEndpoint);
     if (successDetail) {{
