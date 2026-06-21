@@ -708,6 +708,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "function summaryIdentityCell(identityBadge, reviewerIdentity)" in html
     assert "function resetFilterButton(query, target)" in html
     assert "function emptyFilterState(query, rows, message)" in html
+    assert "function listToolbar(endpoint, target, placeholder, sortOptions, filterChipHtml, query)" in html
     assert "function actionPreviewStatus(targetId, mutationEnabled, enabledMessage, disabledMessage)" in html
     assert "function tableHtml(headers, body)" in html
     assert "function packageReviewButtons(record)" in html
@@ -784,8 +785,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "fieldPrefix: 'review-queue'" in html
     assert "fieldPrefix: 'summary-jobs'" in html
     assert "data-success-detail" in html
-    assert "textInput('summaryJobs', 'Filter summary jobs...')" in html
-    assert "sortSelect('summaryJobs', currentSortValue('/api/summary-jobs')" in html
+    assert "listToolbar(endpoint, 'summaryJobs', 'Filter summary jobs...'" in html
     assert "tableHtml(['detail', 'event', 'kind', 'auth', 'preview', 'source counts']" in html
     assert "Auth aligned" in html
     assert "Auth advisory" in html
@@ -818,13 +818,13 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "const readinessButtons = moreStatusButtons(readiness.status, '/api/review-queue', 'reviewQueue', 'package:');" in html
     assert "const timelineButtons = [" in html
     assert "Declared Identity Only" in html
-    assert "resetFilterButton(query, 'runtimeRecords')" in html
-    assert "resetFilterButton(query, 'reviewQueue')" in html
+    assert "listToolbar(endpoint, 'runtimeRecords', 'Filter runtime records...'" in html
+    assert "listToolbar(endpoint, 'reviewQueue', 'Filter review queue...'" in html
     assert "runtimeRecords" in html
     assert "reviewQueue" in html
-    assert "textInput('runtimeRecords'" in html
+    assert "listToolbar(endpoint, 'runtimeRecords', 'Filter runtime records...'" in html
     assert "tableHtml(['detail', 'event', 'kind', 'auth', 'preview', 'source counts']" in html
-    assert "textInput('reviewQueue'" in html
+    assert "listToolbar(endpoint, 'reviewQueue', 'Filter review queue...'" in html
     assert "review-queue-action-preview-response" in html
     assert "Review queue blocked-route preview stays read-only and returns the CLI fallback contract." in html
     assert "previewTarget: 'review-queue-action-preview-response'" in html

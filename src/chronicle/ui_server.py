@@ -2226,6 +2226,13 @@ function tableHtml(headers, body) {{
   return '<table><thead><tr>' + headers.map(header => '<th>' + esc(header) + '</th>').join('')
     + '</tr></thead><tbody>' + body + '</tbody></table>';
 }}
+function listToolbar(endpoint, target, placeholder, sortOptions, filterChipHtml, query) {{
+  return activeViewSummary(endpoint, 'list')
+    + textInput(target, placeholder)
+    + sortSelect(target, currentSortValue(endpoint), sortOptions)
+    + filterChipHtml
+    + resetFilterButton(query, target);
+}}
 function renderRuntimeRecordRow(row, endpoint) {{
   const button = detailJsonButton(endpoint, row);
   const preview = row.runtime_record_preview || {{}};
@@ -2331,14 +2338,10 @@ function renderRuntimeRecordsTable(endpoint, rows) {{
     ], query);
   }});
   const sorted = sortRuntimeRows(filtered);
-  return activeViewSummary(endpoint, 'list')
-    + textInput('runtimeRecords', 'Filter runtime records...')
-    + sortSelect('runtimeRecords', currentSortValue('/api/runtime-records'), [
+  return listToolbar(endpoint, 'runtimeRecords', 'Filter runtime records...', [
       {{ value: 'latest', label: 'Latest first' }},
       {{ value: 'kind', label: 'Kind' }},
-    ])
-    + runtimeRecordsFilterChips()
-    + resetFilterButton(query, 'runtimeRecords')
+    ], runtimeRecordsFilterChips(), query)
     + emptyFilterState(query, sorted, 'No matching runtime records for current filter.')
     + tableHtml(['detail', 'event', 'kind', 'auth', 'preview', 'source counts'], sorted.map(row => renderRuntimeRecordRow(row, endpoint)).join(''));
 }}
@@ -2365,16 +2368,12 @@ function renderReviewQueueTable(endpoint, rows) {{
   }});
   const sorted = sortReviewRows(filtered);
   const mutationEnabled = sorted.some(row => row.ui_mutation_enabled);
-  return activeViewSummary(endpoint, 'list')
-    + textInput('reviewQueue', 'Filter review queue...')
-    + sortSelect('reviewQueue', currentSortValue('/api/review-queue'), [
+  return listToolbar(endpoint, 'reviewQueue', 'Filter review queue...', [
       {{ value: 'attention', label: 'Needs attention first' }},
       {{ value: 'parity', label: 'CLI drift first' }},
       {{ value: 'latest', label: 'Latest first' }},
       {{ value: 'reviewer', label: 'Reviewer' }},
-    ])
-    + reviewQueueFilterChips()
-    + resetFilterButton(query, 'reviewQueue')
+    ], reviewQueueFilterChips(), query)
     + emptyFilterState(query, sorted, 'No matching review rows for current filter.')
     + (
       mutationEnabled
@@ -2409,15 +2408,11 @@ function renderSummaryJobsTable(endpoint, rows) {{
   }});
   const sorted = sortSummaryJobRows(filtered);
   const mutationEnabled = sorted.some(row => row.ui_mutation_enabled);
-  return activeViewSummary(endpoint, 'list')
-    + textInput('summaryJobs', 'Filter summary jobs...')
-    + sortSelect('summaryJobs', currentSortValue('/api/summary-jobs'), [
+  return listToolbar(endpoint, 'summaryJobs', 'Filter summary jobs...', [
       {{ value: 'latest', label: 'Latest first' }},
       {{ value: 'review', label: 'Needs attention first' }},
       {{ value: 'title', label: 'Title' }},
-    ])
-    + summaryJobsFilterChips()
-    + resetFilterButton(query, 'summaryJobs')
+    ], summaryJobsFilterChips(), query)
     + emptyFilterState(query, sorted, 'No matching summary jobs for current filter.')
     + (
       mutationEnabled
@@ -2490,6 +2485,9 @@ function textInput(id, placeholder) {{
 }}
 function filterRows(rows, predicate) {{
   return rows.filter(predicate);
+}}
+function includesQuery(values, query) {{
+  return JSON.stringify(values).toLowerCase().includes(query);
 }}
 function includesQuery(values, query) {{
   return JSON.stringify(values).toLowerCase().includes(query);
