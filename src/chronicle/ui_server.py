@@ -2088,6 +2088,17 @@ function detailMessages(items, fallbackItems = []) {{
   const fallback = Array.isArray(fallbackItems) ? fallbackItems : [];
   return details.map(item => item.message).join(' | ') || fallback.join(' | ') || '';
 }}
+function reviewActionCoreDetailLines(payload, action = '', recordId = '') {{
+  return ''
+    + detailLine('Action', payload.action || action || '')
+    + detailLine('Event', payload.event_id || recordId || '')
+    + detailLine('Error code', payload.error_code || '')
+    + detailLine('Identity assurance', payload.identity_assurance_status || '')
+    + detailLine('Identity assurance message', payload.identity_assurance_message || '')
+    + detailLine('CLI equivalent', payload.cli_equivalent || '')
+    + detailLine('Failure summary', payload.failure_summary || '')
+    + detailLine('Warnings', detailMessages(payload.warning_details, payload.warning_codes));
+}}
 function contractDetailLines(successContract, failureContract, targetId) {{
   const resolvedContract = (successContract || failureContract) || {{}};
   const lines = []
@@ -2099,6 +2110,22 @@ function contractDetailLines(successContract, failureContract, targetId) {{
     + detailListLine('Recovery commands', (failureContract || {{}}).recovery_commands, ' | ')
     + detailListLine('Follow-up commands', (successContract || {{}}).follow_up_commands, ' | ');
   return lines + (resolvedContract.recovery_path ? '<p>' + copyCommandButton(resolvedContract.recovery_path, targetId, 'Copy Recovery CLI') + '</p>' : '');
+}}
+function renderReviewActionResultPanel(title, responseStatus, path, payload, targetId, options = {{}}) {{
+  const action = options.action || '';
+  const recordId = options.recordId || '';
+  const message = options.useStatusFallback
+    ? (payload.message || payload.status || 'No message returned.')
+    : (payload.message || 'No message returned.');
+  const extraLines = options.extraLines || '';
+  return ''
+    + '<p><strong>' + esc(title) + '</strong></p>'
+    + '<p>Status: ' + esc(responseStatus) + '</p>'
+    + '<p>Route: <span class="id">' + esc(path) + '</span></p>'
+    + '<p>' + esc(message) + '</p>'
+    + reviewActionCoreDetailLines(payload, action, recordId)
+    + extraLines
+    + contractDetailLines(payload.success_contract, payload.failure_contract, targetId);
 }}
 function reviewerIdentityBadge(identity) {{
   if (!identity) return '';
@@ -3218,19 +3245,16 @@ async function previewBlockedRoute(path, targetId = 'action-preview-response') {
   }} catch (_error) {{
     payload = {{}};
   }}
-  target.innerHTML = ''
-    + '<p><strong>Blocked Route Preview</strong></p>'
-    + '<p>Status: ' + esc(response.status) + '</p>'
-    + '<p>Route: <span class="id">' + esc(path) + '</span></p>'
-    + '<p>' + esc(payload.message || 'No message returned.') + '</p>'
-    + detailLine('Error code', payload.error_code || '')
-    + detailLine('Identity assurance', payload.identity_assurance_status || '')
-    + detailLine('Identity assurance message', payload.identity_assurance_message || '')
-    + detailLine('Mutation enabled', payload.mutation_enabled)
-    + detailLine('CLI equivalent', payload.cli_equivalent || '')
-    + detailLine('Failure summary', payload.failure_summary || '')
-    + detailLine('Warnings', detailMessages(payload.warning_details, payload.warning_codes))
-    + contractDetailLines(null, payload.failure_contract, targetId);
+  target.innerHTML = renderReviewActionResultPanel(
+    'Blocked Route Preview',
+    response.status,
+    path,
+    payload,
+    targetId,
+    {{
+      extraLines: detailLine('Mutation enabled', payload.mutation_enabled),
+    }},
+  );
 }}
 function reviewFieldValue(prefix, suffix, fallback = '') {{
   const element = prefix === 'reviewer'
@@ -3290,22 +3314,21 @@ async function submitReviewAction(path, action, recordId, targetId = 'action-pre
   }} catch (_error) {{
     payload = {{}};
   }}
-  target.innerHTML = ''
-    + '<p><strong>Review Action Result</strong></p>'
-    + '<p>Status: ' + esc(response.status) + '</p>'
-    + '<p>Route: <span class="id">' + esc(path) + '</span></p>'
-    + '<p>' + esc(payload.message || payload.status || 'No message returned.') + '</p>'
-    + detailLine('Action', payload.action || action || '')
-    + detailLine('Event', payload.event_id || recordId || '')
-    + detailLine('Error code', payload.error_code || '')
-    + detailLine('Identity assurance', payload.identity_assurance_status || '')
-    + detailLine('Identity assurance message', payload.identity_assurance_message || '')
-    + detailLine('Audit ID', payload.audit_id || '')
-    + detailLine('Decision event', payload.decision_event_id || '')
-    + detailLine('CLI equivalent', payload.cli_equivalent || '')
-    + detailLine('Failure summary', payload.failure_summary || '')
-    + detailLine('Warnings', detailMessages(payload.warning_details, payload.warning_codes))
-    + contractDetailLines(payload.success_contract, payload.failure_contract, targetId);
+  target.innerHTML = renderReviewActionResultPanel(
+    'Review Action Result',
+    response.status,
+    path,
+    payload,
+    targetId,
+    {{
+      action: action,
+      recordId: recordId,
+      useStatusFallback: true,
+      extraLines: ''
+        + detailLine('Audit ID', payload.audit_id || '')
+        + detailLine('Decision event', payload.decision_event_id || ''),
+    }},
+  );
   if (response.ok) {{
     if (window.__chronicleCurrentEndpoint) loadEndpoint(window.__chronicleCurrentEndpoint);
     if (successDetail) {{

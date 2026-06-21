@@ -607,6 +607,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "const reviewWarningLabels =" in html
     assert "function detailMessages(items, fallbackItems = [])" in html
     assert "function contractDetailLines(successContract, failureContract, targetId)" in html
+    assert "function renderReviewActionResultPanel(title, responseStatus, path, payload, targetId, options = {})" in html
     assert "reviewerIdentityBadge" in html
     assert "sortSelect" in html
     assert "sortRuntimeRows" in html
