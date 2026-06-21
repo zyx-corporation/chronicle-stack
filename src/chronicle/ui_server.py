@@ -2526,6 +2526,14 @@ function sortSelect(id, value, options) {{
 function compareTextDesc(left, right) {{
   return String(right || '').localeCompare(String(left || ''));
 }}
+function compareReviewerLabel(left, right) {{
+  const leftReviewer = (left.latest_reviewer_identity && left.latest_reviewer_identity.label) || left.latest_reviewer || '';
+  const rightReviewer = (right.latest_reviewer_identity && right.latest_reviewer_identity.label) || right.latest_reviewer || '';
+  return String(leftReviewer).localeCompare(String(rightReviewer));
+}}
+function compareReviewTargetDesc(left, right) {{
+  return compareTextDesc(left.target_event_id, right.target_event_id);
+}}
 function reviewAttentionRank(row) {{
   const capability = row.review_capability || {{}};
   const readiness = row.package_readiness_summary || {{}};
@@ -2564,15 +2572,13 @@ function sortRuntimeRows(rows) {{
 function sortReviewRows(rows) {{
   const sortValue = currentSortValue('/api/review-queue');
   if (sortValue === 'latest') {{
-    return sortRows(rows, (left, right) => compareTextDesc(left.target_event_id, right.target_event_id));
+    return sortRows(rows, compareReviewTargetDesc);
   }}
   if (sortValue === 'reviewer') {{
     return sortRows(rows, (left, right) => {{
-      const leftReviewer = (left.latest_reviewer_identity && left.latest_reviewer_identity.label) || left.latest_reviewer || '';
-      const rightReviewer = (right.latest_reviewer_identity && right.latest_reviewer_identity.label) || right.latest_reviewer || '';
-      const reviewerCompare = String(leftReviewer).localeCompare(String(rightReviewer));
+      const reviewerCompare = compareReviewerLabel(left, right);
       if (reviewerCompare !== 0) return reviewerCompare;
-      return compareTextDesc(left.target_event_id, right.target_event_id);
+      return compareReviewTargetDesc(left, right);
     }});
   }}
   if (sortValue === 'parity') {{
@@ -2583,7 +2589,7 @@ function sortReviewRows(rows) {{
       if (parityCompare !== 0) return parityCompare;
       const attentionCompare = reviewAttentionRank(left) - reviewAttentionRank(right);
       if (attentionCompare !== 0) return attentionCompare;
-      return compareTextDesc(left.target_event_id, right.target_event_id);
+      return compareReviewTargetDesc(left, right);
     }});
   }}
   return sortRows(rows, (left, right) => {{
@@ -2591,7 +2597,7 @@ function sortReviewRows(rows) {{
     if (warningCompare !== 0) return warningCompare;
     const rankCompare = reviewAttentionRank(left) - reviewAttentionRank(right);
     if (rankCompare !== 0) return rankCompare;
-    return compareTextDesc(left.target_event_id, right.target_event_id);
+    return compareReviewTargetDesc(left, right);
   }});
 }}
 function summaryJobAttentionRank(row) {{
@@ -2605,13 +2611,16 @@ function summaryJobAttentionRank(row) {{
   if (reviewStatus === 'resolved') return 4;
   return 5;
 }}
+function compareSummaryJobDesc(left, right) {{
+  return compareTextDesc(left.summary_job_id, right.summary_job_id);
+}}
 function sortSummaryJobRows(rows) {{
   const sortValue = currentSortValue('/api/summary-jobs');
   if (sortValue === 'title') {{
     return sortRows(rows, (left, right) => {{
       const titleCompare = String(left.title || '').localeCompare(String(right.title || ''));
       if (titleCompare !== 0) return titleCompare;
-      return compareTextDesc(left.summary_job_id, right.summary_job_id);
+      return compareSummaryJobDesc(left, right);
     }});
   }}
   if (sortValue === 'review') {{
@@ -2620,10 +2629,10 @@ function sortSummaryJobRows(rows) {{
       if (rankCompare !== 0) return rankCompare;
       const reviewCompare = String(left.review_capability_status || '').localeCompare(String(right.review_capability_status || ''));
       if (reviewCompare !== 0) return reviewCompare;
-      return compareTextDesc(left.summary_job_id, right.summary_job_id);
+      return compareSummaryJobDesc(left, right);
     }});
   }}
-  return sortRows(rows, (left, right) => compareTextDesc(left.summary_job_id, right.summary_job_id));
+  return sortRows(rows, compareSummaryJobDesc);
 }}
 function currentFilterLabel() {{
   if (!window.__chronicleCurrentEndpoint || !window.__chronicleFilters) return '';

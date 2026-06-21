@@ -625,7 +625,10 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "reviewerIdentityBadge" in html
     assert "sortSelect" in html
     assert "sortRuntimeRows" in html
+    assert "compareReviewerLabel" in html
+    assert "compareReviewTargetDesc" in html
     assert "sortReviewRows" in html
+    assert "compareSummaryJobDesc" in html
     assert "sortSummaryJobRows" in html
     assert "activeReviewWarningFilter" in html
     assert "reviewWarningFilterRank" in html
