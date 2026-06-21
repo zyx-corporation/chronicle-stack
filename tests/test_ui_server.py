@@ -692,6 +692,10 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "function emptyFilterState(query, rows, message)" in html
     assert "function actionPreviewStatus(targetId, mutationEnabled, enabledMessage, disabledMessage)" in html
     assert "function tableHtml(headers, body)" in html
+    assert "function packageReviewButtons(record)" in html
+    assert "function runtimeRelatedButtons(record)" in html
+    assert "function reviewRelatedButtons(record)" in html
+    assert "function summaryRelatedButtons(record)" in html
     assert "function renderCliParityNotice(record)" in html
     assert "function renderReviewTimelineNotice(record)" in html
     assert "panelTitle" in html

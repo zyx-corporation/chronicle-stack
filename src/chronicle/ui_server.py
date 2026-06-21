@@ -2770,54 +2770,45 @@ function summaryJsonLine(label, value) {{
 function renderNotice(title, body) {{
   return '<div class="notice">' + noticeTitle(title) + body + '</div>';
 }}
+function packageReviewButtons(record) {{
+  return (record.package_handoff_preview || record.package_readiness)
+    ? [openListButton('Open Package Review', '/api/package-review')]
+    : [];
+}}
+function runtimeRelatedButtons(record) {{
+  const buttons = [openListButton('Open Runtime Records', '/api/runtime-records')];
+  const runtimeKind = record.runtime_record_kind || (record.runtime_record_preview && record.runtime_record_preview.record_kind) || '';
+  if (runtimeKind) buttons.push(moreSliceButton(runtimeKind, '/api/runtime-records', 'runtimeRecords'));
+  return buttons;
+}}
+function reviewRelatedButtons(record) {{
+  const buttons = [openListButton('Open Review Queue', '/api/review-queue')];
+  const capability = record.review_capability || {{}};
+  const readiness = record.package_readiness || {{}};
+  const warnings = Array.isArray(capability.warnings) ? capability.warnings : [];
+  if (record.review_kind) buttons.push(moreSliceButton(record.review_kind, '/api/review-queue', 'reviewQueue'));
+  if (capability.status) buttons.push(moreSliceButton(capability.status, '/api/review-queue', 'reviewQueue'));
+  warnings.slice(0, 2).forEach(code => buttons.push(moreSliceButton(code, '/api/review-queue', 'reviewQueue')));
+  if (readiness.status) buttons.push(sliceActionButton('More ' + readiness.status, '/api/review-queue', 'reviewQueue', 'package:' + readiness.status));
+  return buttons;
+}}
+function summaryRelatedButtons(record) {{
+  const buttons = [openListButton('Open Summary Jobs', '/api/summary-jobs')];
+  if (record.review_target_event_id) buttons.push(openListButton('Open Review Queue', '/api/review-queue'));
+  const capability = record.review_capability || {{}};
+  const readiness = record.package_readiness || {{}};
+  const parity = record.cli_parity || {{}};
+  if (capability.status) buttons.push(moreSliceButton(capability.status, '/api/review-queue', 'reviewQueue'));
+  if (readiness.status) buttons.push(sliceActionButton('More ' + readiness.status, '/api/review-queue', 'reviewQueue', 'package:' + readiness.status));
+  if (parity.status) buttons.push(moreSliceButton(parity.status, '/api/review-queue', 'reviewQueue'));
+  return buttons;
+}}
 function relatedListButtons(detailEndpoint, record) {{
   const buttons = [];
-  if (detailEndpoint.startsWith('/api/runtime-records/')) {{
-    buttons.push(openListButton('Open Runtime Records', '/api/runtime-records'));
-    const runtimeKind = record.runtime_record_kind || (record.runtime_record_preview && record.runtime_record_preview.record_kind) || '';
-    if (runtimeKind) {{
-      buttons.push(moreSliceButton(runtimeKind, '/api/runtime-records', 'runtimeRecords'));
-    }}
-  }}
-  if (detailEndpoint.startsWith('/api/review-queue/')) {{
-    buttons.push(openListButton('Open Review Queue', '/api/review-queue'));
-    const capability = record.review_capability || {{}};
-    const readiness = record.package_readiness || {{}};
-    const warnings = Array.isArray(capability.warnings) ? capability.warnings : [];
-    if (record.review_kind) {{
-      buttons.push(moreSliceButton(record.review_kind, '/api/review-queue', 'reviewQueue'));
-    }}
-    if (capability.status) {{
-      buttons.push(moreSliceButton(capability.status, '/api/review-queue', 'reviewQueue'));
-    }}
-    warnings.slice(0, 2).forEach(code => {{
-      buttons.push(moreSliceButton(code, '/api/review-queue', 'reviewQueue'));
-    }});
-    if (readiness.status) {{
-      buttons.push(sliceActionButton('More ' + readiness.status, '/api/review-queue', 'reviewQueue', 'package:' + readiness.status));
-    }}
-  }}
-  if (detailEndpoint.startsWith('/api/summary-jobs/')) {{
-    buttons.push(openListButton('Open Summary Jobs', '/api/summary-jobs'));
-    if (record.review_target_event_id) {{
-      buttons.push(openListButton('Open Review Queue', '/api/review-queue'));
-    }}
-    const capability = record.review_capability || {{}};
-    const readiness = record.package_readiness || {{}};
-    const parity = record.cli_parity || {{}};
-    if (capability.status) {{
-      buttons.push(moreSliceButton(capability.status, '/api/review-queue', 'reviewQueue'));
-    }}
-    if (readiness.status) {{
-      buttons.push(sliceActionButton('More ' + readiness.status, '/api/review-queue', 'reviewQueue', 'package:' + readiness.status));
-    }}
-    if (parity.status) {{
-      buttons.push(moreSliceButton(parity.status, '/api/review-queue', 'reviewQueue'));
-    }}
-  }}
-  if (record.package_handoff_preview || record.package_readiness) {{
-    buttons.push(openListButton('Open Package Review', '/api/package-review'));
-  }}
+  if (detailEndpoint.startsWith('/api/runtime-records/')) buttons.push(...runtimeRelatedButtons(record));
+  if (detailEndpoint.startsWith('/api/review-queue/')) buttons.push(...reviewRelatedButtons(record));
+  if (detailEndpoint.startsWith('/api/summary-jobs/')) buttons.push(...summaryRelatedButtons(record));
+  buttons.push(...packageReviewButtons(record));
   return buttons.join('');
 }}
 function renderNavigationNotice(endpoint, record, options = {{}}) {{

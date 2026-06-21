@@ -378,6 +378,7 @@ read-only endpoint:
 - detail body 組み立ても shared helper を通すため、navigation option 解決と notice 合成責務を `loadDetail` 本体から切り離します。
 - review queue / summary jobs row の preview/reviewer/identity cell も shared helper を通すため、list-row の preview button 構成と reviewer 表示契約を揃えます。
 - runtime/review/summary list table の reset/empty-state/preview-status/table 骨格も shared helper を通すため、各 list renderer の外枠契約を揃えます。
+- detail related-list button 群も shared helper を通すため、runtime/review/summary/package への drilldown button 構成を detail 種別で揃えます。
 - overview triage では `Identity aligned` などの quick slice から reviewer identity / assurance 系の review queue slice に直接 drilldown できますが、これは引き続き read-only filter state のみです。
 - overview の runtime records / summary jobs panel でも matching-review-derived auth readiness の集約状態を read-only で確認できます。
 - overview の summary jobs panel では matching-review-derived identity/session assurance 集約も read-only で確認できます。
