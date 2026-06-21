@@ -657,6 +657,9 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "function renderNavigationNotice(endpoint, record, options = {})" in html
     assert "function renderRuntimePreviewNotice(record)" in html
     assert "function renderAuthReadinessNotice(record)" in html
+    assert "function renderDetailActionPreviewControls(preview, actions, mutationTargetEventId)" in html
+    assert "function renderDetailActionPreviewList(preview, actions)" in html
+    assert "function renderDetailActionPreviewNotice(record)" in html
     assert "function renderCliParityNotice(record)" in html
     assert "function renderReviewTimelineNotice(record)" in html
     assert "panelTitle" in html

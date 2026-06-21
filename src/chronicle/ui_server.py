@@ -2949,6 +2949,72 @@ function renderReviewCapabilityNotice(record) {{
       + detailLine('Warnings', detailMessages(warnDetails, warnList) || '(none)')
   );
 }}
+function renderDetailActionPreviewControls(preview, actions, mutationTargetEventId) {{
+  const activeActionButtons = actions.map(item =>
+    '<button data-submit-review-action="' + esc(item.post_path || '') + '" data-review-action="' + esc(item.action || '') + '" data-review-record="' + esc(mutationTargetEventId) + '">'
+    + esc(item.label || item.action || 'Apply')
+    + '</button>'
+  ).join(' ');
+  return preview.ui_mutation_enabled
+    ? '<p><label>Reviewer <input id="reviewer-label" value="local-ui" placeholder="alice"></label> '
+      + '<label>Kind <select id="reviewer-kind"><option value="local_operator">local_operator</option><option value="user_declared">user_declared</option></select></label> '
+      + '<label>Session <input id="reviewer-session-label" value="local-ui-session" placeholder="desk-session-1"></label></p>'
+      + '<p><label>Note <input id="reviewer-note" placeholder="optional review note"></label></p>'
+      + '<p>' + activeActionButtons + '</p>'
+    : '<p><button disabled>Approve</button> <button disabled>Reject</button> <button disabled>Request Changes</button></p>';
+}}
+function renderDetailActionPreviewList(preview, actions) {{
+  return '<ul>' + actions.map(item =>
+    '<li><strong>' + esc(item.label || '') + ':</strong> <span class="id">' + esc(item.command || '') + '</span>'
+    + (item.command ? ' ' + copyCommandButton(item.command, 'action-preview-response') : '')
+    + (item.post_path
+      ? (
+          preview.ui_mutation_enabled
+            ? '<br><span class="id">' + esc(item.post_path || '') + '</span> <span class="id">POST enabled</span>'
+            : '<br><span class="id">' + esc(item.post_path || '') + '</span> <button data-preview-post="' + esc(item.post_path || '') + '">Preview blocked route</button>'
+        )
+      : '')
+    + '</li>'
+  ).join('') + '</ul>';
+}}
+function renderDetailActionPreviewNotice(record) {{
+  if (!record.action_preview) return '';
+  const preview = record.action_preview;
+  const actions = Array.isArray(preview.actions) ? preview.actions : [];
+  const failureContract = preview.failure_contract || {{}};
+  const previewButtons = [];
+  const capability = record.review_capability || {{}};
+  const parity = record.cli_parity || {{}};
+  const mutationTargetEventId = record.target_event_id || record.review_target_event_id || record.event_id || '';
+  if (capability.status) {{
+    previewButtons.push(moreSliceButton(capability.status, '/api/review-queue', 'reviewQueue'));
+  }}
+  if (parity.status) {{
+    previewButtons.push(moreSliceButton(parity.status, '/api/review-queue', 'reviewQueue'));
+  }}
+  return renderNotice(
+    'Action Preview',
+    '<p>' + esc(preview.message || '') + '</p>'
+      + detailLine('Status', preview.status || '')
+      + (previewButtons.length > 0 ? '<p>' + previewButtons.join('') + '</p>' : '')
+      + detailLine('Rollback status', failureContract.rollback_status || '')
+      + detailLine('Durable mutation on failure', failureContract.durable_mutation_reported_on_failure)
+      + detailLine('Recovery path', failureContract.recovery_path || '')
+      + detailListLine('Possible errors', failureContract.possible_error_codes, ' | ')
+      + detailListLine('Recovery commands', failureContract.recovery_commands, ' | ')
+      + (failureContract.recovery_path ? '<p>' + copyCommandButton(failureContract.recovery_path, 'action-preview-response', 'Copy Recovery CLI') + '</p>' : '')
+      + ((failureContract.recovery_commands || []).length > 0 ? '<p>' + (failureContract.recovery_commands || []).map(command => copyCommandButton(command, 'action-preview-response', 'Copy CLI')).join(' ') + '</p>' : '')
+      + renderDetailActionPreviewControls(preview, actions, mutationTargetEventId)
+      + renderDetailActionPreviewList(preview, actions)
+      + '<div id="action-preview-response"><p>'
+      + (
+        preview.ui_mutation_enabled
+          ? 'Local mutation is enabled for this detail view. Every action still requires explicit reviewer context and writes audit-backed review history.'
+          : 'Blocked route preview stays read-only and returns the CLI fallback contract.'
+      )
+      + '</p></div>'
+  );
+}}
 function renderCliParityNotice(record) {{
   if (!record.cli_parity) return '';
   const parity = record.cli_parity;
@@ -3261,66 +3327,7 @@ async function loadDetail(endpoint) {{
   extra += renderRelatedLinksNotice(record);
   extra += renderAuthReadinessNotice(record);
   extra += renderReviewCapabilityNotice(record);
-  if (record.action_preview) {{
-    const preview = record.action_preview;
-    const actions = Array.isArray(preview.actions) ? preview.actions : [];
-    const failureContract = preview.failure_contract || {{}};
-    const previewButtons = [];
-    const capability = record.review_capability || {{}};
-    const parity = record.cli_parity || {{}};
-    const mutationTargetEventId = record.target_event_id || record.review_target_event_id || record.event_id || '';
-    if (capability.status) {{
-      previewButtons.push(moreSliceButton(capability.status, '/api/review-queue', 'reviewQueue'));
-    }}
-    if (parity.status) {{
-      previewButtons.push(moreSliceButton(parity.status, '/api/review-queue', 'reviewQueue'));
-    }}
-    const activeActionButtons = actions.map(item =>
-      '<button data-submit-review-action="' + esc(item.post_path || '') + '" data-review-action="' + esc(item.action || '') + '" data-review-record="' + esc(mutationTargetEventId) + '">'
-      + esc(item.label || item.action || 'Apply')
-      + '</button>'
-    ).join(' ');
-    extra += '<div class="notice">' + noticeTitle('Action Preview')
-      + '<p>' + esc(preview.message || '') + '</p>'
-      + detailLine('Status', preview.status || '')
-      + (previewButtons.length > 0 ? '<p>' + previewButtons.join('') + '</p>' : '')
-      + detailLine('Rollback status', failureContract.rollback_status || '')
-      + detailLine('Durable mutation on failure', failureContract.durable_mutation_reported_on_failure)
-      + detailLine('Recovery path', failureContract.recovery_path || '')
-      + detailListLine('Possible errors', failureContract.possible_error_codes, ' | ')
-      + detailListLine('Recovery commands', failureContract.recovery_commands, ' | ')
-      + (failureContract.recovery_path ? '<p>' + copyCommandButton(failureContract.recovery_path, 'action-preview-response', 'Copy Recovery CLI') + '</p>' : '')
-      + ((failureContract.recovery_commands || []).length > 0 ? '<p>' + (failureContract.recovery_commands || []).map(command => copyCommandButton(command, 'action-preview-response', 'Copy CLI')).join(' ') + '</p>' : '')
-      + (
-        preview.ui_mutation_enabled
-          ? '<p><label>Reviewer <input id="reviewer-label" value="local-ui" placeholder="alice"></label> '
-            + '<label>Kind <select id="reviewer-kind"><option value="local_operator">local_operator</option><option value="user_declared">user_declared</option></select></label> '
-            + '<label>Session <input id="reviewer-session-label" value="local-ui-session" placeholder="desk-session-1"></label></p>'
-            + '<p><label>Note <input id="reviewer-note" placeholder="optional review note"></label></p>'
-            + '<p>' + activeActionButtons + '</p>'
-          : '<p><button disabled>Approve</button> <button disabled>Reject</button> <button disabled>Request Changes</button></p>'
-      )
-      + '<ul>' + actions.map(item =>
-          '<li><strong>' + esc(item.label || '') + ':</strong> <span class="id">' + esc(item.command || '') + '</span>'
-          + (item.command ? ' ' + copyCommandButton(item.command, 'action-preview-response') : '')
-          + (item.post_path
-            ? (
-                preview.ui_mutation_enabled
-                  ? '<br><span class="id">' + esc(item.post_path || '') + '</span> <span class="id">POST enabled</span>'
-                  : '<br><span class="id">' + esc(item.post_path || '') + '</span> <button data-preview-post="' + esc(item.post_path || '') + '">Preview blocked route</button>'
-              )
-            : '')
-          + '</li>'
-        ).join('') + '</ul>'
-      + '<div id="action-preview-response"><p>'
-      + (
-        preview.ui_mutation_enabled
-          ? 'Local mutation is enabled for this detail view. Every action still requires explicit reviewer context and writes audit-backed review history.'
-          : 'Blocked route preview stays read-only and returns the CLI fallback contract.'
-      )
-      + '</p></div>'
-      + '</div>';
-  }}
+  extra += renderDetailActionPreviewNotice(record);
   extra += renderCliParityNotice(record);
   extra += renderIdentityAssuranceNotice(record);
   extra += renderReviewTimelineNotice(record);
