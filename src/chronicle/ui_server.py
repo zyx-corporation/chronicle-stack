@@ -3451,12 +3451,16 @@ function renderOverview(payload) {{
     + renderOverviewSummaryJobsPanel(counts, summaryJobs)
     + renderOverviewTriagePanel(triage, warningButtons, warningSummaries);
 }}
+const detailPathResolvers = {{
+  '/api/ai-index-graph-edges': () => null,
+  '/api/ai-index-vector': row => row.record_id ? '/api/ai-index/vector/' + encodeURIComponent(row.record_id) : null,
+  '/api/ai-index-graph-nodes': row => row.node_id ? '/api/ai-index/graph-nodes/' + encodeURIComponent(row.node_id) : null,
+  '/api/runtime-records': row => row.event_id ? '/api/runtime-records/' + encodeURIComponent(row.event_id) : null,
+  '/api/review-queue': row => row.event_id ? '/api/review-queue/' + encodeURIComponent(row.event_id) : null,
+}};
 function detailPath(endpoint, row) {{
-  if (endpoint === '/api/ai-index-graph-edges') return null;
-  if (endpoint === '/api/ai-index-vector' && row.record_id) return '/api/ai-index/vector/' + encodeURIComponent(row.record_id);
-  if (endpoint === '/api/ai-index-graph-nodes' && row.node_id) return '/api/ai-index/graph-nodes/' + encodeURIComponent(row.node_id);
-  if (endpoint === '/api/runtime-records' && row.event_id) return '/api/runtime-records/' + encodeURIComponent(row.event_id);
-  if (endpoint === '/api/review-queue' && row.event_id) return '/api/review-queue/' + encodeURIComponent(row.event_id);
+  const resolver = detailPathResolvers[endpoint];
+  if (resolver) return resolver(row);
   for (const key of idFields) if (row[key]) return endpoint + '/' + encodeURIComponent(row[key]);
   return null;
 }}
@@ -3465,17 +3469,16 @@ function renderTable(endpoint, rows) {{
   const renderer = endpointRenderers[endpoint];
   return renderer ? renderer(endpoint, rows) : renderGenericTable(endpoint, rows);
 }}
+function endpointBody(endpoint, payload) {{
+  if (endpoint === '/api/overview') return renderOverview(payload);
+  const rows = firstArray(payload);
+  return rows ? '<h2>' + esc(endpoint) + '</h2>' + renderTable(endpoint, rows) : '<h2>' + esc(endpoint) + '</h2><pre>' + esc(JSON.stringify(payload, null, 2)) + '</pre>';
+}}
 async function loadEndpoint(endpoint) {{
   window.__chronicleCurrentEndpoint = endpoint;
   const response = await fetch(endpoint);
   const payload = await response.json();
-  if (endpoint === '/api/overview') {{
-    document.getElementById('view').innerHTML = renderOverview(payload);
-    return;
-  }}
-  const rows = firstArray(payload);
-  const body = rows ? renderTable(endpoint, rows) : '<pre>' + esc(JSON.stringify(payload, null, 2)) + '</pre>';
-  document.getElementById('view').innerHTML = '<h2>' + esc(endpoint) + '</h2>' + body;
+  document.getElementById('view').innerHTML = endpointBody(endpoint, payload);
 }}
 async function loadDetail(endpoint) {{
   if (window.__chronicleLastDetail && window.__chronicleLastDetail !== endpoint) {{

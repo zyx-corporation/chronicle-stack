@@ -679,6 +679,8 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "function renderOverviewRuntimeRecordsPanel(counts, runtimeRecords)" in html
     assert "function renderOverviewSummaryJobsPanel(counts, summaryJobs)" in html
     assert "function renderOverviewTriagePanel(triage, warningButtons, warningSummaries)" in html
+    assert "const detailPathResolvers =" in html
+    assert "function endpointBody(endpoint, payload)" in html
     assert "function renderCliParityNotice(record)" in html
     assert "function renderReviewTimelineNotice(record)" in html
     assert "panelTitle" in html

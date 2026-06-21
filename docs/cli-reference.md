@@ -374,6 +374,7 @@ read-only endpoint:
 - view/detail の click/input/change listener も shared helper を通すため、filter/sort/detail-navigation の配線責務を末尾の event binding から分離します。
 - overview の header/counts/runtime/auth/identity/mutation/AI-index panel も shared helper を通すため、read-only overview 前半の表示契約を panel 単位で揃えます。
 - overview の runtime-records/summary-jobs/triage panel も shared helper を通すため、read-only overview 後半の集約・drilldown 契約も panel 単位で揃えます。
+- detailPath resolver と endpoint body 組み立ても shared helper を通すため、endpoint ごとの path/render 分岐責務を lookup/helper 層へ寄せます。
 - overview triage では `Identity aligned` などの quick slice から reviewer identity / assurance 系の review queue slice に直接 drilldown できますが、これは引き続き read-only filter state のみです。
 - overview の runtime records / summary jobs panel でも matching-review-derived auth readiness の集約状態を read-only で確認できます。
 - overview の summary jobs panel では matching-review-derived identity/session assurance 集約も read-only で確認できます。
