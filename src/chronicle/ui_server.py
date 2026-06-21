@@ -3474,6 +3474,39 @@ function endpointBody(endpoint, payload) {{
   const rows = firstArray(payload);
   return rows ? '<h2>' + esc(endpoint) + '</h2>' + renderTable(endpoint, rows) : '<h2>' + esc(endpoint) + '</h2><pre>' + esc(JSON.stringify(payload, null, 2)) + '</pre>';
 }}
+function detailNavigationOptions(endpoint, record) {{
+  const previousDetail = window.__chronicleDetailTrail.length > 0
+    ? window.__chronicleDetailTrail[window.__chronicleDetailTrail.length - 1]
+    : '';
+  return {{
+    filterLabel: currentFilterLabel(),
+    listButtons: relatedListButtons(endpoint, record),
+    previousDetail: previousDetail,
+    trailLabel: currentTrailLabel(),
+    trailButtons: currentTrailButtons(),
+  }};
+}}
+function detailNoticeBody(endpoint, record) {{
+  const options = detailNavigationOptions(endpoint, record);
+  let extra = renderNavigationNotice(endpoint, record, options);
+  extra += renderRuntimePreviewNotice(record);
+  extra += renderRetrievalHandoffNotice(record);
+  extra += renderPackageHandoffPreviewNotice(record);
+  extra += renderInvocationPlanNotice(record);
+  extra += renderPackageReadinessNotice(record);
+  extra += renderRelatedLinksNotice(record);
+  extra += renderAuthReadinessNotice(record);
+  extra += renderReviewCapabilityNotice(record);
+  extra += renderDetailActionPreviewNotice(record);
+  extra += renderCliParityNotice(record);
+  extra += renderIdentityAssuranceNotice(record);
+  extra += renderReviewTimelineNotice(record);
+  return extra;
+}}
+function detailBody(endpoint, payload) {{
+  const record = payload.record || {{}};
+  return '<h2>' + esc(endpoint) + '</h2>' + detailNoticeBody(endpoint, record) + '<pre>' + esc(JSON.stringify(payload, null, 2)) + '</pre>';
+}}
 async function loadEndpoint(endpoint) {{
   window.__chronicleCurrentEndpoint = endpoint;
   const response = await fetch(endpoint);
@@ -3491,35 +3524,7 @@ async function loadDetail(endpoint) {{
     return;
   }}
   const payload = await response.json();
-  const record = payload.record || {{}};
-  const filterLabel = currentFilterLabel();
-  const listButtons = relatedListButtons(endpoint, record);
-  const previousDetail = window.__chronicleDetailTrail.length > 0
-    ? window.__chronicleDetailTrail[window.__chronicleDetailTrail.length - 1]
-    : '';
-  const trailLabel = currentTrailLabel();
-  const trailButtons = currentTrailButtons();
-  let extra = renderNavigationNotice(endpoint, record, {{
-    filterLabel: filterLabel,
-    previousDetail: previousDetail,
-    trailLabel: trailLabel,
-    trailButtons: trailButtons,
-    listButtons: listButtons,
-  }});
-  extra += renderRuntimePreviewNotice(record);
-  extra += renderRetrievalHandoffNotice(record);
-  extra += renderPackageHandoffPreviewNotice(record);
-  extra += renderInvocationPlanNotice(record);
-  extra += renderPackageReadinessNotice(record);
-  extra += renderRelatedLinksNotice(record);
-  extra += renderAuthReadinessNotice(record);
-  extra += renderReviewCapabilityNotice(record);
-  extra += renderDetailActionPreviewNotice(record);
-  extra += renderCliParityNotice(record);
-  extra += renderIdentityAssuranceNotice(record);
-  extra += renderReviewTimelineNotice(record);
-  document.getElementById('detail').innerHTML =
-    '<h2>' + esc(endpoint) + '</h2>' + extra + '<pre>' + esc(JSON.stringify(payload, null, 2)) + '</pre>';
+  document.getElementById('detail').innerHTML = detailBody(endpoint, payload);
 }}
 async function previewBlockedRoute(path, targetId = 'action-preview-response') {{
   const target = document.getElementById(targetId);
