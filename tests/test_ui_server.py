@@ -713,6 +713,8 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "detailLine" in html
     assert "detailListLine" in html
     assert "summaryJsonLine" in html
+    assert "messageParagraph" in html
+    assert "statusMessageBody" in html
     assert "detailListLine('Auth blockers', authBoundary.blockers, ' | ')" in html
     assert "summaryJsonLine('Identity assurance counts', identityBoundary.assurance_counts)" in html
     assert "summaryJsonLine('Auth review capability counts', authBoundaryOverview.review_capability_counts)" in html
@@ -748,7 +750,10 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "Summary identity aligned" in html
     assert "Warning priority:" in html
     assert "summaryJsonLine('Runtime kinds', triage.runtime_record_kinds)" in html
-    assert "detailLine('Status', parity.status || '')" in html
+    assert "statusMessageBody(readiness.status, readiness.message, readinessButtons)" in html
+    assert "statusMessageBody(notice.status, notice.message, noticeButtons)" in html
+    assert "statusMessageBody(assurance.status, assurance.message, assuranceButtons)" in html
+    assert "messageParagraph(parity.message)" in html
     assert "detailListLine('Expected actions', parity.expected_actions)" in html
     assert "listJumpButton('Open Review Queue', '/api/review-queue')" in html
     assert "listJumpButton('Open Runtime Records', '/api/runtime-records')" in html

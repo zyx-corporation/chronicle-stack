@@ -2804,12 +2804,18 @@ function detailListLine(label, values, separator) {{
 function summaryJsonLine(label, value) {{
   return '<p>' + esc(label) + ': ' + esc(JSON.stringify(value || {{}})) + '</p>';
 }}
+function messageParagraph(message) {{
+  return '<p>' + esc(message || '') + '</p>';
+}}
 function buttonRow(buttons) {{
   return buttons.length > 0 ? '<p>' + buttons.join('') + '</p>' : '';
 }}
 function moreStatusButtons(status, endpoint, filterTarget, prefix = '') {{
   if (!status) return [];
   return [listJumpButton('More ' + status, endpoint, filterTarget, prefix + status)];
+}}
+function statusMessageBody(status, message, buttons = []) {{
+  return detailLine('Status', status || '') + buttonRow(buttons) + messageParagraph(message);
 }}
 function renderNotice(title, body) {{
   return '<div class="notice">' + sectionTitle(title) + body + '</div>';
@@ -2911,8 +2917,7 @@ function renderPackageHandoffPreviewNotice(record) {{
   const manifest = preview.package_manifest_preview || {{}};
   return renderNotice(
     'Package Handoff Preview',
-    detailLine('Status', preview.status || '')
-      + '<p>' + esc(preview.message || '') + '</p>'
+    statusMessageBody(preview.status, preview.message)
       + detailListLine('Eligible contexts', preview.eligible_context_ids)
       + detailListLine('Skipped records', preview.skipped_record_ids)
       + detailLine('Package review status', packageReview.status || '(not available)')
@@ -2946,9 +2951,7 @@ function renderPackageReadinessNotice(record) {{
   const readinessButtons = moreStatusButtons(readiness.status, '/api/review-queue', 'reviewQueue', 'package:');
   return renderNotice(
     'Review Package Readiness',
-    detailLine('Status', readiness.status || '')
-      + '<p>' + esc(readiness.message || '') + '</p>'
-      + buttonRow(readinessButtons)
+    statusMessageBody(readiness.status, readiness.message, readinessButtons)
       + detailListLine('Eligible contexts', readiness.eligible_context_ids)
       + detailListLine('Suggested commands', readiness.suggested_commands, ' | ')
       + detailLine('Package review status', packageReview.status || '(not available)')
@@ -2974,9 +2977,7 @@ function renderAuthReadinessNotice(record) {{
   const noticeButtons = moreStatusButtons(notice.status, '/api/review-queue', 'reviewQueue');
   return renderNotice(
     'Auth Readiness',
-    detailLine('Status', notice.status || '')
-      + buttonRow(noticeButtons)
-      + '<p>' + esc(notice.message || '') + '</p>'
+    statusMessageBody(notice.status, notice.message, noticeButtons)
       + detailLine('Review capability', notice.capability_status || '')
       + detailLine('Identity assurance', notice.identity_assurance_status || '')
       + detailLine('Blockers', detailMessages(blockerDetails, notice.blockers))
@@ -2991,7 +2992,7 @@ function renderReviewCapabilityNotice(record) {{
   const warnBadges = reviewWarningBadges(warnList);
   return renderNotice(
     'Review Capability',
-    '<p>' + esc(capability.message || '') + '</p>'
+    messageParagraph(capability.message)
       + detailLine('Status', capability.status || '')
       + (warnBadges ? '<p>' + warnBadges + '</p>' : '')
       + detailLine('Warnings', detailMessages(warnDetails, warnList) || '(none)')
@@ -3039,7 +3040,7 @@ function renderDetailActionPreviewNotice(record) {{
   ];
   return renderNotice(
     'Action Preview',
-    '<p>' + esc(preview.message || '') + '</p>'
+    messageParagraph(preview.message)
       + detailLine('Status', preview.status || '')
       + buttonRow(previewButtons)
       + detailLine('Rollback status', failureContract.rollback_status || '')
@@ -3066,7 +3067,7 @@ function renderCliParityNotice(record) {{
   const parityButtons = moreStatusButtons(parity.status, '/api/review-queue', 'reviewQueue');
   return renderNotice(
     'CLI Parity',
-    '<p>' + esc(parity.message || '') + '</p>'
+    messageParagraph(parity.message)
       + detailLine('Status', parity.status || '')
       + buttonRow(parityButtons)
       + detailListLine('Expected actions', parity.expected_actions)
@@ -3080,9 +3081,7 @@ function renderIdentityAssuranceNotice(record) {{
   const assuranceButtons = moreStatusButtons(assurance.status, '/api/review-queue', 'reviewQueue');
   return renderNotice(
     'Identity Assurance',
-    detailLine('Status', assurance.status || '')
-      + buttonRow(assuranceButtons)
-      + '<p>' + esc(assurance.message || '') + '</p>'
+    statusMessageBody(assurance.status, assurance.message, assuranceButtons)
   );
 }}
 function renderReviewTimelineNotice(record) {{
