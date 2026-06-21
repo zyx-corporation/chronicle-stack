@@ -3065,8 +3065,58 @@ function renderReviewTimelineNotice(record) {{
         + ' (' + esc((item.identity_assurance && item.identity_assurance.status) || '') + ')'
         + (timelineButtons.length > 0 ? '<br>' + timelineButtons.join('') : '')
         + '</li>';
-    }}).join('') + '</ul>'
+      }}).join('') + '</ul>'
   );
+}}
+async function responseJsonOrEmpty(response) {{
+  try {{
+    return await response.json();
+  }} catch (_error) {{
+    return {{}};
+  }}
+}}
+async function postJson(path, body = undefined) {{
+  const options = {{ method: 'POST' }};
+  if (body !== undefined) {{
+    options.headers = {{ 'Content-Type': 'application/json' }};
+    options.body = JSON.stringify(body);
+  }}
+  const response = await fetch(path, options);
+  const payload = await responseJsonOrEmpty(response);
+  return {{ response, payload }};
+}}
+function appendCommandFeedback(target, command, copied) {{
+  if (!target) return;
+  target.innerHTML += '<p>' + esc(copied ? 'Copied recovery CLI: ' : 'Copy failed; command: ') + '<span class="id">' + esc(command) + '</span></p>';
+}}
+async function tryCopyText(command) {{
+  if (navigator.clipboard && navigator.clipboard.writeText) {{
+    try {{
+      await navigator.clipboard.writeText(command);
+      return true;
+    }} catch (_error) {{
+      return false;
+    }}
+  }}
+  const textArea = document.createElement('textarea');
+  textArea.value = command;
+  textArea.setAttribute('readonly', 'readonly');
+  textArea.style.position = 'absolute';
+  textArea.style.left = '-9999px';
+  document.body.appendChild(textArea);
+  textArea.select();
+  const copied = document.execCommand('copy');
+  document.body.removeChild(textArea);
+  return copied;
+}}
+function reviewActionRequestBody(action, fieldPrefix = 'reviewer') {{
+  return {{
+    reviewer_label: reviewFieldValue(fieldPrefix, 'reviewer-label', ''),
+    reviewer_kind: reviewFieldValue(fieldPrefix, 'reviewer-kind', 'local_operator') || 'local_operator',
+    session_label: reviewFieldValue(fieldPrefix, 'reviewer-session-label', ''),
+    note: reviewFieldValue(fieldPrefix, 'reviewer-note', ''),
+    ui_intent: action || '',
+  }};
 }}
 function renderOverview(payload) {{
   const chronicle = payload.chronicle || {{}};
@@ -3338,13 +3388,7 @@ async function previewBlockedRoute(path, targetId = 'action-preview-response') {
   const target = document.getElementById(targetId);
   if (!target) return;
   target.innerHTML = '<p>Loading blocked route preview…</p>';
-  const response = await fetch(path, {{ method: 'POST' }});
-  let payload = {{}};
-  try {{
-    payload = await response.json();
-  }} catch (_error) {{
-    payload = {{}};
-  }}
+  const {{ response, payload }} = await postJson(path);
   target.innerHTML = renderReviewActionResultPanel(
     'Blocked Route Preview',
     response.status,
@@ -3365,55 +3409,14 @@ function reviewFieldValue(prefix, suffix, fallback = '') {{
 async function copyCommand(command, targetId = 'action-preview-response') {{
   const target = document.getElementById(targetId);
   if (!command) return;
-  let copied = false;
-  if (navigator.clipboard && navigator.clipboard.writeText) {{
-    try {{
-      await navigator.clipboard.writeText(command);
-      copied = true;
-    }} catch (_error) {{
-      copied = false;
-    }}
-  }}
-  if (!copied) {{
-    const textArea = document.createElement('textarea');
-    textArea.value = command;
-    textArea.setAttribute('readonly', 'readonly');
-    textArea.style.position = 'absolute';
-    textArea.style.left = '-9999px';
-    document.body.appendChild(textArea);
-    textArea.select();
-    copied = document.execCommand('copy');
-    document.body.removeChild(textArea);
-  }}
-  if (target) {{
-    target.innerHTML += '<p>' + esc(copied ? 'Copied recovery CLI: ' : 'Copy failed; command: ') + '<span class="id">' + esc(command) + '</span></p>';
-  }}
+  const copied = await tryCopyText(command);
+  appendCommandFeedback(target, command, copied);
 }}
 async function submitReviewAction(path, action, recordId, targetId = 'action-preview-response', fieldPrefix = 'reviewer', successDetail = '') {{
   const target = document.getElementById(targetId);
   if (!target) return;
-  const reviewerLabel = reviewFieldValue(fieldPrefix, 'reviewer-label', '');
-  const reviewerKind = reviewFieldValue(fieldPrefix, 'reviewer-kind', 'local_operator') || 'local_operator';
-  const sessionLabel = reviewFieldValue(fieldPrefix, 'reviewer-session-label', '');
-  const note = reviewFieldValue(fieldPrefix, 'reviewer-note', '');
   target.innerHTML = '<p>Applying review action…</p>';
-  const response = await fetch(path, {{
-    method: 'POST',
-    headers: {{ 'Content-Type': 'application/json' }},
-    body: JSON.stringify({{
-      reviewer_label: reviewerLabel,
-      reviewer_kind: reviewerKind,
-      session_label: sessionLabel,
-      note: note,
-      ui_intent: action || ''
-    }})
-  }});
-  let payload = {{}};
-  try {{
-    payload = await response.json();
-  }} catch (_error) {{
-    payload = {{}};
-  }}
+  const {{ response, payload }} = await postJson(path, reviewActionRequestBody(action, fieldPrefix));
   target.innerHTML = renderReviewActionResultPanel(
     'Review Action Result',
     response.status,

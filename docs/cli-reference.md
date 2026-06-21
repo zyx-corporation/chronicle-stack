@@ -370,6 +370,7 @@ read-only endpoint:
 - runtime records / review queue / summary jobs の table renderer も endpoint ごとの helper を通し、generic fallback も renderer map に束ねるため、`renderTable` は dispatcher としての責務に揃います。
 - detail view の navigation/runtime/auth/parity/timeline notice も shared helper を通すため、read-only detail contract の copy と構造を各 detail 種別で揃えます。
 - detail view の action preview も shared helper を通すため、recovery CLI・mutation control・action list の表示契約を detail renderer 全体で揃えます。
+- blocked-route preview / review submit / copy feedback の action runtime 補助も shared helper を通すため、POST 応答処理と copy fallback の挙動を JS 補助層で揃えます。
 - overview triage では `Identity aligned` などの quick slice から reviewer identity / assurance 系の review queue slice に直接 drilldown できますが、これは引き続き read-only filter state のみです。
 - overview の runtime records / summary jobs panel でも matching-review-derived auth readiness の集約状態を read-only で確認できます。
 - overview の summary jobs panel では matching-review-derived identity/session assurance 集約も read-only で確認できます。
