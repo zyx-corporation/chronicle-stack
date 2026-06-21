@@ -70,6 +70,10 @@ AUTH_BOUNDARY_BLOCKER_TEXT: dict[str, str] = {
     "reviewer_identity_declared_only": "Strengthen reviewer identity beyond self-declared metadata.",
     "reviewer_session_label_missing": "Require session labels when session-gated review is expected.",
 }
+OVERVIEW_SLICE_LABELS: dict[str, str] = {
+    "reviewer_identity_declared_only": "Declared identity only",
+    "reviewer_session_label_missing": "Session label required",
+}
 
 
 class UIAuthMode:
@@ -1987,6 +1991,7 @@ class ChronicleUIDataService:
         metadata = self.chronicle.require_initialized()
         title = html.escape(metadata.title)
         root = html.escape(str(self.root.resolve()))
+        review_warning_labels_json = json.dumps(REVIEW_WARNING_LABELS, ensure_ascii=False)
         return f"""<!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -2043,6 +2048,7 @@ th, td {{ padding: 6px; border-bottom: 1px solid #e5e7eb; vertical-align: top; }
 <section id="detail" class="panel"><p>Select JSON from a table row to inspect one record.</p></section>
 <script>
 const idFields = ['event_id', 'context_id', 'artifact_id', 'decision_id', 'rde_record_id', 'rule_id', 'audit_id', 'lifecycle_id', 'record_id', 'node_id', 'summary_job_id'];
+const reviewWarningLabels = {review_warning_labels_json};
 function esc(value) {{ return String(value).replace(/[&<>\"']/g, ch => ({{'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}}[ch])); }}
 function firstArray(payload) {{ for (const key of Object.keys(payload)) if (Array.isArray(payload[key])) return payload[key]; return null; }}
 function badge(text, cls) {{ return '<span class="badge ' + cls + '">' + esc(text) + '</span>'; }}
@@ -2069,14 +2075,7 @@ function reviewerIdentityBadge(identity) {{
 }}
 function reviewWarningBadges(warnings) {{
   return (warnings || []).map(code => {{
-    const warningLabels = {{
-      ui_auth_not_enabled: 'Auth not enabled',
-      ui_authorization_not_enabled: 'Authorization advisory',
-      no_reviewer_identity_recorded: 'Reviewer missing',
-      reviewer_identity_declared_only: 'Declared identity only',
-      reviewer_session_label_missing: 'Session label required'
-    }};
-    const text = warningLabels[String(code || '')] || String(code || '').replaceAll('_', ' ');
+    const text = reviewWarningLabels[String(code || '')] || String(code || '').replaceAll('_', ' ');
     return jumpBadge(text, 'badge-warning', '/api/review-queue', 'reviewQueue', String(code || ''));
   }}).join('');
 }}
