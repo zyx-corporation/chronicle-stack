@@ -2493,12 +2493,49 @@ function includesQuery(values, query) {{
 function sortRows(rows, comparator) {{
   return [...rows].sort(comparator);
 }}
+const endpointFilterTargets = {{
+  '/api/runtime-records': 'runtimeRecords',
+  '/api/review-queue': 'reviewQueue',
+  '/api/summary-jobs': 'summaryJobs',
+}};
+const endpointSortDefaults = {{
+  '/api/runtime-records': 'latest',
+  '/api/review-queue': 'attention',
+  '/api/summary-jobs': 'latest',
+}};
 function currentSortValue(endpoint) {{
   if (!window.__chronicleSorts) return '';
-  if (endpoint === '/api/runtime-records') return window.__chronicleSorts.runtimeRecords || 'latest';
-  if (endpoint === '/api/review-queue') return window.__chronicleSorts.reviewQueue || 'attention';
-  if (endpoint === '/api/summary-jobs') return window.__chronicleSorts.summaryJobs || 'latest';
-  return '';
+  const target = endpointFilterTargets[endpoint];
+  if (!target) return '';
+  return window.__chronicleSorts[target] || endpointSortDefaults[endpoint] || '';
+}}
+function currentFilterValue(endpoint) {{
+  if (!window.__chronicleFilters) return '';
+  const target = endpointFilterTargets[endpoint];
+  return target ? window.__chronicleFilters[target] || '' : '';
+}}
+function setFilterValue(target, value) {{
+  if (!window.__chronicleFilters || !target) return;
+  window.__chronicleFilters[target] = value || '';
+}}
+function setSortValue(target, value) {{
+  if (!window.__chronicleSorts || !target) return;
+  const endpoint = Object.keys(endpointFilterTargets).find(key => endpointFilterTargets[key] === target) || '';
+  window.__chronicleSorts[target] = value || endpointSortDefaults[endpoint] || '';
+}}
+function clearFilterValue(target) {{
+  if (!window.__chronicleFilters || !target) return;
+  window.__chronicleFilters[target] = '';
+}}
+function resetAllFilterValues() {{
+  if (!window.__chronicleFilters) return;
+  Object.values(endpointFilterTargets).forEach(target => {{
+    window.__chronicleFilters[target] = '';
+  }});
+}}
+function endpointStateLabel(kind, endpoint) {{
+  const value = kind === 'filter' ? currentFilterValue(endpoint) : currentSortValue(endpoint);
+  return value ? stateLabel(kind, value) : '';
 }}
 function stateLabel(kind, value, suffix) {{
   const normalizedValue = String(value || '');
@@ -2639,16 +2676,7 @@ function sortSummaryJobRows(rows) {{
 }}
 function currentFilterLabel() {{
   if (!window.__chronicleCurrentEndpoint || !window.__chronicleFilters) return '';
-  if (window.__chronicleCurrentEndpoint === '/api/runtime-records' && window.__chronicleFilters.runtimeRecords) {{
-    return stateLabel('filter', window.__chronicleFilters.runtimeRecords);
-  }}
-  if (window.__chronicleCurrentEndpoint === '/api/review-queue' && window.__chronicleFilters.reviewQueue) {{
-    return stateLabel('filter', window.__chronicleFilters.reviewQueue);
-  }}
-  if (window.__chronicleCurrentEndpoint === '/api/summary-jobs' && window.__chronicleFilters.summaryJobs) {{
-    return stateLabel('filter', window.__chronicleFilters.summaryJobs);
-  }}
-  return '';
+  return endpointStateLabel('filter', window.__chronicleCurrentEndpoint);
 }}
 function currentSortLabel(endpoint) {{
   const currentEndpoint = endpoint || window.__chronicleCurrentEndpoint || '';
@@ -2662,19 +2690,15 @@ function currentSortLabel(endpoint) {{
 }}
 function hasActiveFilters() {{
   if (!window.__chronicleFilters) return false;
-  return Boolean(window.__chronicleFilters.runtimeRecords || window.__chronicleFilters.reviewQueue || window.__chronicleFilters.summaryJobs);
+  return Object.values(endpointFilterTargets).some(target => Boolean(window.__chronicleFilters[target]));
 }}
 function resetFilters(target) {{
   if (!window.__chronicleFilters) return;
   if (!target || target === 'all') {{
-    window.__chronicleFilters.runtimeRecords = '';
-    window.__chronicleFilters.reviewQueue = '';
-    window.__chronicleFilters.summaryJobs = '';
+    resetAllFilterValues();
     return;
   }}
-  if (target === 'runtimeRecords') window.__chronicleFilters.runtimeRecords = '';
-  if (target === 'reviewQueue') window.__chronicleFilters.reviewQueue = '';
-  if (target === 'summaryJobs') window.__chronicleFilters.summaryJobs = '';
+  clearFilterValue(target);
 }}
 function currentTrailLabel() {{
   if (!Array.isArray(window.__chronicleDetailTrail) || window.__chronicleDetailTrail.length === 0) return '';
@@ -3144,19 +3168,13 @@ function reloadCurrentEndpoint() {{
   if (window.__chronicleCurrentEndpoint) loadEndpoint(window.__chronicleCurrentEndpoint);
 }}
 function applyJumpFilter(filterTarget, filterValue) {{
-  if (filterTarget === 'runtimeRecords') window.__chronicleFilters.runtimeRecords = filterValue;
-  if (filterTarget === 'reviewQueue') window.__chronicleFilters.reviewQueue = filterValue;
-  if (filterTarget === 'summaryJobs') window.__chronicleFilters.summaryJobs = filterValue;
+  setFilterValue(filterTarget, filterValue);
 }}
 function updateFilterState(filterId, value) {{
-  if (filterId === 'runtimeRecords') window.__chronicleFilters.runtimeRecords = value || '';
-  if (filterId === 'reviewQueue') window.__chronicleFilters.reviewQueue = value || '';
-  if (filterId === 'summaryJobs') window.__chronicleFilters.summaryJobs = value || '';
+  setFilterValue(filterId, value);
 }}
 function updateSortState(sortId, value) {{
-  if (sortId === 'runtimeRecords') window.__chronicleSorts.runtimeRecords = value || 'latest';
-  if (sortId === 'reviewQueue') window.__chronicleSorts.reviewQueue = value || 'attention';
-  if (sortId === 'summaryJobs') window.__chronicleSorts.summaryJobs = value || 'latest';
+  setSortValue(sortId, value);
 }}
 function handleDetailTrailNavigation(target) {{
   if (!target) return;

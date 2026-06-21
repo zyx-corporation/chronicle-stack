@@ -626,6 +626,11 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "sortSelect" in html
     assert "sortRuntimeRows" in html
     assert "includesQuery" in html
+    assert "endpointFilterTargets" in html
+    assert "endpointSortDefaults" in html
+    assert "currentFilterValue" in html
+    assert "setFilterValue" in html
+    assert "setSortValue" in html
     assert "compareReviewerLabel" in html
     assert "compareReviewTargetDesc" in html
     assert "sortReviewRows" in html
