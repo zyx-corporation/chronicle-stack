@@ -69,6 +69,14 @@ AUTH_BOUNDARY_BLOCKER_TEXT: dict[str, str] = {
     "reviewer_identity_missing": "Record reviewer identity metadata before relying on GUI review signals.",
     "reviewer_identity_declared_only": "Strengthen reviewer identity beyond self-declared metadata.",
     "reviewer_session_label_missing": "Require session labels when session-gated review is expected.",
+    "shared_machine_session_unhardened": "Clarify shared-machine expectations for session-gated review.",
+}
+AUTH_BOUNDARY_WARNING_TO_BLOCKER: dict[str, str] = {
+    "ui_auth_not_enabled": "auth_not_enabled",
+    "ui_authorization_not_enabled": "authorization_not_enabled",
+    "no_reviewer_identity_recorded": "reviewer_identity_missing",
+    "reviewer_identity_declared_only": "reviewer_identity_declared_only",
+    "reviewer_session_label_missing": "reviewer_session_label_missing",
 }
 OVERVIEW_SLICE_LABELS: dict[str, str] = {
     "reviewer_identity_declared_only": "Declared identity only",
@@ -118,14 +126,11 @@ def _auth_boundary_summary(metadata: UIBoundaryMetadata) -> dict[str, Any]:
     next_steps: list[str] = []
 
     if metadata.auth_mode == UIAuthMode.NOT_ENABLED:
-        blockers.append("auth_not_enabled")
-        next_steps.append("Define explicit local auth boundary.")
+        _append_auth_boundary_blocker(blockers, next_steps, "auth_not_enabled")
     if metadata.authorization_mode == UIAuthorizationMode.NOT_ENABLED:
-        blockers.append("authorization_not_enabled")
-        next_steps.append("Define authorization semantics for reviewer actions.")
+        _append_auth_boundary_blocker(blockers, next_steps, "authorization_not_enabled")
     if metadata.session_gating and not metadata.shared_machine_safe:
-        blockers.append("shared_machine_session_unhardened")
-        next_steps.append("Clarify shared-machine expectations for session-gated review.")
+        _append_auth_boundary_blocker(blockers, next_steps, "shared_machine_session_unhardened")
 
     if metadata.auth_mode == UIAuthMode.NOT_ENABLED:
         status = "auth_not_enabled"
@@ -141,10 +146,26 @@ def _auth_boundary_summary(metadata: UIBoundaryMetadata) -> dict[str, Any]:
         "status": status,
         "message": message,
         "blockers": blockers,
+        "blocker_details": [
+            {
+                "code": blocker,
+                "message": AUTH_BOUNDARY_BLOCKER_TEXT.get(blocker, blocker.replace("_", " ")),
+            }
+            for blocker in blockers
+        ],
         "next_steps": next_steps,
         "shared_machine_safe": metadata.shared_machine_safe,
         "session_gating": metadata.session_gating,
     }
+
+
+def _append_auth_boundary_blocker(
+    blockers: list[str],
+    next_steps: list[str],
+    blocker_code: str,
+) -> None:
+    blockers.append(blocker_code)
+    next_steps.append(AUTH_BOUNDARY_BLOCKER_TEXT.get(blocker_code, blocker_code.replace("_", " ")))
 
 
 @dataclass(frozen=True)
@@ -1040,21 +1061,11 @@ class ChronicleUIDataService:
         blockers: list[str] = []
         next_steps: list[str] = []
 
-        if "ui_auth_not_enabled" in warnings:
-            blockers.append("auth_not_enabled")
-            next_steps.append("Define explicit local auth boundary.")
-        if "ui_authorization_not_enabled" in warnings:
-            blockers.append("authorization_not_enabled")
-            next_steps.append("Define authorization semantics for reviewer actions.")
-        if "no_reviewer_identity_recorded" in warnings:
-            blockers.append("reviewer_identity_missing")
-            next_steps.append("Record reviewer identity metadata before relying on GUI review signals.")
-        if "reviewer_identity_declared_only" in warnings:
-            blockers.append("reviewer_identity_declared_only")
-            next_steps.append("Strengthen reviewer identity beyond self-declared metadata.")
-        if "reviewer_session_label_missing" in warnings:
-            blockers.append("reviewer_session_label_missing")
-            next_steps.append("Require session labels when session-gated review is expected.")
+        for warning in warnings:
+            blocker_code = AUTH_BOUNDARY_WARNING_TO_BLOCKER.get(warning)
+            if blocker_code is None:
+                continue
+            _append_auth_boundary_blocker(blockers, next_steps, blocker_code)
 
         assurance_status = str(assurance.get("status", "unknown"))
         capability_status = str(capability.get("status", "unknown"))

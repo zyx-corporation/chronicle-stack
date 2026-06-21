@@ -172,6 +172,10 @@ def test_startup_metadata(tmp_path):
     assert "write_routes_disabled" in payload["ui_boundary"]["mutation_blockers"]
     assert payload["ui_boundary"]["auth_boundary_summary"]["status"] == "auth_not_enabled"
     assert "auth_not_enabled" in payload["ui_boundary"]["auth_boundary_summary"]["blockers"]
+    assert payload["ui_boundary"]["auth_boundary_summary"]["blocker_details"] == [
+        {"code": "auth_not_enabled", "message": "Define explicit local auth boundary."},
+        {"code": "authorization_not_enabled", "message": "Define authorization semantics for reviewer actions."},
+    ]
 
 
 def test_startup_metadata_with_configured_auth_mode(tmp_path):
@@ -253,6 +257,10 @@ def test_ui_overview_data(tmp_path):
     assert overview["ui_boundary"]["auth_mode"] == "not_enabled"
     assert overview["auth_boundary_summary"]["status"] == "auth_not_enabled"
     assert "Define explicit local auth boundary." in overview["auth_boundary_summary"]["next_steps"]
+    assert overview["auth_boundary_summary"]["blocker_details"][0] == {
+        "code": "auth_not_enabled",
+        "message": "Define explicit local auth boundary.",
+    }
     assert overview["auth_boundary_overview"]["auth_warning_count"] == 3
     assert overview["auth_boundary_overview"]["authorization_warning_count"] == 3
     assert overview["auth_boundary_overview"]["missing_identity_count"] == 3

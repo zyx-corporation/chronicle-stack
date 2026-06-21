@@ -359,6 +359,7 @@ read-only endpoint:
 - `authorization_failed` の payload には `warning_details` と `identity_assurance_message` も含まれ、read-only UI で境界理由をそのまま表示できます。
 - read-only UI の overview badge / auth readiness detail でも、warning code そのものではなく人向けの boundary label / blocker 文言を表示します。
 - read-only UI の warning badge label は shared copy map から描画され、overview/detail/action-result 間の copy drift を減らします。
+- auth boundary の blocker / next-step 文言も shared helper から生成され、startup metadata・overview・detail の説明を揃えます。
 - overview triage では `Identity aligned` などの quick slice から reviewer identity / assurance 系の review queue slice に直接 drilldown できますが、これは引き続き read-only filter state のみです。
 - overview の runtime records / summary jobs panel でも matching-review-derived auth readiness の集約状態を read-only で確認できます。
 - overview の summary jobs panel では matching-review-derived identity/session assurance 集約も read-only で確認できます。
