@@ -78,6 +78,16 @@ AUTH_BOUNDARY_WARNING_TO_BLOCKER: dict[str, str] = {
     "reviewer_identity_declared_only": "reviewer_identity_declared_only",
     "reviewer_session_label_missing": "reviewer_session_label_missing",
 }
+MUTATION_BLOCKER_TEXT: dict[str, str] = {
+    "write_routes_disabled": "Keep write routes disabled until all explicit local mutation prerequisites are satisfied.",
+    "auth_not_enabled": "Define explicit local auth boundary.",
+    "authorization_not_enabled": "Define authorization semantics for reviewer actions.",
+    "mutation_capability_flag_disabled": "Require the explicit mutation capability flag before any GUI write path can activate.",
+    "ui_mutation_enable_flag_disabled": "Require the explicit UI mutation enable flag for each local write-capable session.",
+    "reviewer_identity_missing": "Record reviewer identity metadata before using the local GUI write path.",
+    "reviewer_identity_declared_only": "Strengthen reviewer identity beyond self-declared metadata before relying on GUI mutation.",
+    "reviewer_session_label_missing": "Require a local session label before session-gated GUI mutation is treated as eligible.",
+}
 OVERVIEW_SLICE_LABELS: dict[str, str] = {
     "reviewer_identity_declared_only": "Declared identity only",
     "reviewer_session_label_missing": "Session label required",
@@ -118,6 +128,8 @@ class UIBoundaryMetadata:
         "authorization_not_enabled",
         "audit_insertion_cli_only",
     )
+    mutation_blocker_details: list[dict[str, str]] | None = None
+    reviewer_context_requirements: dict[str, Any] | None = None
     auth_boundary_summary: dict[str, Any] | None = None
 
 
@@ -180,6 +192,43 @@ def _serialize_review_warning_details(warnings: list[str]) -> list[dict[str, str
         }
         for warning in warnings
     ]
+
+
+def _append_mutation_blocker(
+    blockers: list[str],
+    next_steps: list[str],
+    blocker_code: str,
+) -> None:
+    if blocker_code not in blockers:
+        blockers.append(blocker_code)
+    message = MUTATION_BLOCKER_TEXT.get(blocker_code, blocker_code.replace("_", " "))
+    if message not in next_steps:
+        next_steps.append(message)
+
+
+def _serialize_mutation_blocker_details(blockers: list[str]) -> list[dict[str, str]]:
+    return [
+        {
+            "code": blocker,
+            "message": MUTATION_BLOCKER_TEXT.get(blocker, blocker.replace("_", " ")),
+        }
+        for blocker in blockers
+    ]
+
+
+def _reviewer_context_requirements(metadata: UIBoundaryMetadata) -> dict[str, Any]:
+    return {
+        "required_fields": ["reviewer_label", "reviewer_kind", "ui_intent"],
+        "session_label_required": bool(metadata.session_gating),
+        "accepted_reviewer_kinds": [ReviewerIdentityKind.LOCAL_OPERATOR.value],
+        "advisory_only_reviewer_kinds": [ReviewerIdentityKind.USER_DECLARED.value],
+        "authority_note": "Request reviewer metadata is required local context, but it is not sufficient proof of authority on its own.",
+        "session_note": (
+            "Session label is required because the current local mutation boundary is session-gated."
+            if metadata.session_gating
+            else "Session label is optional while session-gated review is disabled."
+        ),
+    }
 
 
 @dataclass(frozen=True)
@@ -286,6 +335,8 @@ def build_ui_boundary_metadata(
     return UIBoundaryMetadata(
         **{
             **asdict(metadata),
+            "mutation_blocker_details": _serialize_mutation_blocker_details(list(metadata.mutation_blockers)),
+            "reviewer_context_requirements": _reviewer_context_requirements(metadata),
             "auth_boundary_summary": _auth_boundary_summary(metadata),
         }
     )
@@ -816,20 +867,34 @@ class ChronicleUIDataService:
         queue = review_queue if review_queue is not None else self.review_queue()["review_queue"]
         ready_rows = sum(1 for row in queue if row.get("review_capability", {}).get("can_review_now") is True)
         advisory_rows = sum(1 for row in queue if row.get("review_capability", {}).get("can_review_now") is not True)
-        blockers = list(boundary.get("mutation_blockers", []))
-        next_steps = [
-            "Define explicit local auth boundary.",
-            "Define authorization semantics for reviewer actions.",
-            "Keep write routes disabled until audit insertion and CLI parity checks are explicit.",
-        ]
+        blockers: list[str] = []
+        next_steps: list[str] = []
+        for blocker in boundary.get("mutation_blockers", []):
+            _append_mutation_blocker(blockers, next_steps, str(blocker))
+        pending_boundary_warning_counts: dict[str, int] = {}
+        for row in queue:
+            for warning in row.get("review_capability", {}).get("warnings", []):
+                blocker_code = AUTH_BOUNDARY_WARNING_TO_BLOCKER.get(str(warning))
+                if blocker_code is None:
+                    continue
+                pending_boundary_warning_counts[blocker_code] = (
+                    pending_boundary_warning_counts.get(blocker_code, 0) + 1
+                )
+        for blocker_code in pending_boundary_warning_counts:
+            _append_mutation_blocker(blockers, next_steps, blocker_code)
         if ready_rows > 0:
-            next_steps.append("Preserve review-ready signals as preview-only until write-capable ADR work lands.")
+            next_steps.append(
+                "Preserve review-ready signals as preview-only until browser-triggered write ADR and audit semantics are explicit."
+            )
         return {
             "status": boundary.get("mutation_readiness_status", "preview_only"),
             "message": boundary.get("mutation_readiness_message", "GUI mutation remains disabled."),
             "ready_row_count": ready_rows,
             "advisory_row_count": advisory_rows,
             "blockers": blockers,
+            "blocker_details": _serialize_mutation_blocker_details(blockers),
+            "pending_boundary_warning_counts": pending_boundary_warning_counts,
+            "reviewer_context_requirements": boundary.get("reviewer_context_requirements", {}),
             "next_steps": next_steps,
         }
 
@@ -3339,6 +3404,8 @@ function renderOverviewIdentityBoundaryPanel(identityBoundary) {{
   );
 }}
 function renderOverviewMutationReadinessPanel(mutationReadiness) {{
+  const blockerDetails = Array.isArray(mutationReadiness.blocker_details) ? mutationReadiness.blocker_details : [];
+  const reviewerContextRequirements = mutationReadiness.reviewer_context_requirements || {{}};
   return renderPanel(
     sectionTitle('Mutation Readiness')
     + detailLine('Status', mutationReadiness.status || '')
@@ -3346,6 +3413,10 @@ function renderOverviewMutationReadinessPanel(mutationReadiness) {{
     + detailLine('Ready rows', mutationReadiness.ready_row_count ?? 0)
     + detailLine('Advisory rows', mutationReadiness.advisory_row_count ?? 0)
     + detailListLine('Blockers', mutationReadiness.blockers, ' | ')
+    + detailLine('Blocker details', detailMessages(blockerDetails, mutationReadiness.blockers))
+    + detailListLine('Reviewer fields', reviewerContextRequirements.required_fields, ' | ')
+    + detailListLine('Accepted reviewer kinds', reviewerContextRequirements.accepted_reviewer_kinds, ' | ')
+    + detailLine('Session label required', reviewerContextRequirements.session_label_required)
     + detailListLine('Next steps', mutationReadiness.next_steps, ' | ')
   );
 }}

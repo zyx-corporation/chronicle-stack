@@ -170,6 +170,13 @@ def test_startup_metadata(tmp_path):
     assert payload["ui_boundary"]["loopback_only"] is True
     assert payload["ui_boundary"]["mutation_readiness_status"] == "preview_only"
     assert "write_routes_disabled" in payload["ui_boundary"]["mutation_blockers"]
+    assert payload["ui_boundary"]["mutation_blocker_details"][0]["code"] == "write_routes_disabled"
+    assert payload["ui_boundary"]["reviewer_context_requirements"]["required_fields"] == [
+        "reviewer_label",
+        "reviewer_kind",
+        "ui_intent",
+    ]
+    assert payload["ui_boundary"]["reviewer_context_requirements"]["session_label_required"] is False
     assert payload["ui_boundary"]["auth_boundary_summary"]["status"] == "auth_not_enabled"
     assert "auth_not_enabled" in payload["ui_boundary"]["auth_boundary_summary"]["blockers"]
     assert payload["ui_boundary"]["auth_boundary_summary"]["blocker_details"] == [
@@ -190,6 +197,10 @@ def test_startup_metadata_with_configured_auth_mode(tmp_path):
     assert payload["auth_mode"] == "loopback_local"
     assert payload["authorization_mode"] == "reviewer_declared"
     assert payload["ui_boundary"]["session_gating"] is True
+    assert payload["ui_boundary"]["reviewer_context_requirements"]["session_label_required"] is True
+    assert payload["ui_boundary"]["reviewer_context_requirements"]["accepted_reviewer_kinds"] == [
+        "local_operator"
+    ]
     assert payload["ui_boundary"]["auth_boundary_summary"]["status"] == "reviewer_declared_preview"
 
 
@@ -222,6 +233,7 @@ def test_startup_metadata_with_enabled_ui_mutation(tmp_path):
     assert payload["ui_boundary"]["mutation_enabled"] is True
     assert payload["ui_boundary"]["read_only"] is False
     assert payload["ui_boundary"]["mutation_readiness_status"] == "enabled"
+    assert payload["ui_boundary"]["mutation_blockers"] == []
 
 
 def test_ui_overview_data(tmp_path):
@@ -269,6 +281,13 @@ def test_ui_overview_data(tmp_path):
     assert overview["identity_boundary_summary"]["missing_identity_count"] == 3
     assert overview["mutation_readiness"]["status"] == "preview_only"
     assert "Define explicit local auth boundary." in overview["mutation_readiness"]["next_steps"]
+    assert overview["mutation_readiness"]["blocker_details"][0]["code"] == "write_routes_disabled"
+    assert overview["mutation_readiness"]["pending_boundary_warning_counts"]["reviewer_identity_missing"] == 3
+    assert overview["mutation_readiness"]["reviewer_context_requirements"]["required_fields"] == [
+        "reviewer_label",
+        "reviewer_kind",
+        "ui_intent",
+    ]
     assert overview["runtime_records_summary"]["kind_counts"]["summary"] == 1
     assert overview["runtime_records_summary"]["kind_counts"]["retrieval_plan"] == 1
     assert overview["runtime_records_summary"]["auth_readiness_counts"]["advisory_only"] == 2
@@ -753,6 +772,9 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "summaryJsonLine('Identity assurance counts', summaryJobs.identity_assurance_counts)" in html
     assert "summaryJsonLine('Reviewer kind counts', summaryJobs.reviewer_kind_counts)" in html
     assert "summaryJsonLine('Runtime provider counts', summaryJobs.runtime_provider_counts)" in html
+    assert "detailListLine('Reviewer fields', reviewerContextRequirements.required_fields, ' | ')" in html
+    assert "detailListLine('Accepted reviewer kinds', reviewerContextRequirements.accepted_reviewer_kinds, ' | ')" in html
+    assert "detailLine('Session label required', reviewerContextRequirements.session_label_required)" in html
     assert "Runtime auth advisory" in html
     assert "Summary advisory" in html
     assert "Summary auth advisory" in html
