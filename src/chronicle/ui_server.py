@@ -1813,7 +1813,9 @@ class ChronicleUIDataService:
                     "message": self._review_action_failure_message("authorization_failed"),
                     "mutation_enabled": True,
                     "warning_codes": capability.get("warnings", []),
+                    "warning_details": capability.get("warning_details", []),
                     "identity_assurance_status": assurance.get("status"),
+                    "identity_assurance_message": assurance.get("message"),
                     "failure_summary": self._review_action_failure_summary(
                         error_code="authorization_failed",
                         warning_codes=capability.get("warnings", []),
@@ -3157,9 +3159,12 @@ async function previewBlockedRoute(path, targetId = 'action-preview-response') {
     + '<p>Route: <span class="id">' + esc(path) + '</span></p>'
     + '<p>' + esc(payload.message || 'No message returned.') + '</p>'
     + detailLine('Error code', payload.error_code || '')
+    + detailLine('Identity assurance', payload.identity_assurance_status || '')
+    + detailLine('Identity assurance message', payload.identity_assurance_message || '')
     + detailLine('Mutation enabled', payload.mutation_enabled)
     + detailLine('CLI equivalent', payload.cli_equivalent || '')
     + detailLine('Failure summary', payload.failure_summary || '')
+    + detailLine('Warnings', ((Array.isArray(payload.warning_details) ? payload.warning_details : []).map(item => item.message).join(' | ')) || ((payload.warning_codes || []).join(' | ')) || '')
     + detailLine('Recovery path', (payload.failure_contract || {{}}).recovery_path || '')
     + detailLine('Rollback status', (payload.failure_contract || {{}}).rollback_status || '')
     + detailLine('Durable mutation on failure', (payload.failure_contract || {{}}).durable_mutation_reported_on_failure)
@@ -3233,10 +3238,13 @@ async function submitReviewAction(path, action, recordId, targetId = 'action-pre
     + detailLine('Action', payload.action || action || '')
     + detailLine('Event', payload.event_id || recordId || '')
     + detailLine('Error code', payload.error_code || '')
+    + detailLine('Identity assurance', payload.identity_assurance_status || '')
+    + detailLine('Identity assurance message', payload.identity_assurance_message || '')
     + detailLine('Audit ID', payload.audit_id || '')
     + detailLine('Decision event', payload.decision_event_id || '')
     + detailLine('CLI equivalent', payload.cli_equivalent || '')
     + detailLine('Failure summary', payload.failure_summary || '')
+    + detailLine('Warnings', ((Array.isArray(payload.warning_details) ? payload.warning_details : []).map(item => item.message).join(' | ')) || ((payload.warning_codes || []).join(' | ')) || '')
     + detailLine('Recovery path', ((payload.success_contract || payload.failure_contract) || {{}}).recovery_path || '')
     + detailLine('Rollback status', ((payload.success_contract || payload.failure_contract) || {{}}).rollback_status || '')
     + detailLine('Transaction status', (payload.success_contract || {{}}).transaction_status || '')
