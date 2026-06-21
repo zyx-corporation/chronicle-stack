@@ -2537,6 +2537,9 @@ function endpointStateLabel(kind, endpoint) {{
   const value = kind === 'filter' ? currentFilterValue(endpoint) : currentSortValue(endpoint);
   return value ? stateLabel(kind, value) : '';
 }}
+function endpointFilterTarget(endpoint) {{
+  return endpointFilterTargets[endpoint] || '';
+}}
 function stateLabel(kind, value, suffix) {{
   const normalizedValue = String(value || '');
   if (!normalizedValue) return '';
@@ -2678,15 +2681,18 @@ function currentFilterLabel() {{
   if (!window.__chronicleCurrentEndpoint || !window.__chronicleFilters) return '';
   return endpointStateLabel('filter', window.__chronicleCurrentEndpoint);
 }}
-function currentSortLabel(endpoint) {{
-  const currentEndpoint = endpoint || window.__chronicleCurrentEndpoint || '';
-  const sortValue = currentSortValue(currentEndpoint);
+function sortStateLabel(endpoint, sortValue) {{
   if (!sortValue) return '';
-  if (currentEndpoint === '/api/review-queue') {{
+  if (endpoint === '/api/review-queue') {{
     const warningFilter = activeReviewWarningFilter();
     if (warningFilter) return stateLabel('sort', sortValue, 'warning-first:' + warningFilter);
   }}
   return stateLabel('sort', sortValue);
+}}
+function currentSortLabel(endpoint) {{
+  const currentEndpoint = endpoint || window.__chronicleCurrentEndpoint || '';
+  const sortValue = currentSortValue(currentEndpoint);
+  return sortStateLabel(currentEndpoint, sortValue);
 }}
 function hasActiveFilters() {{
   if (!window.__chronicleFilters) return false;
@@ -2721,17 +2727,18 @@ function sliceChip(filterValue, cls, resetTarget) {{
 function sliceBadge(text, count, cls) {{
   return badge(text + ': ' + count, cls);
 }}
+function filterChips(target, cls) {{
+  const filterValue = String((window.__chronicleFilters && window.__chronicleFilters[target]) || '');
+  return sliceChip(filterValue, cls, target);
+}}
 function reviewQueueFilterChips() {{
-  const filterValue = String((window.__chronicleFilters && window.__chronicleFilters.reviewQueue) || '');
-  return sliceChip(filterValue, 'badge-warning', 'reviewQueue');
+  return filterChips('reviewQueue', 'badge-warning');
 }}
 function runtimeRecordsFilterChips() {{
-  const filterValue = String((window.__chronicleFilters && window.__chronicleFilters.runtimeRecords) || '');
-  return sliceChip(filterValue, 'badge-neutral', 'runtimeRecords');
+  return filterChips('runtimeRecords', 'badge-neutral');
 }}
 function summaryJobsFilterChips() {{
-  const filterValue = String((window.__chronicleFilters && window.__chronicleFilters.summaryJobs) || '');
-  return sliceChip(filterValue, 'badge-neutral', 'summaryJobs');
+  return filterChips('summaryJobs', 'badge-neutral');
 }}
 function activeViewSummary(endpoint, mode) {{
   const parts = [];

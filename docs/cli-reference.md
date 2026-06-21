@@ -382,6 +382,7 @@ read-only endpoint:
 - review/summary sort comparator も shared helper を通すため、reviewer label / target id / summary job id の比較責務を sort 本体から切り離します。
 - runtime/review/summary list の query match 判定も shared helper を通すため、filter predicate ごとの JSON stringify 比較責務を揃えます。
 - filter/sort state lookup も shared helper を通すため、endpoint ごとの target/default 解決責務を state 操作本体から切り離します。
+- filter chip / sort label の state 表示も shared helper を通すため、list state summary の endpoint 別分岐を state 表示 helper へ寄せます。
 - overview triage では `Identity aligned` などの quick slice から reviewer identity / assurance 系の review queue slice に直接 drilldown できますが、これは引き続き read-only filter state のみです。
 - overview の runtime records / summary jobs panel でも matching-review-derived auth readiness の集約状態を read-only で確認できます。
 - overview の summary jobs panel では matching-review-derived identity/session assurance 集約も read-only で確認できます。

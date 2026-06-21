@@ -628,6 +628,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "includesQuery" in html
     assert "endpointFilterTargets" in html
     assert "endpointSortDefaults" in html
+    assert "endpointFilterTarget" in html
     assert "currentFilterValue" in html
     assert "setFilterValue" in html
     assert "setSortValue" in html
@@ -659,6 +660,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "currentTrailButtons" in html
     assert "sliceBadge" in html
     assert "sliceChip" in html
+    assert "filterChips(target, cls)" in html
     assert "openListButton" in html
     assert "sliceActionButton" in html
     assert "moreSliceButton" in html
