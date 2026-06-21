@@ -2204,6 +2204,21 @@ function summaryIdentityCell(identityBadge, reviewerIdentity) {{
     + (reviewerBadge ? '<br>' + reviewerBadge : '')
     + (reviewerLabel ? '<br>' + esc(reviewerLabel) : '');
 }}
+function resetFilterButton(query, target) {{
+  return query ? '<p><button data-reset-filter="' + esc(target) + '">Reset Filter</button></p>' : '';
+}}
+function emptyFilterState(query, rows, message) {{
+  return query && rows.length === 0 ? '<p>' + esc(message) + '</p>' : '';
+}}
+function actionPreviewStatus(targetId, mutationEnabled, enabledMessage, disabledMessage) {{
+  return '<div id="' + esc(targetId) + '"><p>'
+    + (mutationEnabled ? enabledMessage : disabledMessage)
+    + '</p></div>';
+}}
+function tableHtml(headers, body) {{
+  return '<table><thead><tr>' + headers.map(header => '<th>' + esc(header) + '</th>').join('')
+    + '</tr></thead><tbody>' + body + '</tbody></table>';
+}}
 function renderRuntimeRecordRow(row, endpoint) {{
   const path = detailPath(endpoint, row);
   const button = path ? '<button data-detail="' + esc(path) + '">JSON</button>' : '';
@@ -2312,9 +2327,6 @@ function renderRuntimeRecordsTable(endpoint, rows) {{
     ]).toLowerCase().includes(query);
   }});
   const sorted = sortRuntimeRows(filtered);
-  const emptyState = query && sorted.length === 0
-    ? '<p>No matching runtime records for current filter.</p>'
-    : '';
   return activeViewSummary(endpoint, 'list')
     + textInput('runtimeRecords', 'Filter runtime records...')
     + sortSelect('runtimeRecords', currentSortValue('/api/runtime-records'), [
@@ -2322,10 +2334,9 @@ function renderRuntimeRecordsTable(endpoint, rows) {{
       {{ value: 'kind', label: 'Kind' }},
     ])
     + runtimeRecordsFilterChips()
-    + (query ? '<p><button data-reset-filter="runtimeRecords">Reset Filter</button></p>' : '')
-    + emptyState
-    + '<table><thead><tr><th>detail</th><th>event</th><th>kind</th><th>auth</th><th>preview</th><th>source counts</th></tr></thead><tbody>'
-    + sorted.map(row => renderRuntimeRecordRow(row, endpoint)).join('') + '</tbody></table>';
+    + resetFilterButton(query, 'runtimeRecords')
+    + emptyFilterState(query, sorted, 'No matching runtime records for current filter.')
+    + tableHtml(['detail', 'event', 'kind', 'auth', 'preview', 'source counts'], sorted.map(row => renderRuntimeRecordRow(row, endpoint)).join(''));
 }}
 function renderReviewQueueTable(endpoint, rows) {{
   const query = (window.__chronicleFilters && window.__chronicleFilters.reviewQueue || '').toLowerCase();
@@ -2350,9 +2361,6 @@ function renderReviewQueueTable(endpoint, rows) {{
   }});
   const sorted = sortReviewRows(filtered);
   const mutationEnabled = sorted.some(row => row.ui_mutation_enabled);
-  const emptyState = query && sorted.length === 0
-    ? '<p>No matching review rows for current filter.</p>'
-    : '';
   return activeViewSummary(endpoint, 'list')
     + textInput('reviewQueue', 'Filter review queue...')
     + sortSelect('reviewQueue', currentSortValue('/api/review-queue'), [
@@ -2362,22 +2370,20 @@ function renderReviewQueueTable(endpoint, rows) {{
       {{ value: 'reviewer', label: 'Reviewer' }},
     ])
     + reviewQueueFilterChips()
-    + (query ? '<p><button data-reset-filter="reviewQueue">Reset Filter</button></p>' : '')
-    + emptyState
+    + resetFilterButton(query, 'reviewQueue')
+    + emptyFilterState(query, sorted, 'No matching review rows for current filter.')
     + (
       mutationEnabled
         ? renderReviewMutationForm('Local Review Mutation', 'review-queue')
         : ''
     )
-    + '<div id="review-queue-action-preview-response"><p>'
-    + (
-      mutationEnabled
-        ? 'Local mutation is enabled for this list view. Each action still requires explicit reviewer context and writes audit-backed review history.'
-        : 'Review queue blocked-route preview stays read-only and returns the CLI fallback contract.'
+    + actionPreviewStatus(
+      'review-queue-action-preview-response',
+      mutationEnabled,
+      'Local mutation is enabled for this list view. Each action still requires explicit reviewer context and writes audit-backed review history.',
+      'Review queue blocked-route preview stays read-only and returns the CLI fallback contract.'
     )
-    + '</p></div>'
-    + '<table><thead><tr><th>detail</th><th>target</th><th>status</th><th>auth</th><th>preview</th><th>warnings</th><th>latest reviewer</th></tr></thead><tbody>'
-    + sorted.map(row => renderReviewQueueRow(row, endpoint)).join('') + '</tbody></table>';
+    + tableHtml(['detail', 'target', 'status', 'auth', 'preview', 'warnings', 'latest reviewer'], sorted.map(row => renderReviewQueueRow(row, endpoint)).join(''));
 }}
 function renderSummaryJobsTable(endpoint, rows) {{
   const query = (window.__chronicleFilters && window.__chronicleFilters.summaryJobs || '').toLowerCase();
@@ -2399,9 +2405,6 @@ function renderSummaryJobsTable(endpoint, rows) {{
   }});
   const sorted = sortSummaryJobRows(filtered);
   const mutationEnabled = sorted.some(row => row.ui_mutation_enabled);
-  const emptyState = query && sorted.length === 0
-    ? '<p>No matching summary jobs for current filter.</p>'
-    : '';
   return activeViewSummary(endpoint, 'list')
     + textInput('summaryJobs', 'Filter summary jobs...')
     + sortSelect('summaryJobs', currentSortValue('/api/summary-jobs'), [
@@ -2410,22 +2413,20 @@ function renderSummaryJobsTable(endpoint, rows) {{
       {{ value: 'title', label: 'Title' }},
     ])
     + summaryJobsFilterChips()
-    + (query ? '<p><button data-reset-filter="summaryJobs">Reset Filter</button></p>' : '')
-    + emptyState
+    + resetFilterButton(query, 'summaryJobs')
+    + emptyFilterState(query, sorted, 'No matching summary jobs for current filter.')
     + (
       mutationEnabled
         ? renderReviewMutationForm('Summary Review Mutation', 'summary-jobs')
         : ''
     )
-    + '<div id="summary-jobs-action-preview-response"><p>'
-    + (
-      mutationEnabled
-        ? 'Local mutation is enabled for summary-backed review targets. Actions still require explicit reviewer context and write audit-backed review history.'
-        : 'Summary jobs blocked-route preview stays read-only and returns the CLI fallback contract.'
+    + actionPreviewStatus(
+      'summary-jobs-action-preview-response',
+      mutationEnabled,
+      'Local mutation is enabled for summary-backed review targets. Actions still require explicit reviewer context and write audit-backed review history.',
+      'Summary jobs blocked-route preview stays read-only and returns the CLI fallback contract.'
     )
-    + '</p></div>'
-    + '<table><thead><tr><th>detail</th><th>summary job</th><th>status</th><th>review</th><th>auth</th><th>identity</th><th>package</th><th>preview</th><th>runtime</th><th>sources</th></tr></thead><tbody>'
-    + sorted.map(row => renderSummaryJobRow(row, endpoint)).join('') + '</tbody></table>';
+    + tableHtml(['detail', 'summary job', 'status', 'review', 'auth', 'identity', 'package', 'preview', 'runtime', 'sources'], sorted.map(row => renderSummaryJobRow(row, endpoint)).join(''));
 }}
 function renderGenericTable(endpoint, rows) {{
   const keys = Object.keys(rows[0]).slice(0, 8);
