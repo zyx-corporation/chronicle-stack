@@ -614,6 +614,8 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "function authReadinessBadge(status)" in html
     assert "function identityAssuranceBadge(status)" in html
     assert "function summaryReviewStatusBadge(status)" in html
+    assert "function renderReviewQueueRow(row, endpoint)" in html
+    assert "function renderSummaryJobRow(row, endpoint)" in html
     assert "reviewerIdentityBadge" in html
     assert "sortSelect" in html
     assert "sortRuntimeRows" in html

@@ -2171,6 +2171,89 @@ function summaryReviewStatusBadge(status) {{
       ? jumpBadge('Resolved', 'badge-neutral', '/api/review-queue', 'reviewQueue', 'resolved')
       : jumpBadge('Advisory', 'badge-warning', '/api/review-queue', 'reviewQueue', 'advisory');
 }}
+function packageStatusBadge(status) {{
+  return status === 'package_context_available'
+    ? jumpBadge('Package Ready', 'badge-ready', '/api/review-queue', 'reviewQueue', 'package:package_context_available')
+    : status === 'no_context_records'
+      ? jumpBadge('Package Advisory', 'badge-warning', '/api/review-queue', 'reviewQueue', 'package:no_context_records')
+      : badge(status || 'Package Unknown', 'badge-neutral');
+}}
+function renderReviewQueueRow(row, endpoint) {{
+  const path = detailPath(endpoint, row);
+  const button = path ? '<button data-detail="' + esc(path) + '">JSON</button>' : '';
+  const capability = row.review_capability || {{}};
+  const readiness = row.package_readiness_summary || {{}};
+  const parity = row.cli_parity_summary || {{}};
+  const preview = row.action_preview_summary || {{}};
+  const previewActions = Array.isArray(preview.actions) ? preview.actions : [];
+  const authReadiness = row.auth_boundary_notice || {{}};
+  const warnList = Array.isArray(capability.warnings) ? capability.warnings : [];
+  const warnDetails = Array.isArray(capability.warning_details) ? capability.warning_details : [];
+  const warnBadges = reviewWarningBadges(warnList);
+  const reviewerBadge = reviewerIdentityBadge(row.latest_reviewer_identity);
+  const reviewKindBadge = row.review_kind
+    ? jumpBadge(row.review_kind, 'badge-neutral', '/api/review-queue', 'reviewQueue', row.review_kind)
+    : '';
+  const statusBadge = reviewCapabilityBadge(capability);
+  const readinessBadge = packageReadinessBadge(readiness);
+  const parityBadge = reviewParityBadge(parity);
+  const authBadge = authReadinessBadge(authReadiness.status || '');
+  const previewSummary = renderPreviewSummary(preview);
+  const previewButtons = renderPreviewButtons(previewActions, {{
+    mutationEnabled: row.ui_mutation_enabled,
+    recordId: row.target_event_id || '',
+    fieldPrefix: 'review-queue',
+    successDetail: '/api/review-queue/' + esc(row.target_event_id || ''),
+    previewTarget: 'review-queue-action-preview-response',
+  }});
+  return '<tr>'
+    + '<td>' + button + '</td>'
+    + '<td><span class="id">' + esc(row.target_event_id || '') + '</span><br>' + reviewKindBadge + (reviewKindBadge ? '<br>' : '') + esc(row.target_summary || '') + '</td>'
+    + '<td>' + statusBadge + '<br>' + readinessBadge + '<br>' + parityBadge + '</td>'
+    + '<td>' + authBadge + '</td>'
+    + '<td>' + previewSummary + (previewButtons ? '<br>' + previewButtons : '') + '</td>'
+    + '<td>' + (warnBadges ? warnBadges + '<br>' : '') + esc(warnDetails.map(item => item.message).join(' | ') || warnList.join(', ') || '(none)') + '</td>'
+    + '<td>' + reviewerBadge + (reviewerBadge ? '<br>' : '') + esc((row.latest_reviewer_identity && row.latest_reviewer_identity.label) || row.latest_reviewer || '') + '</td>'
+    + '</tr>';
+}}
+function renderSummaryJobRow(row, endpoint) {{
+  const path = detailPath(endpoint, row);
+  const button = path ? '<button data-detail="' + esc(path) + '">JSON</button>' : '';
+  const reviewStatus = row.review_capability_status || '';
+  const authReadinessStatus = row.auth_readiness_status || '';
+  const packageStatus = row.package_readiness_status || '';
+  const identityAssuranceStatus = row.identity_assurance_status || '';
+  const reviewerBadge = reviewerIdentityBadge(row.latest_reviewer_identity);
+  const preview = row.action_preview_summary || {{}};
+  const previewActions = Array.isArray(preview.actions) ? preview.actions : [];
+  const reviewBadge = summaryReviewStatusBadge(reviewStatus);
+  const authBadge = authReadinessBadge(authReadinessStatus);
+  const identityBadge = identityAssuranceBadge(identityAssuranceStatus);
+  const packageBadge = packageStatusBadge(packageStatus);
+  const previewSummary = renderPreviewSummary(preview);
+  const previewButtons = renderPreviewButtons(previewActions, {{
+    mutationEnabled: row.ui_mutation_enabled,
+    recordId: row.review_target_event_id || '',
+    fieldPrefix: 'summary-jobs',
+    successDetail: '/api/summary-jobs/' + esc(row.summary_job_id || ''),
+    previewTarget: 'summary-jobs-action-preview-response',
+  }});
+  const targetButton = row.review_target_event_id
+    ? '<button data-detail-nav="/api/review-queue/' + esc(row.review_target_event_id) + '">Open review</button>'
+    : '';
+  return '<tr>'
+    + '<td>' + button + '</td>'
+    + '<td><span class="id">' + esc(row.summary_job_id || '') + '</span><br>' + esc(row.title || '') + (targetButton ? '<br>' + targetButton : '') + '</td>'
+    + '<td>' + esc(row.status || '') + '</td>'
+    + '<td>' + reviewBadge + '</td>'
+    + '<td>' + authBadge + '</td>'
+    + '<td>' + identityBadge + (reviewerBadge ? '<br>' + reviewerBadge : '') + ((row.latest_reviewer_identity && row.latest_reviewer_identity.label) ? '<br>' + esc(row.latest_reviewer_identity.label || '') : '') + '</td>'
+    + '<td>' + packageBadge + '</td>'
+    + '<td>' + previewSummary + (previewButtons ? '<br>' + previewButtons : '') + '</td>'
+    + '<td>' + esc(row.runtime_provider_kind || '') + '</td>'
+    + '<td>' + esc(row.summary_source_count ?? 0) + '</td>'
+    + '</tr>';
+}}
 function reviewerIdentityBadge(identity) {{
   if (!identity) return '';
   const kind = identity.kind || 'reviewer';
@@ -2858,45 +2941,7 @@ function renderTable(endpoint, rows) {{
       )
       + '</p></div>'
       + '<table><thead><tr><th>detail</th><th>target</th><th>status</th><th>auth</th><th>preview</th><th>warnings</th><th>latest reviewer</th></tr></thead><tbody>'
-      + sorted.map(row => {{
-        const path = detailPath(endpoint, row);
-        const button = path ? '<button data-detail="' + esc(path) + '">JSON</button>' : '';
-        const capability = row.review_capability || {{}};
-        const readiness = row.package_readiness_summary || {{}};
-        const parity = row.cli_parity_summary || {{}};
-        const preview = row.action_preview_summary || {{}};
-        const previewActions = Array.isArray(preview.actions) ? preview.actions : [];
-        const previewAction = previewActions[0] || {{}};
-        const authReadiness = row.auth_boundary_notice || {{}};
-        const warnList = Array.isArray(capability.warnings) ? capability.warnings : [];
-        const warnDetails = Array.isArray(capability.warning_details) ? capability.warning_details : [];
-        const warnBadges = reviewWarningBadges(warnList);
-        const reviewerBadge = reviewerIdentityBadge(row.latest_reviewer_identity);
-        const reviewKindBadge = row.review_kind
-          ? jumpBadge(row.review_kind, 'badge-neutral', '/api/review-queue', 'reviewQueue', row.review_kind)
-          : '';
-        const statusBadge = reviewCapabilityBadge(capability);
-        const readinessBadge = packageReadinessBadge(readiness);
-        const parityBadge = reviewParityBadge(parity);
-        const authBadge = authReadinessBadge(authReadiness.status || '');
-        const previewSummary = renderPreviewSummary(preview);
-        const previewButtons = renderPreviewButtons(previewActions, {{
-          mutationEnabled: row.ui_mutation_enabled,
-          recordId: row.target_event_id || '',
-          fieldPrefix: 'review-queue',
-          successDetail: '/api/review-queue/' + esc(row.target_event_id || ''),
-          previewTarget: 'review-queue-action-preview-response',
-        }});
-        return '<tr>'
-          + '<td>' + button + '</td>'
-          + '<td><span class="id">' + esc(row.target_event_id || '') + '</span><br>' + reviewKindBadge + (reviewKindBadge ? '<br>' : '') + esc(row.target_summary || '') + '</td>'
-          + '<td>' + statusBadge + '<br>' + readinessBadge + '<br>' + parityBadge + '</td>'
-          + '<td>' + authBadge + '</td>'
-          + '<td>' + previewSummary + (previewButtons ? '<br>' + previewButtons : '') + '</td>'
-          + '<td>' + (warnBadges ? warnBadges + '<br>' : '') + esc(warnDetails.map(item => item.message).join(' | ') || warnList.join(', ') || '(none)') + '</td>'
-          + '<td>' + reviewerBadge + (reviewerBadge ? '<br>' : '') + esc((row.latest_reviewer_identity && row.latest_reviewer_identity.label) || row.latest_reviewer || '') + '</td>'
-          + '</tr>';
-      }}).join('') + '</tbody></table>';
+      + sorted.map(row => renderReviewQueueRow(row, endpoint)).join('') + '</tbody></table>';
   }}
   if (endpoint === '/api/summary-jobs') {{
     const query = (window.__chronicleFilters && window.__chronicleFilters.summaryJobs || '').toLowerCase();
@@ -2944,49 +2989,7 @@ function renderTable(endpoint, rows) {{
       )
       + '</p></div>'
       + '<table><thead><tr><th>detail</th><th>summary job</th><th>status</th><th>review</th><th>auth</th><th>identity</th><th>package</th><th>preview</th><th>runtime</th><th>sources</th></tr></thead><tbody>'
-      + sorted.map(row => {{
-        const path = detailPath(endpoint, row);
-        const button = path ? '<button data-detail="' + esc(path) + '">JSON</button>' : '';
-        const reviewStatus = row.review_capability_status || '';
-        const authReadinessStatus = row.auth_readiness_status || '';
-        const packageStatus = row.package_readiness_status || '';
-        const identityAssuranceStatus = row.identity_assurance_status || '';
-        const reviewerBadge = reviewerIdentityBadge(row.latest_reviewer_identity);
-        const preview = row.action_preview_summary || {{}};
-        const previewActions = Array.isArray(preview.actions) ? preview.actions : [];
-        const previewAction = previewActions[0] || {{}};
-        const reviewBadge = summaryReviewStatusBadge(reviewStatus);
-        const authBadge = authReadinessBadge(authReadinessStatus);
-        const identityBadge = identityAssuranceBadge(identityAssuranceStatus);
-        const packageBadge = packageStatus === 'package_context_available'
-          ? jumpBadge('Package Ready', 'badge-ready', '/api/review-queue', 'reviewQueue', 'package:package_context_available')
-          : packageStatus === 'no_context_records'
-            ? jumpBadge('Package Advisory', 'badge-warning', '/api/review-queue', 'reviewQueue', 'package:no_context_records')
-            : badge(packageStatus || 'Package Unknown', 'badge-neutral');
-        const previewSummary = renderPreviewSummary(preview);
-        const previewButtons = renderPreviewButtons(previewActions, {{
-          mutationEnabled: row.ui_mutation_enabled,
-          recordId: row.review_target_event_id || '',
-          fieldPrefix: 'summary-jobs',
-          successDetail: '/api/summary-jobs/' + esc(row.summary_job_id || ''),
-          previewTarget: 'summary-jobs-action-preview-response',
-        }});
-        const targetButton = row.review_target_event_id
-          ? '<button data-detail-nav="/api/review-queue/' + esc(row.review_target_event_id) + '">Open review</button>'
-          : '';
-        return '<tr>'
-          + '<td>' + button + '</td>'
-          + '<td><span class="id">' + esc(row.summary_job_id || '') + '</span><br>' + esc(row.title || '') + (targetButton ? '<br>' + targetButton : '') + '</td>'
-          + '<td>' + esc(row.status || '') + '</td>'
-          + '<td>' + reviewBadge + '</td>'
-          + '<td>' + authBadge + '</td>'
-          + '<td>' + identityBadge + (reviewerBadge ? '<br>' + reviewerBadge : '') + ((row.latest_reviewer_identity && row.latest_reviewer_identity.label) ? '<br>' + esc(row.latest_reviewer_identity.label || '') : '') + '</td>'
-          + '<td>' + packageBadge + '</td>'
-          + '<td>' + previewSummary + (previewButtons ? '<br>' + previewButtons : '') + '</td>'
-          + '<td>' + esc(row.runtime_provider_kind || '') + '</td>'
-          + '<td>' + esc(row.summary_source_count ?? 0) + '</td>'
-          + '</tr>';
-      }}).join('') + '</tbody></table>';
+      + sorted.map(row => renderSummaryJobRow(row, endpoint)).join('') + '</tbody></table>';
   }}
   const keys = Object.keys(rows[0]).slice(0, 8);
   return '<table><thead><tr><th>detail</th>' + keys.map(k => '<th>' + esc(k) + '</th>').join('') + '</tr></thead><tbody>' +
