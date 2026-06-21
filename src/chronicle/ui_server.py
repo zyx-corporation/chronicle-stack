@@ -3440,6 +3440,33 @@ function renderOverviewTriagePanel(triage, warningButtons, warningSummaries) {{
     + '</p>'
   );
 }}
+function overviewWarningButtons(warningSummaries) {{
+  return warningSummaries.map(item =>
+    overviewJumpButton(
+      sliceBadge((item.label || item.code || 'warning'), item.count ?? 0, 'badge-warning'),
+      '/api/review-queue',
+      'reviewQueue',
+      item.code || ''
+    )
+  ).join('');
+}}
+const overviewPanelRenderers = [
+  data => renderOverviewHeaderPanel(data.chronicle),
+  data => renderOverviewCountsPanel(data.counts),
+  data => renderOverviewRuntimeBoundaryPanel(data.runtime),
+  data => renderOverviewRuntimeConfigPanel(data.runtimeConfig, data.runtimeConfigContract),
+  data => renderOverviewUiBoundaryPanel(data.uiBoundary),
+  data => renderOverviewAuthBoundaryPanel(data.authBoundary, data.authBoundaryOverview),
+  data => renderOverviewIdentityBoundaryPanel(data.identityBoundary),
+  data => renderOverviewMutationReadinessPanel(data.mutationReadiness),
+  data => renderOverviewAiIndexPanel(data.aiIndex, data.counts),
+  data => renderOverviewRuntimeRecordsPanel(data.counts, data.runtimeRecords),
+  data => renderOverviewSummaryJobsPanel(data.counts, data.summaryJobs),
+  data => renderOverviewTriagePanel(data.triage, data.warningButtons, data.warningSummaries),
+];
+function renderOverviewPanels(data) {{
+  return overviewPanelRenderers.map(renderer => renderer(data)).join('');
+}}
 function renderOverview(payload) {{
   const chronicle = payload.chronicle || {{}};
   const counts = payload.counts || {{}};
@@ -3456,29 +3483,29 @@ function renderOverview(payload) {{
   const runtimeRecords = payload.runtime_records_summary || {{}};
   const summaryJobs = payload.summary_jobs_summary || {{}};
   const warningSummaries = Array.isArray(triage.warning_summaries) ? triage.warning_summaries : [];
-  const warningButtons = warningSummaries.map(item =>
-    overviewJumpButton(
-      sliceBadge((item.label || item.code || 'warning'), item.count ?? 0, 'badge-warning'),
-      '/api/review-queue',
-      'reviewQueue',
-      item.code || ''
-    )
-  ).join('');
+  const warningButtons = overviewWarningButtons(warningSummaries);
+  const overviewData = {{
+    aiIndex,
+    authBoundary,
+    authBoundaryOverview,
+    chronicle,
+    counts,
+    identityBoundary,
+    mutationReadiness,
+    runtime,
+    runtimeConfig,
+    runtimeConfigContract,
+    runtimeRecords,
+    summaryJobs,
+    triage,
+    uiBoundary,
+    warningButtons,
+    warningSummaries,
+  }};
   return ''
     + '<h2>/api/overview</h2>'
     + renderPanel(activeViewSummary('/api/overview', 'overview'))
-    + renderOverviewHeaderPanel(chronicle)
-    + renderOverviewCountsPanel(counts)
-    + renderOverviewRuntimeBoundaryPanel(runtime)
-    + renderOverviewRuntimeConfigPanel(runtimeConfig, runtimeConfigContract)
-    + renderOverviewUiBoundaryPanel(uiBoundary)
-    + renderOverviewAuthBoundaryPanel(authBoundary, authBoundaryOverview)
-    + renderOverviewIdentityBoundaryPanel(identityBoundary)
-    + renderOverviewMutationReadinessPanel(mutationReadiness)
-    + renderOverviewAiIndexPanel(aiIndex, counts)
-    + renderOverviewRuntimeRecordsPanel(counts, runtimeRecords)
-    + renderOverviewSummaryJobsPanel(counts, summaryJobs)
-    + renderOverviewTriagePanel(triage, warningButtons, warningSummaries);
+    + renderOverviewPanels(overviewData);
 }}
 const detailPathResolvers = {{
   '/api/ai-index-graph-edges': () => null,
