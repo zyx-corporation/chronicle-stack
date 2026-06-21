@@ -49,12 +49,26 @@ REVIEW_WARNING_TEXT: dict[str, str] = {
     "reviewer_identity_declared_only": "Reviewer identity is self-declared and has not been strengthened by a local auth boundary.",
     "reviewer_session_label_missing": "Session-gated review expects a local session label, but none was recorded.",
 }
+REVIEW_WARNING_LABELS: dict[str, str] = {
+    "ui_auth_not_enabled": "Auth not enabled",
+    "ui_authorization_not_enabled": "Authorization advisory",
+    "no_reviewer_identity_recorded": "Reviewer missing",
+    "reviewer_identity_declared_only": "Declared identity only",
+    "reviewer_session_label_missing": "Session label required",
+}
 REVIEW_WARNING_PRIORITY: dict[str, int] = {
     "ui_auth_not_enabled": 0,
     "ui_authorization_not_enabled": 1,
     "reviewer_session_label_missing": 2,
     "reviewer_identity_declared_only": 3,
     "no_reviewer_identity_recorded": 4,
+}
+AUTH_BOUNDARY_BLOCKER_TEXT: dict[str, str] = {
+    "auth_not_enabled": "Define explicit local auth boundary.",
+    "authorization_not_enabled": "Define authorization semantics for reviewer actions.",
+    "reviewer_identity_missing": "Record reviewer identity metadata before relying on GUI review signals.",
+    "reviewer_identity_declared_only": "Strengthen reviewer identity beyond self-declared metadata.",
+    "reviewer_session_label_missing": "Require session labels when session-gated review is expected.",
 }
 
 
@@ -1057,6 +1071,13 @@ class ChronicleUIDataService:
             "status": status,
             "message": message,
             "blockers": blockers,
+            "blocker_details": [
+                {
+                    "code": blocker,
+                    "message": AUTH_BOUNDARY_BLOCKER_TEXT.get(blocker, blocker.replace("_", " ")),
+                }
+                for blocker in blockers
+            ],
             "next_steps": next_steps,
             "capability_status": capability_status,
             "identity_assurance_status": assurance_status,
@@ -1268,6 +1289,10 @@ class ChronicleUIDataService:
     @staticmethod
     def _warning_message(code: str) -> str:
         return REVIEW_WARNING_TEXT.get(code, code.replace("_", " "))
+
+    @staticmethod
+    def _warning_label(code: str) -> str:
+        return REVIEW_WARNING_LABELS.get(code, code.replace("_", " "))
 
     @staticmethod
     def _review_action_failure_contract(
@@ -2044,7 +2069,14 @@ function reviewerIdentityBadge(identity) {{
 }}
 function reviewWarningBadges(warnings) {{
   return (warnings || []).map(code => {{
-    const text = String(code || '').replaceAll('_', ' ');
+    const warningLabels = {{
+      ui_auth_not_enabled: 'Auth not enabled',
+      ui_authorization_not_enabled: 'Authorization advisory',
+      no_reviewer_identity_recorded: 'Reviewer missing',
+      reviewer_identity_declared_only: 'Declared identity only',
+      reviewer_session_label_missing: 'Session label required'
+    }};
+    const text = warningLabels[String(code || '')] || String(code || '').replaceAll('_', ' ');
     return jumpBadge(text, 'badge-warning', '/api/review-queue', 'reviewQueue', String(code || ''));
   }}).join('');
 }}
@@ -2498,8 +2530,8 @@ function renderOverview(payload) {{
     + '<div class="panel">'
     + panelTitle('Identity Boundary')
     + '<p>'
-    + overviewJumpButton(sliceBadge('Identity declared', esc(identityBoundary.declared_identity_count ?? 0), 'badge-warning'), '/api/review-queue', 'reviewQueue', 'reviewer_identity_declared_only')
-    + overviewJumpButton(sliceBadge('Session label missing', esc(identityBoundary.session_label_missing_count ?? 0), 'badge-warning'), '/api/review-queue', 'reviewQueue', 'reviewer_session_label_missing')
+    + overviewJumpButton(sliceBadge('Declared identity only', esc(identityBoundary.declared_identity_count ?? 0), 'badge-warning'), '/api/review-queue', 'reviewQueue', 'reviewer_identity_declared_only')
+    + overviewJumpButton(sliceBadge('Session label required', esc(identityBoundary.session_label_missing_count ?? 0), 'badge-warning'), '/api/review-queue', 'reviewQueue', 'reviewer_session_label_missing')
     + overviewJumpButton(sliceBadge('Identity aligned', esc((identityBoundary.assurance_counts && identityBoundary.assurance_counts.boundary_aligned) ?? 0), 'badge-ready'), '/api/review-queue', 'reviewQueue', 'boundary_aligned')
     + '</p>'
     + detailLine('Status', identityBoundary.status || '')
@@ -2576,7 +2608,7 @@ function renderOverview(payload) {{
     + '</p>'
     + '<p>'
     + overviewJumpButton(sliceBadge('Identity aligned', esc(triage.identity_boundary_aligned_reviews ?? 0), 'badge-ready'), '/api/review-queue', 'reviewQueue', 'boundary_aligned')
-    + overviewJumpButton(sliceBadge('Identity declared', esc(triage.identity_declared_only_reviews ?? 0), 'badge-warning'), '/api/review-queue', 'reviewQueue', 'reviewer_identity_declared_only')
+    + overviewJumpButton(sliceBadge('Declared identity only', esc(triage.identity_declared_only_reviews ?? 0), 'badge-warning'), '/api/review-queue', 'reviewQueue', 'reviewer_identity_declared_only')
     + '</p>'
     + '<p>' + (warningButtons || '') + '</p>'
     + summaryJsonLine('Runtime kinds', triage.runtime_record_kinds)
@@ -2604,7 +2636,7 @@ function renderOverview(payload) {{
     + sliceActionButton('CLI Aligned Reviews', '/api/review-queue', 'reviewQueue', 'aligned')
     + sliceActionButton('Identity Aligned Reviews', '/api/review-queue', 'reviewQueue', 'boundary_aligned')
     + sliceActionButton('Auth Boundary Warnings', '/api/review-queue', 'reviewQueue', 'ui_auth_not_enabled')
-    + sliceActionButton('Declared Identity Warnings', '/api/review-queue', 'reviewQueue', 'reviewer_identity_declared_only')
+    + sliceActionButton('Declared Identity Only', '/api/review-queue', 'reviewQueue', 'reviewer_identity_declared_only')
     + sliceActionButton('Retrieval Plans', '/api/runtime-records', 'runtimeRecords', 'retrieval_plan') + '</p>'
     + '</div>';
 }}
@@ -3008,6 +3040,7 @@ async function loadDetail(endpoint) {{
   if (record.auth_boundary_notice) {{
     const notice = record.auth_boundary_notice;
     const noticeButtons = [];
+    const blockerDetails = Array.isArray(notice.blocker_details) ? notice.blocker_details : [];
     if (notice.status) {{
       noticeButtons.push(moreSliceButton(notice.status, '/api/review-queue', 'reviewQueue'));
     }}
@@ -3017,7 +3050,7 @@ async function loadDetail(endpoint) {{
       + '<p>' + esc(notice.message || '') + '</p>'
       + detailLine('Review capability', notice.capability_status || '')
       + detailLine('Identity assurance', notice.identity_assurance_status || '')
-      + detailListLine('Blockers', notice.blockers, ' | ')
+      + detailLine('Blockers', blockerDetails.map(item => item.message).join(' | ') || (Array.isArray(notice.blockers) ? notice.blockers.join(' | ') : ''))
       + detailListLine('Next steps', notice.next_steps, ' | ')
       + '</div>';
   }}

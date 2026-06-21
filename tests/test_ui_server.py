@@ -617,7 +617,8 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "Auth warnings" in html
     assert "Authorization warnings" in html
     assert "Missing identity" in html
-    assert "Session label missing" in html
+    assert "Session label required" in html
+    assert "Declared identity only" in html
     assert "Mutation capability flag:" in html
     assert "currentTrailLabel" in html
     assert "currentTrailButtons" in html
@@ -698,7 +699,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "sliceActionButton('CLI Aligned Reviews', '/api/review-queue', 'reviewQueue', 'aligned')" in html
     assert "sliceActionButton('Identity Aligned Reviews', '/api/review-queue', 'reviewQueue', 'boundary_aligned')" in html
     assert "sliceActionButton('Auth Boundary Warnings', '/api/review-queue', 'reviewQueue', 'ui_auth_not_enabled')" in html
-    assert "sliceActionButton('Declared Identity Warnings', '/api/review-queue', 'reviewQueue', 'reviewer_identity_declared_only')" in html
+    assert "sliceActionButton('Declared Identity Only', '/api/review-queue', 'reviewQueue', 'reviewer_identity_declared_only')" in html
     assert "sliceActionButton('Retrieval Plans', '/api/runtime-records', 'runtimeRecords', 'retrieval_plan')" in html
     assert "data-detail-nav" in html
     assert "data-detail-trail" in html
@@ -717,7 +718,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "const assuranceButtons = [];" in html
     assert "const readinessButtons = [];" in html
     assert "const timelineButtons = [];" in html
-    assert "Declared Identity Warnings" in html
+    assert "Declared Identity Only" in html
     assert 'data-reset-filter="runtimeRecords"' in html
     assert 'data-reset-filter="reviewQueue"' in html
     assert "runtimeRecords" in html
@@ -787,6 +788,9 @@ def test_http_root_and_read_only_endpoints(tmp_path):
         status, html = _http_get(host, port, "/")
         assert status == 200
         assert "Chronicle Stack Local UI" in html
+        assert "Declared identity only" in html
+        assert "Session label required" in html
+        assert "Declared Identity Only" in html
 
         expected_keys = {
             "/api/overview": "counts",
@@ -1055,6 +1059,29 @@ def test_review_action_authorization_failure_exposes_session_label_warning_detai
     ]
     assert "Session-gated review expects a local session label" in payload["failure_summary"]
     assert "reviewer_session_label_missing" not in payload["failure_summary"]
+
+
+def test_review_queue_auth_boundary_notice_exposes_human_blocker_details(tmp_path):
+    _populate(tmp_path)
+    service = ChronicleUIDataService(
+        tmp_path,
+        mutation_capability_flag=True,
+        enable_ui_mutation=True,
+        auth_mode=UIAuthMode.LOOPBACK_LOCAL,
+        authorization_mode=UIAuthorizationMode.REVIEWER_DECLARED,
+    )
+
+    row = service.review_queue()["review_queue"][0]
+    notice = row["auth_boundary_notice"]
+
+    assert notice["status"] == "advisory_only"
+    assert notice["blockers"] == ["reviewer_identity_missing"]
+    assert notice["blocker_details"] == [
+        {
+            "code": "reviewer_identity_missing",
+            "message": "Record reviewer identity metadata before relying on GUI review signals.",
+        }
+    ]
 
 
 def test_http_review_action_enabled_route_handles_decision_persistence_failure(tmp_path, monkeypatch):
