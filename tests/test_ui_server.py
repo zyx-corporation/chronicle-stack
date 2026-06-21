@@ -661,8 +661,8 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "sliceBadge" in html
     assert "sliceChip" in html
     assert "filterChips(target, cls)" in html
-    assert "openListButton" in html
-    assert "sliceActionButton" in html
+    assert "listJumpButton" in html
+    assert "sectionTitle" in html
     assert "moreSliceButton" in html
     assert "function renderNotice(title, body)" in html
     assert "function renderNavigationNotice(endpoint, record, options = {})" in html
@@ -709,8 +709,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "function summaryRelatedButtons(record)" in html
     assert "function renderCliParityNotice(record)" in html
     assert "function renderReviewTimelineNotice(record)" in html
-    assert "panelTitle" in html
-    assert "noticeTitle" in html
+    assert "sectionTitle" in html
     assert "detailLine" in html
     assert "detailListLine" in html
     assert "summaryJsonLine" in html
@@ -751,12 +750,12 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "summaryJsonLine('Runtime kinds', triage.runtime_record_kinds)" in html
     assert "detailLine('Status', parity.status || '')" in html
     assert "detailListLine('Expected actions', parity.expected_actions)" in html
-    assert "openListButton('Open Review Queue', '/api/review-queue')" in html
-    assert "openListButton('Open Runtime Records', '/api/runtime-records')" in html
-    assert "openListButton('Open Summary Jobs', '/api/summary-jobs')" in html
-    assert "openListButton('Open Runtime Config', '/api/runtime-config')" in html
-    assert "openListButton('Open Package Review', '/api/package-review')" in html
-    assert "buttons.push(openListButton('Open Review Queue', '/api/review-queue'));" in html
+    assert "listJumpButton('Open Review Queue', '/api/review-queue')" in html
+    assert "listJumpButton('Open Runtime Records', '/api/runtime-records')" in html
+    assert "listJumpButton('Open Summary Jobs', '/api/summary-jobs')" in html
+    assert "listJumpButton('Open Runtime Config', '/api/runtime-config')" in html
+    assert "listJumpButton('Open Package Review', '/api/package-review')" in html
+    assert "buttons.push(listJumpButton('Open Review Queue', '/api/review-queue'));" in html
     assert "tableHtml(['detail', 'summary job', 'status', 'review', 'auth', 'identity', 'package', 'preview', 'runtime', 'sources']" in html
     assert "tableHtml(['detail', 'target', 'status', 'auth', 'preview', 'warnings', 'latest reviewer']" in html
     assert "summary-jobs-action-preview-response" in html
@@ -779,12 +778,12 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "Open review" in html
     assert "package:no_context_records" in html
     assert 'data-reset-filters="all"' in html
-    assert "sliceActionButton('Advisory Reviews', '/api/review-queue', 'reviewQueue', 'advisory')" in html
-    assert "sliceActionButton('CLI Aligned Reviews', '/api/review-queue', 'reviewQueue', 'aligned')" in html
-    assert "sliceActionButton('Identity Aligned Reviews', '/api/review-queue', 'reviewQueue', 'boundary_aligned')" in html
-    assert "sliceActionButton('Auth Boundary Warnings', '/api/review-queue', 'reviewQueue', 'ui_auth_not_enabled')" in html
-    assert "sliceActionButton('Declared Identity Only', '/api/review-queue', 'reviewQueue', 'reviewer_identity_declared_only')" in html
-    assert "sliceActionButton('Retrieval Plans', '/api/runtime-records', 'runtimeRecords', 'retrieval_plan')" in html
+    assert "listJumpButton('Advisory Reviews', '/api/review-queue', 'reviewQueue', 'advisory')" in html
+    assert "listJumpButton('CLI Aligned Reviews', '/api/review-queue', 'reviewQueue', 'aligned')" in html
+    assert "listJumpButton('Identity Aligned Reviews', '/api/review-queue', 'reviewQueue', 'boundary_aligned')" in html
+    assert "listJumpButton('Auth Boundary Warnings', '/api/review-queue', 'reviewQueue', 'ui_auth_not_enabled')" in html
+    assert "listJumpButton('Declared Identity Only', '/api/review-queue', 'reviewQueue', 'reviewer_identity_declared_only')" in html
+    assert "listJumpButton('Retrieval Plans', '/api/runtime-records', 'runtimeRecords', 'retrieval_plan')" in html
     assert "data-detail-nav" in html
     assert "data-detail-trail" in html
     assert "data-back-view" in html

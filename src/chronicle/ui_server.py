@@ -2782,21 +2782,15 @@ function overviewJumpButton(label, endpoint, filterTarget, filterValue, variant)
   return '<button' + className + ' data-jump="' + esc(endpoint) + '"' + targetAttr + valueAttr + '>'
     + label + '</button>';
 }}
-function openListButton(label, endpoint) {{
-  return overviewJumpButton(esc(label), endpoint);
-}}
-function sliceActionButton(label, endpoint, filterTarget, filterValue, variant) {{
+function listJumpButton(label, endpoint, filterTarget, filterValue, variant) {{
   return overviewJumpButton(esc(label), endpoint, filterTarget, filterValue, variant);
 }}
 function moreSliceButton(filterValue, endpoint, filterTarget) {{
   const value = String(filterValue || '');
   if (!value) return '';
-  return sliceActionButton('More ' + value, endpoint, filterTarget, value);
+  return listJumpButton('More ' + value, endpoint, filterTarget, value);
 }}
-function panelTitle(text) {{
-  return '<h3>' + esc(text) + '</h3>';
-}}
-function noticeTitle(text) {{
+function sectionTitle(text) {{
   return '<h3>' + esc(text) + '</h3>';
 }}
 function detailLine(label, value) {{
@@ -2811,38 +2805,38 @@ function summaryJsonLine(label, value) {{
   return '<p>' + esc(label) + ': ' + esc(JSON.stringify(value || {{}})) + '</p>';
 }}
 function renderNotice(title, body) {{
-  return '<div class="notice">' + noticeTitle(title) + body + '</div>';
+  return '<div class="notice">' + sectionTitle(title) + body + '</div>';
 }}
 function packageReviewButtons(record) {{
   return (record.package_handoff_preview || record.package_readiness)
-    ? [openListButton('Open Package Review', '/api/package-review')]
+    ? [listJumpButton('Open Package Review', '/api/package-review')]
     : [];
 }}
 function runtimeRelatedButtons(record) {{
-  const buttons = [openListButton('Open Runtime Records', '/api/runtime-records')];
+  const buttons = [listJumpButton('Open Runtime Records', '/api/runtime-records')];
   const runtimeKind = record.runtime_record_kind || (record.runtime_record_preview && record.runtime_record_preview.record_kind) || '';
   if (runtimeKind) buttons.push(moreSliceButton(runtimeKind, '/api/runtime-records', 'runtimeRecords'));
   return buttons;
 }}
 function reviewRelatedButtons(record) {{
-  const buttons = [openListButton('Open Review Queue', '/api/review-queue')];
+  const buttons = [listJumpButton('Open Review Queue', '/api/review-queue')];
   const capability = record.review_capability || {{}};
   const readiness = record.package_readiness || {{}};
   const warnings = Array.isArray(capability.warnings) ? capability.warnings : [];
   if (record.review_kind) buttons.push(moreSliceButton(record.review_kind, '/api/review-queue', 'reviewQueue'));
   if (capability.status) buttons.push(moreSliceButton(capability.status, '/api/review-queue', 'reviewQueue'));
   warnings.slice(0, 2).forEach(code => buttons.push(moreSliceButton(code, '/api/review-queue', 'reviewQueue')));
-  if (readiness.status) buttons.push(sliceActionButton('More ' + readiness.status, '/api/review-queue', 'reviewQueue', 'package:' + readiness.status));
+  if (readiness.status) buttons.push(listJumpButton('More ' + readiness.status, '/api/review-queue', 'reviewQueue', 'package:' + readiness.status));
   return buttons;
 }}
 function summaryRelatedButtons(record) {{
-  const buttons = [openListButton('Open Summary Jobs', '/api/summary-jobs')];
-  if (record.review_target_event_id) buttons.push(openListButton('Open Review Queue', '/api/review-queue'));
+  const buttons = [listJumpButton('Open Summary Jobs', '/api/summary-jobs')];
+  if (record.review_target_event_id) buttons.push(listJumpButton('Open Review Queue', '/api/review-queue'));
   const capability = record.review_capability || {{}};
   const readiness = record.package_readiness || {{}};
   const parity = record.cli_parity || {{}};
   if (capability.status) buttons.push(moreSliceButton(capability.status, '/api/review-queue', 'reviewQueue'));
-  if (readiness.status) buttons.push(sliceActionButton('More ' + readiness.status, '/api/review-queue', 'reviewQueue', 'package:' + readiness.status));
+  if (readiness.status) buttons.push(listJumpButton('More ' + readiness.status, '/api/review-queue', 'reviewQueue', 'package:' + readiness.status));
   if (parity.status) buttons.push(moreSliceButton(parity.status, '/api/review-queue', 'reviewQueue'));
   return buttons;
 }}
@@ -2944,7 +2938,7 @@ function renderPackageReadinessNotice(record) {{
   const manifest = readiness.package_manifest_preview || {{}};
   const readinessButtons = [];
   if (readiness.status) {{
-    readinessButtons.push(sliceActionButton('More ' + readiness.status, '/api/review-queue', 'reviewQueue', 'package:' + readiness.status));
+    readinessButtons.push(listJumpButton('More ' + readiness.status, '/api/review-queue', 'reviewQueue', 'package:' + readiness.status));
   }}
   return renderNotice(
     'Review Package Readiness',
@@ -3274,13 +3268,13 @@ function renderOverviewCountsPanel(counts) {{
     '<tr><th>' + esc(key) + '</th><td>' + esc(value ?? '') + '</td></tr>'
   ).join('');
   return renderPanel(
-    panelTitle('Counts')
+    sectionTitle('Counts')
     + '<table><tbody>' + countRows + '</tbody></table>'
   );
 }}
 function renderOverviewRuntimeBoundaryPanel(runtime) {{
   return renderPanel(
-    panelTitle('Runtime Boundary')
+    sectionTitle('Runtime Boundary')
     + '<p>Read-only: ' + esc(runtime.read_only) + '</p>'
     + '<p>External model API: ' + esc(runtime.external_model_api) + '</p>'
     + '<p>GraphRAG runtime: ' + esc(runtime.graphrag_runtime) + '</p>'
@@ -3290,7 +3284,7 @@ function renderOverviewRuntimeBoundaryPanel(runtime) {{
 }}
 function renderOverviewRuntimeConfigPanel(runtimeConfig, runtimeConfigContract) {{
   return renderPanel(
-    panelTitle('Runtime Config')
+    sectionTitle('Runtime Config')
     + detailLine('Source', runtimeConfig.source || '')
     + detailLine('Provider kind', runtimeConfigContract.provider_kind || '')
     + detailLine('Provider name', runtimeConfigContract.provider_name || '')
@@ -3298,12 +3292,12 @@ function renderOverviewRuntimeConfigPanel(runtimeConfig, runtimeConfigContract) 
     + detailLine('Allow network', runtimeConfigContract.allow_network)
     + detailLine('Allow external context', runtimeConfigContract.allow_external_context)
     + detailListLine('Warnings', runtimeConfig.warnings, ' | ')
-    + '<p>' + openListButton('Open Runtime Config', '/api/runtime-config') + '</p>'
+    + '<p>' + listJumpButton('Open Runtime Config', '/api/runtime-config') + '</p>'
   );
 }}
 function renderOverviewUiBoundaryPanel(uiBoundary) {{
   return renderPanel(
-    panelTitle('UI Boundary')
+    sectionTitle('UI Boundary')
     + '<p>Bind scope: ' + esc(uiBoundary.bind_scope || '') + '</p>'
     + '<p>Mutation enabled: ' + esc(uiBoundary.mutation_enabled) + '</p>'
     + '<p>Mutation capability flag: ' + esc(uiBoundary.mutation_capability_flag) + '</p>'
@@ -3315,7 +3309,7 @@ function renderOverviewUiBoundaryPanel(uiBoundary) {{
 }}
 function renderOverviewAuthBoundaryPanel(authBoundary, authBoundaryOverview) {{
   return renderPanel(
-    panelTitle('Auth Boundary')
+    sectionTitle('Auth Boundary')
     + '<p>'
     + overviewJumpButton(sliceBadge('Auth warnings', esc(authBoundaryOverview.auth_warning_count ?? 0), 'badge-warning'), '/api/review-queue', 'reviewQueue', 'ui_auth_not_enabled')
     + overviewJumpButton(sliceBadge('Authorization warnings', esc(authBoundaryOverview.authorization_warning_count ?? 0), 'badge-warning'), '/api/review-queue', 'reviewQueue', 'ui_authorization_not_enabled')
@@ -3332,7 +3326,7 @@ function renderOverviewAuthBoundaryPanel(authBoundary, authBoundaryOverview) {{
 }}
 function renderOverviewIdentityBoundaryPanel(identityBoundary) {{
   return renderPanel(
-    panelTitle('Identity Boundary')
+    sectionTitle('Identity Boundary')
     + '<p>'
     + overviewJumpButton(sliceBadge('Declared identity only', esc(identityBoundary.declared_identity_count ?? 0), 'badge-warning'), '/api/review-queue', 'reviewQueue', 'reviewer_identity_declared_only')
     + overviewJumpButton(sliceBadge('Session label required', esc(identityBoundary.session_label_missing_count ?? 0), 'badge-warning'), '/api/review-queue', 'reviewQueue', 'reviewer_session_label_missing')
@@ -3350,7 +3344,7 @@ function renderOverviewIdentityBoundaryPanel(identityBoundary) {{
 }}
 function renderOverviewMutationReadinessPanel(mutationReadiness) {{
   return renderPanel(
-    panelTitle('Mutation Readiness')
+    sectionTitle('Mutation Readiness')
     + detailLine('Status', mutationReadiness.status || '')
     + '<p>' + esc(mutationReadiness.message || '') + '</p>'
     + detailLine('Ready rows', mutationReadiness.ready_row_count ?? 0)
@@ -3364,7 +3358,7 @@ function renderOverviewAiIndexPanel(aiIndex, counts) {{
   const graphNodeCount = aiIndex.graph && aiIndex.graph.node_count ? aiIndex.graph.node_count : 0;
   const graphEdgeCount = aiIndex.graph && aiIndex.graph.edge_count ? aiIndex.graph.edge_count : 0;
   return renderPanel(
-    panelTitle('AI Index Snapshot')
+    sectionTitle('AI Index Snapshot')
     + '<p>Vector entries: ' + esc(vectorEntryCount) + '</p>'
     + '<p>Graph nodes: ' + esc(graphNodeCount) + '</p>'
     + '<p>Graph edges: ' + esc(graphEdgeCount) + '</p>'
@@ -3375,19 +3369,19 @@ function renderOverviewAiIndexPanel(aiIndex, counts) {{
 }}
 function renderOverviewRuntimeRecordsPanel(counts, runtimeRecords) {{
   return renderPanel(
-    panelTitle('Runtime Records')
+    sectionTitle('Runtime Records')
     + '<p>'
     + overviewJumpButton(sliceBadge('Runtime records', esc(counts.runtime_records ?? 0), 'badge-neutral'), '/api/runtime-records')
     + overviewJumpButton(sliceBadge('Runtime auth advisory', esc((runtimeRecords.auth_readiness_counts && runtimeRecords.auth_readiness_counts.advisory_only) ?? 0), 'badge-warning'), '/api/runtime-records', 'runtimeRecords', 'advisory_only')
     + '</p>'
     + summaryJsonLine('Runtime kinds', runtimeRecords.kind_counts)
     + summaryJsonLine('Auth readiness counts', runtimeRecords.auth_readiness_counts)
-    + '<p>' + openListButton('Open Runtime Records', '/api/runtime-records') + '</p>'
+    + '<p>' + listJumpButton('Open Runtime Records', '/api/runtime-records') + '</p>'
   );
 }}
 function renderOverviewSummaryJobsPanel(counts, summaryJobs) {{
   return renderPanel(
-    panelTitle('Summary Jobs')
+    sectionTitle('Summary Jobs')
     + '<p>'
     + overviewJumpButton(sliceBadge('Summary jobs', esc(counts.summary_jobs ?? 0), 'badge-neutral'), '/api/summary-jobs')
     + overviewJumpButton(sliceBadge('Summary advisory', esc((summaryJobs.review_capability_counts && summaryJobs.review_capability_counts.advisory_only) ?? 0), 'badge-warning'), '/api/summary-jobs', 'summaryJobs', 'advisory_only')
@@ -3403,12 +3397,12 @@ function renderOverviewSummaryJobsPanel(counts, summaryJobs) {{
     + summaryJsonLine('Reviewer kind counts', summaryJobs.reviewer_kind_counts)
     + summaryJsonLine('Runtime provider counts', summaryJobs.runtime_provider_counts)
     + detailLine('Source refs total', summaryJobs.summary_source_total ?? 0)
-    + '<p>' + openListButton('Open Summary Jobs', '/api/summary-jobs') + '</p>'
+    + '<p>' + listJumpButton('Open Summary Jobs', '/api/summary-jobs') + '</p>'
   );
 }}
 function renderOverviewTriagePanel(triage, warningButtons, warningSummaries) {{
   return renderPanel(
-    panelTitle('Triage')
+    sectionTitle('Triage')
     + '<p>'
     + overviewJumpButton(sliceBadge('Needs attention', esc(triage.needs_attention_reviews ?? 0), 'badge-warning'), '/api/review-queue', 'reviewQueue', 'review_requested')
     + '</p>'
@@ -3442,19 +3436,19 @@ function renderOverviewTriagePanel(triage, warningButtons, warningSummaries) {{
         ).join('')
       : '(none)')
     + '</p>'
-    + '<p>' + openListButton('Open Review Queue', '/api/review-queue')
-    + openListButton('Open Runtime Records', '/api/runtime-records')
-    + openListButton('Open Summary Jobs', '/api/summary-jobs')
-    + openListButton('Open Runtime Config', '/api/runtime-config')
-    + openListButton('Open Package Review', '/api/package-review')
+    + '<p>' + listJumpButton('Open Review Queue', '/api/review-queue')
+    + listJumpButton('Open Runtime Records', '/api/runtime-records')
+    + listJumpButton('Open Summary Jobs', '/api/summary-jobs')
+    + listJumpButton('Open Runtime Config', '/api/runtime-config')
+    + listJumpButton('Open Package Review', '/api/package-review')
     + '<button data-reset-filters="all">Reset Filters</button></p>'
-    + '<p>' + sliceActionButton('Advisory Reviews', '/api/review-queue', 'reviewQueue', 'advisory')
-    + sliceActionButton('Package Ready Reviews', '/api/review-queue', 'reviewQueue', 'package:package_context_available')
-    + sliceActionButton('CLI Aligned Reviews', '/api/review-queue', 'reviewQueue', 'aligned')
-    + sliceActionButton('Identity Aligned Reviews', '/api/review-queue', 'reviewQueue', 'boundary_aligned')
-    + sliceActionButton('Auth Boundary Warnings', '/api/review-queue', 'reviewQueue', 'ui_auth_not_enabled')
-    + sliceActionButton('Declared Identity Only', '/api/review-queue', 'reviewQueue', 'reviewer_identity_declared_only')
-    + sliceActionButton('Retrieval Plans', '/api/runtime-records', 'runtimeRecords', 'retrieval_plan')
+    + '<p>' + listJumpButton('Advisory Reviews', '/api/review-queue', 'reviewQueue', 'advisory')
+    + listJumpButton('Package Ready Reviews', '/api/review-queue', 'reviewQueue', 'package:package_context_available')
+    + listJumpButton('CLI Aligned Reviews', '/api/review-queue', 'reviewQueue', 'aligned')
+    + listJumpButton('Identity Aligned Reviews', '/api/review-queue', 'reviewQueue', 'boundary_aligned')
+    + listJumpButton('Auth Boundary Warnings', '/api/review-queue', 'reviewQueue', 'ui_auth_not_enabled')
+    + listJumpButton('Declared Identity Only', '/api/review-queue', 'reviewQueue', 'reviewer_identity_declared_only')
+    + listJumpButton('Retrieval Plans', '/api/runtime-records', 'runtimeRecords', 'retrieval_plan')
     + '</p>'
   );
 }}
