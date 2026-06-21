@@ -2318,13 +2318,13 @@ function renderRuntimeRecordsTable(endpoint, rows) {{
   const filtered = filterRows(rows, row => {{
     if (!query) return true;
     const preview = row.runtime_record_preview || {{}};
-    return JSON.stringify([
+    return includesQuery([
       row.event_id || '',
       row.runtime_record_kind || '',
       row.auth_readiness_status || '',
       preview.title || '',
       preview.preview_text || '',
-    ]).toLowerCase().includes(query);
+    ], query);
   }});
   const sorted = sortRuntimeRows(filtered);
   return activeViewSummary(endpoint, 'list')
@@ -2346,7 +2346,7 @@ function renderReviewQueueTable(endpoint, rows) {{
     const readiness = row.package_readiness_summary || {{}};
     const parity = row.cli_parity_summary || {{}};
     const authReadiness = row.auth_boundary_notice || {{}};
-    return JSON.stringify([
+    return includesQuery([
       row.target_event_id || '',
       row.target_summary || '',
       row.review_kind || '',
@@ -2357,7 +2357,7 @@ function renderReviewQueueTable(endpoint, rows) {{
       (row.latest_identity_assurance && row.latest_identity_assurance.status) || '',
       (row.latest_reviewer_identity && row.latest_reviewer_identity.kind) || '',
       (row.latest_reviewer_identity && row.latest_reviewer_identity.label) || row.latest_reviewer || '',
-    ]).toLowerCase().includes(query);
+    ], query);
   }});
   const sorted = sortReviewRows(filtered);
   const mutationEnabled = sorted.some(row => row.ui_mutation_enabled);
@@ -2389,7 +2389,7 @@ function renderSummaryJobsTable(endpoint, rows) {{
   const query = (window.__chronicleFilters && window.__chronicleFilters.summaryJobs || '').toLowerCase();
   const filtered = filterRows(rows, row => {{
     if (!query) return true;
-    return JSON.stringify([
+    return includesQuery([
       row.summary_job_id || '',
       row.title || '',
       row.status || '',
@@ -2401,7 +2401,7 @@ function renderSummaryJobsTable(endpoint, rows) {{
       (row.latest_reviewer_identity && row.latest_reviewer_identity.label) || '',
       row.cli_parity_status || '',
       row.runtime_provider_kind || '',
-    ]).toLowerCase().includes(query);
+    ], query);
   }});
   const sorted = sortSummaryJobRows(filtered);
   const mutationEnabled = sorted.some(row => row.ui_mutation_enabled);
@@ -2486,6 +2486,9 @@ function textInput(id, placeholder) {{
 }}
 function filterRows(rows, predicate) {{
   return rows.filter(predicate);
+}}
+function includesQuery(values, query) {{
+  return JSON.stringify(values).toLowerCase().includes(query);
 }}
 function sortRows(rows, comparator) {{
   return [...rows].sort(comparator);
