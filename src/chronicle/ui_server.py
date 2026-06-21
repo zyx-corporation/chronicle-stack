@@ -2127,6 +2127,13 @@ function renderReviewActionResultPanel(title, responseStatus, path, payload, tar
     + extraLines
     + contractDetailLines(payload.success_contract, payload.failure_contract, targetId);
 }}
+function renderReviewMutationForm(title, prefix) {{
+  return '<div class="notice"><strong>' + esc(title) + '</strong><p>'
+    + '<label>Reviewer <input id="' + esc(prefix) + '-reviewer-label" value="local-ui" placeholder="alice"></label> '
+    + '<label>Kind <select id="' + esc(prefix) + '-reviewer-kind"><option value="local_operator">local_operator</option><option value="user_declared">user_declared</option></select></label> '
+    + '<label>Session <input id="' + esc(prefix) + '-reviewer-session-label" value="local-ui-session" placeholder="desk-session-1"></label> '
+    + '<label>Note <input id="' + esc(prefix) + '-reviewer-note" placeholder="optional review note"></label></p></div>';
+}}
 function reviewerIdentityBadge(identity) {{
   if (!identity) return '';
   const kind = identity.kind || 'reviewer';
@@ -2803,10 +2810,7 @@ function renderTable(endpoint, rows) {{
       + emptyState
       + (
         mutationEnabled
-          ? '<div class="notice"><strong>Local Review Mutation</strong><p><label>Reviewer <input id="review-queue-reviewer-label" value="local-ui" placeholder="alice"></label> '
-            + '<label>Kind <select id="review-queue-reviewer-kind"><option value="local_operator">local_operator</option><option value="user_declared">user_declared</option></select></label> '
-            + '<label>Session <input id="review-queue-reviewer-session-label" value="local-ui-session" placeholder="desk-session-1"></label> '
-            + '<label>Note <input id="review-queue-reviewer-note" placeholder="optional review note"></label></p></div>'
+          ? renderReviewMutationForm('Local Review Mutation', 'review-queue')
           : ''
       )
       + '<div id="review-queue-action-preview-response"><p>'
@@ -2894,10 +2898,7 @@ function renderTable(endpoint, rows) {{
       + emptyState
       + (
         mutationEnabled
-          ? '<div class="notice"><strong>Summary Review Mutation</strong><p><label>Reviewer <input id="summary-jobs-reviewer-label" value="local-ui" placeholder="alice"></label> '
-            + '<label>Kind <select id="summary-jobs-reviewer-kind"><option value="local_operator">local_operator</option><option value="user_declared">user_declared</option></select></label> '
-            + '<label>Session <input id="summary-jobs-reviewer-session-label" value="local-ui-session" placeholder="desk-session-1"></label> '
-            + '<label>Note <input id="summary-jobs-reviewer-note" placeholder="optional review note"></label></p></div>'
+          ? renderReviewMutationForm('Summary Review Mutation', 'summary-jobs')
           : ''
       )
       + '<div id="summary-jobs-action-preview-response"><p>'

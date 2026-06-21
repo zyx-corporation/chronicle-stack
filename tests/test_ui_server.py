@@ -608,6 +608,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "function detailMessages(items, fallbackItems = [])" in html
     assert "function contractDetailLines(successContract, failureContract, targetId)" in html
     assert "function renderReviewActionResultPanel(title, responseStatus, path, payload, targetId, options = {})" in html
+    assert "function renderReviewMutationForm(title, prefix)" in html
     assert "reviewerIdentityBadge" in html
     assert "sortSelect" in html
     assert "sortRuntimeRows" in html
@@ -693,8 +694,10 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "Summary jobs blocked-route preview stays read-only and returns the CLI fallback contract." in html
     assert "Local mutation is enabled for this list view. Each action still requires explicit reviewer context and writes audit-backed review history." in html
     assert "Local mutation is enabled for summary-backed review targets. Actions still require explicit reviewer context and write audit-backed review history." in html
-    assert "review-queue-reviewer-label" in html
-    assert "summary-jobs-reviewer-label" in html
+    assert "prefix) + '-reviewer-label" in html
+    assert "prefix) + '-reviewer-kind" in html
+    assert "prefix) + '-reviewer-session-label" in html
+    assert "prefix) + '-reviewer-note" in html
     assert "reviewFieldValue(prefix, suffix, fallback = '')" in html
     assert "data-review-fields=\"review-queue\"" in html
     assert "data-review-fields=\"summary-jobs\"" in html
