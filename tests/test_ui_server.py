@@ -796,11 +796,13 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "CLI Aligned Reviews" in html
     assert "Auth Boundary Warnings" in html
     assert "warnings.slice(0, 2).forEach" in html
-    assert "const previewButtons = [];" in html
-    assert "const parityButtons = [];" in html
-    assert "const assuranceButtons = [];" in html
-    assert "const readinessButtons = [];" in html
-    assert "const timelineButtons = [];" in html
+    assert "function buttonRow(buttons)" in html
+    assert "function moreStatusButtons(status, endpoint, filterTarget, prefix = '')" in html
+    assert "const previewButtons = [" in html
+    assert "const parityButtons = moreStatusButtons(parity.status, '/api/review-queue', 'reviewQueue');" in html
+    assert "const assuranceButtons = moreStatusButtons(assurance.status, '/api/review-queue', 'reviewQueue');" in html
+    assert "const readinessButtons = moreStatusButtons(readiness.status, '/api/review-queue', 'reviewQueue', 'package:');" in html
+    assert "const timelineButtons = [" in html
     assert "Declared Identity Only" in html
     assert "resetFilterButton(query, 'runtimeRecords')" in html
     assert "resetFilterButton(query, 'reviewQueue')" in html

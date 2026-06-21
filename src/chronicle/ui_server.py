@@ -2804,6 +2804,13 @@ function detailListLine(label, values, separator) {{
 function summaryJsonLine(label, value) {{
   return '<p>' + esc(label) + ': ' + esc(JSON.stringify(value || {{}})) + '</p>';
 }}
+function buttonRow(buttons) {{
+  return buttons.length > 0 ? '<p>' + buttons.join('') + '</p>' : '';
+}}
+function moreStatusButtons(status, endpoint, filterTarget, prefix = '') {{
+  if (!status) return [];
+  return [listJumpButton('More ' + status, endpoint, filterTarget, prefix + status)];
+}}
 function renderNotice(title, body) {{
   return '<div class="notice">' + sectionTitle(title) + body + '</div>';
 }}
@@ -2936,15 +2943,12 @@ function renderPackageReadinessNotice(record) {{
   const readiness = record.package_readiness;
   const packageReview = readiness.package_review || {{}};
   const manifest = readiness.package_manifest_preview || {{}};
-  const readinessButtons = [];
-  if (readiness.status) {{
-    readinessButtons.push(listJumpButton('More ' + readiness.status, '/api/review-queue', 'reviewQueue', 'package:' + readiness.status));
-  }}
+  const readinessButtons = moreStatusButtons(readiness.status, '/api/review-queue', 'reviewQueue', 'package:');
   return renderNotice(
     'Review Package Readiness',
     detailLine('Status', readiness.status || '')
       + '<p>' + esc(readiness.message || '') + '</p>'
-      + (readinessButtons.length > 0 ? '<p>' + readinessButtons.join('') + '</p>' : '')
+      + buttonRow(readinessButtons)
       + detailListLine('Eligible contexts', readiness.eligible_context_ids)
       + detailListLine('Suggested commands', readiness.suggested_commands, ' | ')
       + detailLine('Package review status', packageReview.status || '(not available)')
@@ -2966,15 +2970,12 @@ function renderRelatedLinksNotice(record) {{
 function renderAuthReadinessNotice(record) {{
   if (!record.auth_boundary_notice) return '';
   const notice = record.auth_boundary_notice;
-  const noticeButtons = [];
   const blockerDetails = Array.isArray(notice.blocker_details) ? notice.blocker_details : [];
-  if (notice.status) {{
-    noticeButtons.push(moreSliceButton(notice.status, '/api/review-queue', 'reviewQueue'));
-  }}
+  const noticeButtons = moreStatusButtons(notice.status, '/api/review-queue', 'reviewQueue');
   return renderNotice(
     'Auth Readiness',
     detailLine('Status', notice.status || '')
-      + (noticeButtons.length > 0 ? '<p>' + noticeButtons.join('') + '</p>' : '')
+      + buttonRow(noticeButtons)
       + '<p>' + esc(notice.message || '') + '</p>'
       + detailLine('Review capability', notice.capability_status || '')
       + detailLine('Identity assurance', notice.identity_assurance_status || '')
@@ -3029,21 +3030,18 @@ function renderDetailActionPreviewNotice(record) {{
   const preview = record.action_preview;
   const actions = Array.isArray(preview.actions) ? preview.actions : [];
   const failureContract = preview.failure_contract || {{}};
-  const previewButtons = [];
   const capability = record.review_capability || {{}};
   const parity = record.cli_parity || {{}};
   const mutationTargetEventId = record.target_event_id || record.review_target_event_id || record.event_id || '';
-  if (capability.status) {{
-    previewButtons.push(moreSliceButton(capability.status, '/api/review-queue', 'reviewQueue'));
-  }}
-  if (parity.status) {{
-    previewButtons.push(moreSliceButton(parity.status, '/api/review-queue', 'reviewQueue'));
-  }}
+  const previewButtons = [
+    ...moreStatusButtons(capability.status, '/api/review-queue', 'reviewQueue'),
+    ...moreStatusButtons(parity.status, '/api/review-queue', 'reviewQueue'),
+  ];
   return renderNotice(
     'Action Preview',
     '<p>' + esc(preview.message || '') + '</p>'
       + detailLine('Status', preview.status || '')
-      + (previewButtons.length > 0 ? '<p>' + previewButtons.join('') + '</p>' : '')
+      + buttonRow(previewButtons)
       + detailLine('Rollback status', failureContract.rollback_status || '')
       + detailLine('Durable mutation on failure', failureContract.durable_mutation_reported_on_failure)
       + detailLine('Recovery path', failureContract.recovery_path || '')
@@ -3065,15 +3063,12 @@ function renderDetailActionPreviewNotice(record) {{
 function renderCliParityNotice(record) {{
   if (!record.cli_parity) return '';
   const parity = record.cli_parity;
-  const parityButtons = [];
-  if (parity.status) {{
-    parityButtons.push(moreSliceButton(parity.status, '/api/review-queue', 'reviewQueue'));
-  }}
+  const parityButtons = moreStatusButtons(parity.status, '/api/review-queue', 'reviewQueue');
   return renderNotice(
     'CLI Parity',
     '<p>' + esc(parity.message || '') + '</p>'
       + detailLine('Status', parity.status || '')
-      + (parityButtons.length > 0 ? '<p>' + parityButtons.join('') + '</p>' : '')
+      + buttonRow(parityButtons)
       + detailListLine('Expected actions', parity.expected_actions)
       + detailListLine('Missing preview commands', parity.missing_preview_commands, ' | ')
       + detailListLine('Missing queue commands', parity.missing_queue_commands, ' | ')
@@ -3082,14 +3077,11 @@ function renderCliParityNotice(record) {{
 function renderIdentityAssuranceNotice(record) {{
   if (!record.latest_identity_assurance) return '';
   const assurance = record.latest_identity_assurance;
-  const assuranceButtons = [];
-  if (assurance.status) {{
-    assuranceButtons.push(moreSliceButton(assurance.status, '/api/review-queue', 'reviewQueue'));
-  }}
+  const assuranceButtons = moreStatusButtons(assurance.status, '/api/review-queue', 'reviewQueue');
   return renderNotice(
     'Identity Assurance',
     detailLine('Status', assurance.status || '')
-      + (assuranceButtons.length > 0 ? '<p>' + assuranceButtons.join('') + '</p>' : '')
+      + buttonRow(assuranceButtons)
       + '<p>' + esc(assurance.message || '') + '</p>'
   );
 }}
@@ -3098,13 +3090,10 @@ function renderReviewTimelineNotice(record) {{
   return renderNotice(
     'Review Timeline',
     '<ul>' + record.history.map(item => {{
-      const timelineButtons = [];
-      if (item.disposition) {{
-        timelineButtons.push(moreSliceButton(item.disposition, '/api/review-queue', 'reviewQueue'));
-      }}
-      if (item.identity_assurance && item.identity_assurance.status) {{
-        timelineButtons.push(moreSliceButton(item.identity_assurance.status, '/api/review-queue', 'reviewQueue'));
-      }}
+      const timelineButtons = [
+        ...moreStatusButtons(item.disposition, '/api/review-queue', 'reviewQueue'),
+        ...moreStatusButtons(item.identity_assurance && item.identity_assurance.status, '/api/review-queue', 'reviewQueue'),
+      ];
       return '<li>'
         + esc(item.reviewed_at || '') + ' — '
         + esc(item.disposition || '') + ' by '
