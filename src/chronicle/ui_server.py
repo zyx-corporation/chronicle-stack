@@ -3114,6 +3114,7 @@ function renderReviewQueueTable(endpoint, rows) {{
       {{ value: 'latest', label: 'Latest first' }},
       {{ value: 'reviewer', label: 'Reviewer' }},
     ], reviewQueueFilterChips(), query)
+    + sliceButtonRow(reviewQueueSliceButtons())
     + emptyFilterState(query, sorted, 'No matching review rows for current filter.')
     + (
       mutationEnabled
@@ -3539,12 +3540,16 @@ function filterValueLabel(target, value) {{
     if (normalizedValue === 'response_id') return 'Summary provider response';
   }}
   if (normalizedTarget === 'reviewQueue') {{
+    if (normalizedValue === 'review_requested') return 'Review requested';
+    if (normalizedValue === 'ready') return 'Review ready';
     if (normalizedValue === 'advisory_only' || normalizedValue === 'advisory') return 'Review advisory';
+    if (normalizedValue === 'drift_detected') return 'CLI drift';
     if (normalizedValue === 'aligned') return 'CLI aligned';
     if (normalizedValue === 'boundary_aligned') return 'Identity aligned';
     if (normalizedValue === 'ui_auth_not_enabled') return 'Auth boundary warnings';
     if (normalizedValue === 'reviewer_identity_declared_only') return 'Declared identity only';
     if (normalizedValue === 'package:package_context_available') return 'Package ready';
+    if (normalizedValue === 'package:no_context_records') return 'Package advisory';
   }}
   return normalizedValue.replaceAll('_', ' ');
 }}
@@ -3570,6 +3575,17 @@ function sliceButtonRow(buttons) {{
 }}
 function reviewQueueFilterChips() {{
   return filterChips('reviewQueue', 'badge-warning');
+}}
+function reviewQueueSliceButtons() {{
+  return [
+    listJumpButton('Review Requested', '/api/review-queue', 'reviewQueue', 'review_requested'),
+    listJumpButton('Review Ready', '/api/review-queue', 'reviewQueue', 'ready'),
+    listJumpButton('Review Advisory', '/api/review-queue', 'reviewQueue', 'advisory'),
+    listJumpButton('CLI Drift', '/api/review-queue', 'reviewQueue', 'drift_detected'),
+    listJumpButton('Package Ready', '/api/review-queue', 'reviewQueue', 'package:package_context_available'),
+    listJumpButton('Auth Boundary Warnings', '/api/review-queue', 'reviewQueue', 'ui_auth_not_enabled'),
+    listJumpButton('Declared Identity Only', '/api/review-queue', 'reviewQueue', 'reviewer_identity_declared_only'),
+  ];
 }}
 function runtimeRecordsFilterChips() {{
   return filterChips('runtimeRecords', 'badge-neutral');

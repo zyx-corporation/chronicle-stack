@@ -617,6 +617,7 @@ def test_ui_html_filtering_includes_provider_response_metadata_fields(tmp_path, 
     assert "function renderMutationEnablementSummary(summary)" in html
     assert "function sliceButtonRow(buttons)" in html
     assert "function filterValueLabel(target, value)" in html
+    assert "function reviewQueueSliceButtons()" in html
     assert "function runtimeRecordsSliceButtons()" in html
     assert "function summaryJobsSliceButtons()" in html
     assert "copyCommandButton(recoveryPath, previewTarget, 'Copy Recovery CLI')" in html
@@ -1095,6 +1096,10 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "Summary Mutation Preview" in html
     assert "Summary Package Ready" in html
     assert "Summary Provider Response" in html
+    assert "Review Requested" in html
+    assert "Review Ready" in html
+    assert "Review Advisory" in html
+    assert "CLI Drift" in html
     assert "badge('slice:' + filterLabel, cls)" in html
     assert "' <span class=\"id\">' + esc(value) + '</span>'" in html
     assert "Warning priority:" in html
@@ -1128,6 +1133,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "{ value: 'mutation', label: 'Mutation readiness' }" in html
     assert "{ value: 'auth', label: 'Auth readiness' }" in html
     assert "sliceButtonRow(runtimeRecordsSliceButtons())" in html
+    assert "sliceButtonRow(reviewQueueSliceButtons())" in html
     assert "sliceButtonRow(summaryJobsSliceButtons())" in html
     assert "tableHtml(['detail', 'event', 'kind', 'auth', 'preview', 'review route', 'source counts']" in html
     assert "Auth aligned" in html
