@@ -122,6 +122,84 @@ def test_summary_run_creates_runtime_backed_draft(tmp_path: Path) -> None:
     assert draft_job["source_refs"][0]["record_id"] == "evt_source"
 
 
+def test_summary_run_can_use_configured_provider_explicitly(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    os.chdir(str(tmp_path))
+    runner.invoke(app, ["init", "--title", "Summary Run HTTP Test"])
+    runner.invoke(
+        app,
+        [
+            "runtime",
+            "config",
+            "set-http",
+            "--base-url",
+            "https://runtime.example.invalid/v1",
+            "--model",
+            "http-summary-model",
+            "--api-key-env",
+            "OPENAI_API_KEY",
+            "--allow-network",
+        ],
+    )
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+
+    create_result = runner.invoke(
+        app,
+        [
+            "summary", "create",
+            "--title", "Source Draft",
+            "--text", "First sentence. Second sentence. Third sentence.",
+            "--source", "event:evt_source",
+            "--prompt", "Condense the source draft.",
+            "--json",
+        ],
+    )
+    assert create_result.exit_code == 0, create_result.stderr
+    source_job = json.loads(create_result.stdout)
+
+    from chronicle.services.runtime_service import RuntimeService
+
+    def _stub_http_summary(*, config, text, operation, max_sentences):  # type: ignore[no-untyped-def]
+        assert config.provider_kind.value == "http"
+        assert text == "First sentence. Second sentence. Third sentence."
+        assert operation == "summarize"
+        assert max_sentences == 2
+        return {
+            "output_text": "HTTP provider condensed summary.",
+            "response_id": "resp_summary_run",
+            "finish_reason": "stop",
+            "usage": {"input_tokens": 16, "output_tokens": 6},
+        }
+
+    monkeypatch.setattr(RuntimeService, "_invoke_http_operation", staticmethod(_stub_http_summary))
+
+    run_result = runner.invoke(
+        app,
+        [
+            "summary", "run",
+            "--id", source_job["summary_job_id"],
+            "--max-sentences", "2",
+            "--execute-configured-provider",
+            "--json",
+        ],
+    )
+    assert run_result.exit_code == 0, run_result.stderr
+    result = json.loads(run_result.stdout)
+    assert result["provider_kind"] == "http"
+    assert result["external_call_made"] is True
+    assert result["generated_text"] == "HTTP provider condensed summary."
+
+    show_result = runner.invoke(app, ["summary", "show", "--id", result["draft_summary_job_id"], "--json"])
+    draft_job = json.loads(show_result.stdout)
+    assert draft_job["provenance"]["generated_by"] == "runtime_http_manual"
+    assert draft_job["provenance"]["external_call_made"] is True
+    assert draft_job["provenance"]["runtime"]["provider_kind"] == "http"
+    assert draft_job["provenance"]["response_metadata"]["response_id"] == "resp_summary_run"
+    assert draft_job["provenance"]["response_metadata"]["usage_output_tokens"] == 6
+
+
 def test_summary_invoke_plan_carries_summary_context(tmp_path: Path) -> None:
     os.chdir(str(tmp_path))
     runner.invoke(app, ["init", "--title", "Summary Invoke Plan Test"])

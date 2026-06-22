@@ -100,6 +100,13 @@ def summary_run_cmd(
     summary_job_id: Annotated[str, typer.Option("--id", help="Source summary job ID.")],
     max_sentences: Annotated[int, typer.Option("--max-sentences", min=1, help="Maximum number of sentences to keep.")] = 3,
     draft_title: Annotated[str | None, typer.Option("--draft-title", help="Override title for the generated runtime-backed draft summary job.")] = None,
+    execute_configured_provider: Annotated[
+        bool,
+        typer.Option(
+            "--execute-configured-provider",
+            help="Explicitly invoke the configured provider contract for this summary run.",
+        ),
+    ] = False,
     json_output: Annotated[bool, typer.Option("--json")] = False,
 ) -> None:
     """Re-run a local draft through the explicit manual runtime boundary."""
@@ -109,6 +116,7 @@ def summary_run_cmd(
         text=source_job.summary_text,
         max_sentences=max_sentences,
         draft_title=draft_title or f"Runtime Draft: {source_job.title}",
+        execute_configured_provider=execute_configured_provider,
         source_refs=source_job.source_refs,
         tags=["summary-run", summary_job_id],
         prompt=source_job.provenance.prompt or f"summary run from {summary_job_id}",

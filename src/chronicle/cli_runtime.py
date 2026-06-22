@@ -6,6 +6,8 @@ from typing import Annotated
 import typer
 
 from chronicle.errors import ChronicleError
+from chronicle.models.artifact import ArtifactType
+from chronicle.models.summary_job import SummarySourceRef
 from chronicle.interfaces.cli.common import handle_error
 from chronicle.services.runtime_config_service import RuntimeConfigService
 from chronicle.services.runtime_service import RuntimeService
@@ -17,6 +19,23 @@ runtime_config_app = typer.Typer(help="Stored runtime provider configuration.", 
 
 def _dump_json(value: object) -> None:
     typer.echo(json.dumps(value, ensure_ascii=False, indent=2))
+
+
+def _parse_source_ref(value: str) -> SummarySourceRef:
+    if ":" in value:
+        record_type, record_id = value.split(":", 1)
+        return SummarySourceRef(record_id=record_id, record_type=record_type)
+    return SummarySourceRef(record_id=value)
+
+
+def _parse_key_value(value: str) -> tuple[str, str]:
+    if "=" not in value:
+        raise typer.BadParameter("Expected key=value.")
+    key, raw_value = value.split("=", 1)
+    key = key.strip()
+    if not key:
+        raise typer.BadParameter("Expected non-empty key in key=value.")
+    return key, raw_value
 
 
 @runtime_app.command("status")
@@ -49,6 +68,13 @@ def runtime_summarize_cmd(
     max_sentences: Annotated[int, typer.Option("--max-sentences", min=1, help="Maximum number of sentences to keep.")] = 3,
     record: Annotated[bool, typer.Option("--record", help="Persist the generated summary as an assistant_output event requiring review.")] = False,
     draft_title: Annotated[str | None, typer.Option("--draft-title", help="Also persist the generated summary as a pending-review summary job with this title.")] = None,
+    execute_configured_provider: Annotated[
+        bool,
+        typer.Option(
+            "--execute-configured-provider",
+            help="Explicitly invoke the configured provider contract for this summarize command.",
+        ),
+    ] = False,
     json_output: Annotated[bool, typer.Option("--json")] = False,
 ) -> None:
     """Generate a local placeholder summary with explicit manual invocation."""
@@ -58,6 +84,7 @@ def runtime_summarize_cmd(
             max_sentences=max_sentences,
             record=record,
             draft_title=draft_title,
+            execute_configured_provider=execute_configured_provider,
         )
         if json_output:
             _dump_json(result.model_dump(mode="json"))
@@ -70,7 +97,11 @@ def runtime_summarize_cmd(
             typer.echo(f"Event: {result.event_id}")
         if result.draft_summary_job_id:
             typer.echo(f"Draft summary job: {result.draft_summary_job_id}")
-        typer.echo("Boundary: no LLM, no external runtime, review required before trust.")
+        typer.echo(
+            "Boundary: explicit manual runtime only, review required before trust."
+            if result.external_call_made
+            else "Boundary: no LLM, no external runtime, review required before trust."
+        )
     except ChronicleError as exc:
         handle_error(exc, json_output)
 
@@ -108,12 +139,21 @@ def runtime_retrieve_plan_cmd(
 def runtime_invoke_plan_cmd(
     text: Annotated[str, typer.Option("--text", help="Source text for a provider invocation dry-run plan.")],
     operation: Annotated[str, typer.Option("--operation", help="Planned provider operation name.")] = "summarize",
+    source: Annotated[list[str] | None, typer.Option("--source", help="Source reference, e.g. event:evt_x or ctx_x. Repeatable.")] = None,
+    param: Annotated[list[str] | None, typer.Option("--param", help="Operation-specific parameter as key=value. Repeatable.")] = None,
     record: Annotated[bool, typer.Option("--record", help="Persist the invocation dry-run plan as an assistant_output event requiring review.")] = False,
     json_output: Annotated[bool, typer.Option("--json")] = False,
 ) -> None:
     """Show an explicit provider invocation dry-run plan without invoking it."""
     try:
-        plan = RuntimeService().invocation_plan(text=text, operation=operation, record=record)
+        params = dict(_parse_key_value(item) for item in (param or []))
+        plan = RuntimeService().invocation_plan(
+            text=text,
+            operation=operation,
+            record=record,
+            source_ref_count=len(source or []),
+            extra_params=params,
+        )
         if json_output:
             _dump_json(plan.model_dump(mode="json"))
             return
@@ -129,6 +169,72 @@ def runtime_invoke_plan_cmd(
         if plan.event_id:
             typer.echo(f"Event: {plan.event_id}")
         typer.echo("Boundary: dry-run contract only, no provider execution, no external call performed.")
+    except ChronicleError as exc:
+        handle_error(exc, json_output)
+
+
+@runtime_app.command("invoke")
+def runtime_invoke_cmd(
+    text: Annotated[str, typer.Option("--text", help="Source text for configured-provider execution.")],
+    operation: Annotated[str, typer.Option("--operation", help="Configured-provider operation name.")] = "summarize",
+    source: Annotated[list[str] | None, typer.Option("--source", help="Source reference, e.g. event:evt_x or ctx_x. Repeatable.")] = None,
+    param: Annotated[list[str] | None, typer.Option("--param", help="Operation-specific parameter as key=value. Repeatable.")] = None,
+    prompt: Annotated[str, typer.Option("--prompt", help="Optional prompt/provenance note to pass with configured-provider execution.")] = "",
+    record: Annotated[bool, typer.Option("--record", help="Persist the configured-provider output as an assistant_output event requiring review.")] = False,
+    draft_summary_title: Annotated[
+        str | None,
+        typer.Option("--draft-summary-title", help="Also persist the configured-provider output as a pending-review summary job with this title."),
+    ] = None,
+    artifact_title: Annotated[
+        str | None,
+        typer.Option("--artifact-title", help="Also persist the configured-provider output as a draft artifact with this title."),
+    ] = None,
+    artifact_type: Annotated[
+        ArtifactType,
+        typer.Option("--artifact-type", help="Artifact type to use with --artifact-title."),
+    ] = ArtifactType.OTHER,
+    execute_configured_provider: Annotated[
+        bool,
+        typer.Option(
+            "--execute-configured-provider",
+            help="Explicitly invoke the configured provider contract for this operation.",
+        ),
+    ] = False,
+    json_output: Annotated[bool, typer.Option("--json")] = False,
+) -> None:
+    """Invoke the configured provider through the explicit manual boundary."""
+    try:
+        source_refs = [_parse_source_ref(item) for item in (source or [])]
+        params = dict(_parse_key_value(item) for item in (param or []))
+        result = RuntimeService().invoke(
+            text=text,
+            operation=operation,
+            record=record,
+            execute_configured_provider=execute_configured_provider,
+            draft_summary_title=draft_summary_title,
+            artifact_title=artifact_title,
+            artifact_type=artifact_type,
+            source_refs=source_refs,
+            prompt=prompt,
+            extra_params=params,
+        )
+        if json_output:
+            _dump_json(result.model_dump(mode="json"))
+            return
+
+        typer.echo("Chronicle Runtime Invocation")
+        typer.echo(f"Operation: {result.operation}")
+        typer.echo(f"Generated: {result.output_text}")
+        typer.echo(f"Recorded: {result.recorded}")
+        if result.event_id:
+            typer.echo(f"Event: {result.event_id}")
+        if result.draft_summary_job_id:
+            typer.echo(f"Draft summary job: {result.draft_summary_job_id}")
+        if result.artifact_id:
+            typer.echo(f"Artifact: {result.artifact_id}")
+        if result.version_id:
+            typer.echo(f"Version: {result.version_id}")
+        typer.echo("Boundary: explicit configured-provider execution only, review required before trust.")
     except ChronicleError as exc:
         handle_error(exc, json_output)
 

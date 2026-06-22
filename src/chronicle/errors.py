@@ -162,3 +162,61 @@ class UIHostNotLoopbackError(ChronicleError):
             message=f"UI host must remain loopback-only until auth/authz is implemented: {host}",
             hint="Use `127.0.0.1`, `localhost`, or `::1` for the local read-only UI.",
         )
+
+
+class RuntimeProviderExecutionNotEnabledError(ChronicleError):
+    def __init__(self) -> None:
+        super().__init__(
+            code="RUNTIME_PROVIDER_EXECUTION_NOT_ENABLED",
+            message="Configured provider execution was not explicitly enabled for this command.",
+            hint=(
+                "Pass the explicit execute flag on the runtime command"
+                " after reviewing the invocation plan and provider contract."
+            ),
+        )
+
+
+class RuntimeProviderNotReadyError(ChronicleError):
+    def __init__(self, reasons: list[str]) -> None:
+        joined = ", ".join(reasons) if reasons else "provider_not_ready"
+        super().__init__(
+            code="RUNTIME_PROVIDER_NOT_READY",
+            message=f"Configured provider execution is blocked: {joined}",
+            hint="Review `chronicle runtime invoke-plan --json` and `chronicle runtime config show --json`.",
+        )
+
+
+class RuntimeProviderCredentialMissingError(ChronicleError):
+    def __init__(self, env_name: str) -> None:
+        super().__init__(
+            code="RUNTIME_PROVIDER_CREDENTIAL_MISSING",
+            message=f"Configured provider credential env var is missing: {env_name}",
+            hint=f"Export `{env_name}` before retrying the explicit provider execution command.",
+        )
+
+
+class RuntimeProviderResponseError(ChronicleError):
+    def __init__(self, detail: str) -> None:
+        super().__init__(
+            code="RUNTIME_PROVIDER_RESPONSE_ERROR",
+            message=f"Configured provider returned an unusable response: {detail}",
+            hint="Return JSON containing one of: `output_text`, `generated_text`, or `summary`.",
+        )
+
+
+class RuntimeProviderTransportError(ChronicleError):
+    def __init__(self, detail: str) -> None:
+        super().__init__(
+            code="RUNTIME_PROVIDER_TRANSPORT_ERROR",
+            message=f"Configured provider request failed: {detail}",
+            hint="Check the configured base URL, local network reachability, and credential env var.",
+        )
+
+
+class RuntimeProviderExternalContextNotAllowedError(ChronicleError):
+    def __init__(self) -> None:
+        super().__init__(
+            code="RUNTIME_PROVIDER_EXTERNAL_CONTEXT_NOT_ALLOWED",
+            message="Configured provider execution requested external context, but the stored contract does not allow it.",
+            hint="Either remove the external context inputs or reconfigure the provider contract with `--allow-external-context`.",
+        )

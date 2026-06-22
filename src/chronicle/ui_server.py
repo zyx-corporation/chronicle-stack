@@ -20,7 +20,7 @@ from urllib.parse import quote, unquote, urlparse
 
 from chronicle.errors import ChronicleError, UIHostNotLoopbackError
 from chronicle.exporters.html_exporter import HtmlDashboardExporter
-from chronicle.models.runtime import RuntimeInvocationPlan, RuntimeRetrievalPlan
+from chronicle.models.runtime import RuntimeExecutionResult, RuntimeInvocationPlan, RuntimeRetrievalPlan
 from chronicle.models.review import ReviewerIdentity, ReviewerIdentityKind
 from chronicle.services.audit_service import AuditService
 from chronicle.services.chronicle_service import ChronicleService
@@ -477,14 +477,28 @@ class ChronicleUIDataService:
         rows = runtime_records if runtime_records is not None else self.runtime_records()["runtime_records"]
         kind_counts: dict[str, int] = {}
         auth_counts: dict[str, int] = {}
+        finish_reason_counts: dict[str, int] = {}
+        provider_status_counts: dict[str, int] = {}
+        response_present_count = 0
         for row in rows:
             kind = str(row.get("runtime_record_kind", "unknown"))
             auth_status = str(row.get("auth_readiness_status", "unknown"))
+            response_summary = row.get("response_metadata_summary", {})
             kind_counts[kind] = kind_counts.get(kind, 0) + 1
             auth_counts[auth_status] = auth_counts.get(auth_status, 0) + 1
+            if isinstance(response_summary, dict) and response_summary.get("present") is True:
+                response_present_count += 1
+                finish_reason = str(response_summary.get("finish_reason") or "unknown")
+                provider_status = str(response_summary.get("provider_status") or "unknown")
+                finish_reason_counts[finish_reason] = finish_reason_counts.get(finish_reason, 0) + 1
+                provider_status_counts[provider_status] = provider_status_counts.get(provider_status, 0) + 1
         return {
             "kind_counts": kind_counts,
             "auth_readiness_counts": auth_counts,
+            "provider_response_present_count": response_present_count,
+            "provider_response_absent_count": len(rows) - response_present_count,
+            "provider_response_finish_reason_counts": finish_reason_counts,
+            "provider_response_status_counts": provider_status_counts,
         }
 
     def auth_boundary_overview(self, review_queue: list[dict[str, Any]] | None = None) -> dict[str, Any]:
@@ -496,6 +510,9 @@ class ChronicleUIDataService:
         session_label_missing_count = 0
         review_capability_counts: dict[str, int] = {}
         assurance_counts: dict[str, int] = {}
+        provider_finish_reason_counts: dict[str, int] = {}
+        provider_status_counts: dict[str, int] = {}
+        provider_response_present_count = 0
 
         for row in queue:
             capability = row.get("review_capability", {})
@@ -516,6 +533,17 @@ class ChronicleUIDataService:
             if isinstance(assurance, dict) and assurance.get("status"):
                 assurance_status = str(assurance.get("status", "unknown"))
                 assurance_counts[assurance_status] = assurance_counts.get(assurance_status, 0) + 1
+            response_summary = row.get("response_metadata_summary", {})
+            if isinstance(response_summary, dict) and response_summary.get("present") is True:
+                provider_response_present_count += 1
+                finish_reason = str(response_summary.get("finish_reason") or "unknown")
+                provider_status = str(response_summary.get("provider_status") or "unknown")
+                provider_finish_reason_counts[finish_reason] = (
+                    provider_finish_reason_counts.get(finish_reason, 0) + 1
+                )
+                provider_status_counts[provider_status] = (
+                    provider_status_counts.get(provider_status, 0) + 1
+                )
 
         return {
             "auth_warning_count": auth_warning_count,
@@ -525,6 +553,10 @@ class ChronicleUIDataService:
             "session_label_missing_count": session_label_missing_count,
             "review_capability_counts": review_capability_counts,
             "identity_assurance_counts": assurance_counts,
+            "provider_response_present_count": provider_response_present_count,
+            "provider_response_absent_count": len(queue) - provider_response_present_count,
+            "provider_response_finish_reason_counts": provider_finish_reason_counts,
+            "provider_response_status_counts": provider_status_counts,
         }
 
     def summary_jobs_overview(self, summary_jobs: list[dict[str, Any]] | None = None) -> dict[str, Any]:
@@ -536,6 +568,9 @@ class ChronicleUIDataService:
         provider_counts: dict[str, int] = {}
         assurance_counts: dict[str, int] = {}
         reviewer_kind_counts: dict[str, int] = {}
+        finish_reason_counts: dict[str, int] = {}
+        provider_status_counts: dict[str, int] = {}
+        response_present_count = 0
         source_count_total = 0
         for row in rows:
             status = str(row.get("status", "unknown"))
@@ -552,6 +587,13 @@ class ChronicleUIDataService:
             provider_counts[provider_kind] = provider_counts.get(provider_kind, 0) + 1
             assurance_counts[assurance_status] = assurance_counts.get(assurance_status, 0) + 1
             reviewer_kind_counts[reviewer_kind] = reviewer_kind_counts.get(reviewer_kind, 0) + 1
+            response_summary = row.get("response_metadata_summary", {})
+            if isinstance(response_summary, dict) and response_summary.get("present") is True:
+                response_present_count += 1
+                finish_reason = str(response_summary.get("finish_reason") or "unknown")
+                provider_status = str(response_summary.get("provider_status") or "unknown")
+                finish_reason_counts[finish_reason] = finish_reason_counts.get(finish_reason, 0) + 1
+                provider_status_counts[provider_status] = provider_status_counts.get(provider_status, 0) + 1
             source_count_total += int(row.get("summary_source_count", 0) or 0)
         return {
             "status_counts": status_counts,
@@ -559,6 +601,10 @@ class ChronicleUIDataService:
             "auth_readiness_counts": auth_counts,
             "package_readiness_counts": package_counts,
             "runtime_provider_counts": provider_counts,
+            "provider_response_present_count": response_present_count,
+            "provider_response_absent_count": len(rows) - response_present_count,
+            "provider_response_finish_reason_counts": finish_reason_counts,
+            "provider_response_status_counts": provider_status_counts,
             "identity_assurance_counts": assurance_counts,
             "reviewer_kind_counts": reviewer_kind_counts,
             "summary_source_total": source_count_total,
@@ -634,6 +680,7 @@ class ChronicleUIDataService:
         warning_counts: dict[str, int] = {}
         identity_assurance_counts: dict[str, int] = {}
         reviewer_kind_counts: dict[str, int] = {}
+        provider_response_present_reviews = 0
         ready_now = 0
         advisory_only = 0
         package_ready = 0
@@ -677,6 +724,9 @@ class ChronicleUIDataService:
             latest_identity = row.get("latest_reviewer_identity") or {}
             reviewer_kind = str(latest_identity.get("kind", "unknown"))
             reviewer_kind_counts[reviewer_kind] = reviewer_kind_counts.get(reviewer_kind, 0) + 1
+            response_summary = row.get("response_metadata_summary", {})
+            if isinstance(response_summary, dict) and response_summary.get("present") is True:
+                provider_response_present_reviews += 1
 
         return {
             "runtime_record_kinds": runtime_by_kind,
@@ -694,6 +744,7 @@ class ChronicleUIDataService:
             "cli_parity_drift_reviews": parity_drift,
             "identity_boundary_aligned_reviews": identity_boundary_aligned,
             "identity_declared_only_reviews": identity_declared_only,
+            "provider_response_present_reviews": provider_response_present_reviews,
             "needs_attention_reviews": len(review_queue),
         }
 
@@ -762,6 +813,7 @@ class ChronicleUIDataService:
             if event.event_type.value == "assistant_output"
             and (
                 "runtime_summary" in event.payload
+                or "runtime_execution" in event.payload
                 or "runtime_retrieval_plan" in event.payload
                 or "runtime_invocation_plan" in event.payload
             )
@@ -777,6 +829,7 @@ class ChronicleUIDataService:
                 data["auth_readiness_status"] = str(
                     review_row.get("auth_boundary_notice", {}).get("status", "")
                 )
+            data["response_metadata_summary"] = self._runtime_response_metadata_summary(payload=data["payload"])
             rows.append(data)
         return {"runtime_records": rows}
 
@@ -787,6 +840,9 @@ class ChronicleUIDataService:
         for entry in self.review.queue()[:limit]:
             data = entry.model_dump(mode="json")
             data["suggested_cli_family"] = self._suggested_cli_family_from_kind(entry.review_kind)
+            data["response_metadata_summary"] = self._review_target_response_metadata_summary(
+                entry.target_event_id
+            )
             data["review_capability"] = self._review_capability(
                 pending=bool(data.get("pending")),
                 boundary=boundary,
@@ -829,6 +885,10 @@ class ChronicleUIDataService:
             data = job.model_dump(mode="json")
             data["summary_source_count"] = len(job.source_refs)
             data["runtime_provider_kind"] = job.provenance.runtime.provider_kind.value
+            data["response_metadata_summary"] = self._response_metadata_summary(
+                response_metadata=job.provenance.response_metadata,
+                response_keys=job.provenance.response_keys,
+            )
             data["suggested_cli_family"] = "chronicle summary show --id"
             data["identity_assurance_status"] = "unknown"
             review_target_event_id = str(data.get("event_id", ""))
@@ -989,6 +1049,22 @@ class ChronicleUIDataService:
                         f"Open summary job {summary_job_id}",
                     )
                 )
+        if "runtime_execution" in payload:
+            execution = RuntimeExecutionResult.model_validate(payload["runtime_execution"])
+            if execution.draft_summary_job_id:
+                links.append(
+                    _related_link(
+                        f"/api/summary-jobs/{execution.draft_summary_job_id}",
+                        f"Open summary job {execution.draft_summary_job_id}",
+                    )
+                )
+            if execution.artifact_id:
+                links.append(
+                    _related_link(
+                        f"/api/artifacts/{execution.artifact_id}",
+                        f"Open artifact {execution.artifact_id}",
+                    )
+                )
         if "runtime_retrieval_plan" in payload:
             plan = RuntimeRetrievalPlan.model_validate(payload["runtime_retrieval_plan"])
             for record_id in _unique_list(plan):
@@ -1117,6 +1193,54 @@ class ChronicleUIDataService:
             "graph_db": False,
             "correctness_proof": False,
         }
+
+    @staticmethod
+    def _response_metadata_summary(
+        *,
+        response_metadata: dict[str, Any] | None,
+        response_keys: list[str] | None,
+    ) -> dict[str, Any]:
+        metadata = response_metadata or {}
+        keys = [str(item) for item in (response_keys or [])]
+        return {
+            "present": bool(metadata or keys),
+            "response_id": metadata.get("response_id"),
+            "finish_reason": metadata.get("finish_reason"),
+            "provider_status": metadata.get("provider_status"),
+            "usage_input_tokens": metadata.get("usage_input_tokens"),
+            "usage_output_tokens": metadata.get("usage_output_tokens"),
+            "usage_total_tokens": metadata.get("usage_total_tokens"),
+            "metadata_count": len(metadata),
+            "response_key_count": len(keys),
+            "response_keys": keys,
+        }
+
+    def _runtime_response_metadata_summary(self, *, payload: dict[str, Any]) -> dict[str, Any]:
+        if "runtime_execution" in payload:
+            execution = RuntimeExecutionResult.model_validate(payload["runtime_execution"])
+            return self._response_metadata_summary(
+                response_metadata=execution.response_metadata,
+                response_keys=execution.response_keys,
+            )
+        if "runtime_summary" in payload:
+            summary = payload["runtime_summary"]
+            return self._response_metadata_summary(
+                response_metadata=summary.get("response_metadata", {}),
+                response_keys=summary.get("response_keys", []),
+            )
+        return self._response_metadata_summary(response_metadata={}, response_keys=[])
+
+    def _review_target_response_metadata_summary(self, target_event_id: str) -> dict[str, Any]:
+        event = next(
+            (item for item in self.chronicle.jsonl.read_all() if item.event_id == target_event_id),
+            None,
+        )
+        if event is None:
+            return self._response_metadata_summary(response_metadata={}, response_keys=[])
+        payload = getattr(event, "payload", {})
+        if not isinstance(payload, dict):
+            return self._response_metadata_summary(response_metadata={}, response_keys=[])
+        return self._runtime_response_metadata_summary(payload=payload)
 
     def ui_boundary(self) -> dict[str, Any]:
         metadata = build_ui_boundary_metadata(
@@ -1618,6 +1742,7 @@ class ChronicleUIDataService:
             payload = record["payload"]
             if (
                 "runtime_summary" not in payload
+                and "runtime_execution" not in payload
                 and "runtime_retrieval_plan" not in payload
                 and "runtime_invocation_plan" not in payload
             ):
@@ -1627,6 +1752,7 @@ class ChronicleUIDataService:
             record["runtime_record_preview"] = preview.model_dump(mode="json")
             record["suggested_cli_family"] = preview.suggested_cli_family
             record["related_links"] = self.runtime_related_links(parts[2], payload)
+            record["response_metadata_summary"] = self._runtime_response_metadata_summary(payload=payload)
             review_row = self._review_queue_row(parts[2])
             if review_row is not None:
                 record["auth_boundary_notice"] = review_row.get("auth_boundary_notice")
@@ -1676,6 +1802,10 @@ class ChronicleUIDataService:
             job = self.summary_jobs.get(parts[2]).model_dump(mode="json")
             job["summary_source_count"] = len(job.get("source_refs", []))
             job["runtime_provider_kind"] = str(job.get("provenance", {}).get("runtime", {}).get("provider_kind", ""))
+            job["response_metadata_summary"] = self._response_metadata_summary(
+                response_metadata=job.get("provenance", {}).get("response_metadata", {}),
+                response_keys=job.get("provenance", {}).get("response_keys", []),
+            )
             job["suggested_cli_family"] = "chronicle summary show --id"
             job["identity_assurance_status"] = "unknown"
             event_id = str(job.get("event_id", ""))
@@ -2301,6 +2431,7 @@ function listToolbar(endpoint, target, placeholder, sortOptions, filterChipHtml,
 function renderRuntimeRecordRow(row, endpoint) {{
   const button = detailJsonButton(endpoint, row);
   const preview = row.runtime_record_preview || {{}};
+  const responseMetadata = row.response_metadata_summary || {{}};
   const sourceBadges = sourceCountBadges(preview.source_counts || {{}});
   const authBadge = row.auth_readiness_status === 'boundary_aligned'
     ? jumpBadge('Auth aligned', 'badge-ready', '/api/review-queue', 'reviewQueue', 'boundary_aligned')
@@ -2319,7 +2450,14 @@ function renderRuntimeRecordRow(row, endpoint) {{
     + '<td><span class="id">' + esc(row.event_id || '') + '</span></td>'
     + '<td>' + kindBadge + '</td>'
     + '<td>' + authBadge + '</td>'
-    + '<td>' + stackedCell(['<strong>' + esc(preview.title || '') + '</strong>', esc(preview.preview_text || '')]) + '</td>'
+    + '<td>' + stackedCell([
+      '<strong>' + esc(preview.title || '') + '</strong>',
+      esc(preview.preview_text || ''),
+      responseMetadata.present
+        ? 'Response ' + esc(responseMetadata.response_id || '(no response_id)')
+          + (responseMetadata.finish_reason ? ' / ' + esc(responseMetadata.finish_reason) : '')
+        : ''
+    ]) + '</td>'
     + '<td>' + stackedCell([sourceBadges, esc(JSON.stringify(preview.source_counts || {{}}))]) + '</td>'
     + '</tr>';
 }}
@@ -2331,6 +2469,7 @@ function renderReviewQueueRow(row, endpoint) {{
   const preview = row.action_preview_summary || {{}};
   const previewActions = Array.isArray(preview.actions) ? preview.actions : [];
   const authReadiness = row.auth_boundary_notice || {{}};
+  const responseMetadata = row.response_metadata_summary || {{}};
   const warnList = Array.isArray(capability.warnings) ? capability.warnings : [];
   const warnDetails = Array.isArray(capability.warning_details) ? capability.warning_details : [];
   const warnBadges = reviewWarningBadges(warnList);
@@ -2343,7 +2482,15 @@ function renderReviewQueueRow(row, endpoint) {{
   const authBadge = authReadinessBadge(authReadiness.status || '');
   return '<tr>'
     + '<td>' + button + '</td>'
-    + '<td>' + stackedCell(['<span class="id">' + esc(row.target_event_id || '') + '</span>', reviewKindBadge, esc(row.target_summary || '')]) + '</td>'
+    + '<td>' + stackedCell([
+      '<span class="id">' + esc(row.target_event_id || '') + '</span>',
+      reviewKindBadge,
+      esc(row.target_summary || ''),
+      responseMetadata.present
+        ? 'Response ' + esc(responseMetadata.response_id || '(no response_id)')
+          + (responseMetadata.finish_reason ? ' / ' + esc(responseMetadata.finish_reason) : '')
+        : ''
+    ]) + '</td>'
     + '<td>' + stackedCell([statusBadge, readinessBadge, parityBadge]) + '</td>'
     + '<td>' + authBadge + '</td>'
     + '<td>' + previewCell(preview, previewActions, previewButtonsConfig(row, {{
@@ -2368,6 +2515,7 @@ function renderSummaryJobRow(row, endpoint) {{
   const authBadge = authReadinessBadge(authReadinessStatus);
   const identityBadge = identityAssuranceBadge(identityAssuranceStatus);
   const packageBadge = packageStatusBadge(packageStatus);
+  const responseMetadata = row.response_metadata_summary || {{}};
   const targetButton = row.review_target_event_id
     ? '<button data-detail-nav="/api/review-queue/' + esc(row.review_target_event_id) + '">Open review</button>'
     : '';
@@ -2385,7 +2533,13 @@ function renderSummaryJobRow(row, endpoint) {{
       successDetail: '/api/summary-jobs/' + esc(row.summary_job_id || ''),
       previewTarget: 'summary-jobs-action-preview-response',
     }})) + '</td>'
-    + '<td>' + esc(row.runtime_provider_kind || '') + '</td>'
+    + '<td>' + stackedCell([
+      esc(row.runtime_provider_kind || ''),
+      responseMetadata.present
+        ? 'Response ' + esc(responseMetadata.response_id || '(no response_id)')
+          + (responseMetadata.finish_reason ? ' / ' + esc(responseMetadata.finish_reason) : '')
+        : ''
+    ]) + '</td>'
     + '<td>' + esc(row.summary_source_count ?? 0) + '</td>'
     + '</tr>';
 }}
@@ -2394,12 +2548,20 @@ function renderRuntimeRecordsTable(endpoint, rows) {{
   const filtered = filterRows(rows, row => {{
     if (!query) return true;
     const preview = row.runtime_record_preview || {{}};
+    const responseMetadata = row.response_metadata_summary || {{}};
     return includesQuery([
       row.event_id || '',
       row.runtime_record_kind || '',
       row.auth_readiness_status || '',
       preview.title || '',
       preview.preview_text || '',
+      responseMetadata.response_id || '',
+      responseMetadata.finish_reason || '',
+      responseMetadata.provider_status || '',
+      String(responseMetadata.usage_input_tokens ?? ''),
+      String(responseMetadata.usage_output_tokens ?? ''),
+      String(responseMetadata.usage_total_tokens ?? ''),
+      ...(Array.isArray(responseMetadata.response_keys) ? responseMetadata.response_keys : []),
     ], query);
   }});
   const sorted = sortRuntimeRows(filtered);
@@ -2418,6 +2580,7 @@ function renderReviewQueueTable(endpoint, rows) {{
     const readiness = row.package_readiness_summary || {{}};
     const parity = row.cli_parity_summary || {{}};
     const authReadiness = row.auth_boundary_notice || {{}};
+    const responseMetadata = row.response_metadata_summary || {{}};
     return includesQuery([
       row.target_event_id || '',
       row.target_summary || '',
@@ -2429,6 +2592,13 @@ function renderReviewQueueTable(endpoint, rows) {{
       (row.latest_identity_assurance && row.latest_identity_assurance.status) || '',
       (row.latest_reviewer_identity && row.latest_reviewer_identity.kind) || '',
       (row.latest_reviewer_identity && row.latest_reviewer_identity.label) || row.latest_reviewer || '',
+      responseMetadata.response_id || '',
+      responseMetadata.finish_reason || '',
+      responseMetadata.provider_status || '',
+      String(responseMetadata.usage_input_tokens ?? ''),
+      String(responseMetadata.usage_output_tokens ?? ''),
+      String(responseMetadata.usage_total_tokens ?? ''),
+      ...(Array.isArray(responseMetadata.response_keys) ? responseMetadata.response_keys : []),
     ], query);
   }});
   const sorted = sortReviewRows(filtered);
@@ -2457,6 +2627,7 @@ function renderSummaryJobsTable(endpoint, rows) {{
   const query = (window.__chronicleFilters && window.__chronicleFilters.summaryJobs || '').toLowerCase();
   const filtered = filterRows(rows, row => {{
     if (!query) return true;
+    const responseMetadata = row.response_metadata_summary || {{}};
     return includesQuery([
       row.summary_job_id || '',
       row.title || '',
@@ -2469,6 +2640,13 @@ function renderSummaryJobsTable(endpoint, rows) {{
       (row.latest_reviewer_identity && row.latest_reviewer_identity.label) || '',
       row.cli_parity_status || '',
       row.runtime_provider_kind || '',
+      responseMetadata.response_id || '',
+      responseMetadata.finish_reason || '',
+      responseMetadata.provider_status || '',
+      String(responseMetadata.usage_input_tokens ?? ''),
+      String(responseMetadata.usage_output_tokens ?? ''),
+      String(responseMetadata.usage_total_tokens ?? ''),
+      ...(Array.isArray(responseMetadata.response_keys) ? responseMetadata.response_keys : []),
     ], query);
   }});
   const sorted = sortSummaryJobRows(filtered);
@@ -3016,6 +3194,22 @@ function renderInvocationPlanNotice(record) {{
       + detailListLine('Notes', plan.notes, ' | ')
   );
 }}
+function renderResponseMetadataNotice(record) {{
+  if (!record.response_metadata_summary || !record.response_metadata_summary.present) return '';
+  const summary = record.response_metadata_summary;
+  return renderNotice(
+    'Provider Response',
+    detailLine('Response ID', summary.response_id || '')
+      + detailLine('Finish reason', summary.finish_reason || '')
+      + detailLine('Provider status', summary.provider_status || '')
+      + detailLine('Usage input tokens', summary.usage_input_tokens ?? '')
+      + detailLine('Usage output tokens', summary.usage_output_tokens ?? '')
+      + detailLine('Usage total tokens', summary.usage_total_tokens ?? '')
+      + detailLine('Metadata fields', summary.metadata_count ?? 0)
+      + detailLine('Top-level response keys', summary.response_key_count ?? 0)
+      + detailListLine('Response keys', summary.response_keys, ' | ')
+  );
+}}
 function renderPackageReadinessNotice(record) {{
   if (!record.package_readiness) return '';
   const readiness = record.package_readiness;
@@ -3375,12 +3569,15 @@ function renderOverviewAuthBoundaryPanel(authBoundary, authBoundaryOverview) {{
     + overviewJumpButton(sliceBadge('Auth warnings', esc(authBoundaryOverview.auth_warning_count ?? 0), 'badge-warning'), '/api/review-queue', 'reviewQueue', 'ui_auth_not_enabled')
     + overviewJumpButton(sliceBadge('Authorization warnings', esc(authBoundaryOverview.authorization_warning_count ?? 0), 'badge-warning'), '/api/review-queue', 'reviewQueue', 'ui_authorization_not_enabled')
     + overviewJumpButton(sliceBadge('Missing identity', esc(authBoundaryOverview.missing_identity_count ?? 0), 'badge-warning'), '/api/review-queue', 'reviewQueue', 'no_reviewer_identity_recorded')
+    + overviewJumpButton(sliceBadge('Provider response', esc(authBoundaryOverview.provider_response_present_count ?? 0), 'badge-ready'), '/api/review-queue', 'reviewQueue', 'response_id')
     + '</p>'
     + detailLine('Status', authBoundary.status || '')
     + '<p>' + esc(authBoundary.message || '') + '</p>'
     + detailLine('Session gating', authBoundary.session_gating)
     + detailLine('Shared machine safe', authBoundary.shared_machine_safe)
     + summaryJsonLine('Auth review capability counts', authBoundaryOverview.review_capability_counts)
+    + summaryJsonLine('Provider finish reasons', authBoundaryOverview.provider_response_finish_reason_counts)
+    + summaryJsonLine('Provider statuses', authBoundaryOverview.provider_response_status_counts)
     + detailListLine('Auth blockers', authBoundary.blockers, ' | ')
     + detailListLine('Auth next steps', authBoundary.next_steps, ' | ')
   );
@@ -3439,10 +3636,13 @@ function renderOverviewRuntimeRecordsPanel(counts, runtimeRecords) {{
     sectionTitle('Runtime Records')
     + '<p>'
     + overviewJumpButton(sliceBadge('Runtime records', esc(counts.runtime_records ?? 0), 'badge-neutral'), '/api/runtime-records')
+    + overviewJumpButton(sliceBadge('Provider response', esc(runtimeRecords.provider_response_present_count ?? 0), 'badge-ready'), '/api/runtime-records', 'runtimeRecords', 'response_id')
     + overviewJumpButton(sliceBadge('Runtime auth advisory', esc((runtimeRecords.auth_readiness_counts && runtimeRecords.auth_readiness_counts.advisory_only) ?? 0), 'badge-warning'), '/api/runtime-records', 'runtimeRecords', 'advisory_only')
     + '</p>'
     + summaryJsonLine('Runtime kinds', runtimeRecords.kind_counts)
     + summaryJsonLine('Auth readiness counts', runtimeRecords.auth_readiness_counts)
+    + summaryJsonLine('Provider finish reasons', runtimeRecords.provider_response_finish_reason_counts)
+    + summaryJsonLine('Provider statuses', runtimeRecords.provider_response_status_counts)
     + '<p>' + listJumpButton('Open Runtime Records', '/api/runtime-records') + '</p>'
   );
 }}
@@ -3451,6 +3651,7 @@ function renderOverviewSummaryJobsPanel(counts, summaryJobs) {{
     sectionTitle('Summary Jobs')
     + '<p>'
     + overviewJumpButton(sliceBadge('Summary jobs', esc(counts.summary_jobs ?? 0), 'badge-neutral'), '/api/summary-jobs')
+    + overviewJumpButton(sliceBadge('Provider response', esc(summaryJobs.provider_response_present_count ?? 0), 'badge-ready'), '/api/summary-jobs', 'summaryJobs', 'response_id')
     + overviewJumpButton(sliceBadge('Summary advisory', esc((summaryJobs.review_capability_counts && summaryJobs.review_capability_counts.advisory_only) ?? 0), 'badge-warning'), '/api/summary-jobs', 'summaryJobs', 'advisory_only')
     + overviewJumpButton(sliceBadge('Summary auth advisory', esc((summaryJobs.auth_readiness_counts && summaryJobs.auth_readiness_counts.advisory_only) ?? 0), 'badge-warning'), '/api/summary-jobs', 'summaryJobs', 'advisory_only')
     + overviewJumpButton(sliceBadge('Summary package ready', esc((summaryJobs.package_readiness_counts && summaryJobs.package_readiness_counts.package_context_available) ?? 0), 'badge-ready'), '/api/summary-jobs', 'summaryJobs', 'package_context_available')
@@ -3460,6 +3661,8 @@ function renderOverviewSummaryJobsPanel(counts, summaryJobs) {{
     + summaryJsonLine('Review capability counts', summaryJobs.review_capability_counts)
     + summaryJsonLine('Auth readiness counts', summaryJobs.auth_readiness_counts)
     + summaryJsonLine('Package readiness counts', summaryJobs.package_readiness_counts)
+    + summaryJsonLine('Provider finish reasons', summaryJobs.provider_response_finish_reason_counts)
+    + summaryJsonLine('Provider statuses', summaryJobs.provider_response_status_counts)
     + summaryJsonLine('Identity assurance counts', summaryJobs.identity_assurance_counts)
     + summaryJsonLine('Reviewer kind counts', summaryJobs.reviewer_kind_counts)
     + summaryJsonLine('Runtime provider counts', summaryJobs.runtime_provider_counts)
@@ -3487,6 +3690,9 @@ function renderOverviewTriagePanel(triage, warningButtons, warningSummaries) {{
     + '<p>'
     + overviewJumpButton(sliceBadge('Identity aligned', esc(triage.identity_boundary_aligned_reviews ?? 0), 'badge-ready'), '/api/review-queue', 'reviewQueue', 'boundary_aligned')
     + overviewJumpButton(sliceBadge('Declared identity only', esc(triage.identity_declared_only_reviews ?? 0), 'badge-warning'), '/api/review-queue', 'reviewQueue', 'reviewer_identity_declared_only')
+    + '</p>'
+    + '<p>'
+    + overviewJumpButton(sliceBadge('Provider response', esc(triage.provider_response_present_reviews ?? 0), 'badge-ready'), '/api/review-queue', 'reviewQueue', 'response_id')
     + '</p>'
     + '<p>' + (warningButtons || '') + '</p>'
     + summaryJsonLine('Runtime kinds', triage.runtime_record_kinds)
@@ -3623,6 +3829,7 @@ function detailNavigationOptions(endpoint, record) {{
 }}
 const detailNoticeRenderers = [
   renderRuntimePreviewNotice,
+  renderResponseMetadataNotice,
   renderRetrievalHandoffNotice,
   renderPackageHandoffPreviewNotice,
   renderInvocationPlanNotice,

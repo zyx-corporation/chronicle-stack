@@ -277,6 +277,7 @@ def test_ui_overview_data(tmp_path):
     assert overview["auth_boundary_overview"]["authorization_warning_count"] == 3
     assert overview["auth_boundary_overview"]["missing_identity_count"] == 3
     assert overview["auth_boundary_overview"]["review_capability_counts"]["advisory_only"] == 3
+    assert overview["auth_boundary_overview"]["provider_response_present_count"] == 0
     assert overview["identity_boundary_summary"]["status"] == "identity_unavailable"
     assert overview["identity_boundary_summary"]["missing_identity_count"] == 3
     assert overview["mutation_readiness"]["status"] == "preview_only"
@@ -291,10 +292,13 @@ def test_ui_overview_data(tmp_path):
     assert overview["runtime_records_summary"]["kind_counts"]["summary"] == 1
     assert overview["runtime_records_summary"]["kind_counts"]["retrieval_plan"] == 1
     assert overview["runtime_records_summary"]["auth_readiness_counts"]["advisory_only"] == 2
+    assert overview["runtime_records_summary"]["provider_response_present_count"] == 0
+    assert overview["runtime_records_summary"]["provider_response_absent_count"] == 2
     assert overview["summary_jobs_summary"]["status_counts"]["pending_review"] == 1
     assert overview["summary_jobs_summary"]["review_capability_counts"]["advisory_only"] == 1
     assert overview["summary_jobs_summary"]["auth_readiness_counts"]["advisory_only"] == 1
     assert overview["summary_jobs_summary"]["package_readiness_counts"]["no_context_records"] == 1
+    assert overview["summary_jobs_summary"]["provider_response_present_count"] == 0
     assert overview["summary_jobs_summary"]["identity_assurance_counts"]["unknown"] == 1
     assert overview["summary_jobs_summary"]["reviewer_kind_counts"]["unknown"] == 1
     assert overview["summary_jobs_summary"]["runtime_provider_counts"]["disabled"] == 1
@@ -304,6 +308,7 @@ def test_ui_overview_data(tmp_path):
     assert overview["triage"]["runtime_record_kinds"]["retrieval_plan"] == 1
     assert overview["triage"]["review_capability_counts"]["advisory_only"] == 3
     assert overview["triage"]["package_readiness_counts"]["package_context_available"] >= 1
+    assert overview["triage"]["provider_response_present_reviews"] == 0
 
 
 def test_ui_data_service_read_endpoints(tmp_path):
@@ -372,6 +377,146 @@ def test_ui_data_service_read_endpoints(tmp_path):
     assert service.ai_index_vector_entries()["vector_entries"][0]["record_id"] == service.events()["events"][-1]["event_id"]
     assert service.ai_index_graph_nodes()["graph_nodes"]
     assert service.ai_index_graph_edges()["graph_edges"]
+
+
+def test_ui_data_service_exposes_provider_response_metadata_in_read_only_views(tmp_path, monkeypatch):
+    ChronicleService(tmp_path).init("UI Response Metadata")
+    RuntimeConfigService(tmp_path).set_http(
+        base_url="https://runtime.example.invalid/v1",
+        model_name="manual-http-model",
+        api_key_env="OPENAI_API_KEY",
+        allow_network=True,
+    )
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+    monkeypatch.setattr(
+        RuntimeService,
+        "_invoke_http_operation",
+        staticmethod(
+            lambda **_kwargs: {
+                "output_text": "HTTP provider output for UI metadata visibility.",
+                "response_id": "resp_ui_metadata",
+                "finish_reason": "stop",
+                "provider_status": "ok",
+                "usage": {"input_tokens": 14, "output_tokens": 7, "total_tokens": 21},
+            }
+        ),
+    )
+
+    result = RuntimeService(tmp_path).invoke(
+        text="Summarize this runtime output for the read-only UI.",
+        operation="summarize",
+        record=True,
+        execute_configured_provider=True,
+        draft_summary_title="HTTP UI Summary Draft",
+    )
+    service = ChronicleUIDataService(tmp_path)
+
+    runtime_row = next(
+        row for row in service.runtime_records()["runtime_records"] if row["event_id"] == result.event_id
+    )
+    assert runtime_row["response_metadata_summary"] == {
+        "present": True,
+        "response_id": "resp_ui_metadata",
+        "finish_reason": "stop",
+        "provider_status": "ok",
+        "usage_input_tokens": 14,
+        "usage_output_tokens": 7,
+        "usage_total_tokens": 21,
+        "metadata_count": 6,
+        "response_key_count": 5,
+        "response_keys": [
+            "finish_reason",
+            "output_text",
+            "provider_status",
+            "response_id",
+            "usage",
+        ],
+    }
+
+    summary_job_row = service.summary_jobs_list()["summary_jobs"][0]
+    assert summary_job_row["response_metadata_summary"]["response_id"] == "resp_ui_metadata"
+    assert summary_job_row["response_metadata_summary"]["usage_output_tokens"] == 7
+    assert summary_job_row["response_metadata_summary"]["response_key_count"] == 5
+
+    review_row = service.review_queue()["review_queue"][0]
+    assert review_row["response_metadata_summary"]["response_id"] == "resp_ui_metadata"
+    assert review_row["response_metadata_summary"]["finish_reason"] == "stop"
+    assert review_row["response_metadata_summary"]["usage_total_tokens"] == 21
+
+    overview = service.overview()
+    assert overview["runtime_records_summary"]["provider_response_present_count"] == 1
+    assert overview["runtime_records_summary"]["provider_response_finish_reason_counts"]["stop"] == 1
+    assert overview["runtime_records_summary"]["provider_response_status_counts"]["ok"] == 1
+    assert overview["auth_boundary_overview"]["provider_response_present_count"] == 1
+    assert overview["auth_boundary_overview"]["provider_response_finish_reason_counts"]["stop"] == 1
+    assert overview["auth_boundary_overview"]["provider_response_status_counts"]["ok"] == 1
+    assert overview["summary_jobs_summary"]["provider_response_present_count"] == 1
+    assert overview["summary_jobs_summary"]["provider_response_finish_reason_counts"]["stop"] == 1
+    assert overview["summary_jobs_summary"]["provider_response_status_counts"]["ok"] == 1
+    assert overview["triage"]["provider_response_present_reviews"] == 1
+
+    runtime_detail = service.detail_payload(f"/api/runtime-records/{result.event_id}")
+    assert runtime_detail is not None
+    assert runtime_detail["record"]["response_metadata_summary"]["finish_reason"] == "stop"
+    assert runtime_detail["record"]["runtime_record_preview"]["record_kind"] == "execution"
+    assert any(
+        link["path"] == f"/api/summary-jobs/{summary_job_row['summary_job_id']}"
+        for link in runtime_detail["record"]["related_links"]
+    )
+
+    summary_detail = service.detail_payload(f"/api/summary-jobs/{summary_job_row['summary_job_id']}")
+    assert summary_detail is not None
+    assert summary_detail["record"]["response_metadata_summary"]["usage_total_tokens"] == 21
+
+    review_detail = service.detail_payload(f"/api/review-queue/{result.event_id}")
+    assert review_detail is not None
+    assert review_detail["record"]["response_metadata_summary"]["provider_status"] == "ok"
+
+
+def test_ui_html_filtering_includes_provider_response_metadata_fields(tmp_path, monkeypatch):
+    ChronicleService(tmp_path).init("UI Metadata Filter")
+    RuntimeConfigService(tmp_path).set_http(
+        base_url="https://runtime.example.invalid/v1",
+        model_name="manual-http-model",
+        api_key_env="OPENAI_API_KEY",
+        allow_network=True,
+    )
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+    monkeypatch.setattr(
+        RuntimeService,
+        "_invoke_http_operation",
+        staticmethod(
+            lambda **_kwargs: {
+                "output_text": "HTTP provider output for filter visibility.",
+                "response_id": "resp_filter_ui",
+                "finish_reason": "stop",
+                "provider_status": "ok",
+                "usage": {"input_tokens": 18, "output_tokens": 8, "total_tokens": 26},
+            }
+        ),
+    )
+
+    RuntimeService(tmp_path).invoke(
+        text="Summarize this runtime output for filter coverage.",
+        operation="summarize",
+        record=True,
+        execute_configured_provider=True,
+        draft_summary_title="HTTP Filter Summary Draft",
+    )
+
+    html = ChronicleUIDataService(tmp_path).html_shell()
+
+    assert "responseMetadata.response_id || ''" in html
+    assert "responseMetadata.finish_reason || ''" in html
+    assert "responseMetadata.provider_status || ''" in html
+    assert "String(responseMetadata.usage_total_tokens ?? '')" in html
+    assert "...(Array.isArray(responseMetadata.response_keys) ? responseMetadata.response_keys : [])" in html
+    assert "sliceBadge('Provider response'" in html
+    assert "summaryJsonLine('Provider finish reasons', authBoundaryOverview.provider_response_finish_reason_counts)" in html
+    assert "summaryJsonLine('Provider statuses', authBoundaryOverview.provider_response_status_counts)" in html
+    assert "summaryJsonLine('Provider finish reasons', runtimeRecords.provider_response_finish_reason_counts)" in html
+    assert "summaryJsonLine('Provider statuses', summaryJobs.provider_response_status_counts)" in html
+    assert "Review queue blocked-route preview stays read-only and returns the CLI fallback contract." in html
 
 
 def test_ui_data_service_detail_endpoints(tmp_path):
@@ -775,6 +920,9 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "detailListLine('Reviewer fields', reviewerContextRequirements.required_fields, ' | ')" in html
     assert "detailListLine('Accepted reviewer kinds', reviewerContextRequirements.accepted_reviewer_kinds, ' | ')" in html
     assert "detailLine('Session label required', reviewerContextRequirements.session_label_required)" in html
+    assert "function renderResponseMetadataNotice(record)" in html
+    assert "detailLine('Response ID', summary.response_id || '')" in html
+    assert "detailLine('Usage total tokens', summary.usage_total_tokens ?? '')" in html
     assert "Runtime auth advisory" in html
     assert "Summary advisory" in html
     assert "Summary auth advisory" in html

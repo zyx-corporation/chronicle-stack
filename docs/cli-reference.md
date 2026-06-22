@@ -422,6 +422,7 @@ status は local placeholder runtime の境界を表示します。
 chronicle runtime summarize --text "Source text"
 chronicle runtime summarize --text "Source text" --max-sentences 2
 chronicle runtime summarize --text "Source text" --draft-title "Runtime Draft"
+chronicle runtime summarize --text "Source text" --execute-configured-provider
 chronicle runtime summarize --text "Source text" --record
 chronicle runtime summarize --text "Source text" --record --json
 ```
@@ -435,6 +436,39 @@ chronicle runtime summarize --text "Source text" --record --json
 - `--record` 指定時のみ `assistant_output` event として記録
 - `--draft-title` 指定時のみ pending-review の summary job / draft artifact としても保存
 - draft provenance には provider kind / model name / invocation mode / external_call_made が含まれる
+- configured HTTP provider を使う場合でも `--execute-configured-provider` が無い限り fail closed で止まる
+- configured HTTP provider 実行時は `allow_network=true`, `base_url`, `model`, `api_key_env`, および対応 env var が揃っている必要がある
+- 現在の configured HTTP summarize contract は `POST <base_url>` に JSON を送り、応答 JSON の `output_text` / `generated_text` / `summary` のいずれかを読む
+
+### chronicle runtime invoke
+
+```bash
+chronicle runtime invoke --text "Source text" --operation rewrite
+chronicle runtime invoke --text "Source text" --operation rewrite --execute-configured-provider
+chronicle runtime invoke --text "Source text" --operation rewrite --execute-configured-provider --record
+chronicle runtime invoke --text "Source text" --operation rewrite --execute-configured-provider --artifact-title "Runtime Output"
+chronicle runtime invoke --text "Source text" --operation summarize --draft-summary-title "Runtime Summary Draft" --execute-configured-provider
+chronicle runtime invoke --text "Source text" --operation rewrite --source event:evt_x --prompt "Rewrite with context" --execute-configured-provider
+chronicle runtime invoke --text "Source text" --operation rewrite --param tone=concise --param audience=operator --execute-configured-provider
+chronicle runtime invoke --text "Source text" --operation summarize --execute-configured-provider --json
+```
+
+方針:
+
+- configured provider 実行専用の explicit text operation path
+- `--execute-configured-provider` が無ければ fail closed
+- current contract は text input を持つ operation 名を provider にそのまま渡す
+- `--record` 指定時のみ `assistant_output` event として記録
+- `--draft-summary-title` 指定時のみ configured-provider output を pending-review summary job としても保存する
+- `--artifact-title` 指定時のみ configured-provider output を draft artifact としても保存する
+- `--artifact-type` でその draft artifact の種別を選べる
+- `--source` を渡す場合は configured provider contract 側で `allow_external_context=true` が必要
+- `--prompt` は configured-provider request payload と persisted runtime metadata に残る
+- `--param key=value` で operation-specific parameter を repeatable に渡せる
+- provider response の `response_id` / `finish_reason` / `usage.*` は structured metadata として保持される
+- summary job と draft artifact に保存した場合も、その structured response metadata は provenance として保持される
+- output は derived / review-required であり authority ではない
+- 現在の HTTP text-operation contract でも応答 JSON の `output_text` / `generated_text` / `summary` のいずれかを読む
 
 ### chronicle summary run
 
@@ -442,6 +476,7 @@ chronicle runtime summarize --text "Source text" --record --json
 chronicle summary run --id sum_xxx
 chronicle summary run --id sum_xxx --max-sentences 2
 chronicle summary run --id sum_xxx --draft-title "Runtime Re-draft"
+chronicle summary run --id sum_xxx --execute-configured-provider
 chronicle summary run --id sum_xxx --json
 ```
 
@@ -453,6 +488,7 @@ chronicle summary run --id sum_xxx --json
 - no hidden background execution
 - generated output remains pending review
 - 出力は `runtime_manual` provenance を持つ draft summary job / draft artifact として保存される
+- configured provider 実行時は `runtime_http_manual` provenance と `external_call_made=true` を持つ
 
 ### chronicle summary invoke-plan
 

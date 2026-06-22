@@ -40,6 +40,8 @@ class SummaryJobProvenance(BaseModel):
     operator: str = "user"
     generated_by: str = "manual"
     external_call_made: bool = False
+    response_metadata: dict[str, str | int | float | bool] = Field(default_factory=dict)
+    response_keys: list[str] = Field(default_factory=list)
     generated_at: datetime
 
 

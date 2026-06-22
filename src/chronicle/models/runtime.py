@@ -85,17 +85,42 @@ class RuntimeConfigState(BaseModel):
 
 class RuntimeSummaryResult(BaseModel):
     provider_kind: RuntimeProviderKind = RuntimeProviderKind.LOCAL
+    provider_name: str = "local-placeholder"
     model_name: str = "local-placeholder"
     invocation_mode: str = "explicit-manual"
     external_call_made: bool = False
     requires_review: bool = True
     source_text_length: int
     generated_text: str
+    response_metadata: dict[str, str | int | float | bool] = Field(default_factory=dict)
+    response_keys: list[str] = Field(default_factory=list)
     recorded: bool = False
     event_id: str | None = None
     draft_summary_job_id: str | None = None
     draft_artifact_id: str | None = None
     draft_version_id: str | None = None
+
+
+class RuntimeExecutionResult(BaseModel):
+    provider_kind: RuntimeProviderKind
+    provider_name: str
+    model_name: str
+    operation: str
+    invocation_mode: str = "explicit-http-manual"
+    external_call_made: bool = False
+    requires_review: bool = True
+    source_text_length: int
+    output_text: str
+    source_refs: list[dict[str, str]] = Field(default_factory=list)
+    prompt: str = ""
+    params: dict[str, str] = Field(default_factory=dict)
+    response_metadata: dict[str, str | int | float | bool] = Field(default_factory=dict)
+    response_keys: list[str] = Field(default_factory=list)
+    recorded: bool = False
+    event_id: str | None = None
+    draft_summary_job_id: str | None = None
+    artifact_id: str | None = None
+    version_id: str | None = None
 
 
 class RuntimeRetrievalHit(BaseModel):
