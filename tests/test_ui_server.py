@@ -1128,6 +1128,9 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "function renderResponseMetadataNotice(record)" in html
     assert "detailLine('Response ID', summary.response_id || '')" in html
     assert "detailLine('Usage total tokens', summary.usage_total_tokens ?? '')" in html
+    assert '"Action": "操作"' in html
+    assert '"Rollback status": "ロールバック状態"' in html
+    assert '"Response ID": "応答ID"' in html
     assert "Runtime auth advisory" in html
     assert "Runtime mutation preview" in html
     assert "Summary advisory" in html
