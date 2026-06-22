@@ -1102,10 +1102,13 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "Summary Mutation Preview" in html
     assert "Summary Package Ready" in html
     assert "Summary Provider Response" in html
+    assert "sliceButtonRow(runtimeRecordsSliceButtons())" in html
+    assert "sliceButtonRow(summaryJobsSliceButtons())" in html
     assert "Review Requested" in html
     assert "Review Ready" in html
     assert "Review Advisory" in html
     assert "CLI Drift" in html
+    assert "sliceButtonRow(reviewQueueSliceButtons())" in html
     assert "badge('slice:' + filterLabel, cls)" in html
     assert "' <span class=\"id\">' + esc(value) + '</span>'" in html
     assert "Warning priority:" in html

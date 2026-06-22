@@ -4372,6 +4372,7 @@ function renderOverviewRuntimeRecordsPanel(counts, runtimeRecords) {{
     + summaryJsonLine('Mutation operational counts', runtimeRecords.mutation_operational_counts)
     + summaryJsonLine('Provider finish reasons', runtimeRecords.provider_response_finish_reason_counts)
     + summaryJsonLine('Provider statuses', runtimeRecords.provider_response_status_counts)
+    + sliceButtonRow(runtimeRecordsSliceButtons())
     + '<p>' + listJumpButton('Open Runtime Records', '/api/runtime-records') + '</p>'
   );
 }}
@@ -4399,6 +4400,7 @@ function renderOverviewSummaryJobsPanel(counts, summaryJobs) {{
     + summaryJsonLine('Reviewer kind counts', summaryJobs.reviewer_kind_counts)
     + summaryJsonLine('Runtime provider counts', summaryJobs.runtime_provider_counts)
     + detailLine('Source refs total', summaryJobs.summary_source_total ?? 0)
+    + sliceButtonRow(summaryJobsSliceButtons())
     + '<p>' + listJumpButton('Open Summary Jobs', '/api/summary-jobs') + '</p>'
   );
 }}
@@ -4447,6 +4449,7 @@ function renderOverviewTriagePanel(triage, warningButtons, warningSummaries) {{
     + listJumpButton('Open Runtime Config', '/api/runtime-config')
     + listJumpButton('Open Package Review', '/api/package-review')
     + '<button data-reset-filters="all">Reset Filters</button></p>'
+    + sliceButtonRow(reviewQueueSliceButtons())
     + '<p>' + listJumpButton('Advisory Reviews', '/api/review-queue', 'reviewQueue', 'advisory')
     + listJumpButton('Package Ready Reviews', '/api/review-queue', 'reviewQueue', 'package:package_context_available')
     + listJumpButton('CLI Aligned Reviews', '/api/review-queue', 'reviewQueue', 'aligned')
