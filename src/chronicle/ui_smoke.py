@@ -203,7 +203,14 @@ def run_ui_smoke(root: Path | None = None) -> UISmokeReport:
                                 ),
                                 list,
                             )
+                            and isinstance(
+                                mutation_enablement.get("reviewer_context_requirements", {}).get(
+                                    "required_reviewer_kinds_for_mutation"
+                                ),
+                                list,
+                            )
                             and isinstance(mutation_enablement.get("write_route_contract", {}).get("actions"), list)
+                            and isinstance(mutation_enablement.get("identity_proof_contract"), dict)
                         ),
                         (
                             "ok"
@@ -216,7 +223,14 @@ def run_ui_smoke(root: Path | None = None) -> UISmokeReport:
                                 ),
                                 list,
                             )
+                            and isinstance(
+                                mutation_enablement.get("reviewer_context_requirements", {}).get(
+                                    "required_reviewer_kinds_for_mutation"
+                                ),
+                                list,
+                            )
                             and isinstance(mutation_enablement.get("write_route_contract", {}).get("actions"), list)
+                            and isinstance(mutation_enablement.get("identity_proof_contract"), dict)
                             else "review detail missing mutation enablement contract detail"
                         ),
                     )
@@ -274,6 +288,8 @@ def run_ui_smoke(root: Path | None = None) -> UISmokeReport:
                         blocked is not None
                         and blocked[0].value == 403
                         and blocked[1].get("error_code") == "mutation_disabled"
+                        and isinstance(blocked[1].get("reviewer_context_requirements"), dict)
+                        and bool(blocked[1].get("write_route_contract", {}).get("route_template"))
                         and isinstance(blocked[1].get("failure_contract"), dict)
                         and blocked[1].get("failure_contract", {}).get("rollback_status") == "fail_closed",
                         (
@@ -281,6 +297,8 @@ def run_ui_smoke(root: Path | None = None) -> UISmokeReport:
                             if blocked is not None
                             and blocked[0].value == 403
                             and blocked[1].get("error_code") == "mutation_disabled"
+                            and isinstance(blocked[1].get("reviewer_context_requirements"), dict)
+                            and bool(blocked[1].get("write_route_contract", {}).get("route_template"))
                             and isinstance(blocked[1].get("failure_contract"), dict)
                             and blocked[1].get("failure_contract", {}).get("rollback_status") == "fail_closed"
                             else "blocked review action route contract missing"
@@ -360,7 +378,14 @@ def run_ui_smoke(root: Path | None = None) -> UISmokeReport:
                                 ),
                                 list,
                             )
+                            and isinstance(
+                                mutation_enablement.get("reviewer_context_requirements", {}).get(
+                                    "required_reviewer_kinds_for_mutation"
+                                ),
+                                list,
+                            )
                             and isinstance(mutation_enablement.get("write_route_contract", {}).get("actions"), list)
+                            and isinstance(mutation_enablement.get("identity_proof_contract"), dict)
                         ),
                         (
                             "ok"
@@ -373,7 +398,14 @@ def run_ui_smoke(root: Path | None = None) -> UISmokeReport:
                                 ),
                                 list,
                             )
+                            and isinstance(
+                                mutation_enablement.get("reviewer_context_requirements", {}).get(
+                                    "required_reviewer_kinds_for_mutation"
+                                ),
+                                list,
+                            )
                             and isinstance(mutation_enablement.get("write_route_contract", {}).get("actions"), list)
+                            and isinstance(mutation_enablement.get("identity_proof_contract"), dict)
                             else "summary detail missing mutation enablement contract detail"
                         ),
                     )
@@ -500,7 +532,14 @@ def run_ui_smoke(root: Path | None = None) -> UISmokeReport:
                         ),
                         list,
                     )
+                    and isinstance(
+                        mutation_readiness.get("reviewer_context_requirements", {}).get(
+                            "required_reviewer_kinds_for_mutation"
+                        ),
+                        list,
+                    )
                     and bool(mutation_readiness.get("write_route_contract", {}).get("route_template"))
+                    and isinstance(mutation_readiness.get("identity_proof_contract"), dict)
                 ),
                 (
                     "ok"
@@ -513,7 +552,14 @@ def run_ui_smoke(root: Path | None = None) -> UISmokeReport:
                         ),
                         list,
                     )
+                    and isinstance(
+                        mutation_readiness.get("reviewer_context_requirements", {}).get(
+                            "required_reviewer_kinds_for_mutation"
+                        ),
+                        list,
+                    )
                     and bool(mutation_readiness.get("write_route_contract", {}).get("route_template"))
+                    and isinstance(mutation_readiness.get("identity_proof_contract"), dict)
                     else "overview missing mutation readiness contract detail"
                 ),
             )

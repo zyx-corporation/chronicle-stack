@@ -213,6 +213,11 @@ def test_startup_metadata(tmp_path):
     assert payload["ui_boundary"]["reviewer_context_requirements"]["session_label_pattern"] == (
         "^[a-z0-9][a-z0-9._-]{1,63}$"
     )
+    assert payload["ui_boundary"]["reviewer_context_requirements"]["required_reviewer_kinds_for_mutation"] == [
+        "local_operator"
+    ]
+    assert payload["ui_boundary"]["reviewer_context_requirements"]["session_boundary_status"] == "optional"
+    assert payload["ui_boundary"]["reviewer_context_requirements"]["ui_intent_required"] is True
     assert payload["ui_boundary"]["write_route_contract"]["route_template"] == "/api/review-actions/<event_id>/<action>"
     assert payload["ui_boundary"]["write_route_contract"]["actions"] == [
         "approve",
@@ -221,6 +226,9 @@ def test_startup_metadata(tmp_path):
     ]
     assert payload["ui_boundary"]["write_route_contract"]["blocked_status_code"] == 403
     assert payload["ui_boundary"]["write_route_contract"]["identity_proof_contract"]["proof_status"] == "local_operator_advisory"
+    assert payload["ui_boundary"]["write_route_contract"]["identity_proof_contract"]["required_reviewer_kinds_for_mutation"] == [
+        "local_operator"
+    ]
     assert payload["ui_boundary"]["auth_boundary_summary"]["status"] == "auth_not_enabled"
     assert "auth_not_enabled" in payload["ui_boundary"]["auth_boundary_summary"]["blockers"]
     assert payload["ui_boundary"]["auth_boundary_summary"]["blocker_details"] == [
@@ -251,6 +259,7 @@ def test_startup_metadata_with_configured_auth_mode(tmp_path):
     assert payload["ui_boundary"]["reviewer_context_requirements"]["accepted_reviewer_kinds"] == [
         "local_operator"
     ]
+    assert payload["ui_boundary"]["reviewer_context_requirements"]["session_boundary_status"] == "required"
     assert payload["ui_boundary"]["write_route_contract"]["identity_proof_contract"]["proof_status"] == "session_gated_local_operator"
     assert payload["ui_boundary"]["auth_boundary_summary"]["status"] == "reviewer_declared_preview"
 
@@ -267,6 +276,7 @@ def test_startup_metadata_with_mutation_capability_flag(tmp_path):
     assert payload["mutation_enabled"] is False
     assert payload["ui_boundary"]["mutation_capability_flag"] is True
     assert "preview intent only" in payload["ui_boundary"]["mutation_readiness_message"]
+    assert "session enablement" in payload["ui_boundary"]["mutation_readiness_message"]
 
 
 def test_startup_metadata_with_enabled_ui_mutation(tmp_path):
@@ -374,6 +384,19 @@ def test_ui_overview_data(tmp_path):
         "reviewer_label",
         "reviewer_kind",
         "ui_intent",
+    ]
+    assert overview["mutation_readiness"]["reviewer_context_requirements"]["required_reviewer_kinds_for_mutation"] == [
+        "local_operator"
+    ]
+    assert overview["mutation_readiness"]["identity_proof_contract"]["required_reviewer_kinds_for_mutation"] == [
+        "local_operator"
+    ]
+    assert overview["mutation_readiness"]["operational_readiness"]["blocking_codes"] == [
+        "mutation_capability_flag",
+        "ui_mutation_enable_flag",
+        "auth_boundary",
+        "authorization_boundary",
+        "reviewer_identity",
     ]
     assert overview["runtime_records_summary"]["kind_counts"]["summary"] == 1
     assert overview["runtime_records_summary"]["kind_counts"]["retrieval_plan"] == 1
@@ -1570,6 +1593,10 @@ def test_review_action_failure_summary_uses_human_warning_text(tmp_path):
     assert payload["error_code"] == "authorization_failed"
     assert payload["identity_assurance_status"] == "boundary_aligned"
     assert payload["identity_assurance_message"] == "Reviewer identity metadata is aligned with the current UI auth boundary."
+    assert payload["write_route_contract"]["route_template"] == "/api/review-actions/<event_id>/<action>"
+    assert payload["reviewer_context_requirements"]["required_reviewer_kinds_for_mutation"] == [
+        "local_operator"
+    ]
     assert payload["warning_details"] == [
         {
             "code": "reviewer_identity_declared_only",
@@ -1604,6 +1631,8 @@ def test_review_action_applies_when_session_gated_inputs_are_complete(tmp_path):
     assert payload["ok"] is True
     assert payload["status"] == "applied"
     assert payload["reviewer_identity"]["session_label"] == "ui-test-session"
+    assert payload["write_route_contract"]["route_template"] == "/api/review-actions/<event_id>/<action>"
+    assert payload["reviewer_context_requirements"]["session_boundary_status"] == "required"
 
 
 def test_review_action_requires_session_label_before_authorization_check(tmp_path):
@@ -1627,6 +1656,7 @@ def test_review_action_requires_session_label_before_authorization_check(tmp_pat
 
     assert status == 400
     assert payload["error_code"] == "session_label_required"
+    assert payload["write_route_contract"]["blocked_status_code"] == 403
     assert payload["failure_contract"]["possible_error_codes"][1:4] == [
         "reviewer_label_required",
         "invalid_reviewer_label",
