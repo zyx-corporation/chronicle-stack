@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from chronicle._ui_i18n_catalog import UI_I18N_CATALOG
+
 SUPPORTED_UI_LOCALES: tuple[str, str, str] = ("ja", "en", "zh-CN")
 DEFAULT_UI_LOCALE = "ja"
 FALLBACK_UI_LOCALE = "en"
@@ -70,6 +72,7 @@ MUTATION_BLOCKER_TEXT: dict[str, str] = {
 }
 
 __all__ = [
+    "UI_I18N_CATALOG",
     "AUTH_BOUNDARY_BLOCKER_TEXT",
     "AUTH_BOUNDARY_WARNING_TO_BLOCKER",
     "MUTATION_BLOCKER_TEXT",
