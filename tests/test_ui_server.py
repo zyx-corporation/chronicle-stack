@@ -1131,6 +1131,9 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert '"Action": "操作"' in html
     assert '"Rollback status": "ロールバック状態"' in html
     assert '"Response ID": "応答ID"' in html
+    assert '"Read-only": "読み取り専用"' in html
+    assert '"Runtime records": "ランタイム記録"' in html
+    assert '"Audit ID": "監査ID"' in html
     assert "Runtime auth advisory" in html
     assert "Runtime mutation preview" in html
     assert "Summary advisory" in html
