@@ -1,10 +1,14 @@
 """Tests for Chronicle local UI i18n catalogs and helper invariants."""
 
+from chronicle.ui_i18n import DEFAULT_UI_LOCALE, FALLBACK_UI_LOCALE, SUPPORTED_UI_LOCALES
 from chronicle.ui_server import UI_I18N_CATALOG
 
 
 def test_ui_i18n_catalog_supports_expected_locales():
-    assert set(UI_I18N_CATALOG) == {"ja", "en", "zh-CN"}
+    assert SUPPORTED_UI_LOCALES == ("ja", "en", "zh-CN")
+    assert DEFAULT_UI_LOCALE == "ja"
+    assert FALLBACK_UI_LOCALE == "en"
+    assert set(UI_I18N_CATALOG) == set(SUPPORTED_UI_LOCALES)
 
 
 def test_ui_i18n_catalog_contains_core_shell_and_navigation_keys():

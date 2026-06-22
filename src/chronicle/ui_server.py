@@ -42,10 +42,13 @@ from chronicle.services.summary_job_service import SummaryJobService
 from chronicle.ui_i18n import (
     AUTH_BOUNDARY_BLOCKER_TEXT,
     AUTH_BOUNDARY_WARNING_TO_BLOCKER,
+    DEFAULT_UI_LOCALE,
+    FALLBACK_UI_LOCALE,
     MUTATION_BLOCKER_TEXT,
     REVIEW_WARNING_LABELS,
     REVIEW_WARNING_PRIORITY,
     REVIEW_WARNING_TEXT,
+    SUPPORTED_UI_LOCALES,
 )
 from chronicle.services.vector_index_service import VectorIndexService
 
@@ -4067,14 +4070,14 @@ function uiLabel(text) {{
   return key ? t(key, rawText) : localizeTextValue(rawText);
 }}
 const uiI18nCatalog = {ui_i18n_catalog_json};
-const supportedLocales = ['ja', 'en', 'zh-CN'];
-const defaultLocale = 'ja';
+const supportedLocales = {json.dumps(list(SUPPORTED_UI_LOCALES), ensure_ascii=False)};
+const defaultLocale = {json.dumps(DEFAULT_UI_LOCALE, ensure_ascii=False)};
 function normalizeLocale(locale) {{
   const value = String(locale || '').trim();
   if (supportedLocales.includes(value)) return value;
   if (value.startsWith('ja')) return 'ja';
   if (value.startsWith('zh')) return 'zh-CN';
-  return 'en';
+  return {json.dumps(FALLBACK_UI_LOCALE, ensure_ascii=False)};
 }}
 function currentLocale() {{ return window.__chronicleLocale || defaultLocale; }}
 function t(key, fallback = '') {{

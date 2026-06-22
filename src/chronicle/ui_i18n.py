@@ -2,6 +2,10 @@
 
 from __future__ import annotations
 
+SUPPORTED_UI_LOCALES: tuple[str, str, str] = ("ja", "en", "zh-CN")
+DEFAULT_UI_LOCALE = "ja"
+FALLBACK_UI_LOCALE = "en"
+
 REVIEW_WARNING_TEXT: dict[str, str] = {
     "ui_auth_not_enabled": "UI auth mode is not enabled, so reviewer identity is not enforced by the local UI boundary.",
     "ui_authorization_not_enabled": "UI authorization mode is not enabled, so reviewer permissions remain advisory only.",
@@ -58,7 +62,10 @@ __all__ = [
     "AUTH_BOUNDARY_BLOCKER_TEXT",
     "AUTH_BOUNDARY_WARNING_TO_BLOCKER",
     "MUTATION_BLOCKER_TEXT",
+    "DEFAULT_UI_LOCALE",
+    "FALLBACK_UI_LOCALE",
     "REVIEW_WARNING_LABELS",
     "REVIEW_WARNING_PRIORITY",
     "REVIEW_WARNING_TEXT",
+    "SUPPORTED_UI_LOCALES",
 ]
