@@ -3305,6 +3305,10 @@ nav {{ display: flex; flex-wrap: wrap; gap: 4px; margin: 14px 0 16px; padding-bo
 .badge-warning {{ background: #fef3c7; color: #92400e; }}
 .badge-ready {{ background: #dcfce7; color: #166534; }}
 .badge-neutral {{ background: #e5e7eb; color: #374151; }}
+.fact-line {{ display: grid; grid-template-columns: minmax(132px, 220px) minmax(0, 1fr); gap: 8px 12px; align-items: start; margin: 8px 0; }}
+.fact-label {{ font-weight: 600; color: #374151; }}
+.fact-value {{ min-width: 0; overflow-wrap: anywhere; }}
+.fact-code {{ font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.9em; }}
 .json-block {{ margin: 12px 0 0; border-top: 1px solid #e5e7eb; padding-top: 12px; }}
 .json-block summary {{ cursor: pointer; font-weight: 600; color: #111827; }}
 .json-block[open] summary {{ margin-bottom: 10px; }}
@@ -4529,7 +4533,8 @@ function sectionTitle(text) {{
   return '<h3>' + esc(text) + '</h3>';
 }}
 function detailLine(label, value) {{
-  return '<p>' + esc(localizeTextValue(label)) + ': ' + esc(value || '') + '</p>';
+  return '<div class="fact-line"><div class="fact-label">' + esc(localizeTextValue(label))
+    + '</div><div class="fact-value">' + esc(value || '') + '</div></div>';
 }}
 function detailListLine(label, values, separator) {{
   const items = Array.isArray(values) ? values : [];
@@ -4537,7 +4542,8 @@ function detailListLine(label, values, separator) {{
   return detailLine(label, items.join(joiner) || '(none)');
 }}
 function summaryJsonLine(label, value) {{
-  return '<p>' + esc(localizeTextValue(label)) + ': ' + esc(JSON.stringify(value || {{}})) + '</p>';
+  return '<div class="fact-line"><div class="fact-label">' + esc(localizeTextValue(label))
+    + '</div><div class="fact-value fact-code">' + esc(JSON.stringify(value || {{}})) + '</div></div>';
 }}
 function messageParagraph(message) {{
   return '<p>' + esc(message || '') + '</p>';

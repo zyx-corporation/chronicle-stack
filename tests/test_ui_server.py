@@ -914,6 +914,9 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "@media (max-width: 980px)" in html
     assert '<div class="shell-grid">' in html
     assert ".json-block {" in html
+    assert ".fact-line {" in html
+    assert ".fact-label {" in html
+    assert ".fact-value {" in html
     assert "loadDetail" in html
     assert "label('notice.runtime_preview', 'Runtime Preview')" in html
     assert "label('notice.retrieval_handoff', 'Retrieval Handoff')" in html
