@@ -3814,6 +3814,8 @@ function renderRuntimeRecordRow(row, endpoint) {{
     + '<td>' + cellStack([
       cellTitle(preview.title || ''),
       cellMeta(preview.preview_text || ''),
+      sourceBadges,
+      cellCode(JSON.stringify(preview.source_counts || {{}})),
       responseSummaryLine(responseMetadata),
     ]) + '</td>'
     + '<td>' + previewCell(actionPreview, previewActions, previewButtonsConfig(row, {{
@@ -3822,7 +3824,6 @@ function renderRuntimeRecordRow(row, endpoint) {{
       successDetail: '/api/runtime-records/' + esc(row.event_id || ''),
       previewTarget: 'runtime-records-action-preview-response',
     }})) + '</td>'
-    + '<td>' + cellStack([sourceBadges, cellCode(JSON.stringify(preview.source_counts || {{}}))]) + '</td>'
     + '</tr>';
 }}
 function renderReviewQueueRow(row, endpoint) {{
@@ -3853,8 +3854,7 @@ function renderReviewQueueRow(row, endpoint) {{
       cellMeta(row.target_summary || ''),
       responseSummaryLine(responseMetadata),
     ]) + '</td>'
-    + '<td>' + stackedCell([statusBadge, readinessBadge, parityBadge]) + '</td>'
-    + '<td>' + authBadge + '</td>'
+    + '<td>' + stackedCell([statusBadge, readinessBadge, parityBadge, authBadge]) + '</td>'
     + '<td>' + stackedCell([mutationEnablementBadge(mutationEnablement), renderMutationEnablementSummary(mutationEnablement), previewCell(preview, previewActions, previewButtonsConfig(row, {{
       recordId: row.target_event_id || '',
       fieldPrefix: 'review-queue',
@@ -3885,19 +3885,15 @@ function renderSummaryJobRow(row, endpoint) {{
   return '<tr>'
     + '<td>' + button + '</td>'
     + '<td>' + cellStack(['<div><span class="id">' + esc(row.summary_job_id || '') + '</span></div>', cellTitle(row.title || ''), targetButton]) + '</td>'
-    + '<td>' + esc(row.status || '') + '</td>'
-    + '<td>' + reviewBadge + '</td>'
-    + '<td>' + stackedCell([authBadge, mutationEnablementBadge(mutationEnablement), renderMutationEnablementSummary(mutationEnablement)]) + '</td>'
+    + '<td>' + cellStack([cellMeta(row.status || ''), reviewBadge, authBadge, packageBadge, mutationEnablementBadge(mutationEnablement), renderMutationEnablementSummary(mutationEnablement)]) + '</td>'
     + '<td>' + summaryIdentityCell(identityBadge, row.latest_reviewer_identity) + '</td>'
-    + '<td>' + packageBadge + '</td>'
     + '<td>' + previewCell(preview, previewActions, previewButtonsConfig(row, {{
       recordId: row.review_target_event_id || '',
       fieldPrefix: 'summary-jobs',
       successDetail: '/api/summary-jobs/' + esc(row.summary_job_id || ''),
       previewTarget: 'summary-jobs-action-preview-response',
     }})) + '</td>'
-    + '<td>' + cellStack([cellMeta(row.runtime_provider_kind || ''), responseSummaryLine(responseMetadata)]) + '</td>'
-    + '<td>' + esc(row.summary_source_count ?? 0) + '</td>'
+    + '<td>' + cellStack([cellMeta(row.runtime_provider_kind || ''), responseSummaryLine(responseMetadata), cellMeta('sources: ' + String(row.summary_source_count ?? 0))]) + '</td>'
     + '</tr>';
 }}
 function renderRuntimeRecordsTable(endpoint, rows) {{
@@ -3952,7 +3948,7 @@ function renderRuntimeRecordsTable(endpoint, rows) {{
       t('notice.mutation_enabled_runtime_records'),
       t('notice.blocked_route_preview_runtime_records')
     )
-    + tableHtml(['detail', 'event', 'kind', 'auth', 'preview', 'review route', 'source counts'], sorted.map(row => renderRuntimeRecordRow(row, endpoint)).join(''));
+    + tableHtml(['detail', 'event', 'kind', 'auth', 'preview', 'review route'], sorted.map(row => renderRuntimeRecordRow(row, endpoint)).join(''));
 }}
 function renderReviewQueueTable(endpoint, rows) {{
   const query = (window.__chronicleFilters && window.__chronicleFilters.reviewQueue || '').toLowerCase();
@@ -4008,7 +4004,7 @@ function renderReviewQueueTable(endpoint, rows) {{
       t('notice.mutation_enabled_review_queue'),
       t('notice.blocked_route_preview_review_queue')
     )
-    + tableHtml(['detail', 'target', 'status', 'auth', 'preview', 'warnings', 'latest reviewer'], sorted.map(row => renderReviewQueueRow(row, endpoint)).join(''));
+    + tableHtml(['detail', 'target', 'status', 'preview', 'warnings', 'latest reviewer'], sorted.map(row => renderReviewQueueRow(row, endpoint)).join(''));
 }}
 function renderSummaryJobsTable(endpoint, rows) {{
   const query = (window.__chronicleFilters && window.__chronicleFilters.summaryJobs || '').toLowerCase();
@@ -4062,7 +4058,7 @@ function renderSummaryJobsTable(endpoint, rows) {{
       t('notice.mutation_enabled_summary_jobs'),
       t('notice.blocked_route_preview_summary_jobs')
     )
-    + tableHtml(['detail', 'summary job', 'status', 'review', 'auth', 'identity', 'package', 'preview', 'runtime', 'sources'], sorted.map(row => renderSummaryJobRow(row, endpoint)).join(''));
+    + tableHtml(['detail', 'summary job', 'status', 'identity', 'preview', 'runtime'], sorted.map(row => renderSummaryJobRow(row, endpoint)).join(''));
 }}
 function renderGenericTable(endpoint, rows) {{
   const keys = Object.keys(rows[0]).slice(0, 8);

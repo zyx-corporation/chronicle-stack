@@ -1155,8 +1155,8 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "label('button.open_runtime_config', 'Open Runtime Config')" in html
     assert "label('button.open_package_review', 'Open Package Review')" in html
     assert "buttons.push(listJumpButton(label('button.open_review_queue', 'Open Review Queue'), '/api/review-queue'));" in html
-    assert "tableHtml(['detail', 'summary job', 'status', 'review', 'auth', 'identity', 'package', 'preview', 'runtime', 'sources']" in html
-    assert "tableHtml(['detail', 'target', 'status', 'auth', 'preview', 'warnings', 'latest reviewer']" in html
+    assert "tableHtml(['detail', 'summary job', 'status', 'identity', 'preview', 'runtime']" in html
+    assert "tableHtml(['detail', 'target', 'status', 'preview', 'warnings', 'latest reviewer']" in html
     assert "summary-jobs-action-preview-response" in html
     assert "Summary jobs blocked-route preview stays read-only and returns the CLI fallback contract." in html
     assert "Local mutation is enabled for this list view. Each action still requires explicit reviewer context and writes audit-backed review history." in html
@@ -1175,7 +1175,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "sliceButtonRow(runtimeRecordsSliceButtons())" in html
     assert "sliceButtonRow(reviewQueueSliceButtons())" in html
     assert "sliceButtonRow(summaryJobsSliceButtons())" in html
-    assert "tableHtml(['detail', 'event', 'kind', 'auth', 'preview', 'review route', 'source counts']" in html
+    assert "tableHtml(['detail', 'event', 'kind', 'auth', 'preview', 'review route']" in html
     assert "Auth aligned" in html
     assert "Auth advisory" in html
     assert "label('button.open_review', 'Open review')" in html
@@ -1212,7 +1212,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "runtimeRecords" in html
     assert "reviewQueue" in html
     assert "listToolbar(endpoint, 'runtimeRecords', t('placeholder.runtime_filter')" in html
-    assert "tableHtml(['detail', 'event', 'kind', 'auth', 'preview', 'review route', 'source counts']" in html
+    assert "tableHtml(['detail', 'event', 'kind', 'auth', 'preview', 'review route']" in html
     assert "listToolbar(endpoint, 'reviewQueue', t('placeholder.review_filter')" in html
     assert "review-queue-action-preview-response" in html
     assert "Review queue blocked-route preview stays read-only and returns the CLI fallback contract." in html
