@@ -213,6 +213,9 @@ UI_I18N_CATALOG: dict[str, dict[str, Any]] = {
         "section.runtime_records": "ランタイム記録",
         "section.summary_jobs": "要約ジョブ",
         "section.triage": "トリアージ",
+        "section.recovery_contract": "回復契約",
+        "section.review_action": "レビュー操作",
+        "section.action_result": "現在の結果",
         "sort.runtime.latest": "新しい順",
         "sort.runtime.mutation": "Mutation 準備状況",
         "sort.runtime.auth": "認証準備状況",
@@ -545,6 +548,9 @@ UI_I18N_CATALOG: dict[str, dict[str, Any]] = {
         "section.runtime_records": "Runtime Records",
         "section.summary_jobs": "Summary Jobs",
         "section.triage": "Triage",
+        "section.recovery_contract": "Recovery Contract",
+        "section.review_action": "Review Action",
+        "section.action_result": "Current Result",
         "sort.runtime.latest": "Latest first",
         "sort.runtime.mutation": "Mutation readiness",
         "sort.runtime.auth": "Auth readiness",
@@ -693,6 +699,9 @@ UI_I18N_CATALOG: dict[str, dict[str, Any]] = {
         "section.runtime_records": "运行时记录",
         "section.summary_jobs": "摘要任务",
         "section.triage": "分诊",
+        "section.recovery_contract": "恢复契约",
+        "section.review_action": "审查操作",
+        "section.action_result": "当前结果",
         "sort.runtime.latest": "最新优先",
         "sort.runtime.mutation": "Mutation 就绪度",
         "sort.runtime.auth": "认证就绪度",
@@ -3301,6 +3310,9 @@ nav {{ display: flex; flex-wrap: wrap; gap: 4px; margin: 14px 0 16px; padding-bo
 #detail {{ position: sticky; top: 16px; max-height: calc(100vh - 32px); }}
 .warning {{ background: #fefce8; border-left: 4px solid #eab308; padding: 10px 12px; }}
 .notice {{ background: #eff6ff; border-left: 4px solid #3b82f6; padding: 10px 12px; margin: 10px 0; }}
+.notice-section {{ margin-top: 12px; padding-top: 10px; border-top: 1px solid #bfdbfe; }}
+.notice-section:first-of-type {{ margin-top: 0; padding-top: 0; border-top: none; }}
+.notice-section h4 {{ margin: 0 0 8px; font-size: 0.95rem; color: #1d4ed8; }}
 .badge {{ display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 0.85em; margin-right: 6px; }}
 .badge-warning {{ background: #fef3c7; color: #92400e; }}
 .badge-ready {{ background: #dcfce7; color: #166534; }}
@@ -4571,6 +4583,9 @@ function collapsibleJsonBlock(summaryLabel, value, open = false) {{
     + prettyJsonPre(value)
     + '</details>';
 }}
+function noticeSection(title, body) {{
+  return '<section class="notice-section"><h4>' + esc(title) + '</h4>' + body + '</section>';
+}}
 function renderNotice(title, body) {{
   return '<div class="notice">' + sectionTitle(title) + body + '</div>';
 }}
@@ -4845,27 +4860,42 @@ function renderDetailActionPreviewNotice(record) {{
     ...moreStatusButtons(capability.status, '/api/review-queue', 'reviewQueue'),
     ...moreStatusButtons(parity.status, '/api/review-queue', 'reviewQueue'),
   ];
-  return renderNotice(
-    label('notice.action_preview', 'Action Preview'),
-    messageParagraph(preview.message)
-      + detailLine('Status', preview.status || '')
-      + buttonRow(previewButtons)
-      + detailLine('Rollback status', failureContract.rollback_status || '')
+  const recoveryContractSection = noticeSection(
+    label('section.recovery_contract', 'Recovery Contract'),
+    detailLine('Rollback status', failureContract.rollback_status || '')
       + detailLine('Durable mutation on failure', failureContract.durable_mutation_reported_on_failure)
       + detailLine('Recovery path', failureContract.recovery_path || '')
       + detailListLine('Possible errors', failureContract.possible_error_codes, ' | ')
       + detailListLine('Recovery commands', failureContract.recovery_commands, ' | ')
       + (failureContract.recovery_path ? '<p>' + copyCommandButton(failureContract.recovery_path, 'action-preview-response', 'Copy Recovery CLI') + '</p>' : '')
       + ((failureContract.recovery_commands || []).length > 0 ? '<p>' + (failureContract.recovery_commands || []).map(command => copyCommandButton(command, 'action-preview-response', 'Copy CLI')).join(' ') + '</p>' : '')
-      + renderDetailActionPreviewControls(preview, actions, mutationTargetEventId)
+  );
+  const reviewActionSection = noticeSection(
+    label('section.review_action', 'Review Action'),
+    renderDetailActionPreviewControls(preview, actions, mutationTargetEventId)
       + renderDetailActionPreviewList(preview, actions)
-      + '<div id="action-preview-response"><p>'
+  );
+  const actionResultSection = noticeSection(
+    label('section.action_result', 'Current Result'),
+    '<div id="action-preview-response"><p>'
       + (
         preview.ui_mutation_enabled
           ? t('notice.mutation_enabled_detail')
           : t('notice.blocked_route_preview_detail')
       )
       + '</p></div>'
+  );
+  return renderNotice(
+    label('notice.action_preview', 'Action Preview'),
+    noticeSection(
+      label('status.detail', 'Detail'),
+      messageParagraph(preview.message)
+        + detailLine('Status', preview.status || '')
+        + buttonRow(previewButtons)
+    )
+      + recoveryContractSection
+      + reviewActionSection
+      + actionResultSection
   );
 }}
 function renderCliParityNotice(record) {{

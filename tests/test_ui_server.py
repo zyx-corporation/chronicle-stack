@@ -917,6 +917,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert ".fact-line {" in html
     assert ".fact-label {" in html
     assert ".fact-value {" in html
+    assert ".notice-section {" in html
     assert "loadDetail" in html
     assert "label('notice.runtime_preview', 'Runtime Preview')" in html
     assert "label('notice.retrieval_handoff', 'Retrieval Handoff')" in html
@@ -1063,8 +1064,12 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "routeHeading" in html
     assert "prettyJsonPre" in html
     assert "function collapsibleJsonBlock(summaryLabel, value, open = false)" in html
+    assert "function noticeSection(title, body)" in html
     assert "label('label.record_json', 'Record JSON')" in html
     assert "label('label.response_json', 'Response JSON')" in html
+    assert "label('section.recovery_contract', 'Recovery Contract')" in html
+    assert "label('section.review_action', 'Review Action')" in html
+    assert "label('section.action_result', 'Current Result')" in html
     assert "detailListLine('Auth blockers', authBoundary.blockers, ' | ')" in html
     assert "summaryJsonLine('Identity assurance counts', identityBoundary.assurance_counts)" in html
     assert "summaryJsonLine('Auth review capability counts', authBoundaryOverview.review_capability_counts)" in html
