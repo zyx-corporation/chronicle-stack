@@ -1082,6 +1082,10 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "label('button.more_details', 'More details')" in html
     assert "label('label.record_json', 'Record JSON')" in html
     assert "label('label.response_json', 'Response JSON')" in html
+    assert "label('label.table_detail', 'Detail')" in html
+    assert "label('label.table_event', 'Event')" in html
+    assert "label('label.table_latest_reviewer', 'Latest Reviewer')" in html
+    assert "label('label.table_summary_job', 'Summary Job')" in html
     assert "label('section.recovery_contract', 'Recovery Contract')" in html
     assert "label('section.review_action', 'Review Action')" in html
     assert "label('section.action_result', 'Current Result')" in html
@@ -1103,11 +1107,11 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "review_requested" in html
     assert "ready" in html
     assert "CLI Parity" in html
-    assert "CLI drift first" in html
-    assert "Latest first" in html
-    assert "Needs attention first" in html
-    assert "Reviewer" in html
-    assert "Title" in html
+    assert "t('sort.review.parity')" in html
+    assert "t('sort.runtime.latest')" in html
+    assert "t('sort.review.attention')" in html
+    assert "t('sort.review.reviewer')" in html
+    assert "t('sort.summary.title')" in html
     assert "summaryJsonLine('CLI parity counts', triage.cli_parity_counts)" in html
     assert "summaryJsonLine('Identity assurance counts', triage.identity_assurance_counts)" in html
     assert "summaryJsonLine('Reviewer kind counts', triage.reviewer_kind_counts)" in html
@@ -1161,8 +1165,8 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "label('button.open_runtime_config', 'Open Runtime Config')" in html
     assert "label('button.open_package_review', 'Open Package Review')" in html
     assert "buttons.push(listJumpButton(label('button.open_review_queue', 'Open Review Queue'), '/api/review-queue'));" in html
-    assert "tableHtml(['detail', 'summary job', 'status', 'identity', 'preview', 'runtime']" in html
-    assert "tableHtml(['detail', 'target', 'status', 'preview', 'warnings', 'latest reviewer']" in html
+    assert "label('label.table_runtime', 'Runtime')" in html
+    assert "label('label.table_target', 'Target')" in html
     assert "summary-jobs-action-preview-response" in html
     assert "Summary jobs blocked-route preview stays read-only and returns the CLI fallback contract." in html
     assert "Local mutation is enabled for this list view. Each action still requires explicit reviewer context and writes audit-backed review history." in html
@@ -1176,12 +1180,12 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "fieldPrefix: 'summary-jobs'" in html
     assert "data-success-detail" in html
     assert "listToolbar(endpoint, 'summaryJobs', t('placeholder.summary_filter')" in html
-    assert "{ value: 'mutation', label: 'Mutation readiness' }" in html
-    assert "{ value: 'auth', label: 'Auth readiness' }" in html
+    assert "{ value: 'mutation', label: t('sort.runtime.mutation') }" in html
+    assert "{ value: 'auth', label: t('sort.runtime.auth') }" in html
     assert "sliceButtonRow(runtimeRecordsSliceButtons())" in html
     assert "sliceButtonRow(reviewQueueSliceButtons())" in html
     assert "sliceButtonRow(summaryJobsSliceButtons())" in html
-    assert "tableHtml(['detail', 'event', 'kind', 'auth', 'preview', 'review route']" in html
+    assert "label('label.table_review_route', 'Review Route')" in html
     assert "Auth aligned" in html
     assert "Auth advisory" in html
     assert "label('button.open_review', 'Open review')" in html
@@ -1218,7 +1222,10 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "runtimeRecords" in html
     assert "reviewQueue" in html
     assert "listToolbar(endpoint, 'runtimeRecords', t('placeholder.runtime_filter')" in html
-    assert "tableHtml(['detail', 'event', 'kind', 'auth', 'preview', 'review route']" in html
+    assert "label('label.table_event', 'Event')" in html
+    assert "label('label.table_kind', 'Kind')" in html
+    assert "label('label.table_auth', 'Auth')" in html
+    assert "label('label.table_preview', 'Preview')" in html
     assert "listToolbar(endpoint, 'reviewQueue', t('placeholder.review_filter')" in html
     assert "review-queue-action-preview-response" in html
     assert "Review queue blocked-route preview stays read-only and returns the CLI fallback contract." in html

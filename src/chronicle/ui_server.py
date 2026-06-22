@@ -166,6 +166,19 @@ UI_I18N_CATALOG: dict[str, dict[str, Any]] = {
         "status.trail": "trail",
         "label.record_json": "レコードJSON",
         "label.response_json": "応答JSON",
+        "label.table_detail": "詳細",
+        "label.table_event": "イベント",
+        "label.table_kind": "種別",
+        "label.table_auth": "認証",
+        "label.table_preview": "プレビュー",
+        "label.table_review_route": "レビュー経路",
+        "label.table_target": "対象",
+        "label.table_status": "状態",
+        "label.table_warnings": "警告",
+        "label.table_latest_reviewer": "最新レビュアー",
+        "label.table_summary_job": "要約ジョブ",
+        "label.table_identity": "本人性",
+        "label.table_runtime": "ランタイム",
         "notice.action_preview": "操作プレビュー",
         "notice.navigation": "ナビゲーション",
         "notice.runtime_preview": "ランタイムプレビュー",
@@ -504,6 +517,19 @@ UI_I18N_CATALOG: dict[str, dict[str, Any]] = {
         "status.trail": "trail",
         "label.record_json": "Record JSON",
         "label.response_json": "Response JSON",
+        "label.table_detail": "Detail",
+        "label.table_event": "Event",
+        "label.table_kind": "Kind",
+        "label.table_auth": "Auth",
+        "label.table_preview": "Preview",
+        "label.table_review_route": "Review Route",
+        "label.table_target": "Target",
+        "label.table_status": "Status",
+        "label.table_warnings": "Warnings",
+        "label.table_latest_reviewer": "Latest Reviewer",
+        "label.table_summary_job": "Summary Job",
+        "label.table_identity": "Identity",
+        "label.table_runtime": "Runtime",
         "notice.action_preview": "Action Preview",
         "notice.navigation": "Navigation",
         "notice.runtime_preview": "Runtime Preview",
@@ -658,6 +684,19 @@ UI_I18N_CATALOG: dict[str, dict[str, Any]] = {
         "status.trail": "trail",
         "label.record_json": "记录 JSON",
         "label.response_json": "响应 JSON",
+        "label.table_detail": "详情",
+        "label.table_event": "事件",
+        "label.table_kind": "类型",
+        "label.table_auth": "认证",
+        "label.table_preview": "预览",
+        "label.table_review_route": "审查路径",
+        "label.table_target": "目标",
+        "label.table_status": "状态",
+        "label.table_warnings": "警告",
+        "label.table_latest_reviewer": "最新审阅者",
+        "label.table_summary_job": "摘要任务",
+        "label.table_identity": "身份",
+        "label.table_runtime": "运行时",
         "notice.action_preview": "操作预览",
         "notice.navigation": "导航",
         "notice.runtime_preview": "运行时预览",
@@ -3997,10 +4036,10 @@ function renderRuntimeRecordsTable(endpoint, rows) {{
   const sorted = sortRuntimeRows(filtered);
   const mutationEnabled = sorted.some(row => row.ui_mutation_enabled);
   return listToolbar(endpoint, 'runtimeRecords', t('placeholder.runtime_filter'), [
-      {{ value: 'latest', label: 'Latest first' }},
-      {{ value: 'mutation', label: 'Mutation readiness' }},
-      {{ value: 'auth', label: 'Auth readiness' }},
-      {{ value: 'kind', label: 'Kind' }},
+      {{ value: 'latest', label: t('sort.runtime.latest') }},
+      {{ value: 'mutation', label: t('sort.runtime.mutation') }},
+      {{ value: 'auth', label: t('sort.runtime.auth') }},
+      {{ value: 'kind', label: t('sort.runtime.kind') }},
     ], runtimeRecordsFilterChips(), query)
     + sliceButtonRow(runtimeRecordsSliceButtons())
     + emptyFilterState(query, sorted, 'No matching runtime records for current filter.')
@@ -4015,7 +4054,14 @@ function renderRuntimeRecordsTable(endpoint, rows) {{
       t('notice.mutation_enabled_runtime_records'),
       t('notice.blocked_route_preview_runtime_records')
     )
-    + tableHtml(['detail', 'event', 'kind', 'auth', 'preview', 'review route'], sorted.map(row => renderRuntimeRecordRow(row, endpoint)).join(''));
+    + tableHtml([
+      label('label.table_detail', 'Detail'),
+      label('label.table_event', 'Event'),
+      label('label.table_kind', 'Kind'),
+      label('label.table_auth', 'Auth'),
+      label('label.table_preview', 'Preview'),
+      label('label.table_review_route', 'Review Route'),
+    ], sorted.map(row => renderRuntimeRecordRow(row, endpoint)).join(''));
 }}
 function renderReviewQueueTable(endpoint, rows) {{
   const query = (window.__chronicleFilters && window.__chronicleFilters.reviewQueue || '').toLowerCase();
@@ -4053,10 +4099,10 @@ function renderReviewQueueTable(endpoint, rows) {{
   const sorted = sortReviewRows(filtered);
   const mutationEnabled = sorted.some(row => row.ui_mutation_enabled);
   return listToolbar(endpoint, 'reviewQueue', t('placeholder.review_filter'), [
-      {{ value: 'attention', label: 'Needs attention first' }},
-      {{ value: 'parity', label: 'CLI drift first' }},
-      {{ value: 'latest', label: 'Latest first' }},
-      {{ value: 'reviewer', label: 'Reviewer' }},
+      {{ value: 'attention', label: t('sort.review.attention') }},
+      {{ value: 'parity', label: t('sort.review.parity') }},
+      {{ value: 'latest', label: t('sort.review.latest') }},
+      {{ value: 'reviewer', label: t('sort.review.reviewer') }},
     ], reviewQueueFilterChips(), query)
     + sliceButtonRow(reviewQueueSliceButtons())
     + emptyFilterState(query, sorted, 'No matching review rows for current filter.')
@@ -4071,7 +4117,14 @@ function renderReviewQueueTable(endpoint, rows) {{
       t('notice.mutation_enabled_review_queue'),
       t('notice.blocked_route_preview_review_queue')
     )
-    + tableHtml(['detail', 'target', 'status', 'preview', 'warnings', 'latest reviewer'], sorted.map(row => renderReviewQueueRow(row, endpoint)).join(''));
+    + tableHtml([
+      label('label.table_detail', 'Detail'),
+      label('label.table_target', 'Target'),
+      label('label.table_status', 'Status'),
+      label('label.table_preview', 'Preview'),
+      label('label.table_warnings', 'Warnings'),
+      label('label.table_latest_reviewer', 'Latest Reviewer'),
+    ], sorted.map(row => renderReviewQueueRow(row, endpoint)).join(''));
 }}
 function renderSummaryJobsTable(endpoint, rows) {{
   const query = (window.__chronicleFilters && window.__chronicleFilters.summaryJobs || '').toLowerCase();
@@ -4107,10 +4160,10 @@ function renderSummaryJobsTable(endpoint, rows) {{
   const sorted = sortSummaryJobRows(filtered);
   const mutationEnabled = sorted.some(row => row.ui_mutation_enabled);
   return listToolbar(endpoint, 'summaryJobs', t('placeholder.summary_filter'), [
-      {{ value: 'latest', label: 'Latest first' }},
-      {{ value: 'mutation', label: 'Mutation readiness' }},
-      {{ value: 'review', label: 'Needs attention first' }},
-      {{ value: 'title', label: 'Title' }},
+      {{ value: 'latest', label: t('sort.summary.latest') }},
+      {{ value: 'mutation', label: t('sort.summary.mutation') }},
+      {{ value: 'review', label: t('sort.summary.review') }},
+      {{ value: 'title', label: t('sort.summary.title') }},
     ], summaryJobsFilterChips(), query)
     + sliceButtonRow(summaryJobsSliceButtons())
     + emptyFilterState(query, sorted, 'No matching summary jobs for current filter.')
@@ -4125,7 +4178,14 @@ function renderSummaryJobsTable(endpoint, rows) {{
       t('notice.mutation_enabled_summary_jobs'),
       t('notice.blocked_route_preview_summary_jobs')
     )
-    + tableHtml(['detail', 'summary job', 'status', 'identity', 'preview', 'runtime'], sorted.map(row => renderSummaryJobRow(row, endpoint)).join(''));
+    + tableHtml([
+      label('label.table_detail', 'Detail'),
+      label('label.table_summary_job', 'Summary Job'),
+      label('label.table_status', 'Status'),
+      label('label.table_identity', 'Identity'),
+      label('label.table_preview', 'Preview'),
+      label('label.table_runtime', 'Runtime'),
+    ], sorted.map(row => renderSummaryJobRow(row, endpoint)).join(''));
 }}
 function renderGenericTable(endpoint, rows) {{
   const keys = Object.keys(rows[0]).slice(0, 8);
