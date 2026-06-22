@@ -678,15 +678,26 @@ class ChronicleUIDataService:
         rows = runtime_records if runtime_records is not None else self.runtime_records()["runtime_records"]
         kind_counts: dict[str, int] = {}
         auth_counts: dict[str, int] = {}
+        mutation_counts: dict[str, int] = {}
+        mutation_operational_counts: dict[str, int] = {}
         finish_reason_counts: dict[str, int] = {}
         provider_status_counts: dict[str, int] = {}
         response_present_count = 0
         for row in rows:
             kind = str(row.get("runtime_record_kind", "unknown"))
             auth_status = str(row.get("auth_readiness_status", "unknown"))
+            mutation_summary = row.get("mutation_enablement_summary", {})
+            mutation_status = str(mutation_summary.get("status", "unknown"))
+            mutation_operational_status = str(
+                mutation_summary.get("operational_status", "unknown")
+            )
             response_summary = row.get("response_metadata_summary", {})
             kind_counts[kind] = kind_counts.get(kind, 0) + 1
             auth_counts[auth_status] = auth_counts.get(auth_status, 0) + 1
+            mutation_counts[mutation_status] = mutation_counts.get(mutation_status, 0) + 1
+            mutation_operational_counts[mutation_operational_status] = (
+                mutation_operational_counts.get(mutation_operational_status, 0) + 1
+            )
             if isinstance(response_summary, dict) and response_summary.get("present") is True:
                 response_present_count += 1
                 finish_reason = str(response_summary.get("finish_reason") or "unknown")
@@ -696,6 +707,8 @@ class ChronicleUIDataService:
         return {
             "kind_counts": kind_counts,
             "auth_readiness_counts": auth_counts,
+            "mutation_readiness_counts": mutation_counts,
+            "mutation_operational_counts": mutation_operational_counts,
             "provider_response_present_count": response_present_count,
             "provider_response_absent_count": len(rows) - response_present_count,
             "provider_response_finish_reason_counts": finish_reason_counts,
@@ -766,6 +779,8 @@ class ChronicleUIDataService:
         review_counts: dict[str, int] = {}
         auth_counts: dict[str, int] = {}
         package_counts: dict[str, int] = {}
+        mutation_counts: dict[str, int] = {}
+        mutation_operational_counts: dict[str, int] = {}
         provider_counts: dict[str, int] = {}
         assurance_counts: dict[str, int] = {}
         reviewer_kind_counts: dict[str, int] = {}
@@ -778,6 +793,11 @@ class ChronicleUIDataService:
             review_status = str(row.get("review_capability_status", "unknown"))
             auth_status = str(row.get("auth_readiness_status", "unknown"))
             package_status = str(row.get("package_readiness_status", "unknown"))
+            mutation_summary = row.get("mutation_enablement_summary", {})
+            mutation_status = str(mutation_summary.get("status", "unknown"))
+            mutation_operational_status = str(
+                mutation_summary.get("operational_status", "unknown")
+            )
             provider_kind = str(row.get("runtime_provider_kind", "unknown"))
             assurance_status = str(row.get("identity_assurance_status", "unknown"))
             reviewer_kind = str((row.get("latest_reviewer_identity") or {}).get("kind", "unknown"))
@@ -785,6 +805,10 @@ class ChronicleUIDataService:
             review_counts[review_status] = review_counts.get(review_status, 0) + 1
             auth_counts[auth_status] = auth_counts.get(auth_status, 0) + 1
             package_counts[package_status] = package_counts.get(package_status, 0) + 1
+            mutation_counts[mutation_status] = mutation_counts.get(mutation_status, 0) + 1
+            mutation_operational_counts[mutation_operational_status] = (
+                mutation_operational_counts.get(mutation_operational_status, 0) + 1
+            )
             provider_counts[provider_kind] = provider_counts.get(provider_kind, 0) + 1
             assurance_counts[assurance_status] = assurance_counts.get(assurance_status, 0) + 1
             reviewer_kind_counts[reviewer_kind] = reviewer_kind_counts.get(reviewer_kind, 0) + 1
@@ -801,6 +825,8 @@ class ChronicleUIDataService:
             "review_capability_counts": review_counts,
             "auth_readiness_counts": auth_counts,
             "package_readiness_counts": package_counts,
+            "mutation_readiness_counts": mutation_counts,
+            "mutation_operational_counts": mutation_operational_counts,
             "runtime_provider_counts": provider_counts,
             "provider_response_present_count": response_present_count,
             "provider_response_absent_count": len(rows) - response_present_count,
@@ -3028,6 +3054,8 @@ function renderRuntimeRecordsTable(endpoint, rows) {{
   const mutationEnabled = sorted.some(row => row.ui_mutation_enabled);
   return listToolbar(endpoint, 'runtimeRecords', 'Filter runtime records...', [
       {{ value: 'latest', label: 'Latest first' }},
+      {{ value: 'mutation', label: 'Mutation readiness' }},
+      {{ value: 'auth', label: 'Auth readiness' }},
       {{ value: 'kind', label: 'Kind' }},
     ], runtimeRecordsFilterChips(), query)
     + emptyFilterState(query, sorted, 'No matching runtime records for current filter.')
@@ -3134,6 +3162,7 @@ function renderSummaryJobsTable(endpoint, rows) {{
   const mutationEnabled = sorted.some(row => row.ui_mutation_enabled);
   return listToolbar(endpoint, 'summaryJobs', 'Filter summary jobs...', [
       {{ value: 'latest', label: 'Latest first' }},
+      {{ value: 'mutation', label: 'Mutation readiness' }},
       {{ value: 'review', label: 'Needs attention first' }},
       {{ value: 'title', label: 'Title' }},
     ], summaryJobsFilterChips(), query)
@@ -3327,8 +3356,43 @@ function reviewWarningFilterRank(row) {{
   const warnings = ((row.review_capability || {{}}).warnings || []).map(value => String(value || ''));
   return warnings.includes(warningFilter) ? 0 : 1;
 }}
+function mutationSummaryRank(summary) {{
+  const status = String((summary && summary.status) || '');
+  const operationalStatus = String((summary && summary.operational_status) || '');
+  const remainingCount = Number((summary && summary.remaining_count) || 0);
+  if (status === 'enabled') return 0;
+  if (operationalStatus === 'blocked') return 1;
+  if (status === 'preview_only') return 2;
+  if (operationalStatus === 'ready') return 3;
+  return 4 + Math.max(0, remainingCount);
+}}
+function authStatusRank(status) {{
+  const value = String(status || '');
+  if (value === 'boundary_aligned') return 0;
+  if (value === 'advisory_only') return 1;
+  if (value) return 2;
+  return 3;
+}}
 function sortRuntimeRows(rows) {{
   const sortValue = currentSortValue('/api/runtime-records');
+  if (sortValue === 'mutation') {{
+    return sortRows(rows, (left, right) => {{
+      const mutationCompare = mutationSummaryRank(left.mutation_enablement_summary) - mutationSummaryRank(right.mutation_enablement_summary);
+      if (mutationCompare !== 0) return mutationCompare;
+      const authCompare = authStatusRank(left.auth_readiness_status) - authStatusRank(right.auth_readiness_status);
+      if (authCompare !== 0) return authCompare;
+      return compareTextDesc(left.event_id, right.event_id);
+    }});
+  }}
+  if (sortValue === 'auth') {{
+    return sortRows(rows, (left, right) => {{
+      const authCompare = authStatusRank(left.auth_readiness_status) - authStatusRank(right.auth_readiness_status);
+      if (authCompare !== 0) return authCompare;
+      const mutationCompare = mutationSummaryRank(left.mutation_enablement_summary) - mutationSummaryRank(right.mutation_enablement_summary);
+      if (mutationCompare !== 0) return mutationCompare;
+      return compareTextDesc(left.event_id, right.event_id);
+    }});
+  }}
   if (sortValue === 'kind') {{
     return sortRows(rows, (left, right) => {{
       const kindCompare = String(left.runtime_record_kind || '').localeCompare(String(right.runtime_record_kind || ''));
@@ -3385,6 +3449,15 @@ function compareSummaryJobDesc(left, right) {{
 }}
 function sortSummaryJobRows(rows) {{
   const sortValue = currentSortValue('/api/summary-jobs');
+  if (sortValue === 'mutation') {{
+    return sortRows(rows, (left, right) => {{
+      const mutationCompare = mutationSummaryRank(left.mutation_enablement_summary) - mutationSummaryRank(right.mutation_enablement_summary);
+      if (mutationCompare !== 0) return mutationCompare;
+      const reviewCompare = summaryJobAttentionRank(left) - summaryJobAttentionRank(right);
+      if (reviewCompare !== 0) return reviewCompare;
+      return compareSummaryJobDesc(left, right);
+    }});
+  }}
   if (sortValue === 'title') {{
     return sortRows(rows, (left, right) => {{
       const titleCompare = String(left.title || '').localeCompare(String(right.title || ''));
@@ -4189,9 +4262,12 @@ function renderOverviewRuntimeRecordsPanel(counts, runtimeRecords) {{
     + overviewJumpButton(sliceBadge('Runtime records', esc(counts.runtime_records ?? 0), 'badge-neutral'), '/api/runtime-records')
     + overviewJumpButton(sliceBadge('Provider response', esc(runtimeRecords.provider_response_present_count ?? 0), 'badge-ready'), '/api/runtime-records', 'runtimeRecords', 'response_id')
     + overviewJumpButton(sliceBadge('Runtime auth advisory', esc((runtimeRecords.auth_readiness_counts && runtimeRecords.auth_readiness_counts.advisory_only) ?? 0), 'badge-warning'), '/api/runtime-records', 'runtimeRecords', 'advisory_only')
+    + overviewJumpButton(sliceBadge('Runtime mutation preview', esc((runtimeRecords.mutation_readiness_counts && runtimeRecords.mutation_readiness_counts.preview_only) ?? 0), 'badge-warning'), '/api/runtime-records', 'runtimeRecords', 'preview_only')
     + '</p>'
     + summaryJsonLine('Runtime kinds', runtimeRecords.kind_counts)
     + summaryJsonLine('Auth readiness counts', runtimeRecords.auth_readiness_counts)
+    + summaryJsonLine('Mutation readiness counts', runtimeRecords.mutation_readiness_counts)
+    + summaryJsonLine('Mutation operational counts', runtimeRecords.mutation_operational_counts)
     + summaryJsonLine('Provider finish reasons', runtimeRecords.provider_response_finish_reason_counts)
     + summaryJsonLine('Provider statuses', runtimeRecords.provider_response_status_counts)
     + '<p>' + listJumpButton('Open Runtime Records', '/api/runtime-records') + '</p>'
@@ -4207,11 +4283,14 @@ function renderOverviewSummaryJobsPanel(counts, summaryJobs) {{
     + overviewJumpButton(sliceBadge('Summary auth advisory', esc((summaryJobs.auth_readiness_counts && summaryJobs.auth_readiness_counts.advisory_only) ?? 0), 'badge-warning'), '/api/summary-jobs', 'summaryJobs', 'advisory_only')
     + overviewJumpButton(sliceBadge('Summary package ready', esc((summaryJobs.package_readiness_counts && summaryJobs.package_readiness_counts.package_context_available) ?? 0), 'badge-ready'), '/api/summary-jobs', 'summaryJobs', 'package_context_available')
     + overviewJumpButton(sliceBadge('Summary identity aligned', esc((summaryJobs.identity_assurance_counts && summaryJobs.identity_assurance_counts.boundary_aligned) ?? 0), 'badge-ready'), '/api/summary-jobs', 'summaryJobs', 'boundary_aligned')
+    + overviewJumpButton(sliceBadge('Summary mutation preview', esc((summaryJobs.mutation_readiness_counts && summaryJobs.mutation_readiness_counts.preview_only) ?? 0), 'badge-warning'), '/api/summary-jobs', 'summaryJobs', 'preview_only')
     + '</p>'
     + summaryJsonLine('Status counts', summaryJobs.status_counts)
     + summaryJsonLine('Review capability counts', summaryJobs.review_capability_counts)
     + summaryJsonLine('Auth readiness counts', summaryJobs.auth_readiness_counts)
     + summaryJsonLine('Package readiness counts', summaryJobs.package_readiness_counts)
+    + summaryJsonLine('Mutation readiness counts', summaryJobs.mutation_readiness_counts)
+    + summaryJsonLine('Mutation operational counts', summaryJobs.mutation_operational_counts)
     + summaryJsonLine('Provider finish reasons', summaryJobs.provider_response_finish_reason_counts)
     + summaryJsonLine('Provider statuses', summaryJobs.provider_response_status_counts)
     + summaryJsonLine('Identity assurance counts', summaryJobs.identity_assurance_counts)

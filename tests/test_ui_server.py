@@ -357,12 +357,16 @@ def test_ui_overview_data(tmp_path):
     assert overview["runtime_records_summary"]["kind_counts"]["summary"] == 1
     assert overview["runtime_records_summary"]["kind_counts"]["retrieval_plan"] == 1
     assert overview["runtime_records_summary"]["auth_readiness_counts"]["advisory_only"] == 2
+    assert overview["runtime_records_summary"]["mutation_readiness_counts"]["preview_only"] == 2
+    assert overview["runtime_records_summary"]["mutation_operational_counts"]["blocked"] == 2
     assert overview["runtime_records_summary"]["provider_response_present_count"] == 0
     assert overview["runtime_records_summary"]["provider_response_absent_count"] == 2
     assert overview["summary_jobs_summary"]["status_counts"]["pending_review"] == 1
     assert overview["summary_jobs_summary"]["review_capability_counts"]["advisory_only"] == 1
     assert overview["summary_jobs_summary"]["auth_readiness_counts"]["advisory_only"] == 1
     assert overview["summary_jobs_summary"]["package_readiness_counts"]["no_context_records"] == 1
+    assert overview["summary_jobs_summary"]["mutation_readiness_counts"]["preview_only"] == 1
+    assert overview["summary_jobs_summary"]["mutation_operational_counts"]["blocked"] == 1
     assert overview["summary_jobs_summary"]["provider_response_present_count"] == 0
     assert overview["summary_jobs_summary"]["identity_assurance_counts"]["unknown"] == 1
     assert overview["summary_jobs_summary"]["reviewer_kind_counts"]["unknown"] == 1
@@ -533,12 +537,14 @@ def test_ui_data_service_exposes_provider_response_metadata_in_read_only_views(t
     assert overview["runtime_records_summary"]["provider_response_present_count"] == 1
     assert overview["runtime_records_summary"]["provider_response_finish_reason_counts"]["stop"] == 1
     assert overview["runtime_records_summary"]["provider_response_status_counts"]["ok"] == 1
+    assert overview["runtime_records_summary"]["mutation_readiness_counts"]["preview_only"] == 1
     assert overview["auth_boundary_overview"]["provider_response_present_count"] == 1
     assert overview["auth_boundary_overview"]["provider_response_finish_reason_counts"]["stop"] == 1
     assert overview["auth_boundary_overview"]["provider_response_status_counts"]["ok"] == 1
     assert overview["summary_jobs_summary"]["provider_response_present_count"] == 1
     assert overview["summary_jobs_summary"]["provider_response_finish_reason_counts"]["stop"] == 1
     assert overview["summary_jobs_summary"]["provider_response_status_counts"]["ok"] == 1
+    assert overview["summary_jobs_summary"]["mutation_readiness_counts"]["preview_only"] == 1
     assert overview["triage"]["provider_response_present_reviews"] == 1
 
     runtime_detail = service.detail_payload(f"/api/runtime-records/{result.event_id}")
@@ -602,6 +608,10 @@ def test_ui_html_filtering_includes_provider_response_metadata_fields(tmp_path, 
     assert "summaryJsonLine('Provider statuses', authBoundaryOverview.provider_response_status_counts)" in html
     assert "summaryJsonLine('Provider finish reasons', runtimeRecords.provider_response_finish_reason_counts)" in html
     assert "summaryJsonLine('Provider statuses', summaryJobs.provider_response_status_counts)" in html
+    assert "summaryJsonLine('Mutation readiness counts', runtimeRecords.mutation_readiness_counts)" in html
+    assert "summaryJsonLine('Mutation operational counts', runtimeRecords.mutation_operational_counts)" in html
+    assert "summaryJsonLine('Mutation readiness counts', summaryJobs.mutation_readiness_counts)" in html
+    assert "summaryJsonLine('Mutation operational counts', summaryJobs.mutation_operational_counts)" in html
     assert "function renderPreviewContractSummary(preview, previewTarget = 'action-preview-response')" in html
     assert "function mutationEnablementBadge(summary)" in html
     assert "function renderMutationEnablementSummary(summary)" in html
@@ -929,6 +939,8 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "reviewerIdentityBadge" in html
     assert "sortSelect" in html
     assert "sortRuntimeRows" in html
+    assert "function mutationSummaryRank(summary)" in html
+    assert "function authStatusRank(status)" in html
     assert "includesQuery" in html
     assert "endpointFilterTargets" in html
     assert "endpointSortDefaults" in html
@@ -1064,10 +1076,12 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "detailLine('Response ID', summary.response_id || '')" in html
     assert "detailLine('Usage total tokens', summary.usage_total_tokens ?? '')" in html
     assert "Runtime auth advisory" in html
+    assert "Runtime mutation preview" in html
     assert "Summary advisory" in html
     assert "Summary auth advisory" in html
     assert "Summary package ready" in html
     assert "Summary identity aligned" in html
+    assert "Summary mutation preview" in html
     assert "Warning priority:" in html
     assert "summaryJsonLine('Runtime kinds', triage.runtime_record_kinds)" in html
     assert "statusMessageBody(readiness.status, readiness.message, readinessButtons)" in html
@@ -1096,6 +1110,8 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "fieldPrefix: 'summary-jobs'" in html
     assert "data-success-detail" in html
     assert "listToolbar(endpoint, 'summaryJobs', 'Filter summary jobs...'" in html
+    assert "{ value: 'mutation', label: 'Mutation readiness' }" in html
+    assert "{ value: 'auth', label: 'Auth readiness' }" in html
     assert "tableHtml(['detail', 'event', 'kind', 'auth', 'preview', 'review route', 'source counts']" in html
     assert "Auth aligned" in html
     assert "Auth advisory" in html
