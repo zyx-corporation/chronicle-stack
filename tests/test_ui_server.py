@@ -974,7 +974,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "Identity Boundary" in html
     assert "Summary Jobs" in html
     assert "Runtime Records" in html
-    assert "Auth warnings" in html
+    assert "Auth Boundary Warnings" in html
     assert "Authorization warnings" in html
     assert "Missing identity" in html
     assert "Session label required" in html
@@ -1150,22 +1150,22 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "Open review" in html
     assert "package:no_context_records" in html
     assert 'data-reset-filters="all"' in html
-    assert "listJumpButton('Advisory Reviews', '/api/review-queue', 'reviewQueue', 'advisory')" in html
-    assert "listJumpButton('CLI Aligned Reviews', '/api/review-queue', 'reviewQueue', 'aligned')" in html
-    assert "listJumpButton('Identity Aligned Reviews', '/api/review-queue', 'reviewQueue', 'boundary_aligned')" in html
+    assert "listJumpButton('Review Advisory', '/api/review-queue', 'reviewQueue', 'advisory')" in html
+    assert "listJumpButton('CLI Aligned', '/api/review-queue', 'reviewQueue', 'aligned')" in html
+    assert "listJumpButton('Identity Aligned', '/api/review-queue', 'reviewQueue', 'boundary_aligned')" in html
     assert "listJumpButton('Auth Boundary Warnings', '/api/review-queue', 'reviewQueue', 'ui_auth_not_enabled')" in html
     assert "listJumpButton('Declared Identity Only', '/api/review-queue', 'reviewQueue', 'reviewer_identity_declared_only')" in html
-    assert "listJumpButton('Retrieval Plans', '/api/runtime-records', 'runtimeRecords', 'retrieval_plan')" in html
+    assert "listJumpButton('Runtime Retrieval Plans', '/api/runtime-records', 'runtimeRecords', 'retrieval_plan')" in html
     assert "data-detail-nav" in html
     assert "data-detail-trail" in html
     assert "data-back-view" in html
     assert "No matching runtime records for current filter." in html
     assert "No matching review rows for current filter." in html
-    assert "CLI aligned" in html
+    assert "CLI Aligned" in html
     assert "Open Runtime Records" in html
     assert "Open Review Queue" in html
     assert "Open Package Review" in html
-    assert "CLI Aligned Reviews" in html
+    assert "Review Advisory" in html
     assert "Auth Boundary Warnings" in html
     assert "warnings.slice(0, 2).forEach" in html
     assert "function buttonRow(buttons)" in html

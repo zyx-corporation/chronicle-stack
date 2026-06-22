@@ -4268,7 +4268,7 @@ function renderOverviewAuthBoundaryPanel(authBoundary, authBoundaryOverview) {{
   return renderPanel(
     sectionTitle('Auth Boundary')
     + '<p>'
-    + overviewJumpButton(sliceBadge('Auth warnings', esc(authBoundaryOverview.auth_warning_count ?? 0), 'badge-warning'), '/api/review-queue', 'reviewQueue', 'ui_auth_not_enabled')
+    + overviewJumpButton(sliceBadge('Auth Boundary Warnings', esc(authBoundaryOverview.auth_warning_count ?? 0), 'badge-warning'), '/api/review-queue', 'reviewQueue', 'ui_auth_not_enabled')
     + overviewJumpButton(sliceBadge('Authorization warnings', esc(authBoundaryOverview.authorization_warning_count ?? 0), 'badge-warning'), '/api/review-queue', 'reviewQueue', 'ui_authorization_not_enabled')
     + overviewJumpButton(sliceBadge('Missing identity', esc(authBoundaryOverview.missing_identity_count ?? 0), 'badge-warning'), '/api/review-queue', 'reviewQueue', 'no_reviewer_identity_recorded')
     + overviewJumpButton(sliceBadge('Provider response', esc(authBoundaryOverview.provider_response_present_count ?? 0), 'badge-ready'), '/api/review-queue', 'reviewQueue', 'response_id')
@@ -4408,25 +4408,25 @@ function renderOverviewTriagePanel(triage, warningButtons, warningSummaries) {{
   return renderPanel(
     sectionTitle('Triage')
     + '<p>'
-    + overviewJumpButton(sliceBadge('Needs attention', esc(triage.needs_attention_reviews ?? 0), 'badge-warning'), '/api/review-queue', 'reviewQueue', 'review_requested')
+    + overviewJumpButton(sliceBadge('Review Requested', esc(triage.needs_attention_reviews ?? 0), 'badge-warning'), '/api/review-queue', 'reviewQueue', 'review_requested')
     + '</p>'
     + '<p>'
-    + overviewJumpButton(sliceBadge('Review ready', esc(triage.ready_now_reviews ?? 0), 'badge-ready'), '/api/review-queue', 'reviewQueue', 'ready')
-    + overviewJumpButton(sliceBadge('Review advisory', esc(triage.advisory_only_reviews ?? 0), 'badge-warning'), '/api/review-queue', 'reviewQueue', 'advisory')
+    + overviewJumpButton(sliceBadge('Review Ready', esc(triage.ready_now_reviews ?? 0), 'badge-ready'), '/api/review-queue', 'reviewQueue', 'ready')
+    + overviewJumpButton(sliceBadge('Review Advisory', esc(triage.advisory_only_reviews ?? 0), 'badge-warning'), '/api/review-queue', 'reviewQueue', 'advisory')
     + '</p>'
     + '<p>'
-    + overviewJumpButton(sliceBadge('Package ready', esc(triage.package_ready_reviews ?? 0), 'badge-ready'), '/api/review-queue', 'reviewQueue', 'package:package_context_available')
+    + overviewJumpButton(sliceBadge('Package Ready', esc(triage.package_ready_reviews ?? 0), 'badge-ready'), '/api/review-queue', 'reviewQueue', 'package:package_context_available')
     + '</p>'
     + '<p>'
-    + overviewJumpButton(sliceBadge('CLI aligned', esc(triage.cli_parity_aligned_reviews ?? 0), 'badge-ready'), '/api/review-queue', 'reviewQueue', 'aligned')
-    + overviewJumpButton(sliceBadge('CLI drift', esc(triage.cli_parity_drift_reviews ?? 0), 'badge-warning'), '/api/review-queue', 'reviewQueue', 'drift_detected')
+    + overviewJumpButton(sliceBadge('CLI Aligned', esc(triage.cli_parity_aligned_reviews ?? 0), 'badge-ready'), '/api/review-queue', 'reviewQueue', 'aligned')
+    + overviewJumpButton(sliceBadge('CLI Drift', esc(triage.cli_parity_drift_reviews ?? 0), 'badge-warning'), '/api/review-queue', 'reviewQueue', 'drift_detected')
     + '</p>'
     + '<p>'
-    + overviewJumpButton(sliceBadge('Identity aligned', esc(triage.identity_boundary_aligned_reviews ?? 0), 'badge-ready'), '/api/review-queue', 'reviewQueue', 'boundary_aligned')
-    + overviewJumpButton(sliceBadge('Declared identity only', esc(triage.identity_declared_only_reviews ?? 0), 'badge-warning'), '/api/review-queue', 'reviewQueue', 'reviewer_identity_declared_only')
+    + overviewJumpButton(sliceBadge('Identity Aligned', esc(triage.identity_boundary_aligned_reviews ?? 0), 'badge-ready'), '/api/review-queue', 'reviewQueue', 'boundary_aligned')
+    + overviewJumpButton(sliceBadge('Declared Identity Only', esc(triage.identity_declared_only_reviews ?? 0), 'badge-warning'), '/api/review-queue', 'reviewQueue', 'reviewer_identity_declared_only')
     + '</p>'
     + '<p>'
-    + overviewJumpButton(sliceBadge('Provider response', esc(triage.provider_response_present_reviews ?? 0), 'badge-ready'), '/api/review-queue', 'reviewQueue', 'response_id')
+    + overviewJumpButton(sliceBadge('Provider Response', esc(triage.provider_response_present_reviews ?? 0), 'badge-ready'), '/api/review-queue', 'reviewQueue', 'response_id')
     + '</p>'
     + '<p>' + (warningButtons || '') + '</p>'
     + summaryJsonLine('Runtime kinds', triage.runtime_record_kinds)
@@ -4450,13 +4450,13 @@ function renderOverviewTriagePanel(triage, warningButtons, warningSummaries) {{
     + listJumpButton('Open Package Review', '/api/package-review')
     + '<button data-reset-filters="all">Reset Filters</button></p>'
     + sliceButtonRow(reviewQueueSliceButtons())
-    + '<p>' + listJumpButton('Advisory Reviews', '/api/review-queue', 'reviewQueue', 'advisory')
-    + listJumpButton('Package Ready Reviews', '/api/review-queue', 'reviewQueue', 'package:package_context_available')
-    + listJumpButton('CLI Aligned Reviews', '/api/review-queue', 'reviewQueue', 'aligned')
-    + listJumpButton('Identity Aligned Reviews', '/api/review-queue', 'reviewQueue', 'boundary_aligned')
+    + '<p>' + listJumpButton('Review Advisory', '/api/review-queue', 'reviewQueue', 'advisory')
+    + listJumpButton('Package Ready', '/api/review-queue', 'reviewQueue', 'package:package_context_available')
+    + listJumpButton('CLI Aligned', '/api/review-queue', 'reviewQueue', 'aligned')
+    + listJumpButton('Identity Aligned', '/api/review-queue', 'reviewQueue', 'boundary_aligned')
     + listJumpButton('Auth Boundary Warnings', '/api/review-queue', 'reviewQueue', 'ui_auth_not_enabled')
     + listJumpButton('Declared Identity Only', '/api/review-queue', 'reviewQueue', 'reviewer_identity_declared_only')
-    + listJumpButton('Retrieval Plans', '/api/runtime-records', 'runtimeRecords', 'retrieval_plan')
+    + listJumpButton('Runtime Retrieval Plans', '/api/runtime-records', 'runtimeRecords', 'retrieval_plan')
     + '</p>'
   );
 }}
