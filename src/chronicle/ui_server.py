@@ -43,6 +43,7 @@ from chronicle.services.vector_index_service import VectorIndexService
 
 DEFAULT_UI_HOST = "127.0.0.1"
 DEFAULT_UI_PORT = 8765
+REVIEWER_LABEL_PATTERN = re.compile(r"^[a-z0-9][a-z0-9._-]{1,63}$")
 SESSION_LABEL_PATTERN = re.compile(r"^[a-z0-9][a-z0-9._-]{1,63}$")
 REVIEW_WARNING_TEXT: dict[str, str] = {
     "ui_auth_not_enabled": "UI auth mode is not enabled, so reviewer identity is not enforced by the local UI boundary.",
@@ -266,14 +267,21 @@ def _mutation_enablement_checks(
 
 
 def _reviewer_context_requirements(metadata: UIBoundaryMetadata) -> dict[str, Any]:
+    effective_required_fields = ["reviewer_label", "reviewer_kind", "ui_intent"]
+    if metadata.session_gating:
+        effective_required_fields.append("session_label")
     return {
         "required_fields": ["reviewer_label", "reviewer_kind", "ui_intent"],
+        "effective_required_fields": effective_required_fields,
+        "reviewer_label_pattern": REVIEWER_LABEL_PATTERN.pattern,
+        "reviewer_label_examples": ["alice", "desk-operator.01"],
         "session_label_required": bool(metadata.session_gating),
         "session_label_pattern": SESSION_LABEL_PATTERN.pattern,
         "session_label_examples": ["desk-session-1", "review.local-01"],
         "accepted_reviewer_kinds": [ReviewerIdentityKind.LOCAL_OPERATOR.value],
         "advisory_only_reviewer_kinds": [ReviewerIdentityKind.USER_DECLARED.value],
         "authority_note": "Request reviewer metadata is required local context, but it is not sufficient proof of authority on its own.",
+        "reviewer_label_note": "Reviewer label must identify the local operator consistently enough for audit and review history drilldown.",
         "session_note": (
             "Session label is required because the current local mutation boundary is session-gated."
             if metadata.session_gating
@@ -1576,6 +1584,7 @@ class ChronicleUIDataService:
         possible_error_codes = [
             "mutation_disabled",
             "reviewer_label_required",
+            "invalid_reviewer_label",
             "session_label_required",
             "invalid_session_label",
             "ui_intent_mismatch",
@@ -1612,6 +1621,7 @@ class ChronicleUIDataService:
         messages = {
             "mutation_disabled": "GUI mutation remains disabled for this session; use the CLI review path instead.",
             "reviewer_label_required": "Reviewer label is missing, so the UI cannot attribute the review action.",
+            "invalid_reviewer_label": "Reviewer label must start with a lowercase letter or digit and use only lowercase letters, digits, dot, underscore, or hyphen.",
             "session_label_required": "Session label is required for the current session-gated local mutation boundary.",
             "invalid_session_label": "Session label must start with a lowercase letter or digit and use only lowercase letters, digits, dot, underscore, or hyphen.",
             "ui_intent_mismatch": "Requested route and submitted UI intent differ, so the action was rejected before mutation.",
@@ -2022,6 +2032,7 @@ class ChronicleUIDataService:
             return None
 
         boundary = self.ui_boundary()["ui_boundary"]
+        reviewer_context_requirements = boundary.get("reviewer_context_requirements", {})
         if not boundary.get("mutation_enabled", False):
             return self.review_action_blocked_response(path)
 
@@ -2044,12 +2055,34 @@ class ChronicleUIDataService:
                     "error_code": "reviewer_label_required",
                     "message": self._review_action_failure_message("reviewer_label_required"),
                     "mutation_enabled": True,
+                    "reviewer_context_requirements": reviewer_context_requirements,
                     "failure_contract": self._review_action_failure_contract(
                         mutation_enabled=True,
                         cli_equivalent=f"chronicle review {action} --event {event_id}",
                         event_id=event_id,
                         action=action,
                         error_code="reviewer_label_required",
+                    ),
+                },
+            )
+        if not REVIEWER_LABEL_PATTERN.fullmatch(reviewer_label):
+            return (
+                HTTPStatus.BAD_REQUEST,
+                {
+                    "ok": False,
+                    "status": "blocked",
+                    "event_id": event_id,
+                    "action": action,
+                    "error_code": "invalid_reviewer_label",
+                    "message": self._review_action_failure_message("invalid_reviewer_label"),
+                    "mutation_enabled": True,
+                    "reviewer_context_requirements": reviewer_context_requirements,
+                    "failure_contract": self._review_action_failure_contract(
+                        mutation_enabled=True,
+                        cli_equivalent=f"chronicle review {action} --event {event_id}",
+                        event_id=event_id,
+                        action=action,
+                        error_code="invalid_reviewer_label",
                     ),
                 },
             )
@@ -2064,6 +2097,7 @@ class ChronicleUIDataService:
                     "error_code": "session_label_required",
                     "message": self._review_action_failure_message("session_label_required"),
                     "mutation_enabled": True,
+                    "reviewer_context_requirements": reviewer_context_requirements,
                     "failure_contract": self._review_action_failure_contract(
                         mutation_enabled=True,
                         cli_equivalent=f"chronicle review {action} --event {event_id}",
@@ -2084,6 +2118,7 @@ class ChronicleUIDataService:
                     "error_code": "invalid_session_label",
                     "message": self._review_action_failure_message("invalid_session_label"),
                     "mutation_enabled": True,
+                    "reviewer_context_requirements": reviewer_context_requirements,
                     "failure_contract": self._review_action_failure_contract(
                         mutation_enabled=True,
                         cli_equivalent=f"chronicle review {action} --event {event_id}",
@@ -2104,6 +2139,7 @@ class ChronicleUIDataService:
                     "error_code": "ui_intent_mismatch",
                     "message": self._review_action_failure_message("ui_intent_mismatch"),
                     "mutation_enabled": True,
+                    "reviewer_context_requirements": reviewer_context_requirements,
                     "failure_contract": self._review_action_failure_contract(
                         mutation_enabled=True,
                         cli_equivalent=f"chronicle review {action} --event {event_id}",
@@ -2126,6 +2162,7 @@ class ChronicleUIDataService:
                     "error_code": "invalid_reviewer_kind",
                     "message": self._review_action_failure_message("invalid_reviewer_kind"),
                     "mutation_enabled": True,
+                    "reviewer_context_requirements": reviewer_context_requirements,
                     "failure_contract": self._review_action_failure_contract(
                         mutation_enabled=True,
                         cli_equivalent=f"chronicle review {action} --event {event_id}",
@@ -2163,6 +2200,7 @@ class ChronicleUIDataService:
                     "warning_details": capability.get("warning_details", []),
                     "identity_assurance_status": assurance.get("status"),
                     "identity_assurance_message": assurance.get("message"),
+                    "reviewer_context_requirements": reviewer_context_requirements,
                     "failure_summary": self._review_action_failure_summary(
                         error_code="authorization_failed",
                         warning_codes=capability.get("warnings", []),
@@ -3401,6 +3439,7 @@ function renderMutationEnablementNotice(record) {{
   const readiness = record.mutation_enablement;
   const blockerDetails = Array.isArray(readiness.blocker_details) ? readiness.blocker_details : [];
   const enablementChecks = Array.isArray(readiness.enablement_checks) ? readiness.enablement_checks : [];
+  const reviewerContext = readiness.reviewer_context_requirements || {{}};
   const readinessButtons = moreStatusButtons(readiness.status, '/api/review-queue', 'reviewQueue');
   return renderNotice(
     'Mutation Enablement',
@@ -3409,6 +3448,11 @@ function renderMutationEnablementNotice(record) {{
       + detailLine('Enablement checks', String(readiness.enablement_satisfied_count ?? 0) + '/' + String(readiness.enablement_required_count ?? 0))
       + detailLine('Blockers', detailMessages(blockerDetails, readiness.blockers))
       + detailListLine('Checks', enablementChecks.map(check => ((check.satisfied ? 'ok: ' : 'blocked: ') + (check.label || check.code || 'check'))), ' | ')
+      + detailListLine('Reviewer fields', reviewerContext.effective_required_fields, ' | ')
+      + detailListLine('Reviewer kinds', reviewerContext.accepted_reviewer_kinds, ' | ')
+      + detailLine('Reviewer label pattern', reviewerContext.reviewer_label_pattern || '')
+      + detailListLine('Reviewer label examples', reviewerContext.reviewer_label_examples, ' | ')
+      + detailLine('Session label pattern', reviewerContext.session_label_pattern || '')
       + detailListLine('Next steps', readiness.next_steps, ' | ')
   );
 }}
@@ -3762,9 +3806,13 @@ function renderOverviewMutationReadinessPanel(mutationReadiness) {{
     + detailListLine('Blockers', mutationReadiness.blockers, ' | ')
     + detailLine('Blocker details', detailMessages(blockerDetails, mutationReadiness.blockers))
     + detailListLine('Enablement checks', enablementChecks.map(check => ((check.satisfied ? 'ok: ' : 'blocked: ') + (check.label || check.code || 'check'))), ' | ')
+    + detailListLine('Effective reviewer fields', reviewerContextRequirements.effective_required_fields, ' | ')
     + detailListLine('Reviewer fields', reviewerContextRequirements.required_fields, ' | ')
     + detailListLine('Accepted reviewer kinds', reviewerContextRequirements.accepted_reviewer_kinds, ' | ')
+    + detailLine('Reviewer label pattern', reviewerContextRequirements.reviewer_label_pattern || '')
+    + detailListLine('Reviewer label examples', reviewerContextRequirements.reviewer_label_examples, ' | ')
     + detailLine('Session label required', reviewerContextRequirements.session_label_required)
+    + detailLine('Session label pattern', reviewerContextRequirements.session_label_pattern || '')
     + detailListLine('Next steps', mutationReadiness.next_steps, ' | ')
   );
 }}

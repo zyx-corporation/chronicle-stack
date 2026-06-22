@@ -176,6 +176,18 @@ def test_startup_metadata(tmp_path):
         "reviewer_kind",
         "ui_intent",
     ]
+    assert payload["ui_boundary"]["reviewer_context_requirements"]["effective_required_fields"] == [
+        "reviewer_label",
+        "reviewer_kind",
+        "ui_intent",
+    ]
+    assert payload["ui_boundary"]["reviewer_context_requirements"]["reviewer_label_pattern"] == (
+        "^[a-z0-9][a-z0-9._-]{1,63}$"
+    )
+    assert payload["ui_boundary"]["reviewer_context_requirements"]["reviewer_label_examples"] == [
+        "alice",
+        "desk-operator.01",
+    ]
     assert payload["ui_boundary"]["reviewer_context_requirements"]["session_label_required"] is False
     assert payload["ui_boundary"]["reviewer_context_requirements"]["session_label_pattern"] == (
         "^[a-z0-9][a-z0-9._-]{1,63}$"
@@ -201,6 +213,12 @@ def test_startup_metadata_with_configured_auth_mode(tmp_path):
     assert payload["authorization_mode"] == "reviewer_declared"
     assert payload["ui_boundary"]["session_gating"] is True
     assert payload["ui_boundary"]["reviewer_context_requirements"]["session_label_required"] is True
+    assert payload["ui_boundary"]["reviewer_context_requirements"]["effective_required_fields"] == [
+        "reviewer_label",
+        "reviewer_kind",
+        "ui_intent",
+        "session_label",
+    ]
     assert payload["ui_boundary"]["reviewer_context_requirements"]["accepted_reviewer_kinds"] == [
         "local_operator"
     ]
@@ -558,6 +576,8 @@ def test_ui_html_filtering_includes_provider_response_metadata_fields(tmp_path, 
     assert "detailListLine('Enablement checks', enablementChecks.map(check => ((check.satisfied ? 'ok: ' : 'blocked: ') + (check.label || check.code || 'check'))), ' | ')" in html
     assert "function renderMutationEnablementNotice(record)" in html
     assert "'Mutation Enablement'" in html
+    assert "detailLine('Reviewer label pattern', reviewerContext.reviewer_label_pattern || '')" in html
+    assert "detailListLine('Effective reviewer fields', reviewerContextRequirements.effective_required_fields, ' | ')" in html
     assert "Review queue blocked-route preview stays read-only and returns the CLI fallback contract." in html
 
 
@@ -1393,8 +1413,42 @@ def test_review_action_requires_session_label_before_authorization_check(tmp_pat
     assert payload["error_code"] == "session_label_required"
     assert payload["failure_contract"]["possible_error_codes"][1:4] == [
         "reviewer_label_required",
+        "invalid_reviewer_label",
         "session_label_required",
-        "invalid_session_label",
+    ]
+
+
+def test_review_action_rejects_invalid_reviewer_label_format(tmp_path):
+    ids = _populate(tmp_path)
+    service = ChronicleUIDataService(
+        tmp_path,
+        mutation_capability_flag=True,
+        enable_ui_mutation=True,
+        auth_mode=UIAuthMode.LOOPBACK_LOCAL,
+        authorization_mode=UIAuthorizationMode.REVIEWER_DECLARED,
+    )
+
+    status, payload = service.review_action_response(
+        f"/api/review-actions/{ids['runtime_summary_event_id']}/approve",
+        {
+            "reviewer_label": "Alice Smith",
+            "reviewer_kind": "local_operator",
+            "session_label": "ui-test-session",
+            "ui_intent": "approve",
+        },
+    )
+
+    assert status == 400
+    assert payload["error_code"] == "invalid_reviewer_label"
+    assert "lowercase letter or digit" in payload["message"]
+    assert payload["reviewer_context_requirements"]["reviewer_label_pattern"] == (
+        "^[a-z0-9][a-z0-9._-]{1,63}$"
+    )
+    assert payload["reviewer_context_requirements"]["effective_required_fields"] == [
+        "reviewer_label",
+        "reviewer_kind",
+        "ui_intent",
+        "session_label",
     ]
 
 
