@@ -374,6 +374,14 @@ UI_I18N_CATALOG: dict[str, dict[str, Any]] = {
         "ui.label.post_enabled": "POST 有効",
         "ui.label.preview_blocked_route": "ブロック済みルートをプレビュー",
         "ui.label.detail_heading": "詳細",
+        "ui.label.empty_runtime_records": "現在のフィルターに一致するランタイム記録はありません。",
+        "ui.label.empty_review_rows": "現在のフィルターに一致するレビュー行はありません。",
+        "ui.label.empty_summary_jobs": "現在のフィルターに一致する要約ジョブはありません。",
+        "ui.label.local_review_mutation": "ローカルレビュー mutation",
+        "ui.label.summary_review_mutation": "要約レビュー mutation",
+        "ui.label.chronicle_id": "Chronicle ID",
+        "ui.label.root": "Root",
+        "ui.label.identity_aligned": "本人性整合",
         "exact": {
             "Overview": "概要",
             "Events": "イベント",
@@ -949,6 +957,14 @@ UI_I18N_CATALOG: dict[str, dict[str, Any]] = {
         "ui.label.post_enabled": "POST enabled",
         "ui.label.preview_blocked_route": "Preview blocked route",
         "ui.label.detail_heading": "Detail",
+        "ui.label.empty_runtime_records": "No matching runtime records for current filter.",
+        "ui.label.empty_review_rows": "No matching review rows for current filter.",
+        "ui.label.empty_summary_jobs": "No matching summary jobs for current filter.",
+        "ui.label.local_review_mutation": "Local Review Mutation",
+        "ui.label.summary_review_mutation": "Summary Review Mutation",
+        "ui.label.chronicle_id": "Chronicle ID",
+        "ui.label.root": "Root",
+        "ui.label.identity_aligned": "Identity aligned",
     },
     "zh-CN": {
         "label.language": "显示语言",
@@ -1208,6 +1224,14 @@ UI_I18N_CATALOG: dict[str, dict[str, Any]] = {
         "ui.label.post_enabled": "POST 已启用",
         "ui.label.preview_blocked_route": "预览被阻止的路由",
         "ui.label.detail_heading": "详情",
+        "ui.label.empty_runtime_records": "没有符合当前筛选条件的运行时记录。",
+        "ui.label.empty_review_rows": "没有符合当前筛选条件的审查行。",
+        "ui.label.empty_summary_jobs": "没有符合当前筛选条件的摘要任务。",
+        "ui.label.local_review_mutation": "本地审查 mutation",
+        "ui.label.summary_review_mutation": "摘要审查 mutation",
+        "ui.label.chronicle_id": "Chronicle ID",
+        "ui.label.root": "Root",
+        "ui.label.identity_aligned": "身份一致",
         "exact": {
             "Overview": "概览",
             "Events": "事件",
@@ -4069,7 +4093,15 @@ const uiLabelKeys = {{
   'Request Changes': 'ui.label.request_changes',
   'POST enabled': 'ui.label.post_enabled',
   'Preview blocked route': 'ui.label.preview_blocked_route',
-  'Detail': 'ui.label.detail_heading'
+  'Detail': 'ui.label.detail_heading',
+  'No matching runtime records for current filter.': 'ui.label.empty_runtime_records',
+  'No matching review rows for current filter.': 'ui.label.empty_review_rows',
+  'No matching summary jobs for current filter.': 'ui.label.empty_summary_jobs',
+  'Local Review Mutation': 'ui.label.local_review_mutation',
+  'Summary Review Mutation': 'ui.label.summary_review_mutation',
+  'Chronicle ID': 'ui.label.chronicle_id',
+  'Root': 'ui.label.root',
+  'Identity aligned': 'ui.label.identity_aligned'
 }};
 function uiLabel(text) {{
   const rawText = String(text || '');
@@ -4679,10 +4711,10 @@ function renderRuntimeRecordsTable(endpoint, rows) {{
       {{ value: 'kind', label: t('sort.runtime.kind') }},
     ], runtimeRecordsFilterChips(), query)
     + sliceButtonRow(runtimeRecordsSliceButtons())
-    + emptyFilterState(query, sorted, localizeTextValue('No matching runtime records for current filter.'))
+    + emptyFilterState(query, sorted, uiLabel('No matching runtime records for current filter.'))
     + (
       mutationEnabled
-        ? renderReviewMutationForm(localizeTextValue('Local Review Mutation'), 'runtime-records')
+        ? renderReviewMutationForm(uiLabel('Local Review Mutation'), 'runtime-records')
         : ''
     )
     + actionPreviewStatus(
@@ -4742,10 +4774,10 @@ function renderReviewQueueTable(endpoint, rows) {{
       {{ value: 'reviewer', label: t('sort.review.reviewer') }},
     ], reviewQueueFilterChips(), query)
     + sliceButtonRow(reviewQueueSliceButtons())
-    + emptyFilterState(query, sorted, localizeTextValue('No matching review rows for current filter.'))
+    + emptyFilterState(query, sorted, uiLabel('No matching review rows for current filter.'))
     + (
       mutationEnabled
-        ? renderReviewMutationForm(localizeTextValue('Local Review Mutation'), 'review-queue')
+        ? renderReviewMutationForm(uiLabel('Local Review Mutation'), 'review-queue')
         : ''
     )
     + actionPreviewStatus(
@@ -4803,10 +4835,10 @@ function renderSummaryJobsTable(endpoint, rows) {{
       {{ value: 'title', label: t('sort.summary.title') }},
     ], summaryJobsFilterChips(), query)
     + sliceButtonRow(summaryJobsSliceButtons())
-    + emptyFilterState(query, sorted, localizeTextValue('No matching summary jobs for current filter.'))
+    + emptyFilterState(query, sorted, uiLabel('No matching summary jobs for current filter.'))
     + (
       mutationEnabled
-        ? renderReviewMutationForm(localizeTextValue('Summary Review Mutation'), 'summary-jobs')
+        ? renderReviewMutationForm(uiLabel('Summary Review Mutation'), 'summary-jobs')
         : ''
     )
     + actionPreviewStatus(
@@ -5883,8 +5915,8 @@ function renderPanel(body) {{
 function renderOverviewHeaderPanel(chronicle) {{
   return renderPanel(
     '<p><strong>' + esc(chronicle.title || '') + '</strong></p>'
-    + '<p>' + esc(localizeTextValue('Chronicle ID')) + ': <span class="id">' + esc(chronicle.id || '') + '</span></p>'
-    + '<p>' + esc(localizeTextValue('Root')) + ': <span class="id">' + esc(chronicle.root || '') + '</span></p>'
+    + '<p>' + esc(uiLabel('Chronicle ID')) + ': <span class="id">' + esc(chronicle.id || '') + '</span></p>'
+    + '<p>' + esc(uiLabel('Root')) + ': <span class="id">' + esc(chronicle.root || '') + '</span></p>'
   );
 }}
 function renderOverviewCountsPanel(counts) {{
@@ -5976,7 +6008,7 @@ function renderOverviewIdentityBoundaryPanel(identityBoundary) {{
     + '<p>'
     + overviewJumpButton(sliceBadge(reviewWarningLabel('reviewer_identity_declared_only'), esc(identityBoundary.declared_identity_count ?? 0), 'badge-warning'), '/api/review-queue', 'reviewQueue', 'reviewer_identity_declared_only')
     + overviewJumpButton(sliceBadge(reviewWarningLabel('reviewer_session_label_missing'), esc(identityBoundary.session_label_missing_count ?? 0), 'badge-warning'), '/api/review-queue', 'reviewQueue', 'reviewer_session_label_missing')
-    + overviewJumpButton(sliceBadge(localizeTextValue('Identity aligned'), esc((identityBoundary.assurance_counts && identityBoundary.assurance_counts.boundary_aligned) ?? 0), 'badge-ready'), '/api/review-queue', 'reviewQueue', 'boundary_aligned')
+    + overviewJumpButton(sliceBadge(uiLabel('Identity aligned'), esc((identityBoundary.assurance_counts && identityBoundary.assurance_counts.boundary_aligned) ?? 0), 'badge-ready'), '/api/review-queue', 'reviewQueue', 'boundary_aligned')
     + '</p>'
     + detailLine('Status', identityBoundary.status || '')
     + '<p>' + esc(identityBoundary.message || '') + '</p>'

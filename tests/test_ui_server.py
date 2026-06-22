@@ -1217,9 +1217,9 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "data-detail-nav" in html
     assert "data-detail-trail" in html
     assert "data-back-view" in html
-    assert "localizeTextValue('No matching runtime records for current filter.')" in html
-    assert "localizeTextValue('No matching review rows for current filter.')" in html
-    assert "localizeTextValue('No matching summary jobs for current filter.')" in html
+    assert "uiLabel('No matching runtime records for current filter.')" in html
+    assert "uiLabel('No matching review rows for current filter.')" in html
+    assert "uiLabel('No matching summary jobs for current filter.')" in html
     assert "CLI aligned" in html
     assert "Open Runtime Records" in html
     assert "Open Review Queue" in html
