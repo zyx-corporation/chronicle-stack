@@ -521,55 +521,55 @@ UI_I18N_CATALOG: dict[str, dict[str, Any]] = {
             "Root: ": "ルート: ",
             "Chronicle ID: ": "Chronicle ID: ",
             "Status: ": "状態: ",
-            "Route: ": "Route: ",
+            "Route: ": "ルート: ",
             "Action: ": "操作: ",
             "Event: ": "イベント: ",
             "Error code: ": "エラーコード: ",
-            "Identity assurance: ": "identity assurance: ",
-            "Identity assurance message: ": "identity assurance message: ",
-            "CLI equivalent: ": "CLI equivalent: ",
-            "Failure summary: ": "failure summary: ",
-            "Warnings: ": "warning: ",
-            "Recovery path: ": "recovery path: ",
-            "Rollback status: ": "rollback status: ",
-            "Transaction status: ": "transaction status: ",
+            "Identity assurance: ": "本人性保証: ",
+            "Identity assurance message: ": "本人性保証メッセージ: ",
+            "CLI equivalent: ": "CLI相当: ",
+            "Failure summary: ": "失敗要約: ",
+            "Warnings: ": "警告: ",
+            "Recovery path: ": "回復パス: ",
+            "Rollback status: ": "ロールバック状態: ",
+            "Transaction status: ": "トランザクション状態: ",
             "Durable mutation on failure: ": "failure 時 durable mutation: ",
-            "Possible errors: ": "possible errors: ",
-            "Recovery commands: ": "recovery commands: ",
-            "Follow-up commands: ": "follow-up commands: ",
-            "Read-only: ": "read-only: ",
+            "Possible errors: ": "想定エラー: ",
+            "Recovery commands: ": "回復コマンド: ",
+            "Follow-up commands: ": "後続コマンド: ",
+            "Read-only: ": "読み取り専用: ",
             "External model API: ": "external model API: ",
             "GraphRAG runtime: ": "GraphRAG runtime: ",
             "Vector DB: ": "vector DB: ",
             "Graph DB: ": "graph DB: ",
             "Bind scope: ": "bind scope: ",
-            "Mutation enabled: ": "mutation enabled: ",
+            "Mutation enabled: ": "mutation 有効: ",
             "Mutation capability flag: ": "mutation capability flag: ",
-            "Auth mode: ": "auth mode: ",
-            "Authorization mode: ": "authorization mode: ",
-            "Session gating: ": "session gating: ",
-            "Mutation readiness: ": "mutation readiness: ",
-            "Write route: ": "write route: ",
-            "Write actions: ": "write actions: ",
-            "Write request fields: ": "write request fields: ",
-            "Write success status: ": "write success status: ",
-            "Write blocked status: ": "write blocked status: ",
-            "Identity proof status: ": "identity proof status: ",
-            "Identity proof fields: ": "identity proof fields: ",
-            "Source: ": "source: ",
-            "Provider kind: ": "provider kind: ",
-            "Provider name: ": "provider name: ",
+            "Auth mode: ": "認証モード: ",
+            "Authorization mode: ": "認可モード: ",
+            "Session gating: ": "セッション制御: ",
+            "Mutation readiness: ": "mutation 準備状況: ",
+            "Write route: ": "書き込みルート: ",
+            "Write actions: ": "書き込み操作: ",
+            "Write request fields: ": "書き込みリクエスト項目: ",
+            "Write success status: ": "書き込み成功ステータス: ",
+            "Write blocked status: ": "書き込み拒否ステータス: ",
+            "Identity proof status: ": "本人確認ステータス: ",
+            "Identity proof fields: ": "本人確認項目: ",
+            "Source: ": "ソース: ",
+            "Provider kind: ": "プロバイダ種別: ",
+            "Provider name: ": "プロバイダ名: ",
             "Model: ": "model: ",
-            "Allow network: ": "allow network: ",
-            "Allow external context: ": "allow external context: ",
-            "Auth blockers: ": "auth blockers: ",
-            "Auth next steps: ": "auth next steps: ",
+            "Allow network: ": "ネットワーク許可: ",
+            "Allow external context: ": "外部コンテキスト許可: ",
+            "Auth blockers: ": "認証阻害要因: ",
+            "Auth next steps: ": "認証の次ステップ: ",
             "slice:": "slice:",
-            "Active view: ": "active view: ",
+            "Active view: ": "アクティブ view: ",
             "view=": "view=",
             "trail=": "trail=",
-            "Response ": "response ",
-            "More ": "more ",
+            "Response ": "応答 ",
+            "More ": "詳細 ",
         },
     },
     "en": {
@@ -3892,7 +3892,7 @@ function renderPreviewContractSummary(preview, previewTarget = 'action-preview-r
       : '',
     recoveryPath
       ? '<br><span class="id">recovery=' + esc(recoveryPath) + '</span> '
-        + copyCommandButton(recoveryPath, previewTarget, 'Copy Recovery CLI')
+        + copyCommandButton(recoveryPath, previewTarget, t('button.copy_recovery_cli'))
       : '',
     possibleErrors.length > 0
       ? '<br><span class="id">errors=' + esc(possibleErrors.join(' | ')) + '</span>'
@@ -5185,12 +5185,12 @@ function renderDetailActionPreviewControls(preview, actions, mutationTargetEvent
     + '</button>'
   ).join(' ');
   return preview.ui_mutation_enabled
-    ? '<p><label>Reviewer <input id="reviewer-label" value="local-ui" placeholder="alice"></label> '
-      + '<label>Kind <select id="reviewer-kind"><option value="local_operator">local_operator</option><option value="user_declared">user_declared</option></select></label> '
-      + '<label>Session <input id="reviewer-session-label" value="local-ui-session" placeholder="desk-session-1"></label></p>'
-      + '<p><label>Note <input id="reviewer-note" placeholder="optional review note"></label></p>'
+    ? '<p><label>' + esc(localizeTextValue('Reviewer')) + ' <input id="reviewer-label" value="local-ui" placeholder="' + esc(t('placeholder.reviewer')) + '"></label> '
+      + '<label>' + esc(localizeTextValue('Kind')) + ' <select id="reviewer-kind"><option value="local_operator">local_operator</option><option value="user_declared">user_declared</option></select></label> '
+      + '<label>' + esc(localizeTextValue('Session')) + ' <input id="reviewer-session-label" value="local-ui-session" placeholder="' + esc(t('placeholder.session')) + '"></label></p>'
+      + '<p><label>' + esc(localizeTextValue('Note')) + ' <input id="reviewer-note" placeholder="' + esc(t('placeholder.review_note')) + '"></label></p>'
       + '<p>' + activeActionButtons + '</p>'
-    : '<p><button disabled>Approve</button> <button disabled>Reject</button> <button disabled>Request Changes</button></p>';
+    : '<p><button disabled>' + esc(localizeTextValue('Approve')) + '</button> <button disabled>' + esc(localizeTextValue('Reject')) + '</button> <button disabled>' + esc(localizeTextValue('Request Changes')) + '</button></p>';
 }}
 function renderDetailActionPreviewList(preview, actions) {{
   return '<ul>' + actions.map(item =>
@@ -5199,8 +5199,8 @@ function renderDetailActionPreviewList(preview, actions) {{
     + (item.post_path
       ? (
           preview.ui_mutation_enabled
-            ? '<br><span class="id">' + esc(item.post_path || '') + '</span> <span class="id">POST enabled</span>'
-            : '<br><span class="id">' + esc(item.post_path || '') + '</span> <button data-preview-post="' + esc(item.post_path || '') + '">Preview blocked route</button>'
+            ? '<br><span class="id">' + esc(item.post_path || '') + '</span> <span class="id">' + esc(localizeTextValue('POST enabled')) + '</span>'
+            : '<br><span class="id">' + esc(item.post_path || '') + '</span> <button data-preview-post="' + esc(item.post_path || '') + '">' + esc(localizeTextValue('Preview blocked route')) + '</button>'
         )
       : '')
     + '</li>'
@@ -5225,8 +5225,8 @@ function renderDetailActionPreviewNotice(record) {{
       + detailLine('Recovery path', failureContract.recovery_path || '')
       + detailListLine('Possible errors', failureContract.possible_error_codes, ' | ')
       + detailListLine('Recovery commands', failureContract.recovery_commands, ' | ')
-      + (failureContract.recovery_path ? '<p>' + copyCommandButton(failureContract.recovery_path, 'action-preview-response', 'Copy Recovery CLI') + '</p>' : '')
-      + ((failureContract.recovery_commands || []).length > 0 ? '<p>' + (failureContract.recovery_commands || []).map(command => copyCommandButton(command, 'action-preview-response', 'Copy CLI')).join(' ') + '</p>' : '')
+      + (failureContract.recovery_path ? '<p>' + copyCommandButton(failureContract.recovery_path, 'action-preview-response', t('button.copy_recovery_cli')) + '</p>' : '')
+      + ((failureContract.recovery_commands || []).length > 0 ? '<p>' + (failureContract.recovery_commands || []).map(command => copyCommandButton(command, 'action-preview-response', t('button.copy_cli'))).join(' ') + '</p>' : '')
   );
   const reviewActionSection = noticeSection(
     label('section.review_action', 'Review Action'),

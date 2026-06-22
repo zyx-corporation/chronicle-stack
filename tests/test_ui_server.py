@@ -1246,10 +1246,10 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "label('notice.auth_readiness', 'Auth Readiness')" in html
     assert "label('notice.review_capability', 'Review Capability')" in html
     assert "label('notice.action_preview', 'Action Preview')" in html
-    assert "<button disabled>Approve</button>" in html
-    assert "<button disabled>Reject</button>" in html
-    assert "<button disabled>Request Changes</button>" in html
-    assert "Preview blocked route" in html
+    assert "localizeTextValue('Approve')" in html
+    assert "localizeTextValue('Reject')" in html
+    assert "localizeTextValue('Request Changes')" in html
+    assert "localizeTextValue('Preview blocked route')" in html
     assert "data-preview-post" in html
     assert "Blocked route preview stays read-only and returns the CLI fallback contract." in html
     assert "localizeTextValue('Status: ')" in html
@@ -1266,12 +1266,16 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "async function submitReviewAction(path, action, recordId, targetId = 'action-preview-response', fieldPrefix = 'reviewer', successDetail = '')" in html
     assert "data-submit-review-action" in html
     assert "data-copy-command" in html
-    assert "Copy Recovery CLI" in html
+    assert "t('button.copy_recovery_cli')" in html
     assert "Review Action Result" in html
-    assert "POST enabled" in html
+    assert "localizeTextValue('POST enabled')" in html
     assert "reviewer-label" in html
     assert "reviewer-kind" in html
     assert "reviewer-session-label" in html
+    assert "localizeTextValue('Reviewer')" in html
+    assert "localizeTextValue('Kind')" in html
+    assert "localizeTextValue('Session')" in html
+    assert "localizeTextValue('Note')" in html
     assert "Identity Assurance" in html
     assert "warning_details" in html
     assert "/api/events" in html
