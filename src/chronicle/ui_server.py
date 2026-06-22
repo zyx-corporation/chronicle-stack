@@ -218,6 +218,53 @@ def _serialize_mutation_blocker_details(blockers: list[str]) -> list[dict[str, s
     ]
 
 
+def _mutation_enablement_checks(
+    *,
+    boundary: dict[str, Any],
+    pending_boundary_warning_counts: dict[str, int],
+) -> list[dict[str, Any]]:
+    blocker_set = {str(item) for item in boundary.get("mutation_blockers", [])}
+    checks = [
+        {
+            "code": "mutation_capability_flag",
+            "label": "Capability flag enabled",
+            "satisfied": "mutation_capability_flag_disabled" not in blocker_set,
+            "detail": MUTATION_BLOCKER_TEXT["mutation_capability_flag_disabled"],
+        },
+        {
+            "code": "ui_mutation_enable_flag",
+            "label": "Session enable flag enabled",
+            "satisfied": "ui_mutation_enable_flag_disabled" not in blocker_set,
+            "detail": MUTATION_BLOCKER_TEXT["ui_mutation_enable_flag_disabled"],
+        },
+        {
+            "code": "auth_boundary",
+            "label": "Auth boundary configured",
+            "satisfied": "auth_not_enabled" not in blocker_set,
+            "detail": MUTATION_BLOCKER_TEXT["auth_not_enabled"],
+        },
+        {
+            "code": "authorization_boundary",
+            "label": "Authorization boundary configured",
+            "satisfied": "authorization_not_enabled" not in blocker_set,
+            "detail": MUTATION_BLOCKER_TEXT["authorization_not_enabled"],
+        },
+        {
+            "code": "reviewer_identity",
+            "label": "Reviewer identity recorded",
+            "satisfied": pending_boundary_warning_counts.get("reviewer_identity_missing", 0) == 0,
+            "detail": MUTATION_BLOCKER_TEXT["reviewer_identity_missing"],
+        },
+        {
+            "code": "session_labels",
+            "label": "Session labels recorded",
+            "satisfied": pending_boundary_warning_counts.get("reviewer_session_label_missing", 0) == 0,
+            "detail": MUTATION_BLOCKER_TEXT["reviewer_session_label_missing"],
+        },
+    ]
+    return checks
+
+
 def _reviewer_context_requirements(metadata: UIBoundaryMetadata) -> dict[str, Any]:
     return {
         "required_fields": ["reviewer_label", "reviewer_kind", "ui_intent"],
@@ -946,6 +993,11 @@ class ChronicleUIDataService:
                 )
         for blocker_code in pending_boundary_warning_counts:
             _append_mutation_blocker(blockers, next_steps, blocker_code)
+        enablement_checks = _mutation_enablement_checks(
+            boundary=boundary,
+            pending_boundary_warning_counts=pending_boundary_warning_counts,
+        )
+        satisfied_checks = sum(1 for check in enablement_checks if check.get("satisfied") is True)
         if ready_rows > 0:
             next_steps.append(
                 "Preserve review-ready signals as preview-only until browser-triggered write ADR and audit semantics are explicit."
@@ -958,6 +1010,10 @@ class ChronicleUIDataService:
             "blockers": blockers,
             "blocker_details": _serialize_mutation_blocker_details(blockers),
             "pending_boundary_warning_counts": pending_boundary_warning_counts,
+            "enablement_checks": enablement_checks,
+            "enablement_ready": satisfied_checks == len(enablement_checks),
+            "enablement_satisfied_count": satisfied_checks,
+            "enablement_required_count": len(enablement_checks),
             "reviewer_context_requirements": boundary.get("reviewer_context_requirements", {}),
             "next_steps": next_steps,
         }
@@ -3675,14 +3731,18 @@ function renderOverviewIdentityBoundaryPanel(identityBoundary) {{
 function renderOverviewMutationReadinessPanel(mutationReadiness) {{
   const blockerDetails = Array.isArray(mutationReadiness.blocker_details) ? mutationReadiness.blocker_details : [];
   const reviewerContextRequirements = mutationReadiness.reviewer_context_requirements || {{}};
+  const enablementChecks = Array.isArray(mutationReadiness.enablement_checks) ? mutationReadiness.enablement_checks : [];
   return renderPanel(
     sectionTitle('Mutation Readiness')
     + detailLine('Status', mutationReadiness.status || '')
     + '<p>' + esc(mutationReadiness.message || '') + '</p>'
     + detailLine('Ready rows', mutationReadiness.ready_row_count ?? 0)
     + detailLine('Advisory rows', mutationReadiness.advisory_row_count ?? 0)
+    + detailLine('Enablement ready', mutationReadiness.enablement_ready)
+    + detailLine('Enablement checks', String(mutationReadiness.enablement_satisfied_count ?? 0) + '/' + String(mutationReadiness.enablement_required_count ?? 0))
     + detailListLine('Blockers', mutationReadiness.blockers, ' | ')
     + detailLine('Blocker details', detailMessages(blockerDetails, mutationReadiness.blockers))
+    + detailListLine('Enablement checks', enablementChecks.map(check => ((check.satisfied ? 'ok: ' : 'blocked: ') + (check.label || check.code || 'check'))), ' | ')
     + detailListLine('Reviewer fields', reviewerContextRequirements.required_fields, ' | ')
     + detailListLine('Accepted reviewer kinds', reviewerContextRequirements.accepted_reviewer_kinds, ' | ')
     + detailLine('Session label required', reviewerContextRequirements.session_label_required)

@@ -239,6 +239,32 @@ def test_startup_metadata_with_enabled_ui_mutation(tmp_path):
     assert payload["ui_boundary"]["mutation_blockers"] == []
 
 
+def test_mutation_readiness_summary_can_reach_enablement_ready(tmp_path):
+    _populate(tmp_path)
+    review_service = ReviewService(tmp_path)
+    for entry in review_service.queue():
+        review_service.approve(
+            event_id=entry.target_event_id,
+            reviewer="alice",
+            reviewer_kind=ReviewerIdentityKind.LOCAL_OPERATOR,
+            session_label="ui-ready-session",
+            note="approved for readiness coverage",
+        )
+    service = ChronicleUIDataService(
+        tmp_path,
+        mutation_capability_flag=True,
+        enable_ui_mutation=True,
+        auth_mode=UIAuthMode.LOOPBACK_LOCAL,
+        authorization_mode=UIAuthorizationMode.REVIEWER_DECLARED,
+    )
+
+    readiness = service.mutation_readiness_summary()
+
+    assert readiness["enablement_ready"] is True
+    assert readiness["enablement_satisfied_count"] == readiness["enablement_required_count"] == 6
+    assert all(check["satisfied"] is True for check in readiness["enablement_checks"])
+
+
 def test_ui_overview_data(tmp_path):
     _populate(tmp_path)
     RuntimeConfigService(tmp_path).set_http(
@@ -287,6 +313,11 @@ def test_ui_overview_data(tmp_path):
     assert "Define explicit local auth boundary." in overview["mutation_readiness"]["next_steps"]
     assert overview["mutation_readiness"]["blocker_details"][0]["code"] == "write_routes_disabled"
     assert overview["mutation_readiness"]["pending_boundary_warning_counts"]["reviewer_identity_missing"] == 3
+    assert overview["mutation_readiness"]["enablement_ready"] is False
+    assert overview["mutation_readiness"]["enablement_satisfied_count"] == 1
+    assert overview["mutation_readiness"]["enablement_required_count"] == 6
+    assert overview["mutation_readiness"]["enablement_checks"][0]["code"] == "mutation_capability_flag"
+    assert overview["mutation_readiness"]["enablement_checks"][0]["satisfied"] is False
     assert overview["mutation_readiness"]["reviewer_context_requirements"]["required_fields"] == [
         "reviewer_label",
         "reviewer_kind",
@@ -523,6 +554,8 @@ def test_ui_html_filtering_includes_provider_response_metadata_fields(tmp_path, 
     assert "copyCommandButton(recoveryPath, previewTarget, 'Copy Recovery CLI')" in html
     assert "rollback=" in html
     assert "errors=" in html
+    assert "detailLine('Enablement ready', mutationReadiness.enablement_ready)" in html
+    assert "detailListLine('Enablement checks', enablementChecks.map(check => ((check.satisfied ? 'ok: ' : 'blocked: ') + (check.label || check.code || 'check'))), ' | ')" in html
     assert "Review queue blocked-route preview stays read-only and returns the CLI fallback contract." in html
 
 
