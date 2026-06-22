@@ -3697,7 +3697,7 @@ function summaryIdentityCell(identityBadge, reviewerIdentity) {{
     + (reviewerLabel ? '<br>' + esc(reviewerLabel) : '');
 }}
 function resetFilterButton(query, target) {{
-  return query ? '<p><button data-reset-filter="' + esc(target) + '">Reset Filter</button></p>' : '';
+  return query ? '<p><button data-reset-filter="' + esc(target) + '">' + esc(label('button.reset_filter', 'Reset Filter')) + '</button></p>' : '';
 }}
 function emptyFilterState(query, rows, message) {{
   return query && rows.length === 0 ? '<p>' + esc(message) + '</p>' : '';
@@ -3727,10 +3727,10 @@ function renderRuntimeRecordRow(row, endpoint) {{
   const responseMetadata = row.response_metadata_summary || {{}};
   const sourceBadges = sourceCountBadges(preview.source_counts || {{}});
   const authBadge = row.auth_readiness_status === 'boundary_aligned'
-    ? jumpBadge('Auth aligned', 'badge-ready', '/api/review-queue', 'reviewQueue', 'boundary_aligned')
+    ? jumpBadge(label('badge.auth_aligned', 'Auth aligned'), 'badge-ready', '/api/review-queue', 'reviewQueue', 'boundary_aligned')
     : row.auth_readiness_status
-      ? jumpBadge('Auth advisory', 'badge-warning', '/api/review-queue', 'reviewQueue', row.auth_readiness_status)
-      : badge('Auth n/a', 'badge-neutral');
+      ? jumpBadge(label('badge.auth_advisory', 'Auth advisory'), 'badge-warning', '/api/review-queue', 'reviewQueue', row.auth_readiness_status)
+      : badge(label('badge.auth_na', 'Auth n/a'), 'badge-neutral');
   const mutationBadge = mutationEnablementBadge(mutationEnablement);
   const kindBadge = jumpBadge(
     row.runtime_record_kind || 'unknown',
@@ -4416,7 +4416,7 @@ function sliceChip(filterValue, cls, resetTarget) {{
   return '<p>'
     + badge('slice:' + filterLabel, cls)
     + ' <span class="id">' + esc(value) + '</span>'
-    + ' <button data-reset-filter="' + esc(resetTarget) + '">Clear Slice</button>'
+    + ' <button data-reset-filter="' + esc(resetTarget) + '">' + esc(label('button.clear_slice', 'Clear Slice')) + '</button>'
     + '</p>';
 }}
 function sliceBadge(text, count, cls) {{
@@ -4434,13 +4434,13 @@ function reviewQueueFilterChips() {{
 }}
 function reviewQueueSliceButtons() {{
   return [
-    listJumpButton('Review Requested', '/api/review-queue', 'reviewQueue', 'review_requested'),
-    listJumpButton('Review Ready', '/api/review-queue', 'reviewQueue', 'ready'),
-    listJumpButton('Review Advisory', '/api/review-queue', 'reviewQueue', 'advisory'),
-    listJumpButton('CLI Drift', '/api/review-queue', 'reviewQueue', 'drift_detected'),
-    listJumpButton('Package Ready', '/api/review-queue', 'reviewQueue', 'package:package_context_available'),
-    listJumpButton('Auth Boundary Warnings', '/api/review-queue', 'reviewQueue', 'ui_auth_not_enabled'),
-    listJumpButton('Declared Identity Only', '/api/review-queue', 'reviewQueue', 'reviewer_identity_declared_only'),
+    listJumpButton(localizeTextValue('Review Requested'), '/api/review-queue', 'reviewQueue', 'review_requested'),
+    listJumpButton(localizeTextValue('Review Ready'), '/api/review-queue', 'reviewQueue', 'ready'),
+    listJumpButton(localizeTextValue('Review Advisory'), '/api/review-queue', 'reviewQueue', 'advisory'),
+    listJumpButton(localizeTextValue('CLI Drift'), '/api/review-queue', 'reviewQueue', 'drift_detected'),
+    listJumpButton(localizeTextValue('Package Ready'), '/api/review-queue', 'reviewQueue', 'package:package_context_available'),
+    listJumpButton(localizeTextValue('Auth Boundary Warnings'), '/api/review-queue', 'reviewQueue', 'ui_auth_not_enabled'),
+    listJumpButton(localizeTextValue('Declared Identity Only'), '/api/review-queue', 'reviewQueue', 'reviewer_identity_declared_only'),
   ];
 }}
 function runtimeRecordsFilterChips() {{
@@ -4451,20 +4451,20 @@ function summaryJobsFilterChips() {{
 }}
 function runtimeRecordsSliceButtons() {{
   return [
-    listJumpButton('Runtime Mutation Preview', '/api/runtime-records', 'runtimeRecords', 'preview_only'),
-    listJumpButton('Runtime Auth Advisory', '/api/runtime-records', 'runtimeRecords', 'advisory_only'),
-    listJumpButton('Runtime Identity Aligned', '/api/runtime-records', 'runtimeRecords', 'boundary_aligned'),
-    listJumpButton('Runtime Retrieval Plans', '/api/runtime-records', 'runtimeRecords', 'retrieval_plan'),
-    listJumpButton('Runtime Provider Response', '/api/runtime-records', 'runtimeRecords', 'response_id'),
+    listJumpButton(localizeTextValue('Runtime Mutation Preview'), '/api/runtime-records', 'runtimeRecords', 'preview_only'),
+    listJumpButton(localizeTextValue('Runtime Auth Advisory'), '/api/runtime-records', 'runtimeRecords', 'advisory_only'),
+    listJumpButton(localizeTextValue('Runtime Identity Aligned'), '/api/runtime-records', 'runtimeRecords', 'boundary_aligned'),
+    listJumpButton(localizeTextValue('Runtime Retrieval Plans'), '/api/runtime-records', 'runtimeRecords', 'retrieval_plan'),
+    listJumpButton(localizeTextValue('Runtime Provider Response'), '/api/runtime-records', 'runtimeRecords', 'response_id'),
   ];
 }}
 function summaryJobsSliceButtons() {{
   return [
-    listJumpButton('Summary Mutation Preview', '/api/summary-jobs', 'summaryJobs', 'preview_only'),
-    listJumpButton('Summary Advisory', '/api/summary-jobs', 'summaryJobs', 'advisory_only'),
-    listJumpButton('Summary Package Ready', '/api/summary-jobs', 'summaryJobs', 'package_context_available'),
-    listJumpButton('Summary Identity Aligned', '/api/summary-jobs', 'summaryJobs', 'boundary_aligned'),
-    listJumpButton('Summary Provider Response', '/api/summary-jobs', 'summaryJobs', 'response_id'),
+    listJumpButton(localizeTextValue('Summary Mutation Preview'), '/api/summary-jobs', 'summaryJobs', 'preview_only'),
+    listJumpButton(localizeTextValue('Summary Advisory'), '/api/summary-jobs', 'summaryJobs', 'advisory_only'),
+    listJumpButton(localizeTextValue('Summary Package Ready'), '/api/summary-jobs', 'summaryJobs', 'package_context_available'),
+    listJumpButton(localizeTextValue('Summary Identity Aligned'), '/api/summary-jobs', 'summaryJobs', 'boundary_aligned'),
+    listJumpButton(localizeTextValue('Summary Provider Response'), '/api/summary-jobs', 'summaryJobs', 'response_id'),
   ];
 }}
 function activeViewSummary(endpoint, mode) {{
@@ -5100,9 +5100,9 @@ function renderOverviewIdentityBoundaryPanel(identityBoundary) {{
   return renderPanel(
     sectionTitle(label('section.identity_boundary', 'Identity Boundary'))
     + '<p>'
-    + overviewJumpButton(sliceBadge('Declared identity only', esc(identityBoundary.declared_identity_count ?? 0), 'badge-warning'), '/api/review-queue', 'reviewQueue', 'reviewer_identity_declared_only')
+    + overviewJumpButton(sliceBadge(localizeTextValue('Declared identity only'), esc(identityBoundary.declared_identity_count ?? 0), 'badge-warning'), '/api/review-queue', 'reviewQueue', 'reviewer_identity_declared_only')
     + overviewJumpButton(sliceBadge(label('overview.session_label_required', 'Session label required'), esc(identityBoundary.session_label_missing_count ?? 0), 'badge-warning'), '/api/review-queue', 'reviewQueue', 'reviewer_session_label_missing')
-    + overviewJumpButton(sliceBadge('Identity aligned', esc((identityBoundary.assurance_counts && identityBoundary.assurance_counts.boundary_aligned) ?? 0), 'badge-ready'), '/api/review-queue', 'reviewQueue', 'boundary_aligned')
+    + overviewJumpButton(sliceBadge(localizeTextValue('Identity aligned'), esc((identityBoundary.assurance_counts && identityBoundary.assurance_counts.boundary_aligned) ?? 0), 'badge-ready'), '/api/review-queue', 'reviewQueue', 'boundary_aligned')
     + '</p>'
     + detailLine('Status', identityBoundary.status || '')
     + '<p>' + esc(identityBoundary.message || '') + '</p>'
@@ -5173,10 +5173,10 @@ function renderOverviewRuntimeRecordsPanel(counts, runtimeRecords) {{
   return renderPanel(
     sectionTitle(label('section.runtime_records', 'Runtime Records'))
     + '<p>'
-    + overviewJumpButton(sliceBadge('Runtime records', esc(counts.runtime_records ?? 0), 'badge-neutral'), '/api/runtime-records')
+    + overviewJumpButton(sliceBadge(localizeTextValue('Runtime records'), esc(counts.runtime_records ?? 0), 'badge-neutral'), '/api/runtime-records')
     + overviewJumpButton(sliceBadge(label('overview.provider_response', 'Provider response'), esc(runtimeRecords.provider_response_present_count ?? 0), 'badge-ready'), '/api/runtime-records', 'runtimeRecords', 'response_id')
-    + overviewJumpButton(sliceBadge('Runtime auth advisory', esc((runtimeRecords.auth_readiness_counts && runtimeRecords.auth_readiness_counts.advisory_only) ?? 0), 'badge-warning'), '/api/runtime-records', 'runtimeRecords', 'advisory_only')
-    + overviewJumpButton(sliceBadge('Runtime mutation preview', esc((runtimeRecords.mutation_readiness_counts && runtimeRecords.mutation_readiness_counts.preview_only) ?? 0), 'badge-warning'), '/api/runtime-records', 'runtimeRecords', 'preview_only')
+    + overviewJumpButton(sliceBadge(localizeTextValue('Runtime auth advisory'), esc((runtimeRecords.auth_readiness_counts && runtimeRecords.auth_readiness_counts.advisory_only) ?? 0), 'badge-warning'), '/api/runtime-records', 'runtimeRecords', 'advisory_only')
+    + overviewJumpButton(sliceBadge(localizeTextValue('Runtime mutation preview'), esc((runtimeRecords.mutation_readiness_counts && runtimeRecords.mutation_readiness_counts.preview_only) ?? 0), 'badge-warning'), '/api/runtime-records', 'runtimeRecords', 'preview_only')
     + '</p>'
     + summaryJsonLine('Runtime kinds', runtimeRecords.kind_counts)
     + summaryJsonLine('Auth readiness counts', runtimeRecords.auth_readiness_counts)
@@ -5192,13 +5192,13 @@ function renderOverviewSummaryJobsPanel(counts, summaryJobs) {{
   return renderPanel(
     sectionTitle(label('section.summary_jobs', 'Summary Jobs'))
     + '<p>'
-    + overviewJumpButton(sliceBadge('Summary jobs', esc(counts.summary_jobs ?? 0), 'badge-neutral'), '/api/summary-jobs')
+    + overviewJumpButton(sliceBadge(localizeTextValue('Summary jobs'), esc(counts.summary_jobs ?? 0), 'badge-neutral'), '/api/summary-jobs')
     + overviewJumpButton(sliceBadge(label('overview.provider_response', 'Provider response'), esc(summaryJobs.provider_response_present_count ?? 0), 'badge-ready'), '/api/summary-jobs', 'summaryJobs', 'response_id')
-    + overviewJumpButton(sliceBadge('Summary advisory', esc((summaryJobs.review_capability_counts && summaryJobs.review_capability_counts.advisory_only) ?? 0), 'badge-warning'), '/api/summary-jobs', 'summaryJobs', 'advisory_only')
-    + overviewJumpButton(sliceBadge('Summary auth advisory', esc((summaryJobs.auth_readiness_counts && summaryJobs.auth_readiness_counts.advisory_only) ?? 0), 'badge-warning'), '/api/summary-jobs', 'summaryJobs', 'advisory_only')
-    + overviewJumpButton(sliceBadge('Summary package ready', esc((summaryJobs.package_readiness_counts && summaryJobs.package_readiness_counts.package_context_available) ?? 0), 'badge-ready'), '/api/summary-jobs', 'summaryJobs', 'package_context_available')
-    + overviewJumpButton(sliceBadge('Summary identity aligned', esc((summaryJobs.identity_assurance_counts && summaryJobs.identity_assurance_counts.boundary_aligned) ?? 0), 'badge-ready'), '/api/summary-jobs', 'summaryJobs', 'boundary_aligned')
-    + overviewJumpButton(sliceBadge('Summary mutation preview', esc((summaryJobs.mutation_readiness_counts && summaryJobs.mutation_readiness_counts.preview_only) ?? 0), 'badge-warning'), '/api/summary-jobs', 'summaryJobs', 'preview_only')
+    + overviewJumpButton(sliceBadge(localizeTextValue('Summary advisory'), esc((summaryJobs.review_capability_counts && summaryJobs.review_capability_counts.advisory_only) ?? 0), 'badge-warning'), '/api/summary-jobs', 'summaryJobs', 'advisory_only')
+    + overviewJumpButton(sliceBadge(localizeTextValue('Summary auth advisory'), esc((summaryJobs.auth_readiness_counts && summaryJobs.auth_readiness_counts.advisory_only) ?? 0), 'badge-warning'), '/api/summary-jobs', 'summaryJobs', 'advisory_only')
+    + overviewJumpButton(sliceBadge(localizeTextValue('Summary package ready'), esc((summaryJobs.package_readiness_counts && summaryJobs.package_readiness_counts.package_context_available) ?? 0), 'badge-ready'), '/api/summary-jobs', 'summaryJobs', 'package_context_available')
+    + overviewJumpButton(sliceBadge(localizeTextValue('Summary identity aligned'), esc((summaryJobs.identity_assurance_counts && summaryJobs.identity_assurance_counts.boundary_aligned) ?? 0), 'badge-ready'), '/api/summary-jobs', 'summaryJobs', 'boundary_aligned')
+    + overviewJumpButton(sliceBadge(localizeTextValue('Summary mutation preview'), esc((summaryJobs.mutation_readiness_counts && summaryJobs.mutation_readiness_counts.preview_only) ?? 0), 'badge-warning'), '/api/summary-jobs', 'summaryJobs', 'preview_only')
     + '</p>'
     + summaryJsonLine('Status counts', summaryJobs.status_counts)
     + summaryJsonLine('Review capability counts', summaryJobs.review_capability_counts)
@@ -5220,25 +5220,25 @@ function renderOverviewTriagePanel(triage, warningButtons, warningSummaries) {{
   return renderPanel(
     sectionTitle(label('section.triage', 'Triage'))
     + '<p>'
-    + overviewJumpButton(sliceBadge('Review Requested', esc(triage.needs_attention_reviews ?? 0), 'badge-warning'), '/api/review-queue', 'reviewQueue', 'review_requested')
+    + overviewJumpButton(sliceBadge(localizeTextValue('Review Requested'), esc(triage.needs_attention_reviews ?? 0), 'badge-warning'), '/api/review-queue', 'reviewQueue', 'review_requested')
     + '</p>'
     + '<p>'
-    + overviewJumpButton(sliceBadge('Review Ready', esc(triage.ready_now_reviews ?? 0), 'badge-ready'), '/api/review-queue', 'reviewQueue', 'ready')
-    + overviewJumpButton(sliceBadge('Review Advisory', esc(triage.advisory_only_reviews ?? 0), 'badge-warning'), '/api/review-queue', 'reviewQueue', 'advisory')
+    + overviewJumpButton(sliceBadge(localizeTextValue('Review Ready'), esc(triage.ready_now_reviews ?? 0), 'badge-ready'), '/api/review-queue', 'reviewQueue', 'ready')
+    + overviewJumpButton(sliceBadge(localizeTextValue('Review Advisory'), esc(triage.advisory_only_reviews ?? 0), 'badge-warning'), '/api/review-queue', 'reviewQueue', 'advisory')
     + '</p>'
     + '<p>'
-    + overviewJumpButton(sliceBadge('Package Ready', esc(triage.package_ready_reviews ?? 0), 'badge-ready'), '/api/review-queue', 'reviewQueue', 'package:package_context_available')
+    + overviewJumpButton(sliceBadge(localizeTextValue('Package Ready'), esc(triage.package_ready_reviews ?? 0), 'badge-ready'), '/api/review-queue', 'reviewQueue', 'package:package_context_available')
     + '</p>'
     + '<p>'
-    + overviewJumpButton(sliceBadge('CLI Aligned', esc(triage.cli_parity_aligned_reviews ?? 0), 'badge-ready'), '/api/review-queue', 'reviewQueue', 'aligned')
-    + overviewJumpButton(sliceBadge('CLI Drift', esc(triage.cli_parity_drift_reviews ?? 0), 'badge-warning'), '/api/review-queue', 'reviewQueue', 'drift_detected')
+    + overviewJumpButton(sliceBadge(localizeTextValue('CLI Aligned'), esc(triage.cli_parity_aligned_reviews ?? 0), 'badge-ready'), '/api/review-queue', 'reviewQueue', 'aligned')
+    + overviewJumpButton(sliceBadge(localizeTextValue('CLI Drift'), esc(triage.cli_parity_drift_reviews ?? 0), 'badge-warning'), '/api/review-queue', 'reviewQueue', 'drift_detected')
     + '</p>'
     + '<p>'
-    + overviewJumpButton(sliceBadge('Identity Aligned', esc(triage.identity_boundary_aligned_reviews ?? 0), 'badge-ready'), '/api/review-queue', 'reviewQueue', 'boundary_aligned')
-    + overviewJumpButton(sliceBadge('Declared Identity Only', esc(triage.identity_declared_only_reviews ?? 0), 'badge-warning'), '/api/review-queue', 'reviewQueue', 'reviewer_identity_declared_only')
+    + overviewJumpButton(sliceBadge(localizeTextValue('Identity Aligned'), esc(triage.identity_boundary_aligned_reviews ?? 0), 'badge-ready'), '/api/review-queue', 'reviewQueue', 'boundary_aligned')
+    + overviewJumpButton(sliceBadge(localizeTextValue('Declared Identity Only'), esc(triage.identity_declared_only_reviews ?? 0), 'badge-warning'), '/api/review-queue', 'reviewQueue', 'reviewer_identity_declared_only')
     + '</p>'
     + '<p>'
-    + overviewJumpButton(sliceBadge('Provider Response', esc(triage.provider_response_present_reviews ?? 0), 'badge-ready'), '/api/review-queue', 'reviewQueue', 'response_id')
+    + overviewJumpButton(sliceBadge(localizeTextValue('Provider Response'), esc(triage.provider_response_present_reviews ?? 0), 'badge-ready'), '/api/review-queue', 'reviewQueue', 'response_id')
     + '</p>'
     + '<p>' + (warningButtons || '') + '</p>'
     + summaryJsonLine('Runtime kinds', triage.runtime_record_kinds)
