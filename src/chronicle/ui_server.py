@@ -10,6 +10,7 @@ from __future__ import annotations
 import html
 import ipaddress
 import json
+import re
 import webbrowser
 from dataclasses import asdict, dataclass
 from http import HTTPStatus
@@ -42,6 +43,7 @@ from chronicle.services.vector_index_service import VectorIndexService
 
 DEFAULT_UI_HOST = "127.0.0.1"
 DEFAULT_UI_PORT = 8765
+SESSION_LABEL_PATTERN = re.compile(r"^[a-z0-9][a-z0-9._-]{1,63}$")
 REVIEW_WARNING_TEXT: dict[str, str] = {
     "ui_auth_not_enabled": "UI auth mode is not enabled, so reviewer identity is not enforced by the local UI boundary.",
     "ui_authorization_not_enabled": "UI authorization mode is not enabled, so reviewer permissions remain advisory only.",
@@ -220,6 +222,8 @@ def _reviewer_context_requirements(metadata: UIBoundaryMetadata) -> dict[str, An
     return {
         "required_fields": ["reviewer_label", "reviewer_kind", "ui_intent"],
         "session_label_required": bool(metadata.session_gating),
+        "session_label_pattern": SESSION_LABEL_PATTERN.pattern,
+        "session_label_examples": ["desk-session-1", "review.local-01"],
         "accepted_reviewer_kinds": [ReviewerIdentityKind.LOCAL_OPERATOR.value],
         "advisory_only_reviewer_kinds": [ReviewerIdentityKind.USER_DECLARED.value],
         "authority_note": "Request reviewer metadata is required local context, but it is not sufficient proof of authority on its own.",
@@ -1516,6 +1520,8 @@ class ChronicleUIDataService:
         possible_error_codes = [
             "mutation_disabled",
             "reviewer_label_required",
+            "session_label_required",
+            "invalid_session_label",
             "ui_intent_mismatch",
             "invalid_reviewer_kind",
             "authorization_failed",
@@ -1550,6 +1556,8 @@ class ChronicleUIDataService:
         messages = {
             "mutation_disabled": "GUI mutation remains disabled for this session; use the CLI review path instead.",
             "reviewer_label_required": "Reviewer label is missing, so the UI cannot attribute the review action.",
+            "session_label_required": "Session label is required for the current session-gated local mutation boundary.",
+            "invalid_session_label": "Session label must start with a lowercase letter or digit and use only lowercase letters, digits, dot, underscore, or hyphen.",
             "ui_intent_mismatch": "Requested route and submitted UI intent differ, so the action was rejected before mutation.",
             "invalid_reviewer_kind": "Reviewer kind is not one of the supported local reviewer identity kinds.",
             "authorization_failed": "Reviewer identity or session boundary is not aligned, so the action stays blocked.",
@@ -1983,6 +1991,46 @@ class ChronicleUIDataService:
                         event_id=event_id,
                         action=action,
                         error_code="reviewer_label_required",
+                    ),
+                },
+            )
+        if boundary.get("session_gating", False) and not session_label_value:
+            return (
+                HTTPStatus.BAD_REQUEST,
+                {
+                    "ok": False,
+                    "status": "blocked",
+                    "event_id": event_id,
+                    "action": action,
+                    "error_code": "session_label_required",
+                    "message": self._review_action_failure_message("session_label_required"),
+                    "mutation_enabled": True,
+                    "failure_contract": self._review_action_failure_contract(
+                        mutation_enabled=True,
+                        cli_equivalent=f"chronicle review {action} --event {event_id}",
+                        event_id=event_id,
+                        action=action,
+                        error_code="session_label_required",
+                    ),
+                },
+            )
+        if session_label_value and not SESSION_LABEL_PATTERN.fullmatch(session_label_value):
+            return (
+                HTTPStatus.BAD_REQUEST,
+                {
+                    "ok": False,
+                    "status": "blocked",
+                    "event_id": event_id,
+                    "action": action,
+                    "error_code": "invalid_session_label",
+                    "message": self._review_action_failure_message("invalid_session_label"),
+                    "mutation_enabled": True,
+                    "failure_contract": self._review_action_failure_contract(
+                        mutation_enabled=True,
+                        cli_equivalent=f"chronicle review {action} --event {event_id}",
+                        event_id=event_id,
+                        action=action,
+                        error_code="invalid_session_label",
                     ),
                 },
             )

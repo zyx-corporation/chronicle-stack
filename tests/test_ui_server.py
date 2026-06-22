@@ -177,6 +177,9 @@ def test_startup_metadata(tmp_path):
         "ui_intent",
     ]
     assert payload["ui_boundary"]["reviewer_context_requirements"]["session_label_required"] is False
+    assert payload["ui_boundary"]["reviewer_context_requirements"]["session_label_pattern"] == (
+        "^[a-z0-9][a-z0-9._-]{1,63}$"
+    )
     assert payload["ui_boundary"]["auth_boundary_summary"]["status"] == "auth_not_enabled"
     assert "auth_not_enabled" in payload["ui_boundary"]["auth_boundary_summary"]["blockers"]
     assert payload["ui_boundary"]["auth_boundary_summary"]["blocker_details"] == [
@@ -1280,6 +1283,7 @@ def test_review_action_failure_summary_uses_human_warning_text(tmp_path):
         {
             "reviewer_label": "alice",
             "reviewer_kind": "user_declared",
+            "session_label": "ui-test-session",
             "ui_intent": "approve",
         },
     )
@@ -1298,7 +1302,33 @@ def test_review_action_failure_summary_uses_human_warning_text(tmp_path):
     assert "reviewer_identity_declared_only" not in payload["failure_summary"]
 
 
-def test_review_action_authorization_failure_exposes_session_label_warning_details(tmp_path):
+def test_review_action_applies_when_session_gated_inputs_are_complete(tmp_path):
+    ids = _populate(tmp_path)
+    service = ChronicleUIDataService(
+        tmp_path,
+        mutation_capability_flag=True,
+        enable_ui_mutation=True,
+        auth_mode=UIAuthMode.LOOPBACK_LOCAL,
+        authorization_mode=UIAuthorizationMode.REVIEWER_DECLARED,
+    )
+
+    status, payload = service.review_action_response(
+        f"/api/review-actions/{ids['runtime_summary_event_id']}/approve",
+        {
+            "reviewer_label": "alice",
+            "reviewer_kind": "local_operator",
+            "session_label": "ui-test-session",
+            "ui_intent": "approve",
+        },
+    )
+
+    assert status == 200
+    assert payload["ok"] is True
+    assert payload["status"] == "applied"
+    assert payload["reviewer_identity"]["session_label"] == "ui-test-session"
+
+
+def test_review_action_requires_session_label_before_authorization_check(tmp_path):
     ids = _populate(tmp_path)
     service = ChronicleUIDataService(
         tmp_path,
@@ -1317,17 +1347,38 @@ def test_review_action_authorization_failure_exposes_session_label_warning_detai
         },
     )
 
-    assert status == 403
-    assert payload["error_code"] == "authorization_failed"
-    assert payload["identity_assurance_status"] == "boundary_aligned"
-    assert payload["warning_details"] == [
-        {
-            "code": "reviewer_session_label_missing",
-            "message": "Session-gated review expects a local session label, but none was recorded.",
-        }
+    assert status == 400
+    assert payload["error_code"] == "session_label_required"
+    assert payload["failure_contract"]["possible_error_codes"][1:4] == [
+        "reviewer_label_required",
+        "session_label_required",
+        "invalid_session_label",
     ]
-    assert "Session-gated review expects a local session label" in payload["failure_summary"]
-    assert "reviewer_session_label_missing" not in payload["failure_summary"]
+
+
+def test_review_action_rejects_invalid_session_label_format(tmp_path):
+    ids = _populate(tmp_path)
+    service = ChronicleUIDataService(
+        tmp_path,
+        mutation_capability_flag=True,
+        enable_ui_mutation=True,
+        auth_mode=UIAuthMode.LOOPBACK_LOCAL,
+        authorization_mode=UIAuthorizationMode.REVIEWER_DECLARED,
+    )
+
+    status, payload = service.review_action_response(
+        f"/api/review-actions/{ids['runtime_summary_event_id']}/approve",
+        {
+            "reviewer_label": "alice",
+            "reviewer_kind": "local_operator",
+            "session_label": "UI Session",
+            "ui_intent": "approve",
+        },
+    )
+
+    assert status == 400
+    assert payload["error_code"] == "invalid_session_label"
+    assert "lowercase letter or digit" in payload["message"]
 
 
 def test_review_queue_auth_boundary_notice_exposes_human_blocker_details(tmp_path):
