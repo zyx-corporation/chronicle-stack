@@ -3058,6 +3058,7 @@ function renderRuntimeRecordsTable(endpoint, rows) {{
       {{ value: 'auth', label: 'Auth readiness' }},
       {{ value: 'kind', label: 'Kind' }},
     ], runtimeRecordsFilterChips(), query)
+    + sliceButtonRow(runtimeRecordsSliceButtons())
     + emptyFilterState(query, sorted, 'No matching runtime records for current filter.')
     + (
       mutationEnabled
@@ -3166,6 +3167,7 @@ function renderSummaryJobsTable(endpoint, rows) {{
       {{ value: 'review', label: 'Needs attention first' }},
       {{ value: 'title', label: 'Title' }},
     ], summaryJobsFilterChips(), query)
+    + sliceButtonRow(summaryJobsSliceButtons())
     + emptyFilterState(query, sorted, 'No matching summary jobs for current filter.')
     + (
       mutationEnabled
@@ -3530,6 +3532,9 @@ function filterChips(target, cls) {{
   const filterValue = String((window.__chronicleFilters && window.__chronicleFilters[target]) || '');
   return sliceChip(filterValue, cls, target);
 }}
+function sliceButtonRow(buttons) {{
+  return buttons.length > 0 ? '<p>' + buttons.join('') + '</p>' : '';
+}}
 function reviewQueueFilterChips() {{
   return filterChips('reviewQueue', 'badge-warning');
 }}
@@ -3538,6 +3543,24 @@ function runtimeRecordsFilterChips() {{
 }}
 function summaryJobsFilterChips() {{
   return filterChips('summaryJobs', 'badge-neutral');
+}}
+function runtimeRecordsSliceButtons() {{
+  return [
+    listJumpButton('Runtime Mutation Preview', '/api/runtime-records', 'runtimeRecords', 'preview_only'),
+    listJumpButton('Runtime Auth Advisory', '/api/runtime-records', 'runtimeRecords', 'advisory_only'),
+    listJumpButton('Runtime Identity Aligned', '/api/runtime-records', 'runtimeRecords', 'boundary_aligned'),
+    listJumpButton('Runtime Retrieval Plans', '/api/runtime-records', 'runtimeRecords', 'retrieval_plan'),
+    listJumpButton('Runtime Provider Response', '/api/runtime-records', 'runtimeRecords', 'response_id'),
+  ];
+}}
+function summaryJobsSliceButtons() {{
+  return [
+    listJumpButton('Summary Mutation Preview', '/api/summary-jobs', 'summaryJobs', 'preview_only'),
+    listJumpButton('Summary Advisory', '/api/summary-jobs', 'summaryJobs', 'advisory_only'),
+    listJumpButton('Summary Package Ready', '/api/summary-jobs', 'summaryJobs', 'package_context_available'),
+    listJumpButton('Summary Identity Aligned', '/api/summary-jobs', 'summaryJobs', 'boundary_aligned'),
+    listJumpButton('Summary Provider Response', '/api/summary-jobs', 'summaryJobs', 'response_id'),
+  ];
 }}
 function activeViewSummary(endpoint, mode) {{
   const parts = [];

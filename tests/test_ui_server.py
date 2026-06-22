@@ -615,6 +615,9 @@ def test_ui_html_filtering_includes_provider_response_metadata_fields(tmp_path, 
     assert "function renderPreviewContractSummary(preview, previewTarget = 'action-preview-response')" in html
     assert "function mutationEnablementBadge(summary)" in html
     assert "function renderMutationEnablementSummary(summary)" in html
+    assert "function sliceButtonRow(buttons)" in html
+    assert "function runtimeRecordsSliceButtons()" in html
+    assert "function summaryJobsSliceButtons()" in html
     assert "copyCommandButton(recoveryPath, previewTarget, 'Copy Recovery CLI')" in html
     assert "rollback=" in html
     assert "transaction=" in html
@@ -1082,6 +1085,14 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "Summary package ready" in html
     assert "Summary identity aligned" in html
     assert "Summary mutation preview" in html
+    assert "Runtime Mutation Preview" in html
+    assert "Runtime Auth Advisory" in html
+    assert "Runtime Identity Aligned" in html
+    assert "Runtime Retrieval Plans" in html
+    assert "Runtime Provider Response" in html
+    assert "Summary Mutation Preview" in html
+    assert "Summary Package Ready" in html
+    assert "Summary Provider Response" in html
     assert "Warning priority:" in html
     assert "summaryJsonLine('Runtime kinds', triage.runtime_record_kinds)" in html
     assert "statusMessageBody(readiness.status, readiness.message, readinessButtons)" in html
@@ -1112,6 +1123,8 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "listToolbar(endpoint, 'summaryJobs', 'Filter summary jobs...'" in html
     assert "{ value: 'mutation', label: 'Mutation readiness' }" in html
     assert "{ value: 'auth', label: 'Auth readiness' }" in html
+    assert "sliceButtonRow(runtimeRecordsSliceButtons())" in html
+    assert "sliceButtonRow(summaryJobsSliceButtons())" in html
     assert "tableHtml(['detail', 'event', 'kind', 'auth', 'preview', 'review route', 'source counts']" in html
     assert "Auth aligned" in html
     assert "Auth advisory" in html
