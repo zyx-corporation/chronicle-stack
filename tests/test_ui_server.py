@@ -3,6 +3,7 @@
 import http.client
 import json
 import threading
+from pathlib import Path
 
 import pytest
 from typer.testing import CliRunner
@@ -35,6 +36,26 @@ from chronicle.ui_server import (
     build_startup_metadata,
     make_server,
 )
+
+
+def test_ui_server_avoids_new_inline_localize_text_value_literals():
+    source = (Path(__file__).resolve().parents[1] / "src/chronicle/ui_server.py").read_text(
+        encoding="utf-8"
+    )
+    allowed_literals = {
+        "localizeTextValue(item.message || '')",
+        "localizeTextValue(preview.message || '')",
+        "localizeTextValue(message || '')",
+        "localizeTextValue(node.nodeValue || '')",
+        "localizeTextValue(value)",
+        "localizeTextValue(rawText)",
+    }
+    inline_literals = {
+        line.strip()
+        for line in source.splitlines()
+        if "localizeTextValue('" in line
+    }
+    assert inline_literals <= allowed_literals
 
 
 def _http_get(host: str, port: int, path: str) -> tuple[int, str]:
