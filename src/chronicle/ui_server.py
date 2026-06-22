@@ -95,6 +95,626 @@ OVERVIEW_SLICE_LABELS: dict[str, str] = {
     "reviewer_identity_declared_only": "Declared identity only",
     "reviewer_session_label_missing": "Session label required",
 }
+UI_I18N_CATALOG: dict[str, dict[str, Any]] = {
+    "ja": {
+        "label.language": "表示言語",
+        "locale.ja": "日本語",
+        "locale.en": "English",
+        "locale.zh-CN": "简体中文",
+        "shell.title": "Chronicle Stack ローカルUI",
+        "shell.root": "ルート",
+        "shell.warning_title": "読み取り専用の前景ローカルUIです。",
+        "shell.warning_body": "このUIはローカルの Chronicle ファイルを読み取りますが、レコードは書き込みません。",
+        "shell.boundary_body": "daemon なし、自動起動なし、外部 model API なし、GraphRAG runtime なし、vector DB なし、graph DB なし。UI の可視化は correctness proof ではありません。",
+        "shell.loading_overview": "概要を読み込み中...",
+        "shell.select_json": "テーブル行の JSON を選択して単一レコードを確認します。",
+        "placeholder.runtime_filter": "runtime record を絞り込む...",
+        "placeholder.review_filter": "review queue を絞り込む...",
+        "placeholder.summary_filter": "summary job を絞り込む...",
+        "placeholder.review_note": "任意のレビュー note",
+        "placeholder.reviewer": "alice",
+        "placeholder.session": "desk-session-1",
+        "nav./api/overview": "概要",
+        "nav./api/events": "イベント",
+        "nav./api/contexts": "コンテキスト",
+        "nav./api/artifacts": "成果物",
+        "nav./api/decisions": "判断",
+        "nav./api/rde": "RDE",
+        "nav./api/boundary": "境界",
+        "nav./api/audit": "監査",
+        "nav./api/lifecycle": "ライフサイクル",
+        "nav./api/runtime-records": "Runtime Records",
+        "nav./api/review-queue": "Review Queue",
+        "nav./api/summary-jobs": "Summary Jobs",
+        "nav./api/ui-boundary": "UI Boundary",
+        "nav./api/runtime-config": "Runtime Config",
+        "nav./api/package-review": "Package Review",
+        "nav./api/graph-summary": "Graph Summary",
+        "nav./api/ai-index-status": "AI Index Status",
+        "nav./api/ai-index-vector": "AI Index Vector",
+        "nav./api/ai-index-graph-nodes": "AI Index Graph Nodes",
+        "nav./api/ai-index-graph-edges": "AI Index Graph Edges",
+        "button.copy_cli": "CLIをコピー",
+        "button.copy_recovery_cli": "復旧CLIをコピー",
+        "button.preview_blocked_route": "拒否ルートをプレビュー",
+        "button.apply": "適用",
+        "button.reset_filter": "フィルターをリセット",
+        "button.clear_slice": "スライスを解除",
+        "button.open_package_review": "Package Review を開く",
+        "button.open_runtime_records": "Runtime Records を開く",
+        "button.open_review_queue": "Review Queue を開く",
+        "button.open_summary_jobs": "Summary Jobs を開く",
+        "button.open_runtime_config": "Runtime Config を開く",
+        "status.loading_blocked_preview": "拒否ルートプレビューを読み込み中…",
+        "status.applying_review_action": "レビュー操作を適用中…",
+        "status.blocked_route_preview": "拒否ルートプレビュー",
+        "status.review_action_result": "レビュー操作結果",
+        "status.not_found": "見つかりません。",
+        "status.no_message": "メッセージが返りませんでした。",
+        "status.copied_recovery_cli": "recovery CLI をコピーしました: ",
+        "status.copy_failed_command": "コピー失敗。コマンド: ",
+        "status.active_view": "アクティブ view",
+        "status.sort": "並び順",
+        "status.more": "詳細",
+        "status.detail": "詳細",
+        "status.view": "view",
+        "status.trail": "trail",
+        "notice.action_preview": "Action Preview",
+        "notice.cli_parity": "CLI Parity",
+        "notice.identity_assurance": "Identity Assurance",
+        "notice.review_timeline": "Review Timeline",
+        "notice.mutation_enabled_detail": "この詳細ビューでは local mutation が有効です。各操作では明示的な reviewer context が必要で、audit-backed な review history が書き込まれます。",
+        "notice.mutation_enabled_runtime_records": "この runtime-record 一覧ビューでは local mutation が有効です。各操作では明示的な reviewer context が必要で、audit-backed な review history が書き込まれます。",
+        "notice.mutation_enabled_review_queue": "この一覧ビューでは local mutation が有効です。各操作では明示的な reviewer context が必要で、audit-backed な review history が書き込まれます。",
+        "notice.mutation_enabled_summary_jobs": "summary-backed review target では local mutation が有効です。各操作では明示的な reviewer context が必要で、audit-backed な review history が書き込まれます。",
+        "notice.blocked_route_preview_runtime_records": "Runtime-record の blocked-route preview は read-only のままで、CLI fallback contract を返します。",
+        "notice.blocked_route_preview_review_queue": "Review queue の blocked-route preview は read-only のままで、CLI fallback contract を返します。",
+        "notice.blocked_route_preview_summary_jobs": "Summary jobs の blocked-route preview は read-only のままで、CLI fallback contract を返します。",
+        "notice.blocked_route_preview_detail": "Blocked route preview は read-only のままで、CLI fallback contract を返します。",
+        "badge.auth_aligned": "Auth aligned",
+        "badge.auth_advisory": "Auth advisory",
+        "badge.auth_na": "Auth n/a",
+        "badge.identity_aligned": "Identity aligned",
+        "badge.identity_advisory": "Identity advisory",
+        "badge.identity_na": "Identity n/a",
+        "badge.ready": "準備完了",
+        "badge.resolved": "解決済み",
+        "badge.advisory": "助言のみ",
+        "badge.package_ready": "Package Ready",
+        "badge.package_advisory": "Package Advisory",
+        "badge.package_unknown": "Package Unknown",
+        "badge.mutation_ready": "Mutation ready",
+        "badge.mutation_preview": "Mutation preview",
+        "badge.mutation_na": "Mutation n/a",
+        "section.counts": "件数",
+        "section.runtime_boundary": "Runtime Boundary",
+        "section.runtime_config": "Runtime Config",
+        "section.ui_boundary": "UI Boundary",
+        "section.auth_boundary": "Auth Boundary",
+        "section.identity_boundary": "Identity Boundary",
+        "section.mutation_readiness": "Mutation Readiness",
+        "section.ai_index_snapshot": "AI Index Snapshot",
+        "section.runtime_records": "Runtime Records",
+        "section.summary_jobs": "Summary Jobs",
+        "section.triage": "Triage",
+        "sort.runtime.latest": "新しい順",
+        "sort.runtime.mutation": "Mutation readiness",
+        "sort.runtime.auth": "Auth readiness",
+        "sort.runtime.kind": "種別",
+        "sort.review.attention": "要対応優先",
+        "sort.review.parity": "CLI drift 優先",
+        "sort.review.latest": "新しい順",
+        "sort.review.reviewer": "レビュアー",
+        "sort.summary.latest": "新しい順",
+        "sort.summary.mutation": "Mutation readiness",
+        "sort.summary.review": "要対応優先",
+        "sort.summary.title": "タイトル",
+        "filter.runtime.preview_only": "Runtime mutation preview",
+        "filter.runtime.advisory_only": "Runtime auth advisory",
+        "filter.runtime.boundary_aligned": "Runtime identity aligned",
+        "filter.runtime.retrieval_plan": "Runtime retrieval plans",
+        "filter.runtime.response_id": "Runtime provider response",
+        "filter.summary.preview_only": "Summary mutation preview",
+        "filter.summary.advisory_only": "Summary advisory",
+        "filter.summary.package_context_available": "Summary package ready",
+        "filter.summary.boundary_aligned": "Summary identity aligned",
+        "filter.summary.response_id": "Summary provider response",
+        "filter.review.review_requested": "Review requested",
+        "filter.review.ready": "Review ready",
+        "filter.review.advisory_only": "Review advisory",
+        "filter.review.advisory": "Review advisory",
+        "filter.review.drift_detected": "CLI drift",
+        "filter.review.aligned": "CLI aligned",
+        "filter.review.boundary_aligned": "Identity aligned",
+        "filter.review.ui_auth_not_enabled": "Auth boundary warnings",
+        "filter.review.reviewer_identity_declared_only": "Declared identity only",
+        "filter.review.package_context_available": "Package ready",
+        "filter.review.no_context_records": "Package advisory",
+        "detail.resource.runtime-records": "Runtime",
+        "detail.resource.review-queue": "Review",
+        "detail.resource.summary-jobs": "Summary",
+        "detail.resource.runtime-config": "Runtime Config",
+        "detail.resource.events": "Event",
+        "detail.resource.contexts": "Context",
+        "detail.resource.artifacts": "Artifact",
+        "detail.resource.decisions": "Decision",
+        "detail.resource.audit": "Audit",
+        "detail.resource.lifecycle": "Lifecycle",
+        "detail.resource.boundary": "Boundary",
+        "detail.resource.rde": "RDE",
+        "overview.authorization_warnings": "Authorization warnings",
+        "overview.missing_identity": "Missing identity",
+        "overview.provider_response": "Provider response",
+        "overview.session_label_required": "Session label required",
+        "overview.warning_priority": "Warning priority",
+        "exact": {
+            "Overview": "概要",
+            "Events": "イベント",
+            "Contexts": "コンテキスト",
+            "Artifacts": "成果物",
+            "Decisions": "判断",
+            "Boundary": "境界",
+            "Audit": "監査",
+            "Lifecycle": "ライフサイクル",
+            "Runtime Records": "Runtime Records",
+            "Review Queue": "Review Queue",
+            "Summary Jobs": "Summary Jobs",
+            "UI Boundary": "UI Boundary",
+            "Runtime Config": "Runtime Config",
+            "Package Review": "Package Review",
+            "Graph Summary": "Graph Summary",
+            "AI Index Status": "AI Index Status",
+            "AI Index Vector": "AI Index Vector",
+            "AI Index Graph Nodes": "AI Index Graph Nodes",
+            "AI Index Graph Edges": "AI Index Graph Edges",
+            "Counts": "件数",
+            "Runtime Boundary": "Runtime Boundary",
+            "Auth Boundary": "Auth Boundary",
+            "Identity Boundary": "Identity Boundary",
+            "Mutation Readiness": "Mutation Readiness",
+            "Triage": "Triage",
+            "Ready": "準備完了",
+            "Resolved": "解決済み",
+            "Advisory": "助言のみ",
+            "Package Ready": "Package Ready",
+            "Package Advisory": "Package Advisory",
+            "Package Unknown": "Package Unknown",
+            "Auth aligned": "Auth aligned",
+            "Auth advisory": "Auth advisory",
+            "Auth n/a": "Auth n/a",
+            "Identity aligned": "Identity aligned",
+            "Identity advisory": "Identity advisory",
+            "Identity n/a": "Identity n/a",
+            "Mutation ready": "Mutation ready",
+            "Mutation preview": "Mutation preview",
+            "Mutation n/a": "Mutation n/a",
+            "CLI aligned": "CLI aligned",
+            "CLI drift": "CLI drift",
+            "Review Requested": "Review Requested",
+            "Review Ready": "Review Ready",
+            "Review Advisory": "Review Advisory",
+            "Auth Boundary Warnings": "Auth Boundary Warnings",
+            "Declared Identity Only": "Declared Identity Only",
+            "Runtime Mutation Preview": "Runtime Mutation Preview",
+            "Runtime Auth Advisory": "Runtime Auth Advisory",
+            "Runtime Identity Aligned": "Runtime Identity Aligned",
+            "Runtime Retrieval Plans": "Runtime Retrieval Plans",
+            "Runtime Provider Response": "Runtime Provider Response",
+            "Summary Mutation Preview": "Summary Mutation Preview",
+            "Summary Advisory": "Summary Advisory",
+            "Summary Package Ready": "Summary Package Ready",
+            "Summary Identity Aligned": "Summary Identity Aligned",
+            "Summary Provider Response": "Summary Provider Response",
+            "Latest first": "新しい順",
+            "Mutation readiness": "Mutation readiness",
+            "Auth readiness": "Auth readiness",
+            "Kind": "種別",
+            "Needs attention first": "要対応優先",
+            "CLI drift first": "CLI drift 優先",
+            "Reviewer": "レビュアー",
+            "Session": "セッション",
+            "Note": "ノート",
+            "Title": "タイトル",
+            "JSON": "JSON",
+            "Reset Filter": "フィルターをリセット",
+            "Clear Slice": "スライスを解除",
+            "Local Review Mutation": "ローカル Review Mutation",
+            "Summary Review Mutation": "Summary Review Mutation",
+            "Detail": "詳細",
+            "Blocked Route Preview": "拒否ルートプレビュー",
+            "Review Action Result": "レビュー操作結果",
+            "Action Preview": "Action Preview",
+            "CLI Parity": "CLI Parity",
+            "Identity Assurance": "Identity Assurance",
+            "Review Timeline": "Review Timeline",
+            "No matching runtime records for current filter.": "現在のフィルターに一致する runtime record はありません。",
+            "No matching review rows for current filter.": "現在のフィルターに一致する review row はありません。",
+            "No matching summary jobs for current filter.": "現在のフィルターに一致する summary job はありません。",
+            "Status": "状態",
+            "Expected actions": "想定アクション",
+            "Missing preview commands": "不足している preview command",
+            "Missing queue commands": "不足している queue command",
+            "Vector entries": "ベクター件数",
+            "Graph nodes": "グラフノード数",
+            "Graph edges": "グラフエッジ数",
+            "Needs-review records": "要レビュー件数",
+            "Warning priority": "Warning priority",
+            "Source refs total": "Source refs 合計",
+            "Warning counts": "Warning 件数",
+            "Status counts": "状態件数",
+            "Review capability counts": "Review capability 件数",
+            "Package readiness counts": "Package readiness 件数",
+            "Identity assurance counts": "Identity assurance 件数",
+            "Reviewer kind counts": "Reviewer kind 件数",
+            "Runtime provider counts": "Runtime provider 件数",
+            "Mutation readiness counts": "Mutation readiness 件数",
+            "Mutation operational counts": "Mutation operational 件数",
+            "Auth readiness counts": "Auth readiness 件数",
+            "Provider finish reasons": "Provider finish reason 件数",
+            "Provider statuses": "Provider status 件数",
+            "Runtime kinds": "Runtime kind 件数",
+            "Auth review capability counts": "Auth review capability 件数",
+            "Declared identity only": "Declared identity only",
+            "Session label required": "Session label required",
+            "Authorization warnings": "Authorization warnings",
+            "Missing identity": "Missing identity",
+            "Provider response": "Provider response",
+        },
+        "prefix": {
+            "Root: ": "ルート: ",
+            "Chronicle ID: ": "Chronicle ID: ",
+            "Status: ": "状態: ",
+            "Route: ": "Route: ",
+            "Action: ": "操作: ",
+            "Event: ": "イベント: ",
+            "Error code: ": "エラーコード: ",
+            "Identity assurance: ": "identity assurance: ",
+            "Identity assurance message: ": "identity assurance message: ",
+            "CLI equivalent: ": "CLI equivalent: ",
+            "Failure summary: ": "failure summary: ",
+            "Warnings: ": "warning: ",
+            "Recovery path: ": "recovery path: ",
+            "Rollback status: ": "rollback status: ",
+            "Transaction status: ": "transaction status: ",
+            "Durable mutation on failure: ": "failure 時 durable mutation: ",
+            "Possible errors: ": "possible errors: ",
+            "Recovery commands: ": "recovery commands: ",
+            "Follow-up commands: ": "follow-up commands: ",
+            "Read-only: ": "read-only: ",
+            "External model API: ": "external model API: ",
+            "GraphRAG runtime: ": "GraphRAG runtime: ",
+            "Vector DB: ": "vector DB: ",
+            "Graph DB: ": "graph DB: ",
+            "Bind scope: ": "bind scope: ",
+            "Mutation enabled: ": "mutation enabled: ",
+            "Mutation capability flag: ": "mutation capability flag: ",
+            "Auth mode: ": "auth mode: ",
+            "Authorization mode: ": "authorization mode: ",
+            "Session gating: ": "session gating: ",
+            "Mutation readiness: ": "mutation readiness: ",
+            "Write route: ": "write route: ",
+            "Write actions: ": "write actions: ",
+            "Write request fields: ": "write request fields: ",
+            "Write success status: ": "write success status: ",
+            "Write blocked status: ": "write blocked status: ",
+            "Identity proof status: ": "identity proof status: ",
+            "Identity proof fields: ": "identity proof fields: ",
+            "Source: ": "source: ",
+            "Provider kind: ": "provider kind: ",
+            "Provider name: ": "provider name: ",
+            "Model: ": "model: ",
+            "Allow network: ": "allow network: ",
+            "Allow external context: ": "allow external context: ",
+            "Auth blockers: ": "auth blockers: ",
+            "Auth next steps: ": "auth next steps: ",
+            "slice:": "slice:",
+            "Active view: ": "active view: ",
+            "view=": "view=",
+            "trail=": "trail=",
+            "Response ": "response ",
+            "More ": "more ",
+        },
+    },
+    "en": {
+        "label.language": "Language",
+        "locale.ja": "日本語",
+        "locale.en": "English",
+        "locale.zh-CN": "简体中文",
+        "shell.title": "Chronicle Stack Local UI",
+        "shell.root": "Root",
+        "shell.warning_title": "Read-only foreground local UI.",
+        "shell.warning_body": "This UI reads local Chronicle files and does not write records.",
+        "shell.boundary_body": "No daemon, no autostart, no external model API, no GraphRAG runtime, no vector DB, no graph DB. UI visibility is not correctness proof.",
+        "shell.loading_overview": "Loading overview...",
+        "shell.select_json": "Select JSON from a table row to inspect one record.",
+        "placeholder.runtime_filter": "Filter runtime records...",
+        "placeholder.review_filter": "Filter review queue...",
+        "placeholder.summary_filter": "Filter summary jobs...",
+        "placeholder.review_note": "optional review note",
+        "placeholder.reviewer": "alice",
+        "placeholder.session": "desk-session-1",
+        "button.copy_cli": "Copy CLI",
+        "button.copy_recovery_cli": "Copy Recovery CLI",
+        "button.preview_blocked_route": "Preview Blocked Route",
+        "button.apply": "Apply",
+        "button.reset_filter": "Reset Filter",
+        "button.clear_slice": "Clear Slice",
+        "button.open_package_review": "Open Package Review",
+        "button.open_runtime_records": "Open Runtime Records",
+        "button.open_review_queue": "Open Review Queue",
+        "button.open_summary_jobs": "Open Summary Jobs",
+        "button.open_runtime_config": "Open Runtime Config",
+        "status.loading_blocked_preview": "Loading blocked-route preview...",
+        "status.applying_review_action": "Applying review action...",
+        "status.blocked_route_preview": "Blocked Route Preview",
+        "status.review_action_result": "Review Action Result",
+        "status.not_found": "Not found.",
+        "status.no_message": "No message returned.",
+        "status.copied_recovery_cli": "Copied recovery CLI: ",
+        "status.copy_failed_command": "Copy failed; command: ",
+        "status.active_view": "Active view",
+        "status.sort": "Sort",
+        "status.more": "More",
+        "status.detail": "Detail",
+        "status.view": "view",
+        "status.trail": "trail",
+        "notice.action_preview": "Action Preview",
+        "notice.cli_parity": "CLI Parity",
+        "notice.identity_assurance": "Identity Assurance",
+        "notice.review_timeline": "Review Timeline",
+        "notice.mutation_enabled_detail": "Local mutation is enabled for this detail view. Every action still requires explicit reviewer context and writes audit-backed review history.",
+        "notice.mutation_enabled_runtime_records": "Local mutation is enabled for this runtime-record list view. Each action still requires explicit reviewer context and writes audit-backed review history.",
+        "notice.mutation_enabled_review_queue": "Local mutation is enabled for this list view. Each action still requires explicit reviewer context and writes audit-backed review history.",
+        "notice.mutation_enabled_summary_jobs": "Local mutation is enabled for summary-backed review targets. Actions still require explicit reviewer context and write audit-backed review history.",
+        "notice.blocked_route_preview_runtime_records": "Runtime-record blocked-route preview stays read-only and returns the CLI fallback contract.",
+        "notice.blocked_route_preview_review_queue": "Review queue blocked-route preview stays read-only and returns the CLI fallback contract.",
+        "notice.blocked_route_preview_summary_jobs": "Summary jobs blocked-route preview stays read-only and returns the CLI fallback contract.",
+        "notice.blocked_route_preview_detail": "Blocked route preview stays read-only and returns the CLI fallback contract.",
+        "badge.auth_aligned": "Auth aligned",
+        "badge.auth_advisory": "Auth advisory",
+        "badge.auth_na": "Auth n/a",
+        "badge.identity_aligned": "Identity aligned",
+        "badge.identity_advisory": "Identity advisory",
+        "badge.identity_na": "Identity n/a",
+        "badge.ready": "Ready",
+        "badge.resolved": "Resolved",
+        "badge.advisory": "Advisory",
+        "badge.package_ready": "Package Ready",
+        "badge.package_advisory": "Package Advisory",
+        "badge.package_unknown": "Package Unknown",
+        "badge.mutation_ready": "Mutation ready",
+        "badge.mutation_preview": "Mutation preview",
+        "badge.mutation_na": "Mutation n/a",
+        "section.counts": "Counts",
+        "section.runtime_boundary": "Runtime Boundary",
+        "section.runtime_config": "Runtime Config",
+        "section.ui_boundary": "UI Boundary",
+        "section.auth_boundary": "Auth Boundary",
+        "section.identity_boundary": "Identity Boundary",
+        "section.mutation_readiness": "Mutation Readiness",
+        "section.ai_index_snapshot": "AI Index Snapshot",
+        "section.runtime_records": "Runtime Records",
+        "section.summary_jobs": "Summary Jobs",
+        "section.triage": "Triage",
+        "sort.runtime.latest": "Latest first",
+        "sort.runtime.mutation": "Mutation readiness",
+        "sort.runtime.auth": "Auth readiness",
+        "sort.runtime.kind": "Kind",
+        "sort.review.attention": "Needs attention first",
+        "sort.review.parity": "CLI drift first",
+        "sort.review.latest": "Latest first",
+        "sort.review.reviewer": "Reviewer",
+        "sort.summary.latest": "Latest first",
+        "sort.summary.mutation": "Mutation readiness",
+        "sort.summary.review": "Needs attention first",
+        "sort.summary.title": "Title",
+        "filter.runtime.preview_only": "Runtime mutation preview",
+        "filter.runtime.advisory_only": "Runtime auth advisory",
+        "filter.runtime.boundary_aligned": "Runtime identity aligned",
+        "filter.runtime.retrieval_plan": "Runtime retrieval plans",
+        "filter.runtime.response_id": "Runtime provider response",
+        "filter.summary.preview_only": "Summary mutation preview",
+        "filter.summary.advisory_only": "Summary advisory",
+        "filter.summary.package_context_available": "Summary package ready",
+        "filter.summary.boundary_aligned": "Summary identity aligned",
+        "filter.summary.response_id": "Summary provider response",
+        "filter.review.review_requested": "Review requested",
+        "filter.review.ready": "Review ready",
+        "filter.review.advisory_only": "Review advisory",
+        "filter.review.advisory": "Review advisory",
+        "filter.review.drift_detected": "CLI drift",
+        "filter.review.aligned": "CLI aligned",
+        "filter.review.boundary_aligned": "Identity aligned",
+        "filter.review.ui_auth_not_enabled": "Auth boundary warnings",
+        "filter.review.reviewer_identity_declared_only": "Declared identity only",
+        "filter.review.package_context_available": "Package ready",
+        "filter.review.no_context_records": "Package advisory",
+        "detail.resource.runtime-records": "Runtime",
+        "detail.resource.review-queue": "Review",
+        "detail.resource.summary-jobs": "Summary",
+        "detail.resource.runtime-config": "Runtime Config",
+        "detail.resource.events": "Event",
+        "detail.resource.contexts": "Context",
+        "detail.resource.artifacts": "Artifact",
+        "detail.resource.decisions": "Decision",
+        "detail.resource.audit": "Audit",
+        "detail.resource.lifecycle": "Lifecycle",
+        "detail.resource.boundary": "Boundary",
+        "detail.resource.rde": "RDE",
+        "overview.authorization_warnings": "Authorization warnings",
+        "overview.missing_identity": "Missing identity",
+        "overview.provider_response": "Provider response",
+        "overview.session_label_required": "Session label required",
+        "overview.warning_priority": "Warning priority",
+    },
+    "zh-CN": {
+        "label.language": "显示语言",
+        "locale.ja": "日本語",
+        "locale.en": "English",
+        "locale.zh-CN": "简体中文",
+        "shell.title": "Chronicle Stack 本地界面",
+        "shell.root": "根目录",
+        "shell.warning_title": "这是只读的前台本地界面。",
+        "shell.warning_body": "该界面读取本地 Chronicle 文件，但不会写入记录。",
+        "shell.boundary_body": "无 daemon、无自动启动、无外部 model API、无 GraphRAG runtime、无 vector DB、无 graph DB。界面可见性不等于 correctness proof。",
+        "shell.loading_overview": "正在加载概览...",
+        "shell.select_json": "从表格行选择 JSON 以查看单条记录。",
+        "placeholder.runtime_filter": "筛选 runtime records...",
+        "placeholder.review_filter": "筛选 review queue...",
+        "placeholder.summary_filter": "筛选 summary jobs...",
+        "placeholder.review_note": "可选 review note",
+        "placeholder.reviewer": "alice",
+        "placeholder.session": "desk-session-1",
+        "button.copy_cli": "复制 CLI",
+        "button.copy_recovery_cli": "复制恢复 CLI",
+        "button.preview_blocked_route": "预览阻止路由",
+        "button.apply": "应用",
+        "button.reset_filter": "重置筛选",
+        "button.clear_slice": "清除切片",
+        "button.open_package_review": "打开包审查",
+        "button.open_runtime_records": "打开运行时记录",
+        "button.open_review_queue": "打开审查队列",
+        "button.open_summary_jobs": "打开摘要任务",
+        "button.open_runtime_config": "打开运行时配置",
+        "status.loading_blocked_preview": "正在加载阻止路由预览…",
+        "status.applying_review_action": "正在应用审查操作…",
+        "status.blocked_route_preview": "阻止路由预览",
+        "status.review_action_result": "审查操作结果",
+        "status.not_found": "未找到。",
+        "status.no_message": "未返回消息。",
+        "status.copied_recovery_cli": "已复制恢复 CLI: ",
+        "status.copy_failed_command": "复制失败；命令: ",
+        "status.active_view": "当前视图",
+        "status.sort": "排序",
+        "status.more": "更多",
+        "status.detail": "详情",
+        "status.view": "view",
+        "status.trail": "trail",
+        "notice.action_preview": "操作预览",
+        "notice.cli_parity": "CLI 一致性",
+        "notice.identity_assurance": "身份保证",
+        "notice.review_timeline": "审查时间线",
+        "notice.mutation_enabled_detail": "此详情视图已启用本地 mutation。每个操作仍需要显式 reviewer context，并会写入带审计支撑的审查历史。",
+        "notice.mutation_enabled_runtime_records": "此 runtime-record 列表视图已启用本地 mutation。每个操作仍需要显式 reviewer context，并会写入带审计支撑的审查历史。",
+        "notice.mutation_enabled_review_queue": "此列表视图已启用本地 mutation。每个操作仍需要显式 reviewer context，并会写入带审计支撑的审查历史。",
+        "notice.mutation_enabled_summary_jobs": "summary-backed 审查目标已启用本地 mutation。操作仍需要显式 reviewer context，并会写入带审计支撑的审查历史。",
+        "notice.blocked_route_preview_runtime_records": "runtime-record 的 blocked-route preview 保持只读，并返回 CLI fallback contract。",
+        "notice.blocked_route_preview_review_queue": "审查队列的 blocked-route preview 保持只读，并返回 CLI fallback contract。",
+        "notice.blocked_route_preview_summary_jobs": "摘要任务的 blocked-route preview 保持只读，并返回 CLI fallback contract。",
+        "notice.blocked_route_preview_detail": "blocked-route preview 保持只读，并返回 CLI fallback contract。",
+        "badge.auth_aligned": "Auth aligned",
+        "badge.auth_advisory": "Auth advisory",
+        "badge.auth_na": "Auth n/a",
+        "badge.identity_aligned": "Identity aligned",
+        "badge.identity_advisory": "Identity advisory",
+        "badge.identity_na": "Identity n/a",
+        "badge.ready": "就绪",
+        "badge.resolved": "已解决",
+        "badge.advisory": "仅提示",
+        "badge.package_ready": "Package Ready",
+        "badge.package_advisory": "Package Advisory",
+        "badge.package_unknown": "Package Unknown",
+        "badge.mutation_ready": "Mutation ready",
+        "badge.mutation_preview": "Mutation preview",
+        "badge.mutation_na": "Mutation n/a",
+        "section.counts": "计数",
+        "section.runtime_boundary": "Runtime Boundary",
+        "section.runtime_config": "Runtime Config",
+        "section.ui_boundary": "UI Boundary",
+        "section.auth_boundary": "Auth Boundary",
+        "section.identity_boundary": "Identity Boundary",
+        "section.mutation_readiness": "Mutation Readiness",
+        "section.ai_index_snapshot": "AI Index Snapshot",
+        "section.runtime_records": "Runtime Records",
+        "section.summary_jobs": "Summary Jobs",
+        "section.triage": "Triage",
+        "sort.runtime.latest": "最新优先",
+        "sort.runtime.mutation": "Mutation readiness",
+        "sort.runtime.auth": "Auth readiness",
+        "sort.runtime.kind": "Kind",
+        "sort.review.attention": "优先显示需关注项",
+        "sort.review.parity": "CLI drift first",
+        "sort.review.latest": "最新优先",
+        "sort.review.reviewer": "审阅者",
+        "sort.summary.latest": "最新优先",
+        "sort.summary.mutation": "Mutation readiness",
+        "sort.summary.review": "优先显示需关注项",
+        "sort.summary.title": "标题",
+        "filter.runtime.preview_only": "Runtime mutation preview",
+        "filter.runtime.advisory_only": "Runtime auth advisory",
+        "filter.runtime.boundary_aligned": "Runtime identity aligned",
+        "filter.runtime.retrieval_plan": "Runtime retrieval plans",
+        "filter.runtime.response_id": "Runtime provider response",
+        "filter.summary.preview_only": "Summary mutation preview",
+        "filter.summary.advisory_only": "Summary advisory",
+        "filter.summary.package_context_available": "Summary package ready",
+        "filter.summary.boundary_aligned": "Summary identity aligned",
+        "filter.summary.response_id": "Summary provider response",
+        "filter.review.review_requested": "Review requested",
+        "filter.review.ready": "Review ready",
+        "filter.review.advisory_only": "Review advisory",
+        "filter.review.advisory": "Review advisory",
+        "filter.review.drift_detected": "CLI drift",
+        "filter.review.aligned": "CLI aligned",
+        "filter.review.boundary_aligned": "Identity aligned",
+        "filter.review.ui_auth_not_enabled": "Auth boundary warnings",
+        "filter.review.reviewer_identity_declared_only": "Declared identity only",
+        "filter.review.package_context_available": "Package ready",
+        "filter.review.no_context_records": "Package advisory",
+        "detail.resource.runtime-records": "Runtime",
+        "detail.resource.review-queue": "Review",
+        "detail.resource.summary-jobs": "Summary",
+        "detail.resource.runtime-config": "Runtime Config",
+        "detail.resource.events": "Event",
+        "detail.resource.contexts": "Context",
+        "detail.resource.artifacts": "Artifact",
+        "detail.resource.decisions": "Decision",
+        "detail.resource.audit": "Audit",
+        "detail.resource.lifecycle": "Lifecycle",
+        "detail.resource.boundary": "Boundary",
+        "detail.resource.rde": "RDE",
+        "overview.authorization_warnings": "授权警告",
+        "overview.missing_identity": "缺少身份",
+        "overview.provider_response": "Provider 响应",
+        "overview.session_label_required": "需要会话标签",
+        "overview.warning_priority": "警告优先级",
+        "exact": {
+            "Overview": "概览",
+            "Events": "事件",
+            "Contexts": "上下文",
+            "Artifacts": "成果物",
+            "Decisions": "决策",
+            "Boundary": "边界",
+            "Audit": "审计",
+            "Lifecycle": "生命周期",
+            "Counts": "计数",
+            "Ready": "就绪",
+            "Resolved": "已解决",
+            "Advisory": "仅提示",
+            "Latest first": "最新优先",
+            "Needs attention first": "优先显示需关注项",
+            "Reviewer": "审阅者",
+            "Session": "会话",
+            "Note": "备注",
+            "Title": "标题",
+            "JSON": "JSON",
+            "Reset Filter": "重置筛选",
+            "Clear Slice": "清除切片",
+            "Detail": "详情",
+            "Blocked Route Preview": "阻止路由预览",
+            "Review Action Result": "审阅操作结果",
+        },
+        "prefix": {
+            "Root: ": "根目录: ",
+            "Status: ": "状态: ",
+            "Action: ": "操作: ",
+            "Event: ": "事件: ",
+            "Error code: ": "错误代码: ",
+            "Warnings: ": "警告: ",
+            "Response ": "响应 ",
+        },
+    },
+}
 
 
 class UIAuthMode:
@@ -2580,15 +3200,17 @@ class ChronicleUIDataService:
         title = html.escape(metadata.title)
         root = html.escape(str(self.root.resolve()))
         review_warning_labels_json = json.dumps(REVIEW_WARNING_LABELS, ensure_ascii=False)
+        ui_i18n_catalog_json = json.dumps(UI_I18N_CATALOG, ensure_ascii=False)
         return f"""<!DOCTYPE html>
 <html lang="ja">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Chronicle Local UI — {title}</title>
+<title>Chronicle Stack ローカルUI — {title}</title>
 <style>
 body {{ font-family: -apple-system, BlinkMacSystemFont, sans-serif; max-width: 1180px; margin: 0 auto; padding: 20px; color: #1f2937; }}
 button {{ margin: 3px; padding: 6px 9px; }}
+select, input {{ margin: 3px; padding: 6px 8px; }}
 .panel {{ border: 1px solid #e5e7eb; border-radius: 8px; padding: 14px; margin: 12px 0; }}
 .warning {{ background: #fefce8; border-left: 4px solid #eab308; padding: 10px 12px; }}
 .notice {{ background: #eff6ff; border-left: 4px solid #3b82f6; padding: 10px 12px; margin: 10px 0; }}
@@ -2603,23 +3225,31 @@ th, td {{ padding: 6px; border-bottom: 1px solid #e5e7eb; vertical-align: top; }
 </style>
 </head>
 <body>
-<h1>Chronicle Stack Local UI</h1>
+<div class="notice">
+  <label for="locale-select" id="locale-label">表示言語</label>
+  <select id="locale-select">
+    <option value="ja">日本語</option>
+    <option value="en">English</option>
+    <option value="zh-CN">简体中文</option>
+  </select>
+</div>
+<h1 id="shell-title">Chronicle Stack ローカルUI</h1>
 <p><strong>{title}</strong></p>
-<p>Root: <span class="id">{root}</span></p>
-<div class="warning">
-  <p><strong>Read-only foreground local UI.</strong> This UI reads local Chronicle files and does not write records.</p>
-  <p>No daemon, no autostart, no external model API, no GraphRAG runtime, no vector DB, no graph DB. UI visibility is not correctness proof.</p>
+<p><span id="shell-root-label">ルート</span>: <span class="id">{root}</span></p>
+<div class="warning" id="shell-warning">
+  <p><strong id="shell-warning-title">読み取り専用の前景ローカルUIです。</strong> <span id="shell-warning-body">このUIはローカルの Chronicle ファイルを読み取りますが、レコードは書き込みません。</span></p>
+  <p id="shell-boundary-body">daemon なし、自動起動なし、外部 model API なし、GraphRAG runtime なし、vector DB なし、graph DB なし。UI の可視化は correctness proof ではありません。</p>
 </div>
 <nav>
-  <button data-endpoint="/api/overview">Overview</button>
-  <button data-endpoint="/api/events">Events</button>
-  <button data-endpoint="/api/contexts">Contexts</button>
-  <button data-endpoint="/api/artifacts">Artifacts</button>
-  <button data-endpoint="/api/decisions">Decisions</button>
+  <button data-endpoint="/api/overview">概要</button>
+  <button data-endpoint="/api/events">イベント</button>
+  <button data-endpoint="/api/contexts">コンテキスト</button>
+  <button data-endpoint="/api/artifacts">成果物</button>
+  <button data-endpoint="/api/decisions">判断</button>
   <button data-endpoint="/api/rde">RDE</button>
-  <button data-endpoint="/api/boundary">Boundary</button>
-  <button data-endpoint="/api/audit">Audit</button>
-  <button data-endpoint="/api/lifecycle">Lifecycle</button>
+  <button data-endpoint="/api/boundary">境界</button>
+  <button data-endpoint="/api/audit">監査</button>
+  <button data-endpoint="/api/lifecycle">ライフサイクル</button>
   <button data-endpoint="/api/runtime-records">Runtime Records</button>
   <button data-endpoint="/api/review-queue">Review Queue</button>
   <button data-endpoint="/api/summary-jobs">Summary Jobs</button>
@@ -2632,11 +3262,131 @@ th, td {{ padding: 6px; border-bottom: 1px solid #e5e7eb; vertical-align: top; }
   <button data-endpoint="/api/ai-index-graph-nodes">AI Index Graph Nodes</button>
   <button data-endpoint="/api/ai-index-graph-edges">AI Index Graph Edges</button>
 </nav>
-<section id="view" class="panel"><p>Loading overview...</p></section>
-<section id="detail" class="panel"><p>Select JSON from a table row to inspect one record.</p></section>
+<section id="view" class="panel"><p id="shell-loading-overview">概要を読み込み中...</p></section>
+<section id="detail" class="panel"><p id="shell-select-json">テーブル行の JSON を選択して単一レコードを確認します。</p></section>
 <script>
 const idFields = ['event_id', 'context_id', 'artifact_id', 'decision_id', 'rde_record_id', 'rule_id', 'audit_id', 'lifecycle_id', 'record_id', 'node_id', 'summary_job_id'];
 const reviewWarningLabels = {review_warning_labels_json};
+const uiI18nCatalog = {ui_i18n_catalog_json};
+const supportedLocales = ['ja', 'en', 'zh-CN'];
+const defaultLocale = 'ja';
+function normalizeLocale(locale) {{
+  const value = String(locale || '').trim();
+  if (supportedLocales.includes(value)) return value;
+  if (value.startsWith('ja')) return 'ja';
+  if (value.startsWith('zh')) return 'zh-CN';
+  return 'en';
+}}
+function currentLocale() {{ return window.__chronicleLocale || defaultLocale; }}
+function t(key, fallback = '') {{
+  const locale = currentLocale();
+  const localeCatalog = uiI18nCatalog[locale] || {{}};
+  const englishCatalog = uiI18nCatalog.en || {{}};
+  return localeCatalog[key] || englishCatalog[key] || fallback || key;
+}}
+function exactTranslations() {{ return (uiI18nCatalog[currentLocale()] || {{}}).exact || {{}}; }}
+function prefixTranslations() {{ return (uiI18nCatalog[currentLocale()] || {{}}).prefix || {{}}; }}
+function localizeTextValue(value) {{
+  const text = String(value || '');
+  const exact = exactTranslations();
+  const trimmed = text.trim();
+  if (trimmed && exact[trimmed]) {{
+    return text.replace(trimmed, exact[trimmed]);
+  }}
+  const prefixes = prefixTranslations();
+  for (const [source, translated] of Object.entries(prefixes)) {{
+    if (text.includes(source)) {{
+      return text.replace(source, translated);
+    }}
+  }}
+  return text;
+}}
+function label(key, fallback = '') {{
+  return t(key, fallback || key);
+}}
+function localizeRenderedRegion(element) {{
+  if (!element) return;
+  const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT, {{
+    acceptNode(node) {{
+      const parent = node.parentElement;
+      if (!parent) return NodeFilter.FILTER_REJECT;
+      if (parent.closest('pre, code, .id')) return NodeFilter.FILTER_REJECT;
+      return NodeFilter.FILTER_ACCEPT;
+    }}
+  }});
+  const nodes = [];
+  while (walker.nextNode()) nodes.push(walker.currentNode);
+  nodes.forEach(node => {{
+    node.nodeValue = localizeTextValue(node.nodeValue || '');
+  }});
+}}
+function applyDynamicAttributeTranslations(root) {{
+  if (!root) return;
+  root.querySelectorAll('[data-filter-input]').forEach(input => {{
+    const target = String(input.getAttribute('data-filter-input') || '');
+    if (target === 'runtimeRecords') input.setAttribute('placeholder', t('placeholder.runtime_filter'));
+    if (target === 'reviewQueue') input.setAttribute('placeholder', t('placeholder.review_filter'));
+    if (target === 'summaryJobs') input.setAttribute('placeholder', t('placeholder.summary_filter'));
+  }});
+  root.querySelectorAll('input[id$=\"-reviewer-note\"]').forEach(input => input.setAttribute('placeholder', t('placeholder.review_note')));
+  root.querySelectorAll('input[id$=\"-reviewer-label\"]').forEach(input => input.setAttribute('placeholder', t('placeholder.reviewer')));
+  root.querySelectorAll('input[id$=\"-reviewer-session-label\"]').forEach(input => input.setAttribute('placeholder', t('placeholder.session')));
+}}
+function applyShellTranslations() {{
+  document.title = t('shell.title') + ' — ' + {json.dumps(metadata.title, ensure_ascii=False)};
+  document.documentElement.lang = currentLocale();
+  const localeLabel = document.getElementById('locale-label');
+  if (localeLabel) localeLabel.textContent = t('label.language');
+  const shellTitle = document.getElementById('shell-title');
+  if (shellTitle) shellTitle.textContent = t('shell.title');
+  const shellRootLabel = document.getElementById('shell-root-label');
+  if (shellRootLabel) shellRootLabel.textContent = t('shell.root');
+  const warningTitle = document.getElementById('shell-warning-title');
+  if (warningTitle) warningTitle.textContent = t('shell.warning_title');
+  const warningBody = document.getElementById('shell-warning-body');
+  if (warningBody) warningBody.textContent = t('shell.warning_body');
+  const boundaryBody = document.getElementById('shell-boundary-body');
+  if (boundaryBody) boundaryBody.textContent = t('shell.boundary_body');
+  const loadingOverview = document.getElementById('shell-loading-overview');
+  if (loadingOverview) loadingOverview.textContent = t('shell.loading_overview');
+  const selectJson = document.getElementById('shell-select-json');
+  if (selectJson) selectJson.textContent = t('shell.select_json');
+  document.querySelectorAll('button[data-endpoint]').forEach(button => {{
+    button.textContent = t('nav.' + button.dataset.endpoint, button.textContent || '');
+  }});
+  const localeSelect = document.getElementById('locale-select');
+  if (localeSelect) {{
+    Array.from(localeSelect.options).forEach(option => {{
+      option.textContent = t('locale.' + option.value, option.textContent || option.value);
+    }});
+    localeSelect.value = currentLocale();
+  }}
+}}
+function applyLocaleToPage() {{
+  applyShellTranslations();
+  const view = document.getElementById('view');
+  const detail = document.getElementById('detail');
+  localizeRenderedRegion(view);
+  localizeRenderedRegion(detail);
+  applyDynamicAttributeTranslations(view);
+  applyDynamicAttributeTranslations(detail);
+}}
+function initialLocale() {{
+  const params = new URLSearchParams(window.location.search);
+  const queryLocale = params.get('locale');
+  if (queryLocale) return normalizeLocale(queryLocale);
+  const storedLocale = window.localStorage.getItem('chronicle-ui-locale');
+  if (storedLocale) return normalizeLocale(storedLocale);
+  return normalizeLocale(navigator.language || defaultLocale);
+}}
+function setLocale(locale, rerender = true) {{
+  window.__chronicleLocale = normalizeLocale(locale);
+  window.localStorage.setItem('chronicle-ui-locale', window.__chronicleLocale);
+  applyLocaleToPage();
+  if (!rerender) return;
+  if (window.__chronicleCurrentEndpoint) loadEndpoint(window.__chronicleCurrentEndpoint);
+  if (window.__chronicleLastDetail) loadDetail(window.__chronicleLastDetail);
+}}
 function esc(value) {{ return String(value).replace(/[&<>\"']/g, ch => ({{'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}}[ch])); }}
 function firstArray(payload) {{ for (const key of Object.keys(payload)) if (Array.isArray(payload[key])) return payload[key]; return null; }}
 function badge(text, cls) {{ return '<span class="badge ' + cls + '">' + esc(text) + '</span>'; }}
@@ -2646,9 +3396,9 @@ function jumpBadge(text, cls, endpoint, filterTarget, filterValue) {{
   return '<button data-jump="' + esc(endpoint) + '"' + targetAttr + valueAttr + '>'
     + badge(text, cls) + '</button>';
 }}
-function copyCommandButton(command, targetId, label = 'Copy CLI') {{
+function copyCommandButton(command, targetId, label = '') {{
   if (!command) return '';
-  return '<button data-copy-command="' + esc(command) + '" data-copy-target="' + esc(targetId || 'action-preview-response') + '">' + esc(label) + '</button>';
+  return '<button data-copy-command="' + esc(command) + '" data-copy-target="' + esc(targetId || 'action-preview-response') + '">' + esc(label || t('button.copy_cli')) + '</button>';
 }}
 function sourceCountBadges(sourceCounts) {{
   return Object.entries(sourceCounts || {{}}).map(([key, value]) =>
@@ -2681,14 +3431,14 @@ function contractDetailLines(successContract, failureContract, targetId) {{
     + detailListLine('Possible errors', (failureContract || {{}}).possible_error_codes, ' | ')
     + detailListLine('Recovery commands', (failureContract || {{}}).recovery_commands, ' | ')
     + detailListLine('Follow-up commands', (successContract || {{}}).follow_up_commands, ' | ');
-  return lines + (resolvedContract.recovery_path ? '<p>' + copyCommandButton(resolvedContract.recovery_path, targetId, 'Copy Recovery CLI') + '</p>' : '');
+  return lines + (resolvedContract.recovery_path ? '<p>' + copyCommandButton(resolvedContract.recovery_path, targetId, t('button.copy_recovery_cli')) + '</p>' : '');
 }}
 function renderReviewActionResultPanel(title, responseStatus, path, payload, targetId, options = {{}}) {{
   const action = options.action || '';
   const recordId = options.recordId || '';
   const message = options.useStatusFallback
-    ? (payload.message || payload.status || 'No message returned.')
-    : (payload.message || 'No message returned.');
+    ? (payload.message || payload.status || t('status.no_message'))
+    : (payload.message || t('status.no_message'));
   const extraLines = options.extraLines || '';
   return ''
     + '<p><strong>' + esc(title) + '</strong></p>'
@@ -2701,10 +3451,10 @@ function renderReviewActionResultPanel(title, responseStatus, path, payload, tar
 }}
 function renderReviewMutationForm(title, prefix) {{
   return '<div class="notice"><strong>' + esc(title) + '</strong><p>'
-    + '<label>Reviewer <input id="' + esc(prefix) + '-reviewer-label" value="local-ui" placeholder="alice"></label> '
-    + '<label>Kind <select id="' + esc(prefix) + '-reviewer-kind"><option value="local_operator">local_operator</option><option value="user_declared">user_declared</option></select></label> '
-    + '<label>Session <input id="' + esc(prefix) + '-reviewer-session-label" value="local-ui-session" placeholder="desk-session-1"></label> '
-    + '<label>Note <input id="' + esc(prefix) + '-reviewer-note" placeholder="optional review note"></label></p></div>';
+    + '<label>' + esc(localizeTextValue('Reviewer')) + ' <input id="' + esc(prefix) + '-reviewer-label" value="local-ui" placeholder="' + esc(t('placeholder.reviewer')) + '"></label> '
+    + '<label>' + esc(localizeTextValue('Kind')) + ' <select id="' + esc(prefix) + '-reviewer-kind"><option value="local_operator">local_operator</option><option value="user_declared">user_declared</option></select></label> '
+    + '<label>' + esc(localizeTextValue('Session')) + ' <input id="' + esc(prefix) + '-reviewer-session-label" value="local-ui-session" placeholder="' + esc(t('placeholder.session')) + '"></label> '
+    + '<label>' + esc(localizeTextValue('Note')) + ' <input id="' + esc(prefix) + '-reviewer-note" placeholder="' + esc(t('placeholder.review_note')) + '"></label></p></div>';
 }}
 function renderPreviewSummary(preview) {{
   return preview.status
@@ -2776,35 +3526,35 @@ function renderPreviewButtons(previewActions, options = {{}}) {{
   const previewTarget = options.previewTarget || 'action-preview-response';
   return actions.map(item =>
     mutationEnabled
-      ? '<button data-submit-review-action="' + esc(item.post_path || '') + '" data-review-action="' + esc(item.action || '') + '" data-review-record="' + esc(recordId) + '" data-review-fields="' + esc(fieldPrefix) + '" data-success-detail="' + esc(successDetail) + '" data-preview-target="' + esc(previewTarget) + '">' + esc(item.label || item.action || 'Apply') + '</button>'
-      : '<button data-preview-post="' + esc(item.post_path || '') + '" data-preview-target="' + esc(previewTarget) + '">Preview blocked route</button>'
+      ? '<button data-submit-review-action="' + esc(item.post_path || '') + '" data-review-action="' + esc(item.action || '') + '" data-review-record="' + esc(recordId) + '" data-review-fields="' + esc(fieldPrefix) + '" data-success-detail="' + esc(successDetail) + '" data-preview-target="' + esc(previewTarget) + '">' + esc(item.label || item.action || t('button.apply')) + '</button>'
+      : '<button data-preview-post="' + esc(item.post_path || '') + '" data-preview-target="' + esc(previewTarget) + '">' + esc(t('button.preview_blocked_route')) + '</button>'
   ).join(' ');
 }}
 function authReadinessBadge(status) {{
   return status === 'boundary_aligned'
-    ? jumpBadge('Auth aligned', 'badge-ready', '/api/review-queue', 'reviewQueue', 'boundary_aligned')
-    : jumpBadge('Auth advisory', 'badge-warning', '/api/review-queue', 'reviewQueue', status || 'advisory_only');
+    ? jumpBadge(label('badge.auth_aligned', 'Auth aligned'), 'badge-ready', '/api/review-queue', 'reviewQueue', 'boundary_aligned')
+    : jumpBadge(label('badge.auth_advisory', 'Auth advisory'), 'badge-warning', '/api/review-queue', 'reviewQueue', status || 'advisory_only');
 }}
 function identityAssuranceBadge(status) {{
   return status === 'boundary_aligned'
-    ? jumpBadge('Identity aligned', 'badge-ready', '/api/review-queue', 'reviewQueue', 'boundary_aligned')
+    ? jumpBadge(label('badge.identity_aligned', 'Identity aligned'), 'badge-ready', '/api/review-queue', 'reviewQueue', 'boundary_aligned')
     : status
-      ? jumpBadge('Identity advisory', 'badge-warning', '/api/review-queue', 'reviewQueue', status)
-      : badge('Identity n/a', 'badge-neutral');
+      ? jumpBadge(label('badge.identity_advisory', 'Identity advisory'), 'badge-warning', '/api/review-queue', 'reviewQueue', status)
+      : badge(label('badge.identity_na', 'Identity n/a'), 'badge-neutral');
 }}
 function summaryReviewStatusBadge(status) {{
   return status === 'ready'
-    ? jumpBadge('Ready', 'badge-ready', '/api/review-queue', 'reviewQueue', 'ready')
+    ? jumpBadge(label('badge.ready', 'Ready'), 'badge-ready', '/api/review-queue', 'reviewQueue', 'ready')
     : status === 'resolved'
-      ? jumpBadge('Resolved', 'badge-neutral', '/api/review-queue', 'reviewQueue', 'resolved')
-      : jumpBadge('Advisory', 'badge-warning', '/api/review-queue', 'reviewQueue', 'advisory');
+      ? jumpBadge(label('badge.resolved', 'Resolved'), 'badge-neutral', '/api/review-queue', 'reviewQueue', 'resolved')
+      : jumpBadge(label('badge.advisory', 'Advisory'), 'badge-warning', '/api/review-queue', 'reviewQueue', 'advisory');
 }}
 function packageStatusBadge(status) {{
   return status === 'package_context_available'
-    ? jumpBadge('Package Ready', 'badge-ready', '/api/review-queue', 'reviewQueue', 'package:package_context_available')
+    ? jumpBadge(label('badge.package_ready', 'Package Ready'), 'badge-ready', '/api/review-queue', 'reviewQueue', 'package:package_context_available')
     : status === 'no_context_records'
-      ? jumpBadge('Package Advisory', 'badge-warning', '/api/review-queue', 'reviewQueue', 'package:no_context_records')
-      : badge(status || 'Package Unknown', 'badge-neutral');
+      ? jumpBadge(label('badge.package_advisory', 'Package Advisory'), 'badge-warning', '/api/review-queue', 'reviewQueue', 'package:no_context_records')
+      : badge(status || label('badge.package_unknown', 'Package Unknown'), 'badge-neutral');
 }}
 function previewButtonsConfig(row, config) {{
   return {{
@@ -2816,9 +3566,9 @@ function previewButtonsConfig(row, config) {{
   }};
 }}
 function mutationEnablementBadge(summary) {{
-  if (!summary || !summary.status) return badge('Mutation n/a', 'badge-neutral');
-  if (summary.enablement_ready) return badge('Mutation ready', 'badge-ready');
-  return badge('Mutation preview', 'badge-warning');
+  if (!summary || !summary.status) return badge(label('badge.mutation_na', 'Mutation n/a'), 'badge-neutral');
+  if (summary.enablement_ready) return badge(label('badge.mutation_ready', 'Mutation ready'), 'badge-ready');
+  return badge(label('badge.mutation_preview', 'Mutation preview'), 'badge-warning');
 }}
 function renderMutationEnablementSummary(summary) {{
   if (!summary || !summary.status) return '';
@@ -3052,7 +3802,7 @@ function renderRuntimeRecordsTable(endpoint, rows) {{
   }});
   const sorted = sortRuntimeRows(filtered);
   const mutationEnabled = sorted.some(row => row.ui_mutation_enabled);
-  return listToolbar(endpoint, 'runtimeRecords', 'Filter runtime records...', [
+  return listToolbar(endpoint, 'runtimeRecords', t('placeholder.runtime_filter'), [
       {{ value: 'latest', label: 'Latest first' }},
       {{ value: 'mutation', label: 'Mutation readiness' }},
       {{ value: 'auth', label: 'Auth readiness' }},
@@ -3062,14 +3812,14 @@ function renderRuntimeRecordsTable(endpoint, rows) {{
     + emptyFilterState(query, sorted, 'No matching runtime records for current filter.')
     + (
       mutationEnabled
-        ? renderReviewMutationForm('Local Review Mutation', 'runtime-records')
+        ? renderReviewMutationForm(localizeTextValue('Local Review Mutation'), 'runtime-records')
         : ''
     )
     + actionPreviewStatus(
       'runtime-records-action-preview-response',
       mutationEnabled,
-      'Local mutation is enabled for this runtime-record list view. Each action still requires explicit reviewer context and writes audit-backed review history.',
-      'Runtime-record blocked-route preview stays read-only and returns the CLI fallback contract.'
+      t('notice.mutation_enabled_runtime_records'),
+      t('notice.blocked_route_preview_runtime_records')
     )
     + tableHtml(['detail', 'event', 'kind', 'auth', 'preview', 'review route', 'source counts'], sorted.map(row => renderRuntimeRecordRow(row, endpoint)).join(''));
 }}
@@ -3108,7 +3858,7 @@ function renderReviewQueueTable(endpoint, rows) {{
   }});
   const sorted = sortReviewRows(filtered);
   const mutationEnabled = sorted.some(row => row.ui_mutation_enabled);
-  return listToolbar(endpoint, 'reviewQueue', 'Filter review queue...', [
+  return listToolbar(endpoint, 'reviewQueue', t('placeholder.review_filter'), [
       {{ value: 'attention', label: 'Needs attention first' }},
       {{ value: 'parity', label: 'CLI drift first' }},
       {{ value: 'latest', label: 'Latest first' }},
@@ -3118,14 +3868,14 @@ function renderReviewQueueTable(endpoint, rows) {{
     + emptyFilterState(query, sorted, 'No matching review rows for current filter.')
     + (
       mutationEnabled
-        ? renderReviewMutationForm('Local Review Mutation', 'review-queue')
+        ? renderReviewMutationForm(localizeTextValue('Local Review Mutation'), 'review-queue')
         : ''
     )
     + actionPreviewStatus(
       'review-queue-action-preview-response',
       mutationEnabled,
-      'Local mutation is enabled for this list view. Each action still requires explicit reviewer context and writes audit-backed review history.',
-      'Review queue blocked-route preview stays read-only and returns the CLI fallback contract.'
+      t('notice.mutation_enabled_review_queue'),
+      t('notice.blocked_route_preview_review_queue')
     )
     + tableHtml(['detail', 'target', 'status', 'auth', 'preview', 'warnings', 'latest reviewer'], sorted.map(row => renderReviewQueueRow(row, endpoint)).join(''));
 }}
@@ -3162,7 +3912,7 @@ function renderSummaryJobsTable(endpoint, rows) {{
   }});
   const sorted = sortSummaryJobRows(filtered);
   const mutationEnabled = sorted.some(row => row.ui_mutation_enabled);
-  return listToolbar(endpoint, 'summaryJobs', 'Filter summary jobs...', [
+  return listToolbar(endpoint, 'summaryJobs', t('placeholder.summary_filter'), [
       {{ value: 'latest', label: 'Latest first' }},
       {{ value: 'mutation', label: 'Mutation readiness' }},
       {{ value: 'review', label: 'Needs attention first' }},
@@ -3172,14 +3922,14 @@ function renderSummaryJobsTable(endpoint, rows) {{
     + emptyFilterState(query, sorted, 'No matching summary jobs for current filter.')
     + (
       mutationEnabled
-        ? renderReviewMutationForm('Summary Review Mutation', 'summary-jobs')
+        ? renderReviewMutationForm(localizeTextValue('Summary Review Mutation'), 'summary-jobs')
         : ''
     )
     + actionPreviewStatus(
       'summary-jobs-action-preview-response',
       mutationEnabled,
-      'Local mutation is enabled for summary-backed review targets. Actions still require explicit reviewer context and write audit-backed review history.',
-      'Summary jobs blocked-route preview stays read-only and returns the CLI fallback contract.'
+      t('notice.mutation_enabled_summary_jobs'),
+      t('notice.blocked_route_preview_summary_jobs')
     )
     + tableHtml(['detail', 'summary job', 'status', 'review', 'auth', 'identity', 'package', 'preview', 'runtime', 'sources'], sorted.map(row => renderSummaryJobRow(row, endpoint)).join(''));
 }}
@@ -3491,22 +4241,22 @@ function sortValueLabel(endpoint, sortValue) {{
   const normalizedSort = String(sortValue || '');
   if (!normalizedSort) return '';
   if (normalizedEndpoint === '/api/runtime-records') {{
-    if (normalizedSort === 'latest') return 'Latest first';
-    if (normalizedSort === 'mutation') return 'Mutation readiness';
-    if (normalizedSort === 'auth') return 'Auth readiness';
-    if (normalizedSort === 'kind') return 'Kind';
+    if (normalizedSort === 'latest') return label('sort.runtime.latest', 'Latest first');
+    if (normalizedSort === 'mutation') return label('sort.runtime.mutation', 'Mutation readiness');
+    if (normalizedSort === 'auth') return label('sort.runtime.auth', 'Auth readiness');
+    if (normalizedSort === 'kind') return label('sort.runtime.kind', 'Kind');
   }}
   if (normalizedEndpoint === '/api/review-queue') {{
-    if (normalizedSort === 'attention') return 'Needs attention first';
-    if (normalizedSort === 'parity') return 'CLI drift first';
-    if (normalizedSort === 'latest') return 'Latest first';
-    if (normalizedSort === 'reviewer') return 'Reviewer';
+    if (normalizedSort === 'attention') return label('sort.review.attention', 'Needs attention first');
+    if (normalizedSort === 'parity') return label('sort.review.parity', 'CLI drift first');
+    if (normalizedSort === 'latest') return label('sort.review.latest', 'Latest first');
+    if (normalizedSort === 'reviewer') return label('sort.review.reviewer', 'Reviewer');
   }}
   if (normalizedEndpoint === '/api/summary-jobs') {{
-    if (normalizedSort === 'latest') return 'Latest first';
-    if (normalizedSort === 'mutation') return 'Mutation readiness';
-    if (normalizedSort === 'review') return 'Needs attention first';
-    if (normalizedSort === 'title') return 'Title';
+    if (normalizedSort === 'latest') return label('sort.summary.latest', 'Latest first');
+    if (normalizedSort === 'mutation') return label('sort.summary.mutation', 'Mutation readiness');
+    if (normalizedSort === 'review') return label('sort.summary.review', 'Needs attention first');
+    if (normalizedSort === 'title') return label('sort.summary.title', 'Title');
   }}
   return normalizedSort.replaceAll('_', ' ');
 }}
@@ -3556,30 +4306,30 @@ function filterValueLabel(target, value) {{
   const normalizedValue = String(value || '');
   if (!normalizedValue) return '';
   if (normalizedTarget === 'runtimeRecords') {{
-    if (normalizedValue === 'preview_only') return 'Runtime mutation preview';
-    if (normalizedValue === 'advisory_only') return 'Runtime auth advisory';
-    if (normalizedValue === 'boundary_aligned') return 'Runtime identity aligned';
-    if (normalizedValue === 'retrieval_plan') return 'Runtime retrieval plans';
-    if (normalizedValue === 'response_id') return 'Runtime provider response';
+    if (normalizedValue === 'preview_only') return label('filter.runtime.preview_only', 'Runtime mutation preview');
+    if (normalizedValue === 'advisory_only') return label('filter.runtime.advisory_only', 'Runtime auth advisory');
+    if (normalizedValue === 'boundary_aligned') return label('filter.runtime.boundary_aligned', 'Runtime identity aligned');
+    if (normalizedValue === 'retrieval_plan') return label('filter.runtime.retrieval_plan', 'Runtime retrieval plans');
+    if (normalizedValue === 'response_id') return label('filter.runtime.response_id', 'Runtime provider response');
   }}
   if (normalizedTarget === 'summaryJobs') {{
-    if (normalizedValue === 'preview_only') return 'Summary mutation preview';
-    if (normalizedValue === 'advisory_only') return 'Summary advisory';
-    if (normalizedValue === 'package_context_available') return 'Summary package ready';
-    if (normalizedValue === 'boundary_aligned') return 'Summary identity aligned';
-    if (normalizedValue === 'response_id') return 'Summary provider response';
+    if (normalizedValue === 'preview_only') return label('filter.summary.preview_only', 'Summary mutation preview');
+    if (normalizedValue === 'advisory_only') return label('filter.summary.advisory_only', 'Summary advisory');
+    if (normalizedValue === 'package_context_available') return label('filter.summary.package_context_available', 'Summary package ready');
+    if (normalizedValue === 'boundary_aligned') return label('filter.summary.boundary_aligned', 'Summary identity aligned');
+    if (normalizedValue === 'response_id') return label('filter.summary.response_id', 'Summary provider response');
   }}
   if (normalizedTarget === 'reviewQueue') {{
-    if (normalizedValue === 'review_requested') return 'Review requested';
-    if (normalizedValue === 'ready') return 'Review ready';
-    if (normalizedValue === 'advisory_only' || normalizedValue === 'advisory') return 'Review advisory';
-    if (normalizedValue === 'drift_detected') return 'CLI drift';
-    if (normalizedValue === 'aligned') return 'CLI aligned';
-    if (normalizedValue === 'boundary_aligned') return 'Identity aligned';
-    if (normalizedValue === 'ui_auth_not_enabled') return 'Auth boundary warnings';
-    if (normalizedValue === 'reviewer_identity_declared_only') return 'Declared identity only';
-    if (normalizedValue === 'package:package_context_available') return 'Package ready';
-    if (normalizedValue === 'package:no_context_records') return 'Package advisory';
+    if (normalizedValue === 'review_requested') return label('filter.review.review_requested', 'Review requested');
+    if (normalizedValue === 'ready') return label('filter.review.ready', 'Review ready');
+    if (normalizedValue === 'advisory_only' || normalizedValue === 'advisory') return label('filter.review.advisory', 'Review advisory');
+    if (normalizedValue === 'drift_detected') return label('filter.review.drift_detected', 'CLI drift');
+    if (normalizedValue === 'aligned') return label('filter.review.aligned', 'CLI aligned');
+    if (normalizedValue === 'boundary_aligned') return label('filter.review.boundary_aligned', 'Identity aligned');
+    if (normalizedValue === 'ui_auth_not_enabled') return label('filter.review.ui_auth_not_enabled', 'Auth boundary warnings');
+    if (normalizedValue === 'reviewer_identity_declared_only') return label('filter.review.reviewer_identity_declared_only', 'Declared identity only');
+    if (normalizedValue === 'package:package_context_available') return label('filter.review.package_context_available', 'Package ready');
+    if (normalizedValue === 'package:no_context_records') return label('filter.review.no_context_records', 'Package advisory');
   }}
   return normalizedValue.replaceAll('_', ' ');
 }}
@@ -3644,37 +4394,23 @@ function summaryJobsSliceButtons() {{
 function activeViewSummary(endpoint, mode) {{
   const parts = [];
   const currentEndpoint = endpoint || window.__chronicleCurrentEndpoint || '/api/overview';
-  parts.push('view=' + currentEndpoint);
+  parts.push(label('status.view', 'view') + '=' + currentEndpoint);
   const filterLabel = currentFilterLabel();
   if (filterLabel) parts.push(filterLabel);
   const sortLabel = currentSortLabel(currentEndpoint);
   if (sortLabel) parts.push(sortLabel);
   if (mode === 'detail') {{
     const trailLabel = currentTrailLabel();
-    if (trailLabel) parts.push('trail=' + trailLabel);
+    if (trailLabel) parts.push(label('status.trail', 'trail') + '=' + trailLabel);
   }}
-  return '<p class="id">Active view: ' + esc(parts.join(' | ')) + '</p>';
+  return '<p class="id">' + esc(label('status.active_view', 'Active view')) + ': ' + esc(parts.join(' | ')) + '</p>';
 }}
 function humanizeDetailPath(path) {{
   const parts = String(path || '').split('/').filter(Boolean);
   if (parts.length < 3 || parts[0] !== 'api') return String(path || '');
   const resource = parts[1];
   const recordId = parts[2];
-  const labels = {{
-    'runtime-records': 'Runtime',
-    'review-queue': 'Review',
-    'summary-jobs': 'Summary',
-    'runtime-config': 'Runtime Config',
-    'events': 'Event',
-    'contexts': 'Context',
-    'artifacts': 'Artifact',
-    'decisions': 'Decision',
-    'audit': 'Audit',
-    'lifecycle': 'Lifecycle',
-    'boundary': 'Boundary',
-    'rde': 'RDE',
-  }};
-  return (labels[resource] || resource) + ': ' + recordId;
+  return label('detail.resource.' + resource, resource) + ': ' + recordId;
 }}
 function overviewJumpButton(label, endpoint, filterTarget, filterValue, variant) {{
   const targetAttr = filterTarget ? ' data-filter-target="' + esc(filterTarget) + '"' : '';
@@ -3695,7 +4431,7 @@ function sectionTitle(text) {{
   return '<h3>' + esc(text) + '</h3>';
 }}
 function detailLine(label, value) {{
-  return '<p>' + esc(label) + ': ' + esc(value || '') + '</p>';
+  return '<p>' + esc(localizeTextValue(label)) + ': ' + esc(value || '') + '</p>';
 }}
 function detailListLine(label, values, separator) {{
   const items = Array.isArray(values) ? values : [];
@@ -3703,7 +4439,7 @@ function detailListLine(label, values, separator) {{
   return detailLine(label, items.join(joiner) || '(none)');
 }}
 function summaryJsonLine(label, value) {{
-  return '<p>' + esc(label) + ': ' + esc(JSON.stringify(value || {{}})) + '</p>';
+  return '<p>' + esc(localizeTextValue(label)) + ': ' + esc(JSON.stringify(value || {{}})) + '</p>';
 }}
 function messageParagraph(message) {{
   return '<p>' + esc(message || '') + '</p>';
@@ -3713,13 +4449,13 @@ function buttonRow(buttons) {{
 }}
 function moreStatusButtons(status, endpoint, filterTarget, prefix = '') {{
   if (!status) return [];
-  return [listJumpButton('More ' + status, endpoint, filterTarget, prefix + status)];
+  return [listJumpButton(label('status.more', 'More') + ' ' + status, endpoint, filterTarget, prefix + status)];
 }}
 function statusMessageBody(status, message, buttons = []) {{
   return detailLine('Status', status || '') + buttonRow(buttons) + messageParagraph(message);
 }}
 function routeHeading(endpoint) {{
-  return '<h2>' + esc(endpoint) + '</h2>';
+  return '<h2>' + esc(endpoint === '/api/overview' ? label('nav./api/overview', 'Overview') : endpoint) + '</h2>';
 }}
 function prettyJsonPre(value) {{
   return '<pre>' + esc(JSON.stringify(value, null, 2)) + '</pre>';
@@ -3729,34 +4465,34 @@ function renderNotice(title, body) {{
 }}
 function packageReviewButtons(record) {{
   return (record.package_handoff_preview || record.package_readiness)
-    ? [listJumpButton('Open Package Review', '/api/package-review')]
+    ? [listJumpButton(label('button.open_package_review', 'Open Package Review'), '/api/package-review')]
     : [];
 }}
 function runtimeRelatedButtons(record) {{
-  const buttons = [listJumpButton('Open Runtime Records', '/api/runtime-records')];
+  const buttons = [listJumpButton(label('button.open_runtime_records', 'Open Runtime Records'), '/api/runtime-records')];
   const runtimeKind = record.runtime_record_kind || (record.runtime_record_preview && record.runtime_record_preview.record_kind) || '';
   if (runtimeKind) buttons.push(moreSliceButton(runtimeKind, '/api/runtime-records', 'runtimeRecords'));
   return buttons;
 }}
 function reviewRelatedButtons(record) {{
-  const buttons = [listJumpButton('Open Review Queue', '/api/review-queue')];
+  const buttons = [listJumpButton(label('button.open_review_queue', 'Open Review Queue'), '/api/review-queue')];
   const capability = record.review_capability || {{}};
   const readiness = record.package_readiness || {{}};
   const warnings = Array.isArray(capability.warnings) ? capability.warnings : [];
   if (record.review_kind) buttons.push(moreSliceButton(record.review_kind, '/api/review-queue', 'reviewQueue'));
   if (capability.status) buttons.push(moreSliceButton(capability.status, '/api/review-queue', 'reviewQueue'));
   warnings.slice(0, 2).forEach(code => buttons.push(moreSliceButton(code, '/api/review-queue', 'reviewQueue')));
-  if (readiness.status) buttons.push(listJumpButton('More ' + readiness.status, '/api/review-queue', 'reviewQueue', 'package:' + readiness.status));
+  if (readiness.status) buttons.push(listJumpButton(label('status.more', 'More') + ' ' + readiness.status, '/api/review-queue', 'reviewQueue', 'package:' + readiness.status));
   return buttons;
 }}
 function summaryRelatedButtons(record) {{
-  const buttons = [listJumpButton('Open Summary Jobs', '/api/summary-jobs')];
-  if (record.review_target_event_id) buttons.push(listJumpButton('Open Review Queue', '/api/review-queue'));
+  const buttons = [listJumpButton(label('button.open_summary_jobs', 'Open Summary Jobs'), '/api/summary-jobs')];
+  if (record.review_target_event_id) buttons.push(listJumpButton(label('button.open_review_queue', 'Open Review Queue'), '/api/review-queue'));
   const capability = record.review_capability || {{}};
   const readiness = record.package_readiness || {{}};
   const parity = record.cli_parity || {{}};
   if (capability.status) buttons.push(moreSliceButton(capability.status, '/api/review-queue', 'reviewQueue'));
-  if (readiness.status) buttons.push(listJumpButton('More ' + readiness.status, '/api/review-queue', 'reviewQueue', 'package:' + readiness.status));
+  if (readiness.status) buttons.push(listJumpButton(label('status.more', 'More') + ' ' + readiness.status, '/api/review-queue', 'reviewQueue', 'package:' + readiness.status));
   if (parity.status) buttons.push(moreSliceButton(parity.status, '/api/review-queue', 'reviewQueue'));
   return buttons;
 }}
@@ -3779,7 +4515,7 @@ function renderNavigationNotice(endpoint, record, options = {{}}) {{
     activeViewSummary(endpoint, 'detail')
       + '<p><button data-back-view="true">Back to current list</button> '
       + (previousDetail ? '<button data-back-detail="true">Back to previous detail</button> ' : '')
-      + (hasActiveFilters() ? '<button data-reset-filters="all">Reset Filters</button> ' : '')
+      + (hasActiveFilters() ? '<button data-reset-filters="all">' + esc(label('button.reset_filter', 'Reset Filter')) + '</button> ' : '')
       + '<span class="id">' + esc(window.__chronicleCurrentEndpoint || '/api/overview') + '</span> → '
       + '<span class="id">' + esc(endpoint) + '</span>'
       + (filterLabel ? ' <span class="id">(' + esc(filterLabel) + ')</span>' : '')
@@ -3999,7 +4735,7 @@ function renderDetailActionPreviewNotice(record) {{
     ...moreStatusButtons(parity.status, '/api/review-queue', 'reviewQueue'),
   ];
   return renderNotice(
-    'Action Preview',
+    label('notice.action_preview', 'Action Preview'),
     messageParagraph(preview.message)
       + detailLine('Status', preview.status || '')
       + buttonRow(previewButtons)
@@ -4015,8 +4751,8 @@ function renderDetailActionPreviewNotice(record) {{
       + '<div id="action-preview-response"><p>'
       + (
         preview.ui_mutation_enabled
-          ? 'Local mutation is enabled for this detail view. Every action still requires explicit reviewer context and writes audit-backed review history.'
-          : 'Blocked route preview stays read-only and returns the CLI fallback contract.'
+          ? t('notice.mutation_enabled_detail')
+          : t('notice.blocked_route_preview_detail')
       )
       + '</p></div>'
   );
@@ -4026,7 +4762,7 @@ function renderCliParityNotice(record) {{
   const parity = record.cli_parity;
   const parityButtons = moreStatusButtons(parity.status, '/api/review-queue', 'reviewQueue');
   return renderNotice(
-    'CLI Parity',
+    label('notice.cli_parity', 'CLI Parity'),
     messageParagraph(parity.message)
       + detailLine('Status', parity.status || '')
       + buttonRow(parityButtons)
@@ -4040,14 +4776,14 @@ function renderIdentityAssuranceNotice(record) {{
   const assurance = record.latest_identity_assurance;
   const assuranceButtons = moreStatusButtons(assurance.status, '/api/review-queue', 'reviewQueue');
   return renderNotice(
-    'Identity Assurance',
+    label('notice.identity_assurance', 'Identity Assurance'),
     statusMessageBody(assurance.status, assurance.message, assuranceButtons)
   );
 }}
 function renderReviewTimelineNotice(record) {{
   if (!Array.isArray(record.history) || record.history.length === 0) return '';
   return renderNotice(
-    'Review Timeline',
+    label('notice.review_timeline', 'Review Timeline'),
     '<ul>' + record.history.map(item => {{
       const timelineButtons = [
         ...moreStatusButtons(item.disposition, '/api/review-queue', 'reviewQueue'),
@@ -4082,7 +4818,7 @@ async function postJson(path, body = undefined) {{
 }}
 function appendCommandFeedback(target, command, copied) {{
   if (!target) return;
-  target.innerHTML += '<p>' + esc(copied ? 'Copied recovery CLI: ' : 'Copy failed; command: ') + '<span class="id">' + esc(command) + '</span></p>';
+  target.innerHTML += '<p>' + esc(copied ? t('status.copied_recovery_cli') : t('status.copy_failed_command')) + '<span class="id">' + esc(command) + '</span></p>';
 }}
 async function tryCopyText(command) {{
   if (navigator.clipboard && navigator.clipboard.writeText) {{
@@ -4207,8 +4943,8 @@ function renderPanel(body) {{
 function renderOverviewHeaderPanel(chronicle) {{
   return renderPanel(
     '<p><strong>' + esc(chronicle.title || '') + '</strong></p>'
-    + '<p>Chronicle ID: <span class="id">' + esc(chronicle.id || '') + '</span></p>'
-    + '<p>Root: <span class="id">' + esc(chronicle.root || '') + '</span></p>'
+    + '<p>' + esc(localizeTextValue('Chronicle ID')) + ': <span class="id">' + esc(chronicle.id || '') + '</span></p>'
+    + '<p>' + esc(localizeTextValue('Root')) + ': <span class="id">' + esc(chronicle.root || '') + '</span></p>'
   );
 }}
 function renderOverviewCountsPanel(counts) {{
@@ -4216,23 +4952,23 @@ function renderOverviewCountsPanel(counts) {{
     '<tr><th>' + esc(key) + '</th><td>' + esc(value ?? '') + '</td></tr>'
   ).join('');
   return renderPanel(
-    sectionTitle('Counts')
+    sectionTitle(label('section.counts', 'Counts'))
     + '<table><tbody>' + countRows + '</tbody></table>'
   );
 }}
 function renderOverviewRuntimeBoundaryPanel(runtime) {{
   return renderPanel(
-    sectionTitle('Runtime Boundary')
-    + '<p>Read-only: ' + esc(runtime.read_only) + '</p>'
-    + '<p>External model API: ' + esc(runtime.external_model_api) + '</p>'
-    + '<p>GraphRAG runtime: ' + esc(runtime.graphrag_runtime) + '</p>'
-    + '<p>Vector DB: ' + esc(runtime.vector_db) + '</p>'
-    + '<p>Graph DB: ' + esc(runtime.graph_db) + '</p>'
+    sectionTitle(label('section.runtime_boundary', 'Runtime Boundary'))
+    + detailLine('Read-only', runtime.read_only)
+    + detailLine('External model API', runtime.external_model_api)
+    + detailLine('GraphRAG runtime', runtime.graphrag_runtime)
+    + detailLine('Vector DB', runtime.vector_db)
+    + detailLine('Graph DB', runtime.graph_db)
   );
 }}
 function renderOverviewRuntimeConfigPanel(runtimeConfig, runtimeConfigContract) {{
   return renderPanel(
-    sectionTitle('Runtime Config')
+    sectionTitle(label('section.runtime_config', 'Runtime Config'))
     + detailLine('Source', runtimeConfig.source || '')
     + detailLine('Provider kind', runtimeConfigContract.provider_kind || '')
     + detailLine('Provider name', runtimeConfigContract.provider_name || '')
@@ -4240,21 +4976,21 @@ function renderOverviewRuntimeConfigPanel(runtimeConfig, runtimeConfigContract) 
     + detailLine('Allow network', runtimeConfigContract.allow_network)
     + detailLine('Allow external context', runtimeConfigContract.allow_external_context)
     + detailListLine('Warnings', runtimeConfig.warnings, ' | ')
-    + '<p>' + listJumpButton('Open Runtime Config', '/api/runtime-config') + '</p>'
+    + '<p>' + listJumpButton(label('button.open_runtime_config', 'Open Runtime Config'), '/api/runtime-config') + '</p>'
   );
 }}
 function renderOverviewUiBoundaryPanel(uiBoundary) {{
   const writeRouteContract = uiBoundary.write_route_contract || {{}};
   const identityProofContract = writeRouteContract.identity_proof_contract || {{}};
   return renderPanel(
-    sectionTitle('UI Boundary')
-    + '<p>Bind scope: ' + esc(uiBoundary.bind_scope || '') + '</p>'
-    + '<p>Mutation enabled: ' + esc(uiBoundary.mutation_enabled) + '</p>'
-    + '<p>Mutation capability flag: ' + esc(uiBoundary.mutation_capability_flag) + '</p>'
-    + '<p>Auth mode: ' + esc(uiBoundary.auth_mode || '') + '</p>'
-    + '<p>Authorization mode: ' + esc(uiBoundary.authorization_mode || '') + '</p>'
-    + '<p>Session gating: ' + esc(uiBoundary.session_gating) + '</p>'
-    + '<p>Mutation readiness: ' + esc(uiBoundary.mutation_readiness_status || '') + '</p>'
+    sectionTitle(label('section.ui_boundary', 'UI Boundary'))
+    + detailLine('Bind scope', uiBoundary.bind_scope || '')
+    + detailLine('Mutation enabled', uiBoundary.mutation_enabled)
+    + detailLine('Mutation capability flag', uiBoundary.mutation_capability_flag)
+    + detailLine('Auth mode', uiBoundary.auth_mode || '')
+    + detailLine('Authorization mode', uiBoundary.authorization_mode || '')
+    + detailLine('Session gating', uiBoundary.session_gating)
+    + detailLine('Mutation readiness', uiBoundary.mutation_readiness_status || '')
     + detailLine('Write route', writeRouteContract.route_template || '')
     + detailListLine('Write actions', writeRouteContract.actions, ' | ')
     + detailListLine('Write request fields', writeRouteContract.expected_request_fields, ' | ')
@@ -4266,12 +5002,12 @@ function renderOverviewUiBoundaryPanel(uiBoundary) {{
 }}
 function renderOverviewAuthBoundaryPanel(authBoundary, authBoundaryOverview) {{
   return renderPanel(
-    sectionTitle('Auth Boundary')
+    sectionTitle(label('section.auth_boundary', 'Auth Boundary'))
     + '<p>'
     + overviewJumpButton(sliceBadge('Auth Boundary Warnings', esc(authBoundaryOverview.auth_warning_count ?? 0), 'badge-warning'), '/api/review-queue', 'reviewQueue', 'ui_auth_not_enabled')
-    + overviewJumpButton(sliceBadge('Authorization warnings', esc(authBoundaryOverview.authorization_warning_count ?? 0), 'badge-warning'), '/api/review-queue', 'reviewQueue', 'ui_authorization_not_enabled')
-    + overviewJumpButton(sliceBadge('Missing identity', esc(authBoundaryOverview.missing_identity_count ?? 0), 'badge-warning'), '/api/review-queue', 'reviewQueue', 'no_reviewer_identity_recorded')
-    + overviewJumpButton(sliceBadge('Provider response', esc(authBoundaryOverview.provider_response_present_count ?? 0), 'badge-ready'), '/api/review-queue', 'reviewQueue', 'response_id')
+    + overviewJumpButton(sliceBadge(label('overview.authorization_warnings', 'Authorization warnings'), esc(authBoundaryOverview.authorization_warning_count ?? 0), 'badge-warning'), '/api/review-queue', 'reviewQueue', 'ui_authorization_not_enabled')
+    + overviewJumpButton(sliceBadge(label('overview.missing_identity', 'Missing identity'), esc(authBoundaryOverview.missing_identity_count ?? 0), 'badge-warning'), '/api/review-queue', 'reviewQueue', 'no_reviewer_identity_recorded')
+    + overviewJumpButton(sliceBadge(label('overview.provider_response', 'Provider response'), esc(authBoundaryOverview.provider_response_present_count ?? 0), 'badge-ready'), '/api/review-queue', 'reviewQueue', 'response_id')
     + '</p>'
     + detailLine('Status', authBoundary.status || '')
     + '<p>' + esc(authBoundary.message || '') + '</p>'
@@ -4286,10 +5022,10 @@ function renderOverviewAuthBoundaryPanel(authBoundary, authBoundaryOverview) {{
 }}
 function renderOverviewIdentityBoundaryPanel(identityBoundary) {{
   return renderPanel(
-    sectionTitle('Identity Boundary')
+    sectionTitle(label('section.identity_boundary', 'Identity Boundary'))
     + '<p>'
     + overviewJumpButton(sliceBadge('Declared identity only', esc(identityBoundary.declared_identity_count ?? 0), 'badge-warning'), '/api/review-queue', 'reviewQueue', 'reviewer_identity_declared_only')
-    + overviewJumpButton(sliceBadge('Session label required', esc(identityBoundary.session_label_missing_count ?? 0), 'badge-warning'), '/api/review-queue', 'reviewQueue', 'reviewer_session_label_missing')
+    + overviewJumpButton(sliceBadge(label('overview.session_label_required', 'Session label required'), esc(identityBoundary.session_label_missing_count ?? 0), 'badge-warning'), '/api/review-queue', 'reviewQueue', 'reviewer_session_label_missing')
     + overviewJumpButton(sliceBadge('Identity aligned', esc((identityBoundary.assurance_counts && identityBoundary.assurance_counts.boundary_aligned) ?? 0), 'badge-ready'), '/api/review-queue', 'reviewQueue', 'boundary_aligned')
     + '</p>'
     + detailLine('Status', identityBoundary.status || '')
@@ -4311,7 +5047,7 @@ function renderOverviewMutationReadinessPanel(mutationReadiness) {{
   const enablementChecks = Array.isArray(mutationReadiness.enablement_checks) ? mutationReadiness.enablement_checks : [];
   const operationalReadiness = mutationReadiness.operational_readiness || {{}};
   return renderPanel(
-    sectionTitle('Mutation Readiness')
+    sectionTitle(label('section.mutation_readiness', 'Mutation Readiness'))
     + detailLine('Status', mutationReadiness.status || '')
     + '<p>' + esc(mutationReadiness.message || '') + '</p>'
     + detailLine('Ready rows', mutationReadiness.ready_row_count ?? 0)
@@ -4348,21 +5084,21 @@ function renderOverviewAiIndexPanel(aiIndex, counts) {{
   const graphNodeCount = aiIndex.graph && aiIndex.graph.node_count ? aiIndex.graph.node_count : 0;
   const graphEdgeCount = aiIndex.graph && aiIndex.graph.edge_count ? aiIndex.graph.edge_count : 0;
   return renderPanel(
-    sectionTitle('AI Index Snapshot')
-    + '<p>Vector entries: ' + esc(vectorEntryCount) + '</p>'
-    + '<p>Graph nodes: ' + esc(graphNodeCount) + '</p>'
-    + '<p>Graph edges: ' + esc(graphEdgeCount) + '</p>'
-    + '<p>Runtime records: ' + esc(counts.runtime_records ?? 0) + '</p>'
-    + '<p>Summary jobs: ' + esc(counts.summary_jobs ?? 0) + '</p>'
-    + '<p>Needs-review records: ' + esc(counts.review_queue ?? 0) + '</p>'
+    sectionTitle(label('section.ai_index_snapshot', 'AI Index Snapshot'))
+    + detailLine('Vector entries', vectorEntryCount)
+    + detailLine('Graph nodes', graphNodeCount)
+    + detailLine('Graph edges', graphEdgeCount)
+    + detailLine('Runtime records', counts.runtime_records ?? 0)
+    + detailLine('Summary jobs', counts.summary_jobs ?? 0)
+    + detailLine('Needs-review records', counts.review_queue ?? 0)
   );
 }}
 function renderOverviewRuntimeRecordsPanel(counts, runtimeRecords) {{
   return renderPanel(
-    sectionTitle('Runtime Records')
+    sectionTitle(label('section.runtime_records', 'Runtime Records'))
     + '<p>'
     + overviewJumpButton(sliceBadge('Runtime records', esc(counts.runtime_records ?? 0), 'badge-neutral'), '/api/runtime-records')
-    + overviewJumpButton(sliceBadge('Provider response', esc(runtimeRecords.provider_response_present_count ?? 0), 'badge-ready'), '/api/runtime-records', 'runtimeRecords', 'response_id')
+    + overviewJumpButton(sliceBadge(label('overview.provider_response', 'Provider response'), esc(runtimeRecords.provider_response_present_count ?? 0), 'badge-ready'), '/api/runtime-records', 'runtimeRecords', 'response_id')
     + overviewJumpButton(sliceBadge('Runtime auth advisory', esc((runtimeRecords.auth_readiness_counts && runtimeRecords.auth_readiness_counts.advisory_only) ?? 0), 'badge-warning'), '/api/runtime-records', 'runtimeRecords', 'advisory_only')
     + overviewJumpButton(sliceBadge('Runtime mutation preview', esc((runtimeRecords.mutation_readiness_counts && runtimeRecords.mutation_readiness_counts.preview_only) ?? 0), 'badge-warning'), '/api/runtime-records', 'runtimeRecords', 'preview_only')
     + '</p>'
@@ -4373,15 +5109,15 @@ function renderOverviewRuntimeRecordsPanel(counts, runtimeRecords) {{
     + summaryJsonLine('Provider finish reasons', runtimeRecords.provider_response_finish_reason_counts)
     + summaryJsonLine('Provider statuses', runtimeRecords.provider_response_status_counts)
     + sliceButtonRow(runtimeRecordsSliceButtons())
-    + '<p>' + listJumpButton('Open Runtime Records', '/api/runtime-records') + '</p>'
+    + '<p>' + listJumpButton(label('button.open_runtime_records', 'Open Runtime Records'), '/api/runtime-records') + '</p>'
   );
 }}
 function renderOverviewSummaryJobsPanel(counts, summaryJobs) {{
   return renderPanel(
-    sectionTitle('Summary Jobs')
+    sectionTitle(label('section.summary_jobs', 'Summary Jobs'))
     + '<p>'
     + overviewJumpButton(sliceBadge('Summary jobs', esc(counts.summary_jobs ?? 0), 'badge-neutral'), '/api/summary-jobs')
-    + overviewJumpButton(sliceBadge('Provider response', esc(summaryJobs.provider_response_present_count ?? 0), 'badge-ready'), '/api/summary-jobs', 'summaryJobs', 'response_id')
+    + overviewJumpButton(sliceBadge(label('overview.provider_response', 'Provider response'), esc(summaryJobs.provider_response_present_count ?? 0), 'badge-ready'), '/api/summary-jobs', 'summaryJobs', 'response_id')
     + overviewJumpButton(sliceBadge('Summary advisory', esc((summaryJobs.review_capability_counts && summaryJobs.review_capability_counts.advisory_only) ?? 0), 'badge-warning'), '/api/summary-jobs', 'summaryJobs', 'advisory_only')
     + overviewJumpButton(sliceBadge('Summary auth advisory', esc((summaryJobs.auth_readiness_counts && summaryJobs.auth_readiness_counts.advisory_only) ?? 0), 'badge-warning'), '/api/summary-jobs', 'summaryJobs', 'advisory_only')
     + overviewJumpButton(sliceBadge('Summary package ready', esc((summaryJobs.package_readiness_counts && summaryJobs.package_readiness_counts.package_context_available) ?? 0), 'badge-ready'), '/api/summary-jobs', 'summaryJobs', 'package_context_available')
@@ -4401,12 +5137,12 @@ function renderOverviewSummaryJobsPanel(counts, summaryJobs) {{
     + summaryJsonLine('Runtime provider counts', summaryJobs.runtime_provider_counts)
     + detailLine('Source refs total', summaryJobs.summary_source_total ?? 0)
     + sliceButtonRow(summaryJobsSliceButtons())
-    + '<p>' + listJumpButton('Open Summary Jobs', '/api/summary-jobs') + '</p>'
+    + '<p>' + listJumpButton(label('button.open_summary_jobs', 'Open Summary Jobs'), '/api/summary-jobs') + '</p>'
   );
 }}
 function renderOverviewTriagePanel(triage, warningButtons, warningSummaries) {{
   return renderPanel(
-    sectionTitle('Triage')
+    sectionTitle(label('section.triage', 'Triage'))
     + '<p>'
     + overviewJumpButton(sliceBadge('Review Requested', esc(triage.needs_attention_reviews ?? 0), 'badge-warning'), '/api/review-queue', 'reviewQueue', 'review_requested')
     + '</p>'
@@ -4436,27 +5172,27 @@ function renderOverviewTriagePanel(triage, warningButtons, warningSummaries) {{
     + summaryJsonLine('Identity assurance counts', triage.identity_assurance_counts)
     + summaryJsonLine('Reviewer kind counts', triage.reviewer_kind_counts)
     + summaryJsonLine('Warning counts', triage.warning_counts)
-    + '<p>Warning priority: '
+    + '<p>' + esc(label('overview.warning_priority', 'Warning priority')) + ': '
     + (warningSummaries.length > 0
       ? warningSummaries.map(item =>
           sliceBadge((item.label || item.code || 'warning'), item.count ?? 0, 'badge-warning')
         ).join('')
       : '(none)')
     + '</p>'
-    + '<p>' + listJumpButton('Open Review Queue', '/api/review-queue')
-    + listJumpButton('Open Runtime Records', '/api/runtime-records')
-    + listJumpButton('Open Summary Jobs', '/api/summary-jobs')
-    + listJumpButton('Open Runtime Config', '/api/runtime-config')
-    + listJumpButton('Open Package Review', '/api/package-review')
-    + '<button data-reset-filters="all">Reset Filters</button></p>'
+    + '<p>' + listJumpButton(label('button.open_review_queue', 'Open Review Queue'), '/api/review-queue')
+    + listJumpButton(label('button.open_runtime_records', 'Open Runtime Records'), '/api/runtime-records')
+    + listJumpButton(label('button.open_summary_jobs', 'Open Summary Jobs'), '/api/summary-jobs')
+    + listJumpButton(label('button.open_runtime_config', 'Open Runtime Config'), '/api/runtime-config')
+    + listJumpButton(label('button.open_package_review', 'Open Package Review'), '/api/package-review')
+    + '<button data-reset-filters="all">' + esc(label('button.reset_filter', 'Reset Filter')) + '</button></p>'
     + sliceButtonRow(reviewQueueSliceButtons())
-    + '<p>' + listJumpButton('Review Advisory', '/api/review-queue', 'reviewQueue', 'advisory')
-    + listJumpButton('Package Ready', '/api/review-queue', 'reviewQueue', 'package:package_context_available')
-    + listJumpButton('CLI Aligned', '/api/review-queue', 'reviewQueue', 'aligned')
-    + listJumpButton('Identity Aligned', '/api/review-queue', 'reviewQueue', 'boundary_aligned')
-    + listJumpButton('Auth Boundary Warnings', '/api/review-queue', 'reviewQueue', 'ui_auth_not_enabled')
-    + listJumpButton('Declared Identity Only', '/api/review-queue', 'reviewQueue', 'reviewer_identity_declared_only')
-    + listJumpButton('Runtime Retrieval Plans', '/api/runtime-records', 'runtimeRecords', 'retrieval_plan')
+    + '<p>' + listJumpButton(localizeTextValue('Review Advisory'), '/api/review-queue', 'reviewQueue', 'advisory')
+    + listJumpButton(localizeTextValue('Package Ready'), '/api/review-queue', 'reviewQueue', 'package:package_context_available')
+    + listJumpButton(localizeTextValue('CLI Aligned'), '/api/review-queue', 'reviewQueue', 'aligned')
+    + listJumpButton(localizeTextValue('Identity Aligned'), '/api/review-queue', 'reviewQueue', 'boundary_aligned')
+    + listJumpButton(localizeTextValue('Auth Boundary Warnings'), '/api/review-queue', 'reviewQueue', 'ui_auth_not_enabled')
+    + listJumpButton(localizeTextValue('Declared Identity Only'), '/api/review-queue', 'reviewQueue', 'reviewer_identity_declared_only')
+    + listJumpButton(localizeTextValue('Runtime Retrieval Plans'), '/api/runtime-records', 'runtimeRecords', 'retrieval_plan')
     + '</p>'
   );
 }}
@@ -4594,6 +5330,7 @@ async function loadEndpoint(endpoint) {{
   const response = await fetch(endpoint);
   const payload = await response.json();
   document.getElementById('view').innerHTML = endpointBody(endpoint, payload);
+  applyLocaleToPage();
 }}
 async function loadDetail(endpoint) {{
   if (window.__chronicleLastDetail && window.__chronicleLastDetail !== endpoint) {{
@@ -4602,19 +5339,21 @@ async function loadDetail(endpoint) {{
   window.__chronicleLastDetail = endpoint;
   const response = await fetch(endpoint);
   if (!response.ok) {{
-    document.getElementById('detail').innerHTML = '<h2>Detail</h2><p>Not found.</p>';
+    document.getElementById('detail').innerHTML = '<h2>' + esc(localizeTextValue('Detail')) + '</h2><p>' + esc(t('status.not_found')) + '</p>';
+    applyLocaleToPage();
     return;
   }}
   const payload = await response.json();
   document.getElementById('detail').innerHTML = detailBody(endpoint, payload);
+  applyLocaleToPage();
 }}
 async function previewBlockedRoute(path, targetId = 'action-preview-response') {{
   const target = document.getElementById(targetId);
   if (!target) return;
-  target.innerHTML = '<p>Loading blocked route preview…</p>';
+  target.innerHTML = '<p>' + esc(t('status.loading_blocked_preview')) + '</p>';
   const {{ response, payload }} = await postJson(path);
   target.innerHTML = renderReviewActionResultPanel(
-    'Blocked Route Preview',
+    t('status.blocked_route_preview'),
     response.status,
     path,
     payload,
@@ -4623,6 +5362,7 @@ async function previewBlockedRoute(path, targetId = 'action-preview-response') {
       extraLines: detailLine('Mutation enabled', payload.mutation_enabled),
     }},
   );
+  applyLocaleToPage();
 }}
 function reviewFieldValue(prefix, suffix, fallback = '') {{
   const element = prefix === 'reviewer'
@@ -4639,10 +5379,10 @@ async function copyCommand(command, targetId = 'action-preview-response') {{
 async function submitReviewAction(path, action, recordId, targetId = 'action-preview-response', fieldPrefix = 'reviewer', successDetail = '') {{
   const target = document.getElementById(targetId);
   if (!target) return;
-  target.innerHTML = '<p>Applying review action…</p>';
+  target.innerHTML = '<p>' + esc(t('status.applying_review_action')) + '</p>';
   const {{ response, payload }} = await postJson(path, reviewActionRequestBody(action, fieldPrefix));
   target.innerHTML = renderReviewActionResultPanel(
-    'Review Action Result',
+    t('status.review_action_result'),
     response.status,
     path,
     payload,
@@ -4656,6 +5396,7 @@ async function submitReviewAction(path, action, recordId, targetId = 'action-pre
         + detailLine('Decision event', payload.decision_event_id || ''),
     }},
   );
+  applyLocaleToPage();
   if (response.ok) {{
     if (window.__chronicleCurrentEndpoint) loadEndpoint(window.__chronicleCurrentEndpoint);
     if (successDetail) {{
@@ -4672,8 +5413,11 @@ document.getElementById('view').addEventListener('click', handleViewPreviewPost)
 window.__chronicleFilters = {{ runtimeRecords: '', reviewQueue: '', summaryJobs: '' }};
 window.__chronicleSorts = {{ runtimeRecords: 'latest', reviewQueue: 'attention', summaryJobs: 'latest' }};
 window.__chronicleDetailTrail = [];
+window.__chronicleLocale = initialLocale();
 document.getElementById('view').addEventListener('input', handleViewInput);
 document.getElementById('view').addEventListener('change', handleViewChange);
+document.getElementById('locale-select').addEventListener('change', event => setLocale(event.target.value));
+applyLocaleToPage();
 loadEndpoint('/api/overview');
 </script>
 </body>

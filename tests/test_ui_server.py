@@ -603,7 +603,7 @@ def test_ui_html_filtering_includes_provider_response_metadata_fields(tmp_path, 
     assert "responseMetadata.provider_status || ''" in html
     assert "String(responseMetadata.usage_total_tokens ?? '')" in html
     assert "...(Array.isArray(responseMetadata.response_keys) ? responseMetadata.response_keys : [])" in html
-    assert "sliceBadge('Provider response'" in html
+    assert "sliceBadge(label('overview.provider_response', 'Provider response')" in html
     assert "summaryJsonLine('Provider finish reasons', authBoundaryOverview.provider_response_finish_reason_counts)" in html
     assert "summaryJsonLine('Provider statuses', authBoundaryOverview.provider_response_status_counts)" in html
     assert "summaryJsonLine('Provider finish reasons', runtimeRecords.provider_response_finish_reason_counts)" in html
@@ -620,7 +620,12 @@ def test_ui_html_filtering_includes_provider_response_metadata_fields(tmp_path, 
     assert "function reviewQueueSliceButtons()" in html
     assert "function runtimeRecordsSliceButtons()" in html
     assert "function summaryJobsSliceButtons()" in html
-    assert "copyCommandButton(recoveryPath, previewTarget, 'Copy Recovery CLI')" in html
+    assert 'id="locale-select"' in html
+    assert "const uiI18nCatalog =" in html
+    assert "function setLocale(locale, rerender = true)" in html
+    assert "applyLocaleToPage();" in html
+    assert "Chronicle Stack ローカルUI" in html
+    assert "button.copy_recovery_cli" in html
     assert "rollback=" in html
     assert "transaction=" in html
     assert "durable-on-failure=" in html
@@ -902,8 +907,8 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
 
     html = ChronicleUIDataService(tmp_path).html_shell()
 
-    assert "Chronicle Stack Local UI" in html
-    assert "Read-only foreground local UI" in html
+    assert "Chronicle Stack ローカルUI" in html
+    assert "読み取り専用の前景ローカルUIです。" in html
     assert "loadDetail" in html
     assert "Runtime Preview" in html
     assert "Retrieval Handoff" in html
@@ -1111,19 +1116,19 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "sliceButtonRow(reviewQueueSliceButtons())" in html
     assert "badge('slice:' + filterLabel, cls)" in html
     assert "' <span class=\"id\">' + esc(value) + '</span>'" in html
-    assert "Warning priority:" in html
+    assert "label('overview.warning_priority', 'Warning priority')" in html
     assert "summaryJsonLine('Runtime kinds', triage.runtime_record_kinds)" in html
     assert "statusMessageBody(readiness.status, readiness.message, readinessButtons)" in html
     assert "statusMessageBody(notice.status, notice.message, noticeButtons)" in html
     assert "statusMessageBody(assurance.status, assurance.message, assuranceButtons)" in html
     assert "messageParagraph(parity.message)" in html
     assert "detailListLine('Expected actions', parity.expected_actions)" in html
-    assert "listJumpButton('Open Review Queue', '/api/review-queue')" in html
-    assert "listJumpButton('Open Runtime Records', '/api/runtime-records')" in html
-    assert "listJumpButton('Open Summary Jobs', '/api/summary-jobs')" in html
-    assert "listJumpButton('Open Runtime Config', '/api/runtime-config')" in html
-    assert "listJumpButton('Open Package Review', '/api/package-review')" in html
-    assert "buttons.push(listJumpButton('Open Review Queue', '/api/review-queue'));" in html
+    assert "label('button.open_review_queue', 'Open Review Queue')" in html
+    assert "label('button.open_runtime_records', 'Open Runtime Records')" in html
+    assert "label('button.open_summary_jobs', 'Open Summary Jobs')" in html
+    assert "label('button.open_runtime_config', 'Open Runtime Config')" in html
+    assert "label('button.open_package_review', 'Open Package Review')" in html
+    assert "buttons.push(listJumpButton(label('button.open_review_queue', 'Open Review Queue'), '/api/review-queue'));" in html
     assert "tableHtml(['detail', 'summary job', 'status', 'review', 'auth', 'identity', 'package', 'preview', 'runtime', 'sources']" in html
     assert "tableHtml(['detail', 'target', 'status', 'auth', 'preview', 'warnings', 'latest reviewer']" in html
     assert "summary-jobs-action-preview-response" in html
@@ -1138,7 +1143,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "fieldPrefix: 'review-queue'" in html
     assert "fieldPrefix: 'summary-jobs'" in html
     assert "data-success-detail" in html
-    assert "listToolbar(endpoint, 'summaryJobs', 'Filter summary jobs...'" in html
+    assert "listToolbar(endpoint, 'summaryJobs', t('placeholder.summary_filter')" in html
     assert "{ value: 'mutation', label: 'Mutation readiness' }" in html
     assert "{ value: 'auth', label: 'Auth readiness' }" in html
     assert "sliceButtonRow(runtimeRecordsSliceButtons())" in html
@@ -1150,12 +1155,12 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "Open review" in html
     assert "package:no_context_records" in html
     assert 'data-reset-filters="all"' in html
-    assert "listJumpButton('Review Advisory', '/api/review-queue', 'reviewQueue', 'advisory')" in html
-    assert "listJumpButton('CLI Aligned', '/api/review-queue', 'reviewQueue', 'aligned')" in html
-    assert "listJumpButton('Identity Aligned', '/api/review-queue', 'reviewQueue', 'boundary_aligned')" in html
-    assert "listJumpButton('Auth Boundary Warnings', '/api/review-queue', 'reviewQueue', 'ui_auth_not_enabled')" in html
-    assert "listJumpButton('Declared Identity Only', '/api/review-queue', 'reviewQueue', 'reviewer_identity_declared_only')" in html
-    assert "listJumpButton('Runtime Retrieval Plans', '/api/runtime-records', 'runtimeRecords', 'retrieval_plan')" in html
+    assert "listJumpButton(localizeTextValue('Review Advisory'), '/api/review-queue', 'reviewQueue', 'advisory')" in html
+    assert "listJumpButton(localizeTextValue('CLI Aligned'), '/api/review-queue', 'reviewQueue', 'aligned')" in html
+    assert "listJumpButton(localizeTextValue('Identity Aligned'), '/api/review-queue', 'reviewQueue', 'boundary_aligned')" in html
+    assert "listJumpButton(localizeTextValue('Auth Boundary Warnings'), '/api/review-queue', 'reviewQueue', 'ui_auth_not_enabled')" in html
+    assert "listJumpButton(localizeTextValue('Declared Identity Only'), '/api/review-queue', 'reviewQueue', 'reviewer_identity_declared_only')" in html
+    assert "listJumpButton(localizeTextValue('Runtime Retrieval Plans'), '/api/runtime-records', 'runtimeRecords', 'retrieval_plan')" in html
     assert "data-detail-nav" in html
     assert "data-detail-trail" in html
     assert "data-back-view" in html
@@ -1176,13 +1181,13 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "const readinessButtons = moreStatusButtons(readiness.status, '/api/review-queue', 'reviewQueue', 'package:');" in html
     assert "const timelineButtons = [" in html
     assert "Declared Identity Only" in html
-    assert "listToolbar(endpoint, 'runtimeRecords', 'Filter runtime records...'" in html
-    assert "listToolbar(endpoint, 'reviewQueue', 'Filter review queue...'" in html
+    assert "listToolbar(endpoint, 'runtimeRecords', t('placeholder.runtime_filter')" in html
+    assert "listToolbar(endpoint, 'reviewQueue', t('placeholder.review_filter')" in html
     assert "runtimeRecords" in html
     assert "reviewQueue" in html
-    assert "listToolbar(endpoint, 'runtimeRecords', 'Filter runtime records...'" in html
+    assert "listToolbar(endpoint, 'runtimeRecords', t('placeholder.runtime_filter')" in html
     assert "tableHtml(['detail', 'event', 'kind', 'auth', 'preview', 'review route', 'source counts']" in html
-    assert "listToolbar(endpoint, 'reviewQueue', 'Filter review queue...'" in html
+    assert "listToolbar(endpoint, 'reviewQueue', t('placeholder.review_filter')" in html
     assert "review-queue-action-preview-response" in html
     assert "Review queue blocked-route preview stays read-only and returns the CLI fallback contract." in html
     assert "previewTarget: 'review-queue-action-preview-response'" in html
