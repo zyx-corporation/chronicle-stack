@@ -289,7 +289,7 @@ def _mutation_operational_readiness(
         "message": (
             "All explicit local mutation prerequisites are currently satisfied."
             if not unsatisfied
-            else f"{len(unsatisfied)} explicit local mutation prerequisite(s) remain unsatisfied."
+            else "Explicit local mutation prerequisites remain unsatisfied."
         ),
     }
 

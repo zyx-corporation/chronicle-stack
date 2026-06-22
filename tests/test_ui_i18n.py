@@ -57,6 +57,25 @@ def test_ui_i18n_catalog_contains_exact_and_prefix_maps_for_each_locale():
             assert isinstance(catalog["prefix"], dict), locale
 
 
+def test_ui_i18n_catalog_covers_mutation_readiness_and_related_link_labels():
+    required_exact = {
+        "Capability flag enabled",
+        "Session enable flag enabled",
+        "Auth boundary configured",
+        "Authorization boundary configured",
+        "Reviewer identity recorded",
+        "Session labels recorded",
+        "All explicit local mutation prerequisites are currently satisfied.",
+        "Explicit local mutation prerequisites remain unsatisfied.",
+        "Open matching review detail",
+        "Open matching runtime record",
+    }
+    for locale in ("ja", "zh-CN"):
+        exact = UI_I18N_CATALOG[locale]["exact"]
+        missing = required_exact.difference(exact)
+        assert not missing, f"{locale} missing exact keys: {sorted(missing)}"
+
+
 def test_normalize_ui_locale_matches_supported_locale_rules():
     assert normalize_ui_locale("ja") == "ja"
     assert normalize_ui_locale("ja-JP") == "ja"
