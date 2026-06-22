@@ -76,6 +76,40 @@ def test_ui_i18n_catalog_covers_mutation_readiness_and_related_link_labels():
         assert not missing, f"{locale} missing exact keys: {sorted(missing)}"
 
 
+def test_ui_i18n_catalog_covers_package_preview_and_review_preview_messages():
+    required_exact = {
+        "No context records were selected by the retrieval dry-run, so package preview is advisory only.",
+        "Read-only package preview derived from retrieval-plan context hits.",
+        "Target event is not available for package readiness derivation.",
+        "Read-only package readiness derived from context-linked review target records.",
+        "Review target is already resolved in the current derived queue view.",
+        "Boundary and reviewer identity conditions are aligned for future mutation-capable review.",
+        "Review remains CLI-led and read-only in UI; see warnings for unmet boundary conditions.",
+        "Package readiness unavailable.",
+        "Use the equivalent chronicle review CLI command for recovery or inspection.",
+        "Use the equivalent chronicle review CLI command for follow-up inspection.",
+        "UI mutation is enabled for this local session; review actions still require explicit reviewer context.",
+        "UI mutation is enabled, but boundary warnings still block review until reviewer context aligns.",
+        "UI mutation is not enabled; use the equivalent CLI command.",
+        "UI mutation is not enabled; boundary warnings still require CLI-led review.",
+        "UI preview commands match the current append-only review CLI contract.",
+        "UI preview commands drifted from the append-only review CLI contract.",
+    }
+    required_prefix = {
+        "Open summary job ",
+        "Open artifact ",
+        "runtime retrieval handoff: ",
+        "review target handoff: ",
+    }
+    for locale in ("ja", "zh-CN"):
+        exact = UI_I18N_CATALOG[locale]["exact"]
+        exact_missing = required_exact.difference(exact)
+        assert not exact_missing, f"{locale} missing exact keys: {sorted(exact_missing)}"
+        prefix = UI_I18N_CATALOG[locale]["prefix"]
+        prefix_missing = required_prefix.difference(prefix)
+        assert not prefix_missing, f"{locale} missing prefix keys: {sorted(prefix_missing)}"
+
+
 def test_normalize_ui_locale_matches_supported_locale_rules():
     assert normalize_ui_locale("ja") == "ja"
     assert normalize_ui_locale("ja-JP") == "ja"
