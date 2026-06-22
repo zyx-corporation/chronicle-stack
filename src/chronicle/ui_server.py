@@ -3486,13 +3486,43 @@ function currentFilterLabel() {{
   const value = target ? window.__chronicleFilters[target] || '' : '';
   return value ? stateLabel('filter', value, filterValueLabel(target, value)) : '';
 }}
+function sortValueLabel(endpoint, sortValue) {{
+  const normalizedEndpoint = String(endpoint || '');
+  const normalizedSort = String(sortValue || '');
+  if (!normalizedSort) return '';
+  if (normalizedEndpoint === '/api/runtime-records') {{
+    if (normalizedSort === 'latest') return 'Latest first';
+    if (normalizedSort === 'mutation') return 'Mutation readiness';
+    if (normalizedSort === 'auth') return 'Auth readiness';
+    if (normalizedSort === 'kind') return 'Kind';
+  }}
+  if (normalizedEndpoint === '/api/review-queue') {{
+    if (normalizedSort === 'attention') return 'Needs attention first';
+    if (normalizedSort === 'parity') return 'CLI drift first';
+    if (normalizedSort === 'latest') return 'Latest first';
+    if (normalizedSort === 'reviewer') return 'Reviewer';
+  }}
+  if (normalizedEndpoint === '/api/summary-jobs') {{
+    if (normalizedSort === 'latest') return 'Latest first';
+    if (normalizedSort === 'mutation') return 'Mutation readiness';
+    if (normalizedSort === 'review') return 'Needs attention first';
+    if (normalizedSort === 'title') return 'Title';
+  }}
+  return normalizedSort.replaceAll('_', ' ');
+}}
 function sortStateLabel(endpoint, sortValue) {{
   if (!sortValue) return '';
   if (endpoint === '/api/review-queue') {{
     const warningFilter = activeReviewWarningFilter();
-    if (warningFilter) return stateLabel('sort', sortValue, 'warning-first:' + warningFilter);
+    if (warningFilter) {{
+      return stateLabel(
+        'sort',
+        sortValue,
+        sortValueLabel(endpoint, sortValue) + ' / warning-first:' + warningFilter,
+      );
+    }}
   }}
-  return stateLabel('sort', sortValue);
+  return stateLabel('sort', sortValue, sortValueLabel(endpoint, sortValue));
 }}
 function currentSortLabel(endpoint) {{
   const currentEndpoint = endpoint || window.__chronicleCurrentEndpoint || '';

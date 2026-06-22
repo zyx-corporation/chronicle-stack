@@ -920,6 +920,8 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "currentSortValue" in html
     assert "stateLabel" in html
     assert "currentSortLabel" in html
+    assert "function sortValueLabel(endpoint, sortValue)" in html
+    assert "stateLabel('sort', sortValue, sortValueLabel(endpoint, sortValue))" in html
     assert "warning-first:" in html
     assert "jumpBadge" in html
     assert "sourceCountBadges" in html
@@ -1065,6 +1067,10 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "ready" in html
     assert "CLI Parity" in html
     assert "CLI drift first" in html
+    assert "Latest first" in html
+    assert "Needs attention first" in html
+    assert "Reviewer" in html
+    assert "Title" in html
     assert "summaryJsonLine('CLI parity counts', triage.cli_parity_counts)" in html
     assert "summaryJsonLine('Identity assurance counts', triage.identity_assurance_counts)" in html
     assert "summaryJsonLine('Reviewer kind counts', triage.reviewer_kind_counts)" in html
