@@ -1148,20 +1148,20 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "Summary package ready" in html
     assert "Summary identity aligned" in html
     assert "Summary mutation preview" in html
-    assert "Runtime Mutation Preview" in html
-    assert "Runtime Auth Advisory" in html
-    assert "Runtime Identity Aligned" in html
-    assert "Runtime Retrieval Plans" in html
-    assert "Runtime Provider Response" in html
-    assert "Summary Mutation Preview" in html
-    assert "Summary Package Ready" in html
-    assert "Summary Provider Response" in html
+    assert "Runtime mutation preview" in html
+    assert "Runtime auth advisory" in html
+    assert "Runtime identity aligned" in html
+    assert "Runtime retrieval plans" in html
+    assert "Runtime provider response" in html
+    assert "Summary mutation preview" in html
+    assert "Summary package ready" in html
+    assert "Summary provider response" in html
     assert "sliceButtonRow(runtimeRecordsSliceButtons())" in html
     assert "sliceButtonRow(summaryJobsSliceButtons())" in html
-    assert "Review Requested" in html
-    assert "Review Ready" in html
-    assert "Review Advisory" in html
-    assert "CLI Drift" in html
+    assert "Review requested" in html
+    assert "Review ready" in html
+    assert "Review advisory" in html
+    assert "CLI drift" in html
     assert "sliceButtonRow(reviewQueueSliceButtons())" in html
     assert "badge('slice:' + filterLabel, cls)" in html
     assert "' <span class=\"id\">' + esc(value) + '</span>'" in html
@@ -1224,7 +1224,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "Open Runtime Records" in html
     assert "Open Review Queue" in html
     assert "Open Package Review" in html
-    assert "Review Advisory" in html
+    assert "Review advisory" in html
     assert "Auth Boundary Warnings" in html
     assert "warnings.slice(0, 2).forEach" in html
     assert "function buttonRow(buttons)" in html
@@ -1257,14 +1257,14 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "label('notice.auth_readiness', 'Auth Readiness')" in html
     assert "label('notice.review_capability', 'Review Capability')" in html
     assert "label('notice.action_preview', 'Action Preview')" in html
-    assert "localizeTextValue('Approve')" in html
-    assert "localizeTextValue('Reject')" in html
-    assert "localizeTextValue('Request Changes')" in html
-    assert "localizeTextValue('Preview blocked route')" in html
+    assert "uiLabel('Approve')" in html
+    assert "uiLabel('Reject')" in html
+    assert "uiLabel('Request Changes')" in html
+    assert "uiLabel('Preview blocked route')" in html
     assert "data-preview-post" in html
     assert "Blocked route preview stays read-only and returns the CLI fallback contract." in html
-    assert "localizeTextValue('Status: ')" in html
-    assert "localizeTextValue('Route: ')" in html
+    assert "uiLabel('Status: ')" in html
+    assert "uiLabel('Route: ')" in html
     assert "Rollback status" in html
     assert "Durable mutation on failure" in html
     assert "Possible errors" in html
@@ -1279,14 +1279,14 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "data-copy-command" in html
     assert "t('button.copy_recovery_cli')" in html
     assert "Review Action Result" in html
-    assert "localizeTextValue('POST enabled')" in html
+    assert "uiLabel('POST enabled')" in html
     assert "reviewer-label" in html
     assert "reviewer-kind" in html
     assert "reviewer-session-label" in html
-    assert "localizeTextValue('Reviewer')" in html
-    assert "localizeTextValue('Kind')" in html
-    assert "localizeTextValue('Session')" in html
-    assert "localizeTextValue('Note')" in html
+    assert "uiLabel('Reviewer')" in html
+    assert "uiLabel('Kind')" in html
+    assert "uiLabel('Session')" in html
+    assert "uiLabel('Note')" in html
     assert "Identity Assurance" in html
     assert "warning_details" in html
     assert "/api/events" in html

@@ -363,6 +363,17 @@ UI_I18N_CATALOG: dict[str, dict[str, Any]] = {
         "ui.label.auth_blockers": "認証ブロッカー",
         "ui.label.auth_next_steps": "認証の次手順",
         "ui.label.identity_assurance_counts": "本人性保証件数",
+        "ui.label.status_prefix": "状態: ",
+        "ui.label.route_prefix": "ルート: ",
+        "ui.label.reviewer": "レビュアー",
+        "ui.label.session": "セッション",
+        "ui.label.note": "メモ",
+        "ui.label.approve": "承認",
+        "ui.label.reject": "却下",
+        "ui.label.request_changes": "修正依頼",
+        "ui.label.post_enabled": "POST 有効",
+        "ui.label.preview_blocked_route": "ブロック済みルートをプレビュー",
+        "ui.label.detail_heading": "詳細",
         "exact": {
             "Overview": "概要",
             "Events": "イベント",
@@ -927,6 +938,17 @@ UI_I18N_CATALOG: dict[str, dict[str, Any]] = {
         "ui.label.auth_blockers": "Auth blockers",
         "ui.label.auth_next_steps": "Auth next steps",
         "ui.label.identity_assurance_counts": "Identity assurance counts",
+        "ui.label.status_prefix": "Status: ",
+        "ui.label.route_prefix": "Route: ",
+        "ui.label.reviewer": "Reviewer",
+        "ui.label.session": "Session",
+        "ui.label.note": "Note",
+        "ui.label.approve": "Approve",
+        "ui.label.reject": "Reject",
+        "ui.label.request_changes": "Request Changes",
+        "ui.label.post_enabled": "POST enabled",
+        "ui.label.preview_blocked_route": "Preview blocked route",
+        "ui.label.detail_heading": "Detail",
     },
     "zh-CN": {
         "label.language": "显示语言",
@@ -1175,6 +1197,17 @@ UI_I18N_CATALOG: dict[str, dict[str, Any]] = {
         "ui.label.auth_blockers": "认证阻塞项",
         "ui.label.auth_next_steps": "认证后续步骤",
         "ui.label.identity_assurance_counts": "身份保证计数",
+        "ui.label.status_prefix": "状态: ",
+        "ui.label.route_prefix": "路由: ",
+        "ui.label.reviewer": "审阅者",
+        "ui.label.session": "会话",
+        "ui.label.note": "备注",
+        "ui.label.approve": "批准",
+        "ui.label.reject": "拒绝",
+        "ui.label.request_changes": "请求修改",
+        "ui.label.post_enabled": "POST 已启用",
+        "ui.label.preview_blocked_route": "预览被阻止的路由",
+        "ui.label.detail_heading": "详情",
         "exact": {
             "Overview": "概览",
             "Events": "事件",
@@ -4025,7 +4058,18 @@ const uiLabelKeys = {{
   'Shared machine safe': 'ui.label.shared_machine_safe',
   'Auth blockers': 'ui.label.auth_blockers',
   'Auth next steps': 'ui.label.auth_next_steps',
-  'Identity assurance counts': 'ui.label.identity_assurance_counts'
+  'Identity assurance counts': 'ui.label.identity_assurance_counts',
+  'Status: ': 'ui.label.status_prefix',
+  'Route: ': 'ui.label.route_prefix',
+  'Reviewer': 'ui.label.reviewer',
+  'Session': 'ui.label.session',
+  'Note': 'ui.label.note',
+  'Approve': 'ui.label.approve',
+  'Reject': 'ui.label.reject',
+  'Request Changes': 'ui.label.request_changes',
+  'POST enabled': 'ui.label.post_enabled',
+  'Preview blocked route': 'ui.label.preview_blocked_route',
+  'Detail': 'ui.label.detail_heading'
 }};
 function uiLabel(text) {{
   const rawText = String(text || '');
@@ -4209,8 +4253,8 @@ function renderReviewActionResultPanel(title, responseStatus, path, payload, tar
   const extraLines = options.extraLines || '';
   return ''
     + '<p><strong>' + esc(title) + '</strong></p>'
-    + '<p>' + esc(localizeTextValue('Status: ')) + esc(responseStatus) + '</p>'
-    + '<p>' + esc(localizeTextValue('Route: ')) + '<span class="id">' + esc(path) + '</span></p>'
+    + '<p>' + esc(uiLabel('Status: ')) + esc(responseStatus) + '</p>'
+    + '<p>' + esc(uiLabel('Route: ')) + '<span class="id">' + esc(path) + '</span></p>'
     + '<p>' + esc(message) + '</p>'
     + reviewActionCoreDetailLines(payload, action, recordId)
     + extraLines
@@ -4218,10 +4262,10 @@ function renderReviewActionResultPanel(title, responseStatus, path, payload, tar
 }}
 function renderReviewMutationForm(title, prefix) {{
   return '<div class="notice"><strong>' + esc(title) + '</strong><p>'
-    + '<label>' + esc(localizeTextValue('Reviewer')) + ' <input id="' + esc(prefix) + '-reviewer-label" value="local-ui" placeholder="' + esc(t('placeholder.reviewer')) + '"></label> '
-    + '<label>' + esc(localizeTextValue('Kind')) + ' <select id="' + esc(prefix) + '-reviewer-kind"><option value="local_operator">local_operator</option><option value="user_declared">user_declared</option></select></label> '
-    + '<label>' + esc(localizeTextValue('Session')) + ' <input id="' + esc(prefix) + '-reviewer-session-label" value="local-ui-session" placeholder="' + esc(t('placeholder.session')) + '"></label> '
-    + '<label>' + esc(localizeTextValue('Note')) + ' <input id="' + esc(prefix) + '-reviewer-note" placeholder="' + esc(t('placeholder.review_note')) + '"></label></p></div>';
+    + '<label>' + esc(uiLabel('Reviewer')) + ' <input id="' + esc(prefix) + '-reviewer-label" value="local-ui" placeholder="' + esc(t('placeholder.reviewer')) + '"></label> '
+    + '<label>' + esc(uiLabel('Kind')) + ' <select id="' + esc(prefix) + '-reviewer-kind"><option value="local_operator">local_operator</option><option value="user_declared">user_declared</option></select></label> '
+    + '<label>' + esc(uiLabel('Session')) + ' <input id="' + esc(prefix) + '-reviewer-session-label" value="local-ui-session" placeholder="' + esc(t('placeholder.session')) + '"></label> '
+    + '<label>' + esc(uiLabel('Note')) + ' <input id="' + esc(prefix) + '-reviewer-note" placeholder="' + esc(t('placeholder.review_note')) + '"></label></p></div>';
 }}
 function renderPreviewSummary(preview) {{
   return preview.status
@@ -5220,13 +5264,13 @@ function reviewQueueFilterChips() {{
 }}
 function reviewQueueSliceButtons() {{
   return [
-    listJumpButton(localizeTextValue('Review Requested'), '/api/review-queue', 'reviewQueue', 'review_requested'),
-    listJumpButton(localizeTextValue('Review Ready'), '/api/review-queue', 'reviewQueue', 'ready'),
-    listJumpButton(localizeTextValue('Review Advisory'), '/api/review-queue', 'reviewQueue', 'advisory'),
-    listJumpButton(localizeTextValue('CLI Drift'), '/api/review-queue', 'reviewQueue', 'drift_detected'),
-    listJumpButton(localizeTextValue('Package Ready'), '/api/review-queue', 'reviewQueue', 'package:package_context_available'),
-    listJumpButton(localizeTextValue('Auth Boundary Warnings'), '/api/review-queue', 'reviewQueue', 'ui_auth_not_enabled'),
-    listJumpButton(localizeTextValue('Declared Identity Only'), '/api/review-queue', 'reviewQueue', 'reviewer_identity_declared_only'),
+    listJumpButton(filterValueLabel('reviewQueue', 'review_requested'), '/api/review-queue', 'reviewQueue', 'review_requested'),
+    listJumpButton(filterValueLabel('reviewQueue', 'ready'), '/api/review-queue', 'reviewQueue', 'ready'),
+    listJumpButton(filterValueLabel('reviewQueue', 'advisory'), '/api/review-queue', 'reviewQueue', 'advisory'),
+    listJumpButton(filterValueLabel('reviewQueue', 'drift_detected'), '/api/review-queue', 'reviewQueue', 'drift_detected'),
+    listJumpButton(filterValueLabel('reviewQueue', 'package:package_context_available'), '/api/review-queue', 'reviewQueue', 'package:package_context_available'),
+    listJumpButton(reviewWarningLabel('ui_auth_not_enabled'), '/api/review-queue', 'reviewQueue', 'ui_auth_not_enabled'),
+    listJumpButton(reviewWarningLabel('reviewer_identity_declared_only'), '/api/review-queue', 'reviewQueue', 'reviewer_identity_declared_only'),
   ];
 }}
 function runtimeRecordsFilterChips() {{
@@ -5237,20 +5281,20 @@ function summaryJobsFilterChips() {{
 }}
 function runtimeRecordsSliceButtons() {{
   return [
-    listJumpButton(localizeTextValue('Runtime Mutation Preview'), '/api/runtime-records', 'runtimeRecords', 'preview_only'),
-    listJumpButton(localizeTextValue('Runtime Auth Advisory'), '/api/runtime-records', 'runtimeRecords', 'advisory_only'),
-    listJumpButton(localizeTextValue('Runtime Identity Aligned'), '/api/runtime-records', 'runtimeRecords', 'boundary_aligned'),
-    listJumpButton(localizeTextValue('Runtime Retrieval Plans'), '/api/runtime-records', 'runtimeRecords', 'retrieval_plan'),
-    listJumpButton(localizeTextValue('Runtime Provider Response'), '/api/runtime-records', 'runtimeRecords', 'response_id'),
+    listJumpButton(filterValueLabel('runtimeRecords', 'preview_only'), '/api/runtime-records', 'runtimeRecords', 'preview_only'),
+    listJumpButton(filterValueLabel('runtimeRecords', 'advisory_only'), '/api/runtime-records', 'runtimeRecords', 'advisory_only'),
+    listJumpButton(filterValueLabel('runtimeRecords', 'boundary_aligned'), '/api/runtime-records', 'runtimeRecords', 'boundary_aligned'),
+    listJumpButton(filterValueLabel('runtimeRecords', 'retrieval_plan'), '/api/runtime-records', 'runtimeRecords', 'retrieval_plan'),
+    listJumpButton(filterValueLabel('runtimeRecords', 'response_id'), '/api/runtime-records', 'runtimeRecords', 'response_id'),
   ];
 }}
 function summaryJobsSliceButtons() {{
   return [
-    listJumpButton(localizeTextValue('Summary Mutation Preview'), '/api/summary-jobs', 'summaryJobs', 'preview_only'),
-    listJumpButton(localizeTextValue('Summary Advisory'), '/api/summary-jobs', 'summaryJobs', 'advisory_only'),
-    listJumpButton(localizeTextValue('Summary Package Ready'), '/api/summary-jobs', 'summaryJobs', 'package_context_available'),
-    listJumpButton(localizeTextValue('Summary Identity Aligned'), '/api/summary-jobs', 'summaryJobs', 'boundary_aligned'),
-    listJumpButton(localizeTextValue('Summary Provider Response'), '/api/summary-jobs', 'summaryJobs', 'response_id'),
+    listJumpButton(filterValueLabel('summaryJobs', 'preview_only'), '/api/summary-jobs', 'summaryJobs', 'preview_only'),
+    listJumpButton(filterValueLabel('summaryJobs', 'advisory_only'), '/api/summary-jobs', 'summaryJobs', 'advisory_only'),
+    listJumpButton(filterValueLabel('summaryJobs', 'package_context_available'), '/api/summary-jobs', 'summaryJobs', 'package_context_available'),
+    listJumpButton(filterValueLabel('summaryJobs', 'boundary_aligned'), '/api/summary-jobs', 'summaryJobs', 'boundary_aligned'),
+    listJumpButton(filterValueLabel('summaryJobs', 'response_id'), '/api/summary-jobs', 'summaryJobs', 'response_id'),
   ];
 }}
 function activeViewSummary(endpoint, mode) {{
@@ -5582,12 +5626,12 @@ function renderDetailActionPreviewControls(preview, actions, mutationTargetEvent
     + '</button>'
   ).join(' ');
   return preview.ui_mutation_enabled
-    ? '<p><label>' + esc(localizeTextValue('Reviewer')) + ' <input id="reviewer-label" value="local-ui" placeholder="' + esc(t('placeholder.reviewer')) + '"></label> '
-      + '<label>' + esc(localizeTextValue('Kind')) + ' <select id="reviewer-kind"><option value="local_operator">local_operator</option><option value="user_declared">user_declared</option></select></label> '
-      + '<label>' + esc(localizeTextValue('Session')) + ' <input id="reviewer-session-label" value="local-ui-session" placeholder="' + esc(t('placeholder.session')) + '"></label></p>'
-      + '<p><label>' + esc(localizeTextValue('Note')) + ' <input id="reviewer-note" placeholder="' + esc(t('placeholder.review_note')) + '"></label></p>'
+    ? '<p><label>' + esc(uiLabel('Reviewer')) + ' <input id="reviewer-label" value="local-ui" placeholder="' + esc(t('placeholder.reviewer')) + '"></label> '
+      + '<label>' + esc(uiLabel('Kind')) + ' <select id="reviewer-kind"><option value="local_operator">local_operator</option><option value="user_declared">user_declared</option></select></label> '
+      + '<label>' + esc(uiLabel('Session')) + ' <input id="reviewer-session-label" value="local-ui-session" placeholder="' + esc(t('placeholder.session')) + '"></label></p>'
+      + '<p><label>' + esc(uiLabel('Note')) + ' <input id="reviewer-note" placeholder="' + esc(t('placeholder.review_note')) + '"></label></p>'
       + '<p>' + activeActionButtons + '</p>'
-    : '<p><button disabled>' + esc(localizeTextValue('Approve')) + '</button> <button disabled>' + esc(localizeTextValue('Reject')) + '</button> <button disabled>' + esc(localizeTextValue('Request Changes')) + '</button></p>';
+    : '<p><button disabled>' + esc(uiLabel('Approve')) + '</button> <button disabled>' + esc(uiLabel('Reject')) + '</button> <button disabled>' + esc(uiLabel('Request Changes')) + '</button></p>';
 }}
 function renderDetailActionPreviewList(preview, actions) {{
   return '<ul>' + actions.map(item =>
@@ -5596,8 +5640,8 @@ function renderDetailActionPreviewList(preview, actions) {{
     + (item.post_path
       ? (
           preview.ui_mutation_enabled
-            ? '<br><span class="id">' + esc(item.post_path || '') + '</span> <span class="id">' + esc(localizeTextValue('POST enabled')) + '</span>'
-            : '<br><span class="id">' + esc(item.post_path || '') + '</span> <button data-preview-post="' + esc(item.post_path || '') + '">' + esc(localizeTextValue('Preview blocked route')) + '</button>'
+            ? '<br><span class="id">' + esc(item.post_path || '') + '</span> <span class="id">' + esc(uiLabel('POST enabled')) + '</span>'
+            : '<br><span class="id">' + esc(item.post_path || '') + '</span> <button data-preview-post="' + esc(item.post_path || '') + '">' + esc(uiLabel('Preview blocked route')) + '</button>'
         )
       : '')
     + '</li>'
@@ -6264,7 +6308,7 @@ async function loadDetail(endpoint) {{
   window.__chronicleLastDetail = endpoint;
   const response = await fetch(endpoint);
   if (!response.ok) {{
-    document.getElementById('detail').innerHTML = '<h2>' + esc(localizeTextValue('Detail')) + '</h2><p>' + esc(t('status.not_found')) + '</p>';
+    document.getElementById('detail').innerHTML = '<h2>' + esc(uiLabel('Detail')) + '</h2><p>' + esc(t('status.not_found')) + '</p>';
     applyLocaleToPage();
     return;
   }}
