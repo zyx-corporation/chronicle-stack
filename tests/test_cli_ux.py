@@ -1,6 +1,8 @@
 """Tests for CLI UX improvements (v0.3)."""
 
 import os
+import subprocess
+from pathlib import Path
 
 from typer.testing import CliRunner
 
@@ -90,6 +92,23 @@ def test_ui_help_mentions_auth_mode_options(tmp_path):
     assert "authorization-mode" in result.stdout
     assert "mutation-capability-flag" in result.stdout
     assert "enable-ui-mutation" in result.stdout
+
+
+def test_ui_json_outputs_metadata_and_exits(tmp_path):
+    """ui --json should emit startup metadata and exit without starting the server."""
+    _run(tmp_path, "init", "--title", "UI JSON Flush Test")
+    python_bin = Path(__file__).resolve().parents[1] / ".venv" / "bin" / "python"
+    chronicle_bin = Path(__file__).resolve().parents[1] / ".venv" / "bin" / "chronicle"
+    proc = subprocess.run(
+        [str(python_bin), str(chronicle_bin), "ui", "--json", "--root", str(tmp_path)],
+        cwd=str(tmp_path),
+        capture_output=True,
+        text=True,
+        timeout=5,
+    )
+    assert proc.returncode == 0
+    assert "\"url\":" in proc.stdout
+    assert "127.0.0.1" in proc.stdout
 
 
 def test_invalid_export_format_exits_nonzero(tmp_path):

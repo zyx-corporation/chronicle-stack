@@ -320,7 +320,7 @@ chronicle ui-smoke
 chronicle ui-smoke --json
 ```
 
-`chronicle ui` は明示起動型 foreground local web UI です。既定では read-only であり、daemon、autostart、hosted service ではありません。
+`chronicle ui` は明示起動型 foreground local web UI です。既定では read-only であり、daemon、autostart、hosted service ではありません。`chronicle ui --json` は起動 metadata を JSON で出力して終了するため、URL 確認や wrapper script からの呼び出しに使えます。
 
 現段階でも bind host は loopback (`127.0.0.1`, `localhost`, `::1`) のみ許可されます。`--auth-mode` と `--authorization-mode` は boundary config であり、UI review detail の assurance 表示に反映されます。`--mutation-capability-flag` は preview intent を metadata に記録します。実際の write route は `--enable-ui-mutation` を追加し、さらに `--auth-mode loopback_local --authorization-mode reviewer_declared` が揃った場合にのみ有効化されます。詳細は [ADR-0022](adr/0022-explicit-local-ui-mutation-enable-flag.md) を参照してください。
 

@@ -1,7 +1,10 @@
 """Chronicle CLI — primary interface for Chronicle Core."""
 
 from importlib.metadata import PackageNotFoundError, version as _package_version
+from io import UnsupportedOperation
+import os
 from pathlib import Path
+import sys
 from typing import Annotated
 
 import typer
@@ -59,6 +62,37 @@ app = typer.Typer(
 )
 
 
+def _emit_stdout_line(text: str) -> None:
+    try:
+        os.write(sys.stdout.fileno(), f"{text}\n".encode("utf-8"))
+    except (AttributeError, OSError, UnsupportedOperation):
+        typer.echo(text)
+
+
+def _emit_ui_startup_output(*, metadata, enable_ui_mutation: bool, json_output: bool) -> None:
+    if json_output:
+        _emit_stdout_line(metadata.to_json())
+        return
+    _emit_stdout_line("Chronicle Stack local UI")
+    _emit_stdout_line(f"Root: {metadata.root}")
+    _emit_stdout_line(f"Serving: {metadata.url}")
+    _emit_stdout_line(f"Bind scope: {metadata.bind_scope}")
+    _emit_stdout_line(
+        "Mode: mutation enabled for loopback-local review"
+        if metadata.mutation_enabled
+        else "Mode: read-only, mutation disabled"
+    )
+    _emit_stdout_line(
+        f"Mutation capability flag: {metadata.mutation_capability_flag} (preview intent only)"
+    )
+    _emit_stdout_line(f"Enable UI mutation: {enable_ui_mutation}")
+    _emit_stdout_line(f"Auth: {metadata.auth_mode}; Authorization: {metadata.authorization_mode}")
+    _emit_stdout_line(
+        "Boundary: no daemon, no external model API, no GraphRAG runtime, no vector DB, no graph DB"
+    )
+    _emit_stdout_line("Press Ctrl-C to stop.")
+
+
 @app.callback()
 def _root_callback(
     version: Annotated[
@@ -102,7 +136,7 @@ def ui_cmd(
         str,
         typer.Option("--authorization-mode", help="UI boundary authorization-mode placeholder metadata."),
     ] = UIAuthorizationMode.NOT_ENABLED,
-    json_output: Annotated[bool, typer.Option("--json", help="Print startup metadata as JSON before serving.")] = False,
+    json_output: Annotated[bool, typer.Option("--json", help="Print startup metadata as JSON and exit.")] = False,
 ) -> None:
     """Start an explicit foreground read-only local web UI."""
     try:
@@ -117,25 +151,15 @@ def ui_cmd(
             auth_mode=auth_mode,
             authorization_mode=authorization_mode,
         )
+        _emit_ui_startup_output(
+            metadata=metadata,
+            enable_ui_mutation=enable_ui_mutation,
+            json_output=json_output,
+        )
+        sys.stdout.flush()
+        sys.stderr.flush()
         if json_output:
-            typer.echo(metadata.to_json())
-        else:
-            typer.echo("Chronicle Stack local UI")
-            typer.echo(f"Root: {metadata.root}")
-            typer.echo(f"Serving: {metadata.url}")
-            typer.echo(f"Bind scope: {metadata.bind_scope}")
-            typer.echo(
-                "Mode: mutation enabled for loopback-local review"
-                if metadata.mutation_enabled
-                else "Mode: read-only, mutation disabled"
-            )
-            typer.echo(f"Mutation capability flag: {metadata.mutation_capability_flag} (preview intent only)")
-            typer.echo(f"Enable UI mutation: {enable_ui_mutation}")
-            typer.echo(
-                f"Auth: {metadata.auth_mode}; Authorization: {metadata.authorization_mode}"
-            )
-            typer.echo("Boundary: no daemon, no external model API, no GraphRAG runtime, no vector DB, no graph DB")
-            typer.echo("Press Ctrl-C to stop.")
+            return
         serve_ui(
             host=host,
             port=port,
@@ -195,5 +219,10 @@ app.add_typer(summary_app, name="summary")
 app.add_typer(review_app, name="review")
 
 
-if __name__ == "__main__":
+def main() -> None:
+    """Console-script entrypoint."""
     app()
+
+
+if __name__ == "__main__":
+    main()

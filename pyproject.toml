@@ -26,7 +26,7 @@ dev = [
 ]
 
 [project.scripts]
-chronicle = "chronicle.cli:app"
+chronicle = "chronicle.cli:main"
 chronicle-graph = "chronicle.cli_graph:graph_app"
 chronicle-context = "chronicle.cli_context:context_app"
 chronicle-audit = "chronicle.cli_audit:audit_app"
