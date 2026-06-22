@@ -1043,6 +1043,7 @@ class ChronicleUIDataService:
                 entry.target_event_id,
                 data.get("review_capability", {}),
                 mutation_enabled=bool(boundary.get("mutation_enabled", False)),
+                write_route_contract=boundary.get("write_route_contract", {}),
             )
             data["cli_parity_summary"] = self._review_cli_parity_summary(
                 entry.target_event_id,
@@ -1820,6 +1821,7 @@ class ChronicleUIDataService:
         capability: dict[str, Any],
         *,
         mutation_enabled: bool = False,
+        write_route_contract: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         can_review_now = bool(capability.get("can_review_now", False))
         actions = []
@@ -1866,6 +1868,7 @@ class ChronicleUIDataService:
                 event_id=target_event_id,
                 audit_id=None,
             ),
+            "write_route_contract": write_route_contract or {},
             "actions": actions,
         }
 
@@ -1989,6 +1992,7 @@ class ChronicleUIDataService:
                         parts[2],
                         row.get("review_capability", {}),
                         mutation_enabled=bool(boundary.get("mutation_enabled", False)),
+                        write_route_contract=boundary.get("write_route_contract", {}),
                     )
                     row["cli_parity"] = self._review_cli_parity_summary(
                         parts[2],
@@ -2037,6 +2041,7 @@ class ChronicleUIDataService:
                         event_id,
                         job["review_capability"],
                         mutation_enabled=bool(boundary.get("mutation_enabled", False)),
+                        write_route_contract=boundary.get("write_route_contract", {}),
                     )
                     job["cli_parity"] = self._review_cli_parity_summary(
                         event_id,
@@ -2614,6 +2619,7 @@ function renderPreviewSummary(preview) {{
 function renderPreviewContractSummary(preview, previewTarget = 'action-preview-response') {{
   const failureContract = (preview && preview.failure_contract) || {{}};
   const successContract = (preview && preview.success_contract) || {{}};
+  const writeRouteContract = (preview && preview.write_route_contract) || {{}};
   const recoveryPath = failureContract.recovery_path || '';
   const possibleErrors = Array.isArray(failureContract.possible_error_codes)
     ? failureContract.possible_error_codes
@@ -2621,7 +2627,10 @@ function renderPreviewContractSummary(preview, previewTarget = 'action-preview-r
   const followUpCommands = Array.isArray(successContract.follow_up_commands)
     ? successContract.follow_up_commands
     : [];
-  if (!recoveryPath && possibleErrors.length === 0 && followUpCommands.length === 0) return '';
+  const requestFields = Array.isArray(writeRouteContract.expected_request_fields)
+    ? writeRouteContract.expected_request_fields
+    : [];
+  if (!recoveryPath && possibleErrors.length === 0 && followUpCommands.length === 0 && requestFields.length === 0) return '';
   return [
     failureContract.rollback_status
       ? '<br><span class="id">rollback=' + esc(failureContract.rollback_status) + '</span>'
@@ -2631,6 +2640,18 @@ function renderPreviewContractSummary(preview, previewTarget = 'action-preview-r
       : '',
     typeof failureContract.durable_mutation_reported_on_failure === 'boolean'
       ? '<br><span class="id">durable-on-failure=' + esc(failureContract.durable_mutation_reported_on_failure) + '</span>'
+      : '',
+    writeRouteContract.route_template
+      ? '<br><span class="id">write-route=' + esc(writeRouteContract.route_template) + '</span>'
+      : '',
+    requestFields.length > 0
+      ? '<br><span class="id">request-fields=' + esc(requestFields.join(' | ')) + '</span>'
+      : '',
+    writeRouteContract.success_status_code
+      ? '<br><span class="id">success-status=' + esc(writeRouteContract.success_status_code) + '</span>'
+      : '',
+    writeRouteContract.blocked_status_code
+      ? '<br><span class="id">blocked-status=' + esc(writeRouteContract.blocked_status_code) + '</span>'
       : '',
     recoveryPath
       ? '<br><span class="id">recovery=' + esc(recoveryPath) + '</span> '

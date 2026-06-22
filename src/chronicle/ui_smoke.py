@@ -247,12 +247,16 @@ def run_ui_smoke(root: Path | None = None) -> UISmokeReport:
                         f"{endpoint}/{record_id}#preview-follow-up-contract",
                         isinstance(action_preview, dict)
                         and isinstance(action_preview.get("success_contract"), dict)
-                        and isinstance(action_preview.get("success_contract", {}).get("follow_up_commands"), list),
+                        and isinstance(action_preview.get("success_contract", {}).get("follow_up_commands"), list)
+                        and bool(action_preview.get("write_route_contract", {}).get("route_template"))
+                        and isinstance(action_preview.get("write_route_contract", {}).get("expected_request_fields"), list),
                         (
                             "ok"
                             if isinstance(action_preview, dict)
                             and isinstance(action_preview.get("success_contract"), dict)
                             and isinstance(action_preview.get("success_contract", {}).get("follow_up_commands"), list)
+                            and bool(action_preview.get("write_route_contract", {}).get("route_template"))
+                            and isinstance(action_preview.get("write_route_contract", {}).get("expected_request_fields"), list)
                             else "review detail missing preview follow-up contract"
                         ),
                     )
@@ -396,12 +400,16 @@ def run_ui_smoke(root: Path | None = None) -> UISmokeReport:
                         f"{endpoint}/{record_id}#preview-follow-up-contract",
                         isinstance(preview, dict)
                         and isinstance(preview.get("success_contract"), dict)
-                        and isinstance(preview.get("success_contract", {}).get("follow_up_commands"), list),
+                        and isinstance(preview.get("success_contract", {}).get("follow_up_commands"), list)
+                        and bool(preview.get("write_route_contract", {}).get("route_template"))
+                        and isinstance(preview.get("write_route_contract", {}).get("expected_request_fields"), list),
                         (
                             "ok"
                             if isinstance(preview, dict)
                             and isinstance(preview.get("success_contract"), dict)
                             and isinstance(preview.get("success_contract", {}).get("follow_up_commands"), list)
+                            and bool(preview.get("write_route_contract", {}).get("route_template"))
+                            and isinstance(preview.get("write_route_contract", {}).get("expected_request_fields"), list)
                             else "summary detail missing preview follow-up contract"
                         ),
                     )
