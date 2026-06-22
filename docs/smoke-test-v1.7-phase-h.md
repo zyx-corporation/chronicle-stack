@@ -84,10 +84,12 @@ Expected auth-readiness smoke checks include:
 - `/api/overview#summary-auth-readiness`
 - `/api/review-queue/<id>#auth-readiness`
 - `/api/review-queue/<id>#mutation-enablement`
+- `/api/review-queue/<id>#preview-follow-up-contract`
 - `/api/runtime-records/<id>#auth-readiness`
 - `/api/runtime-records/<id>#mutation-enablement`
 - `/api/summary-jobs/<id>#auth-readiness`
 - `/api/summary-jobs/<id>#mutation-enablement`
+- `/api/summary-jobs/<id>#preview-follow-up-contract`
 - `html-shell`
 
 ## Manual spot checks

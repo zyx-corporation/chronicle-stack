@@ -240,6 +240,21 @@ def run_ui_smoke(root: Path | None = None) -> UISmokeReport:
                         ),
                     )
                 )
+                checks.append(
+                    UISmokeCheck(
+                        f"{endpoint}/{record_id}#preview-follow-up-contract",
+                        isinstance(action_preview, dict)
+                        and isinstance(action_preview.get("success_contract"), dict)
+                        and isinstance(action_preview.get("success_contract", {}).get("follow_up_commands"), list),
+                        (
+                            "ok"
+                            if isinstance(action_preview, dict)
+                            and isinstance(action_preview.get("success_contract"), dict)
+                            and isinstance(action_preview.get("success_contract", {}).get("follow_up_commands"), list)
+                            else "review detail missing preview follow-up contract"
+                        ),
+                    )
+                )
                 blocked = service.review_action_blocked_response(
                     f"/api/review-actions/{record_id}/approve"
                 )
@@ -367,6 +382,21 @@ def run_ui_smoke(root: Path | None = None) -> UISmokeReport:
                             and isinstance(preview.get("failure_contract"), dict)
                             and preview.get("failure_contract", {}).get("rollback_status") == "fail_closed"
                             else "summary detail missing blocked route preview contract"
+                        ),
+                    )
+                )
+                checks.append(
+                    UISmokeCheck(
+                        f"{endpoint}/{record_id}#preview-follow-up-contract",
+                        isinstance(preview, dict)
+                        and isinstance(preview.get("success_contract"), dict)
+                        and isinstance(preview.get("success_contract", {}).get("follow_up_commands"), list),
+                        (
+                            "ok"
+                            if isinstance(preview, dict)
+                            and isinstance(preview.get("success_contract"), dict)
+                            and isinstance(preview.get("success_contract", {}).get("follow_up_commands"), list)
+                            else "summary detail missing preview follow-up contract"
                         ),
                     )
                 )

@@ -1828,6 +1828,11 @@ class ChronicleUIDataService:
                 action="approve",
                 error_code="mutation_disabled",
             ),
+            "success_contract": ChronicleUIDataService._review_action_success_contract(
+                cli_equivalent=f"chronicle review approve --event {target_event_id}",
+                event_id=target_event_id,
+                audit_id=None,
+            ),
             "actions": actions,
         }
 
@@ -2575,11 +2580,15 @@ function renderPreviewSummary(preview) {{
 }}
 function renderPreviewContractSummary(preview, previewTarget = 'action-preview-response') {{
   const failureContract = (preview && preview.failure_contract) || {{}};
+  const successContract = (preview && preview.success_contract) || {{}};
   const recoveryPath = failureContract.recovery_path || '';
   const possibleErrors = Array.isArray(failureContract.possible_error_codes)
     ? failureContract.possible_error_codes
     : [];
-  if (!recoveryPath && possibleErrors.length === 0) return '';
+  const followUpCommands = Array.isArray(successContract.follow_up_commands)
+    ? successContract.follow_up_commands
+    : [];
+  if (!recoveryPath && possibleErrors.length === 0 && followUpCommands.length === 0) return '';
   return [
     failureContract.rollback_status
       ? '<br><span class="id">rollback=' + esc(failureContract.rollback_status) + '</span>'
@@ -2590,6 +2599,9 @@ function renderPreviewContractSummary(preview, previewTarget = 'action-preview-r
       : '',
     possibleErrors.length > 0
       ? '<br><span class="id">errors=' + esc(possibleErrors.join(' | ')) + '</span>'
+      : '',
+    followUpCommands.length > 0
+      ? '<br><span class="id">follow-up=' + esc(followUpCommands.join(' | ')) + '</span>'
       : '',
   ].join('');
 }}

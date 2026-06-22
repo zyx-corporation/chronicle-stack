@@ -396,6 +396,7 @@ def test_ui_data_service_read_endpoints(tmp_path):
     assert service.summary_jobs_list()["summary_jobs"][0]["package_readiness_status"] == "no_context_records"
     assert service.summary_jobs_list()["summary_jobs"][0]["cli_parity_status"] == "aligned"
     assert service.summary_jobs_list()["summary_jobs"][0]["action_preview_summary"]["status"] == "preview_only"
+    assert service.summary_jobs_list()["summary_jobs"][0]["action_preview_summary"]["success_contract"]["follow_up_commands"][0] == "chronicle review queue --include-resolved --json"
     assert service.summary_jobs_list()["summary_jobs"][0]["identity_assurance_status"] == "unknown"
     assert service.runtime_config_state()["runtime_config"]["config"]["provider_name"] == "ui-local"
     assert service.review_queue()["review_queue"][0]["review_preview_only"] is True
@@ -405,6 +406,7 @@ def test_ui_data_service_read_endpoints(tmp_path):
     assert service.review_queue()["review_queue"][0]["package_readiness_summary"]["label"].startswith("package:")
     assert service.review_queue()["review_queue"][0]["package_readiness_summary"]["message"]
     assert service.review_queue()["review_queue"][0]["action_preview_summary"]["status"] == "preview_only"
+    assert service.review_queue()["review_queue"][0]["action_preview_summary"]["success_contract"]["transaction_status"] == "decision_and_audit_persisted"
     assert service.review_queue()["review_queue"][0]["action_preview_summary"]["actions"][0]["post_path"].startswith(
         "/api/review-actions/evt_"
     )
@@ -579,6 +581,7 @@ def test_ui_html_filtering_includes_provider_response_metadata_fields(tmp_path, 
     assert "copyCommandButton(recoveryPath, previewTarget, 'Copy Recovery CLI')" in html
     assert "rollback=" in html
     assert "errors=" in html
+    assert "follow-up=" in html
     assert "detailLine('Enablement ready', mutationReadiness.enablement_ready)" in html
     assert "detailListLine('Enablement checks', enablementChecks.map(check => ((check.satisfied ? 'ok: ' : 'blocked: ') + (check.label || check.code || 'check'))), ' | ')" in html
     assert "function renderMutationEnablementNotice(record)" in html
@@ -622,6 +625,7 @@ def test_ui_data_service_detail_endpoints(tmp_path):
     assert summary_detail["package_readiness"]["status"] == "no_context_records"
     assert summary_detail["cli_parity"]["status"] == "aligned"
     assert summary_detail["action_preview"]["status"] == "preview_only"
+    assert summary_detail["action_preview"]["success_contract"]["rollback_status"] == "not_required"
     assert summary_detail["mutation_enablement"]["enablement_ready"] is False
     assert any(item["source"] == "boundary" for item in summary_detail["mutation_enablement"]["blocker_summaries"])
     assert summary_detail["mutation_enablement"]["write_route_contract"]["route_template"] == "/api/review-actions/<event_id>/<action>"
@@ -658,6 +662,7 @@ def test_ui_data_service_detail_endpoints(tmp_path):
         "reject",
         "request-changes",
     ]
+    assert review_detail["action_preview"]["success_contract"]["follow_up_commands"][0] == "chronicle review queue --include-resolved --json"
     assert review_detail["review_preview_only"] is True
     assert review_detail["package_readiness"]["status"] == "no_context_records"
     assert review_detail["package_readiness"]["suggested_commands"][0] == "chronicle show --json"
