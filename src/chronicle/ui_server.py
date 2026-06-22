@@ -303,6 +303,35 @@ def _mutation_enablement_checks(
     return checks
 
 
+def _mutation_operational_readiness(
+    *,
+    enablement_checks: list[dict[str, Any]],
+) -> dict[str, Any]:
+    unsatisfied = [
+        {
+            "code": str(check.get("code", "")),
+            "label": str(check.get("label", check.get("code", ""))),
+            "detail": str(check.get("detail", "")),
+        }
+        for check in enablement_checks
+        if check.get("satisfied") is not True
+    ]
+    satisfied_count = len(enablement_checks) - len(unsatisfied)
+    required_count = len(enablement_checks)
+    return {
+        "status": "ready" if not unsatisfied else "blocked",
+        "satisfied_count": satisfied_count,
+        "required_count": required_count,
+        "remaining_count": len(unsatisfied),
+        "unsatisfied_checks": unsatisfied,
+        "message": (
+            "All explicit local mutation prerequisites are currently satisfied."
+            if not unsatisfied
+            else f"{len(unsatisfied)} explicit local mutation prerequisite(s) remain unsatisfied."
+        ),
+    }
+
+
 def _reviewer_context_requirements(metadata: UIBoundaryMetadata) -> dict[str, Any]:
     effective_required_fields = ["reviewer_label", "reviewer_kind", "ui_intent"]
     if metadata.session_gating:
@@ -1097,6 +1126,9 @@ class ChronicleUIDataService:
             boundary_blockers=boundary_blockers,
             pending_boundary_warning_counts=pending_boundary_warning_counts,
         )
+        operational_readiness = _mutation_operational_readiness(
+            enablement_checks=enablement_checks,
+        )
         satisfied_checks = sum(1 for check in enablement_checks if check.get("satisfied") is True)
         if ready_rows > 0:
             next_steps.append(
@@ -1115,6 +1147,7 @@ class ChronicleUIDataService:
             "enablement_ready": satisfied_checks == len(enablement_checks),
             "enablement_satisfied_count": satisfied_checks,
             "enablement_required_count": len(enablement_checks),
+            "operational_readiness": operational_readiness,
             "reviewer_context_requirements": boundary.get("reviewer_context_requirements", {}),
             "write_route_contract": boundary.get("write_route_contract", {}),
             "next_steps": next_steps,
@@ -2593,6 +2626,12 @@ function renderPreviewContractSummary(preview, previewTarget = 'action-preview-r
     failureContract.rollback_status
       ? '<br><span class="id">rollback=' + esc(failureContract.rollback_status) + '</span>'
       : '',
+    successContract.transaction_status
+      ? '<br><span class="id">transaction=' + esc(successContract.transaction_status) + '</span>'
+      : '',
+    typeof failureContract.durable_mutation_reported_on_failure === 'boolean'
+      ? '<br><span class="id">durable-on-failure=' + esc(failureContract.durable_mutation_reported_on_failure) + '</span>'
+      : '',
     recoveryPath
       ? '<br><span class="id">recovery=' + esc(recoveryPath) + '</span> '
         + copyCommandButton(recoveryPath, previewTarget, 'Copy Recovery CLI')
@@ -3546,6 +3585,7 @@ function renderMutationEnablementNotice(record) {{
   const blockerDetails = Array.isArray(readiness.blocker_details) ? readiness.blocker_details : [];
   const blockerSummaries = Array.isArray(readiness.blocker_summaries) ? readiness.blocker_summaries : [];
   const enablementChecks = Array.isArray(readiness.enablement_checks) ? readiness.enablement_checks : [];
+  const operationalReadiness = readiness.operational_readiness || {{}};
   const reviewerContext = readiness.reviewer_context_requirements || {{}};
   const writeRouteContract = readiness.write_route_contract || {{}};
   const readinessButtons = moreStatusButtons(readiness.status, '/api/review-queue', 'reviewQueue');
@@ -3554,9 +3594,13 @@ function renderMutationEnablementNotice(record) {{
     statusMessageBody(readiness.status, readiness.message, readinessButtons)
       + detailLine('Enablement ready', readiness.enablement_ready)
       + detailLine('Enablement checks', String(readiness.enablement_satisfied_count ?? 0) + '/' + String(readiness.enablement_required_count ?? 0))
+      + detailLine('Operational readiness', operationalReadiness.status || '')
+      + detailLine('Operational summary', operationalReadiness.message || '')
+      + detailLine('Remaining prerequisites', operationalReadiness.remaining_count ?? 0)
       + detailLine('Blockers', detailMessages(blockerDetails, readiness.blockers))
       + detailListLine('Blocker sources', blockerSummaries.map(item => ((item.source || 'unknown') + ':' + (item.code || 'blocker') + '=' + String(item.affected_count ?? 0))), ' | ')
       + detailListLine('Checks', enablementChecks.map(check => ((check.satisfied ? 'ok: ' : 'blocked: ') + (check.label || check.code || 'check'))), ' | ')
+      + detailListLine('Remaining checks', (operationalReadiness.unsatisfied_checks || []).map(item => ((item.label || item.code || 'check') + ': ' + (item.detail || ''))), ' | ')
       + detailListLine('Reviewer fields', reviewerContext.effective_required_fields, ' | ')
       + detailListLine('Reviewer kinds', reviewerContext.accepted_reviewer_kinds, ' | ')
       + detailLine('Reviewer label pattern', reviewerContext.reviewer_label_pattern || '')
@@ -3916,6 +3960,7 @@ function renderOverviewMutationReadinessPanel(mutationReadiness) {{
   const reviewerContextRequirements = mutationReadiness.reviewer_context_requirements || {{}};
   const writeRouteContract = mutationReadiness.write_route_contract || {{}};
   const enablementChecks = Array.isArray(mutationReadiness.enablement_checks) ? mutationReadiness.enablement_checks : [];
+  const operationalReadiness = mutationReadiness.operational_readiness || {{}};
   return renderPanel(
     sectionTitle('Mutation Readiness')
     + detailLine('Status', mutationReadiness.status || '')
@@ -3924,10 +3969,14 @@ function renderOverviewMutationReadinessPanel(mutationReadiness) {{
     + detailLine('Advisory rows', mutationReadiness.advisory_row_count ?? 0)
     + detailLine('Enablement ready', mutationReadiness.enablement_ready)
     + detailLine('Enablement checks', String(mutationReadiness.enablement_satisfied_count ?? 0) + '/' + String(mutationReadiness.enablement_required_count ?? 0))
+    + detailLine('Operational readiness', operationalReadiness.status || '')
+    + detailLine('Operational summary', operationalReadiness.message || '')
+    + detailLine('Remaining prerequisites', operationalReadiness.remaining_count ?? 0)
     + detailListLine('Blockers', mutationReadiness.blockers, ' | ')
     + detailLine('Blocker details', detailMessages(blockerDetails, mutationReadiness.blockers))
     + detailListLine('Blocker sources', blockerSummaries.map(item => ((item.source || 'unknown') + ':' + (item.code || 'blocker') + '=' + String(item.affected_count ?? 0))), ' | ')
     + detailListLine('Enablement checks', enablementChecks.map(check => ((check.satisfied ? 'ok: ' : 'blocked: ') + (check.label || check.code || 'check'))), ' | ')
+    + detailListLine('Remaining checks', (operationalReadiness.unsatisfied_checks || []).map(item => ((item.label || item.code || 'check') + ': ' + (item.detail || ''))), ' | ')
     + detailListLine('Effective reviewer fields', reviewerContextRequirements.effective_required_fields, ' | ')
     + detailListLine('Reviewer fields', reviewerContextRequirements.required_fields, ' | ')
     + detailListLine('Accepted reviewer kinds', reviewerContextRequirements.accepted_reviewer_kinds, ' | ')

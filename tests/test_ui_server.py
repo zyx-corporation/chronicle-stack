@@ -288,6 +288,8 @@ def test_mutation_readiness_summary_can_reach_enablement_ready(tmp_path):
     assert readiness["enablement_ready"] is True
     assert readiness["enablement_satisfied_count"] == readiness["enablement_required_count"] == 6
     assert all(check["satisfied"] is True for check in readiness["enablement_checks"])
+    assert readiness["operational_readiness"]["status"] == "ready"
+    assert readiness["operational_readiness"]["remaining_count"] == 0
 
 
 def test_ui_overview_data(tmp_path):
@@ -341,6 +343,8 @@ def test_ui_overview_data(tmp_path):
     assert overview["mutation_readiness"]["enablement_ready"] is False
     assert overview["mutation_readiness"]["enablement_satisfied_count"] == 1
     assert overview["mutation_readiness"]["enablement_required_count"] == 6
+    assert overview["mutation_readiness"]["operational_readiness"]["status"] == "blocked"
+    assert overview["mutation_readiness"]["operational_readiness"]["remaining_count"] == 5
     assert overview["mutation_readiness"]["enablement_checks"][0]["code"] == "mutation_capability_flag"
     assert overview["mutation_readiness"]["enablement_checks"][0]["satisfied"] is False
     assert overview["mutation_readiness"]["reviewer_context_requirements"]["required_fields"] == [
@@ -580,9 +584,13 @@ def test_ui_html_filtering_includes_provider_response_metadata_fields(tmp_path, 
     assert "function renderPreviewContractSummary(preview, previewTarget = 'action-preview-response')" in html
     assert "copyCommandButton(recoveryPath, previewTarget, 'Copy Recovery CLI')" in html
     assert "rollback=" in html
+    assert "transaction=" in html
+    assert "durable-on-failure=" in html
     assert "errors=" in html
     assert "follow-up=" in html
     assert "detailLine('Enablement ready', mutationReadiness.enablement_ready)" in html
+    assert "detailLine('Operational readiness', operationalReadiness.status || '')" in html
+    assert "detailListLine('Remaining checks', (operationalReadiness.unsatisfied_checks || []).map(item => ((item.label || item.code || 'check') + ': ' + (item.detail || ''))), ' | ')" in html
     assert "detailListLine('Enablement checks', enablementChecks.map(check => ((check.satisfied ? 'ok: ' : 'blocked: ') + (check.label || check.code || 'check'))), ' | ')" in html
     assert "function renderMutationEnablementNotice(record)" in html
     assert "'Mutation Enablement'" in html
@@ -627,6 +635,7 @@ def test_ui_data_service_detail_endpoints(tmp_path):
     assert summary_detail["action_preview"]["status"] == "preview_only"
     assert summary_detail["action_preview"]["success_contract"]["rollback_status"] == "not_required"
     assert summary_detail["mutation_enablement"]["enablement_ready"] is False
+    assert summary_detail["mutation_enablement"]["operational_readiness"]["status"] == "blocked"
     assert any(item["source"] == "boundary" for item in summary_detail["mutation_enablement"]["blocker_summaries"])
     assert summary_detail["mutation_enablement"]["write_route_contract"]["route_template"] == "/api/review-actions/<event_id>/<action>"
     assert any(link["path"] == f"/api/review-queue/{summary_detail['review_target_event_id']}" for link in summary_detail["related_links"])
@@ -635,6 +644,7 @@ def test_ui_data_service_detail_endpoints(tmp_path):
     assert runtime_detail["runtime_record_preview"]["record_kind"] == "summary"
     assert runtime_detail["auth_boundary_notice"]["status"] == "advisory_only"
     assert runtime_detail["mutation_enablement"]["enablement_ready"] is False
+    assert runtime_detail["mutation_enablement"]["operational_readiness"]["remaining_count"] >= 1
     assert any(item["source"] == "review_queue" for item in runtime_detail["mutation_enablement"]["blocker_summaries"])
     assert runtime_detail["mutation_enablement"]["write_route_contract"]["success_status_code"] == 200
     assert runtime_detail["suggested_cli_family"] == "chronicle runtime summarize --record"
@@ -662,6 +672,7 @@ def test_ui_data_service_detail_endpoints(tmp_path):
         "reject",
         "request-changes",
     ]
+    assert review_detail["mutation_enablement"]["operational_readiness"]["unsatisfied_checks"]
     assert review_detail["action_preview"]["success_contract"]["follow_up_commands"][0] == "chronicle review queue --include-resolved --json"
     assert review_detail["review_preview_only"] is True
     assert review_detail["package_readiness"]["status"] == "no_context_records"
