@@ -356,8 +356,33 @@ def _reviewer_context_requirements(metadata: UIBoundaryMetadata) -> dict[str, An
     }
 
 
+def _reviewer_identity_proof_contract(metadata: UIBoundaryMetadata) -> dict[str, Any]:
+    reviewer_context = _reviewer_context_requirements(metadata)
+    return {
+        "proof_status": (
+            "session_gated_local_operator"
+            if metadata.session_gating
+            else "local_operator_advisory"
+        ),
+        "accepted_auth_modes": [UIAuthMode.LOOPBACK_LOCAL],
+        "required_identity_fields": reviewer_context.get("effective_required_fields", []),
+        "session_label_required": bool(metadata.session_gating),
+        "session_label_pattern": reviewer_context.get("session_label_pattern", ""),
+        "accepted_reviewer_kinds": reviewer_context.get("accepted_reviewer_kinds", []),
+        "advisory_only_reviewer_kinds": reviewer_context.get("advisory_only_reviewer_kinds", []),
+        "proof_note": (
+            "Local reviewer identity proof currently means loopback-local operator context plus reviewer/session metadata."
+        ),
+        "insufficient_without": [
+            "explicit authorization boundary",
+            "fail-closed audit insertion",
+        ],
+    }
+
+
 def _ui_write_route_contract(metadata: UIBoundaryMetadata) -> dict[str, Any]:
     reviewer_context = _reviewer_context_requirements(metadata)
+    identity_proof = _reviewer_identity_proof_contract(metadata)
     mutation_enabled = bool(metadata.mutation_enabled)
     actions = ["approve", "reject", "request-changes"]
     return {
@@ -378,6 +403,7 @@ def _ui_write_route_contract(metadata: UIBoundaryMetadata) -> dict[str, Any]:
         "transaction_rule": (
             "No durable GUI review result is reported as applied unless both review decision persistence and audit insertion succeed."
         ),
+        "identity_proof_contract": identity_proof,
         "success_contract": {
             "transaction_status": "decision_and_audit_persisted",
             "rollback_status": "not_required",
@@ -2620,6 +2646,7 @@ function renderPreviewContractSummary(preview, previewTarget = 'action-preview-r
   const failureContract = (preview && preview.failure_contract) || {{}};
   const successContract = (preview && preview.success_contract) || {{}};
   const writeRouteContract = (preview && preview.write_route_contract) || {{}};
+  const identityProofContract = writeRouteContract.identity_proof_contract || {{}};
   const recoveryPath = failureContract.recovery_path || '';
   const possibleErrors = Array.isArray(failureContract.possible_error_codes)
     ? failureContract.possible_error_codes
@@ -2652,6 +2679,12 @@ function renderPreviewContractSummary(preview, previewTarget = 'action-preview-r
       : '',
     writeRouteContract.blocked_status_code
       ? '<br><span class="id">blocked-status=' + esc(writeRouteContract.blocked_status_code) + '</span>'
+      : '',
+    identityProofContract.proof_status
+      ? '<br><span class="id">proof-status=' + esc(identityProofContract.proof_status) + '</span>'
+      : '',
+    Array.isArray(identityProofContract.required_identity_fields) && identityProofContract.required_identity_fields.length > 0
+      ? '<br><span class="id">proof-fields=' + esc(identityProofContract.required_identity_fields.join(' | ')) + '</span>'
       : '',
     recoveryPath
       ? '<br><span class="id">recovery=' + esc(recoveryPath) + '</span> '
@@ -3609,6 +3642,7 @@ function renderMutationEnablementNotice(record) {{
   const operationalReadiness = readiness.operational_readiness || {{}};
   const reviewerContext = readiness.reviewer_context_requirements || {{}};
   const writeRouteContract = readiness.write_route_contract || {{}};
+  const identityProofContract = writeRouteContract.identity_proof_contract || {{}};
   const readinessButtons = moreStatusButtons(readiness.status, '/api/review-queue', 'reviewQueue');
   return renderNotice(
     'Mutation Enablement',
@@ -3631,6 +3665,8 @@ function renderMutationEnablementNotice(record) {{
       + detailListLine('Write actions', writeRouteContract.actions, ' | ')
       + detailLine('Write success status', writeRouteContract.success_status_code ?? '')
       + detailLine('Write blocked status', writeRouteContract.blocked_status_code ?? '')
+      + detailLine('Identity proof status', identityProofContract.proof_status || '')
+      + detailListLine('Identity proof fields', identityProofContract.required_identity_fields, ' | ')
       + detailListLine('Next steps', readiness.next_steps, ' | ')
   );
 }}
@@ -3921,6 +3957,7 @@ function renderOverviewRuntimeConfigPanel(runtimeConfig, runtimeConfigContract) 
 }}
 function renderOverviewUiBoundaryPanel(uiBoundary) {{
   const writeRouteContract = uiBoundary.write_route_contract || {{}};
+  const identityProofContract = writeRouteContract.identity_proof_contract || {{}};
   return renderPanel(
     sectionTitle('UI Boundary')
     + '<p>Bind scope: ' + esc(uiBoundary.bind_scope || '') + '</p>'
@@ -3935,6 +3972,8 @@ function renderOverviewUiBoundaryPanel(uiBoundary) {{
     + detailListLine('Write request fields', writeRouteContract.expected_request_fields, ' | ')
     + detailLine('Write success status', writeRouteContract.success_status_code ?? '')
     + detailLine('Write blocked status', writeRouteContract.blocked_status_code ?? '')
+    + detailLine('Identity proof status', identityProofContract.proof_status || '')
+    + detailListLine('Identity proof fields', identityProofContract.required_identity_fields, ' | ')
   );
 }}
 function renderOverviewAuthBoundaryPanel(authBoundary, authBoundaryOverview) {{
@@ -3980,6 +4019,7 @@ function renderOverviewMutationReadinessPanel(mutationReadiness) {{
   const blockerSummaries = Array.isArray(mutationReadiness.blocker_summaries) ? mutationReadiness.blocker_summaries : [];
   const reviewerContextRequirements = mutationReadiness.reviewer_context_requirements || {{}};
   const writeRouteContract = mutationReadiness.write_route_contract || {{}};
+  const identityProofContract = writeRouteContract.identity_proof_contract || {{}};
   const enablementChecks = Array.isArray(mutationReadiness.enablement_checks) ? mutationReadiness.enablement_checks : [];
   const operationalReadiness = mutationReadiness.operational_readiness || {{}};
   return renderPanel(
@@ -4010,6 +4050,8 @@ function renderOverviewMutationReadinessPanel(mutationReadiness) {{
     + detailListLine('Write request fields', writeRouteContract.expected_request_fields, ' | ')
     + detailLine('Write success status', writeRouteContract.success_status_code ?? '')
     + detailLine('Write blocked status', writeRouteContract.blocked_status_code ?? '')
+    + detailLine('Identity proof status', identityProofContract.proof_status || '')
+    + detailListLine('Identity proof fields', identityProofContract.required_identity_fields, ' | ')
     + detailListLine('Next steps', mutationReadiness.next_steps, ' | ')
   );
 }}
