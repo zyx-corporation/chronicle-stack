@@ -1820,6 +1820,7 @@ class ChronicleUIDataService:
             review_row = self._review_queue_row(parts[2])
             if review_row is not None:
                 record["auth_boundary_notice"] = review_row.get("auth_boundary_notice")
+                record["mutation_enablement"] = self.mutation_readiness_summary()
                 record["auth_readiness_status"] = str(
                     review_row.get("auth_boundary_notice", {}).get("status", "")
                 )
@@ -1857,6 +1858,7 @@ class ChronicleUIDataService:
                         row.get("review_capability"),
                         row.get("latest_identity_assurance"),
                     )
+                    row["mutation_enablement"] = self.mutation_readiness_summary()
                     row["ui_mutation_enabled"] = bool(boundary.get("mutation_enabled", False))
                     row["review_preview_only"] = not bool(boundary.get("mutation_enabled", False))
                     return {"record": row}
@@ -1904,6 +1906,7 @@ class ChronicleUIDataService:
                         job.get("review_capability"),
                         job.get("latest_identity_assurance"),
                     )
+                    job["mutation_enablement"] = self.mutation_readiness_summary()
                     job["history"] = [
                         self._history_row(item, boundary)
                         for item in self.review.history(event_id=event_id)
@@ -3393,6 +3396,22 @@ function renderReviewCapabilityNotice(record) {{
       + detailLine('Warnings', detailMessages(warnDetails, warnList) || '(none)')
   );
 }}
+function renderMutationEnablementNotice(record) {{
+  if (!record.mutation_enablement) return '';
+  const readiness = record.mutation_enablement;
+  const blockerDetails = Array.isArray(readiness.blocker_details) ? readiness.blocker_details : [];
+  const enablementChecks = Array.isArray(readiness.enablement_checks) ? readiness.enablement_checks : [];
+  const readinessButtons = moreStatusButtons(readiness.status, '/api/review-queue', 'reviewQueue');
+  return renderNotice(
+    'Mutation Enablement',
+    statusMessageBody(readiness.status, readiness.message, readinessButtons)
+      + detailLine('Enablement ready', readiness.enablement_ready)
+      + detailLine('Enablement checks', String(readiness.enablement_satisfied_count ?? 0) + '/' + String(readiness.enablement_required_count ?? 0))
+      + detailLine('Blockers', detailMessages(blockerDetails, readiness.blockers))
+      + detailListLine('Checks', enablementChecks.map(check => ((check.satisfied ? 'ok: ' : 'blocked: ') + (check.label || check.code || 'check'))), ' | ')
+      + detailListLine('Next steps', readiness.next_steps, ' | ')
+  );
+}}
 function renderDetailActionPreviewControls(preview, actions, mutationTargetEventId) {{
   const activeActionButtons = actions.map(item =>
     '<button data-submit-review-action="' + esc(item.post_path || '') + '" data-review-action="' + esc(item.action || '') + '" data-review-record="' + esc(mutationTargetEventId) + '">'
@@ -3969,6 +3988,7 @@ const detailNoticeRenderers = [
   renderRelatedLinksNotice,
   renderAuthReadinessNotice,
   renderReviewCapabilityNotice,
+  renderMutationEnablementNotice,
   renderDetailActionPreviewNotice,
   renderCliParityNotice,
   renderIdentityAssuranceNotice,

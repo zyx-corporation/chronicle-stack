@@ -556,6 +556,8 @@ def test_ui_html_filtering_includes_provider_response_metadata_fields(tmp_path, 
     assert "errors=" in html
     assert "detailLine('Enablement ready', mutationReadiness.enablement_ready)" in html
     assert "detailListLine('Enablement checks', enablementChecks.map(check => ((check.satisfied ? 'ok: ' : 'blocked: ') + (check.label || check.code || 'check'))), ' | ')" in html
+    assert "function renderMutationEnablementNotice(record)" in html
+    assert "'Mutation Enablement'" in html
     assert "Review queue blocked-route preview stays read-only and returns the CLI fallback contract." in html
 
 
@@ -590,11 +592,13 @@ def test_ui_data_service_detail_endpoints(tmp_path):
     assert summary_detail["package_readiness"]["status"] == "no_context_records"
     assert summary_detail["cli_parity"]["status"] == "aligned"
     assert summary_detail["action_preview"]["status"] == "preview_only"
+    assert summary_detail["mutation_enablement"]["enablement_ready"] is False
     assert any(link["path"] == f"/api/review-queue/{summary_detail['review_target_event_id']}" for link in summary_detail["related_links"])
     runtime_detail = service.detail_payload(f"/api/runtime-records/{ids['runtime_summary_event_id']}")["record"]
     assert "runtime_summary" in runtime_detail["payload"]
     assert runtime_detail["runtime_record_preview"]["record_kind"] == "summary"
     assert runtime_detail["auth_boundary_notice"]["status"] == "advisory_only"
+    assert runtime_detail["mutation_enablement"]["enablement_ready"] is False
     assert runtime_detail["suggested_cli_family"] == "chronicle runtime summarize --record"
     assert runtime_detail["related_links"][0]["path"] == f"/api/review-queue/{ids['runtime_summary_event_id']}"
     assert runtime_detail["related_links"][0]["label"] == "Open matching review detail"
@@ -613,6 +617,7 @@ def test_ui_data_service_detail_endpoints(tmp_path):
     assert retrieval_detail["auth_boundary_notice"]["status"] == "advisory_only"
     review_detail = service.detail_payload(f"/api/review-queue/{ids['runtime_summary_event_id']}")["record"]
     assert review_detail["target_event_id"] == ids["runtime_summary_event_id"]
+    assert review_detail["mutation_enablement"]["enablement_ready"] is False
     assert review_detail["review_preview_only"] is True
     assert review_detail["package_readiness"]["status"] == "no_context_records"
     assert review_detail["package_readiness"]["suggested_commands"][0] == "chronicle show --json"
