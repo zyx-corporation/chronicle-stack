@@ -110,6 +110,15 @@ def test_ui_i18n_catalog_covers_package_preview_and_review_preview_messages():
     required_prefix = {
         "Open summary job ",
         "Open artifact ",
+        "Response ",
+        "sources: ",
+        "More ",
+        "Sort: ",
+        "Hit counts: vector=",
+        ", graph=",
+        ", chronicle=",
+        "prev=",
+        "trail=",
         "Package preview available for ",
         "review status is ",
         "runtime retrieval handoff: ",
@@ -122,6 +131,19 @@ def test_ui_i18n_catalog_covers_package_preview_and_review_preview_messages():
         prefix = UI_I18N_CATALOG[locale]["prefix"]
         prefix_missing = required_prefix.difference(prefix)
         assert not prefix_missing, f"{locale} missing prefix keys: {sorted(prefix_missing)}"
+
+
+def test_ui_i18n_catalog_covers_generic_helper_empty_and_fallback_copy():
+    required_exact = {
+        "No records.",
+        "(none)",
+        "(not available)",
+        "(no response_id)",
+    }
+    for locale in ("ja", "zh-CN"):
+        exact = UI_I18N_CATALOG[locale]["exact"]
+        missing = required_exact.difference(exact)
+        assert not missing, f"{locale} missing exact keys: {sorted(missing)}"
 
 
 def test_normalize_ui_locale_matches_supported_locale_rules():
