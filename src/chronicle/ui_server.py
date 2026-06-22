@@ -3616,8 +3616,8 @@ function renderReviewActionResultPanel(title, responseStatus, path, payload, tar
   const extraLines = options.extraLines || '';
   return ''
     + '<p><strong>' + esc(title) + '</strong></p>'
-    + '<p>Status: ' + esc(responseStatus) + '</p>'
-    + '<p>Route: <span class="id">' + esc(path) + '</span></p>'
+    + '<p>' + esc(localizeTextValue('Status: ')) + esc(responseStatus) + '</p>'
+    + '<p>' + esc(localizeTextValue('Route: ')) + '<span class="id">' + esc(path) + '</span></p>'
     + '<p>' + esc(message) + '</p>'
     + reviewActionCoreDetailLines(payload, action, recordId)
     + extraLines
@@ -4042,7 +4042,7 @@ function renderRuntimeRecordsTable(endpoint, rows) {{
       {{ value: 'kind', label: t('sort.runtime.kind') }},
     ], runtimeRecordsFilterChips(), query)
     + sliceButtonRow(runtimeRecordsSliceButtons())
-    + emptyFilterState(query, sorted, 'No matching runtime records for current filter.')
+    + emptyFilterState(query, sorted, localizeTextValue('No matching runtime records for current filter.'))
     + (
       mutationEnabled
         ? renderReviewMutationForm(localizeTextValue('Local Review Mutation'), 'runtime-records')
@@ -4105,7 +4105,7 @@ function renderReviewQueueTable(endpoint, rows) {{
       {{ value: 'reviewer', label: t('sort.review.reviewer') }},
     ], reviewQueueFilterChips(), query)
     + sliceButtonRow(reviewQueueSliceButtons())
-    + emptyFilterState(query, sorted, 'No matching review rows for current filter.')
+    + emptyFilterState(query, sorted, localizeTextValue('No matching review rows for current filter.'))
     + (
       mutationEnabled
         ? renderReviewMutationForm(localizeTextValue('Local Review Mutation'), 'review-queue')
@@ -4166,7 +4166,7 @@ function renderSummaryJobsTable(endpoint, rows) {{
       {{ value: 'title', label: t('sort.summary.title') }},
     ], summaryJobsFilterChips(), query)
     + sliceButtonRow(summaryJobsSliceButtons())
-    + emptyFilterState(query, sorted, 'No matching summary jobs for current filter.')
+    + emptyFilterState(query, sorted, localizeTextValue('No matching summary jobs for current filter.'))
     + (
       mutationEnabled
         ? renderReviewMutationForm(localizeTextValue('Summary Review Mutation'), 'summary-jobs')
@@ -4189,7 +4189,7 @@ function renderSummaryJobsTable(endpoint, rows) {{
 }}
 function renderGenericTable(endpoint, rows) {{
   const keys = Object.keys(rows[0]).slice(0, 8);
-  return '<table><thead><tr><th>detail</th>' + keys.map(k => '<th>' + esc(k) + '</th>').join('') + '</tr></thead><tbody>'
+  return '<table><thead><tr><th>' + esc(label('label.table_detail', 'Detail')) + '</th>' + keys.map(k => '<th>' + esc(k) + '</th>').join('') + '</tr></thead><tbody>'
     + rows.map(row => {{
       const path = detailPath(endpoint, row);
       const button = path ? '<button data-detail="' + esc(path) + '">JSON</button>' : '';

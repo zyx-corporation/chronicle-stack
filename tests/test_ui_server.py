@@ -1200,8 +1200,9 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "data-detail-nav" in html
     assert "data-detail-trail" in html
     assert "data-back-view" in html
-    assert "No matching runtime records for current filter." in html
-    assert "No matching review rows for current filter." in html
+    assert "localizeTextValue('No matching runtime records for current filter.')" in html
+    assert "localizeTextValue('No matching review rows for current filter.')" in html
+    assert "localizeTextValue('No matching summary jobs for current filter.')" in html
     assert "CLI Aligned" in html
     assert "Open Runtime Records" in html
     assert "Open Review Queue" in html
@@ -1245,6 +1246,8 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "Preview blocked route" in html
     assert "data-preview-post" in html
     assert "Blocked route preview stays read-only and returns the CLI fallback contract." in html
+    assert "localizeTextValue('Status: ')" in html
+    assert "localizeTextValue('Route: ')" in html
     assert "Rollback status" in html
     assert "Durable mutation on failure" in html
     assert "Possible errors" in html
