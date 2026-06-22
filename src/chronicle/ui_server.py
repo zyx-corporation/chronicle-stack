@@ -262,7 +262,10 @@ UI_I18N_CATALOG: dict[str, dict[str, Any]] = {
         "filter.review.aligned": "CLI整合",
         "filter.review.boundary_aligned": "本人性整合",
         "filter.review.ui_auth_not_enabled": "認証境界警告",
+        "filter.review.ui_authorization_not_enabled": "認可境界警告",
+        "filter.review.no_reviewer_identity_recorded": "本人性不足",
         "filter.review.reviewer_identity_declared_only": "申告のみの本人性",
+        "filter.review.reviewer_session_label_missing": "セッションラベル必須",
         "filter.review.package_context_available": "パッケージ準備完了",
         "filter.review.no_context_records": "パッケージ要確認",
         "detail.resource.runtime-records": "Runtime",
@@ -745,7 +748,10 @@ UI_I18N_CATALOG: dict[str, dict[str, Any]] = {
         "filter.review.aligned": "CLI aligned",
         "filter.review.boundary_aligned": "Identity aligned",
         "filter.review.ui_auth_not_enabled": "Auth boundary warnings",
+        "filter.review.ui_authorization_not_enabled": "Authorization warnings",
+        "filter.review.no_reviewer_identity_recorded": "Missing identity",
         "filter.review.reviewer_identity_declared_only": "Declared identity only",
+        "filter.review.reviewer_session_label_missing": "Session label required",
         "filter.review.package_context_available": "Package ready",
         "filter.review.no_context_records": "Package advisory",
         "detail.resource.runtime-records": "Runtime",
@@ -912,7 +918,10 @@ UI_I18N_CATALOG: dict[str, dict[str, Any]] = {
         "filter.review.aligned": "CLI 一致",
         "filter.review.boundary_aligned": "身份一致",
         "filter.review.ui_auth_not_enabled": "认证边界警告",
+        "filter.review.ui_authorization_not_enabled": "授权边界警告",
+        "filter.review.no_reviewer_identity_recorded": "缺少身份",
         "filter.review.reviewer_identity_declared_only": "仅声明身份",
+        "filter.review.reviewer_session_label_missing": "需要会话标签",
         "filter.review.package_context_available": "包已就绪",
         "filter.review.no_context_records": "包需关注",
         "detail.resource.runtime-records": "运行时",
@@ -3849,7 +3858,7 @@ function detailMessages(items, fallbackItems = []) {{
   const fallback = Array.isArray(fallbackItems) ? fallbackItems : [];
   const detailMessages = details.map(item => localizeTextValue(item.message || ''));
   if (detailMessages.length > 0) return detailMessages.join(' | ');
-  return fallback.map(item => localizeTextValue(reviewWarningLabels[String(item || '')] || String(item || ''))).join(' | ') || '';
+  return fallback.map(item => reviewWarningLabel(item)).join(' | ') || '';
 }}
 function reviewActionCoreDetailLines(payload, action = '', recordId = '') {{
   return ''
@@ -4478,7 +4487,7 @@ function reviewerIdentityBadge(identity) {{
 }}
 function reviewWarningBadges(warnings) {{
   return (warnings || []).map(code => {{
-    const text = reviewWarningLabels[String(code || '')] || String(code || '').replaceAll('_', ' ');
+    const text = reviewWarningLabel(code);
     return jumpBadge(text, 'badge-warning', '/api/review-queue', 'reviewQueue', String(code || ''));
   }}).join('');
 }}
@@ -4847,12 +4856,26 @@ function filterValueLabel(target, value) {{
     if (normalizedValue === 'drift_detected') return label('filter.review.drift_detected', 'CLI drift');
     if (normalizedValue === 'aligned') return label('filter.review.aligned', 'CLI aligned');
     if (normalizedValue === 'boundary_aligned') return label('filter.review.boundary_aligned', 'Identity aligned');
-    if (normalizedValue === 'ui_auth_not_enabled') return label('filter.review.ui_auth_not_enabled', 'Auth boundary warnings');
-    if (normalizedValue === 'reviewer_identity_declared_only') return label('filter.review.reviewer_identity_declared_only', 'Declared identity only');
+    if (
+      normalizedValue === 'ui_auth_not_enabled'
+      || normalizedValue === 'ui_authorization_not_enabled'
+      || normalizedValue === 'no_reviewer_identity_recorded'
+      || normalizedValue === 'reviewer_identity_declared_only'
+      || normalizedValue === 'reviewer_session_label_missing'
+    ) return reviewWarningLabel(normalizedValue);
     if (normalizedValue === 'package:package_context_available') return label('filter.review.package_context_available', 'Package ready');
     if (normalizedValue === 'package:no_context_records') return label('filter.review.no_context_records', 'Package advisory');
   }}
   return normalizedValue.replaceAll('_', ' ');
+}}
+function reviewWarningLabel(code) {{
+  const normalizedCode = String(code || '');
+  if (normalizedCode === 'ui_auth_not_enabled') return label('filter.review.ui_auth_not_enabled', 'Auth boundary warnings');
+  if (normalizedCode === 'ui_authorization_not_enabled') return label('filter.review.ui_authorization_not_enabled', 'Authorization warnings');
+  if (normalizedCode === 'no_reviewer_identity_recorded') return label('filter.review.no_reviewer_identity_recorded', 'Missing identity');
+  if (normalizedCode === 'reviewer_identity_declared_only') return label('filter.review.reviewer_identity_declared_only', 'Declared identity only');
+  if (normalizedCode === 'reviewer_session_label_missing') return label('filter.review.reviewer_session_label_missing', 'Session label required');
+  return localizeTextValue(reviewWarningLabels[normalizedCode] || normalizedCode.replaceAll('_', ' '));
 }}
 function sliceChip(filterValue, cls, resetTarget) {{
   const value = String(filterValue || '');
@@ -5566,9 +5589,9 @@ function renderOverviewAuthBoundaryPanel(authBoundary, authBoundaryOverview) {{
   return renderPanel(
     sectionTitle(label('section.auth_boundary', 'Auth Boundary'))
     + '<p>'
-    + overviewJumpButton(sliceBadge('Auth Boundary Warnings', esc(authBoundaryOverview.auth_warning_count ?? 0), 'badge-warning'), '/api/review-queue', 'reviewQueue', 'ui_auth_not_enabled')
-    + overviewJumpButton(sliceBadge(label('overview.authorization_warnings', 'Authorization warnings'), esc(authBoundaryOverview.authorization_warning_count ?? 0), 'badge-warning'), '/api/review-queue', 'reviewQueue', 'ui_authorization_not_enabled')
-    + overviewJumpButton(sliceBadge(label('overview.missing_identity', 'Missing identity'), esc(authBoundaryOverview.missing_identity_count ?? 0), 'badge-warning'), '/api/review-queue', 'reviewQueue', 'no_reviewer_identity_recorded')
+    + overviewJumpButton(sliceBadge(reviewWarningLabel('ui_auth_not_enabled'), esc(authBoundaryOverview.auth_warning_count ?? 0), 'badge-warning'), '/api/review-queue', 'reviewQueue', 'ui_auth_not_enabled')
+    + overviewJumpButton(sliceBadge(reviewWarningLabel('ui_authorization_not_enabled'), esc(authBoundaryOverview.authorization_warning_count ?? 0), 'badge-warning'), '/api/review-queue', 'reviewQueue', 'ui_authorization_not_enabled')
+    + overviewJumpButton(sliceBadge(reviewWarningLabel('no_reviewer_identity_recorded'), esc(authBoundaryOverview.missing_identity_count ?? 0), 'badge-warning'), '/api/review-queue', 'reviewQueue', 'no_reviewer_identity_recorded')
     + overviewJumpButton(sliceBadge(label('overview.provider_response', 'Provider response'), esc(authBoundaryOverview.provider_response_present_count ?? 0), 'badge-ready'), '/api/review-queue', 'reviewQueue', 'response_id')
     + '</p>'
     + detailLine('Status', authBoundary.status || '')
@@ -5589,8 +5612,8 @@ function renderOverviewIdentityBoundaryPanel(identityBoundary) {{
   return renderPanel(
     sectionTitle(label('section.identity_boundary', 'Identity Boundary'))
     + '<p>'
-    + overviewJumpButton(sliceBadge(localizeTextValue('Declared identity only'), esc(identityBoundary.declared_identity_count ?? 0), 'badge-warning'), '/api/review-queue', 'reviewQueue', 'reviewer_identity_declared_only')
-    + overviewJumpButton(sliceBadge(label('overview.session_label_required', 'Session label required'), esc(identityBoundary.session_label_missing_count ?? 0), 'badge-warning'), '/api/review-queue', 'reviewQueue', 'reviewer_session_label_missing')
+    + overviewJumpButton(sliceBadge(reviewWarningLabel('reviewer_identity_declared_only'), esc(identityBoundary.declared_identity_count ?? 0), 'badge-warning'), '/api/review-queue', 'reviewQueue', 'reviewer_identity_declared_only')
+    + overviewJumpButton(sliceBadge(reviewWarningLabel('reviewer_session_label_missing'), esc(identityBoundary.session_label_missing_count ?? 0), 'badge-warning'), '/api/review-queue', 'reviewQueue', 'reviewer_session_label_missing')
     + overviewJumpButton(sliceBadge(localizeTextValue('Identity aligned'), esc((identityBoundary.assurance_counts && identityBoundary.assurance_counts.boundary_aligned) ?? 0), 'badge-ready'), '/api/review-queue', 'reviewQueue', 'boundary_aligned')
     + '</p>'
     + detailLine('Status', identityBoundary.status || '')
@@ -5745,7 +5768,7 @@ function renderOverviewTriagePanel(triage, warningButtons, warningSummaries) {{
     + '</p>'
     + '<p>'
     + overviewJumpButton(sliceBadge(localizeTextValue('Identity Aligned'), esc(triage.identity_boundary_aligned_reviews ?? 0), 'badge-ready'), '/api/review-queue', 'reviewQueue', 'boundary_aligned')
-    + overviewJumpButton(sliceBadge(localizeTextValue('Declared Identity Only'), esc(triage.identity_declared_only_reviews ?? 0), 'badge-warning'), '/api/review-queue', 'reviewQueue', 'reviewer_identity_declared_only')
+    + overviewJumpButton(sliceBadge(reviewWarningLabel('reviewer_identity_declared_only'), esc(triage.identity_declared_only_reviews ?? 0), 'badge-warning'), '/api/review-queue', 'reviewQueue', 'reviewer_identity_declared_only')
     + '</p>'
     + '<p>'
     + overviewJumpButton(sliceBadge(localizeTextValue('Provider Response'), esc(triage.provider_response_present_reviews ?? 0), 'badge-ready'), '/api/review-queue', 'reviewQueue', 'response_id')
@@ -5770,8 +5793,8 @@ function renderOverviewTriagePanel(triage, warningButtons, warningSummaries) {{
     + listJumpButton(localizeTextValue('Package Ready'), '/api/review-queue', 'reviewQueue', 'package:package_context_available')
     + listJumpButton(localizeTextValue('CLI Aligned'), '/api/review-queue', 'reviewQueue', 'aligned')
     + listJumpButton(localizeTextValue('Identity Aligned'), '/api/review-queue', 'reviewQueue', 'boundary_aligned')
-    + listJumpButton(localizeTextValue('Auth Boundary Warnings'), '/api/review-queue', 'reviewQueue', 'ui_auth_not_enabled')
-    + listJumpButton(localizeTextValue('Declared Identity Only'), '/api/review-queue', 'reviewQueue', 'reviewer_identity_declared_only')
+    + listJumpButton(reviewWarningLabel('ui_auth_not_enabled'), '/api/review-queue', 'reviewQueue', 'ui_auth_not_enabled')
+    + listJumpButton(reviewWarningLabel('reviewer_identity_declared_only'), '/api/review-queue', 'reviewQueue', 'reviewer_identity_declared_only')
     + listJumpButton(localizeTextValue('Runtime Retrieval Plans'), '/api/runtime-records', 'runtimeRecords', 'retrieval_plan')
     + '</p>'
   );

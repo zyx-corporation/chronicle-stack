@@ -948,8 +948,10 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "sourceCountBadges" in html
     assert "reviewWarningBadges" in html
     assert "const reviewWarningLabels =" in html
+    assert "function reviewWarningLabel(code)" in html
     assert "function detailMessages(items, fallbackItems = [])" in html
     assert "localizeTextValue(item.message || '')" in html
+    assert "return fallback.map(item => reviewWarningLabel(item)).join(' | ') || '';" in html
     assert "function contractDetailLines(successContract, failureContract, targetId)" in html
     assert "function renderReviewActionResultPanel(title, responseStatus, path, payload, targetId, options = {})" in html
     assert "function renderReviewMutationForm(title, prefix)" in html
@@ -1164,6 +1166,8 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "badge('slice:' + filterLabel, cls)" in html
     assert "' <span class=\"id\">' + esc(value) + '</span>'" in html
     assert "label('overview.warning_priority', 'Warning priority')" in html
+    assert "reviewWarningLabel('ui_authorization_not_enabled')" in html
+    assert "reviewWarningLabel('reviewer_session_label_missing')" in html
     assert "summaryJsonLine('Runtime kinds', triage.runtime_record_kinds)" in html
     assert "statusMessageBody(readiness.status, readiness.message, readinessButtons)" in html
     assert "statusMessageBody(notice.status, notice.message, noticeButtons)" in html
