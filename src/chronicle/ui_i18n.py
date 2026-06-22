@@ -54,7 +54,11 @@ MUTATION_BLOCKER_TEXT: dict[str, str] = {
     "reviewer_session_label_missing": "Require a local session label before session-gated GUI mutation is treated as eligible.",
 }
 
-OVERVIEW_SLICE_LABELS: dict[str, str] = {
-    "reviewer_identity_declared_only": "Declared identity only",
-    "reviewer_session_label_missing": "Session label required",
-}
+__all__ = [
+    "AUTH_BOUNDARY_BLOCKER_TEXT",
+    "AUTH_BOUNDARY_WARNING_TO_BLOCKER",
+    "MUTATION_BLOCKER_TEXT",
+    "REVIEW_WARNING_LABELS",
+    "REVIEW_WARNING_PRIORITY",
+    "REVIEW_WARNING_TEXT",
+]
