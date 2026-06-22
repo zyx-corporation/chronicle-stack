@@ -642,7 +642,7 @@ def test_ui_html_filtering_includes_provider_response_metadata_fields(tmp_path, 
     assert "detailListLine('Remaining checks', (operationalReadiness.unsatisfied_checks || []).map(item => ((item.label || item.code || 'check') + ': ' + (item.detail || ''))), ' | ')" in html
     assert "detailListLine('Enablement checks', enablementChecks.map(check => ((check.satisfied ? 'ok: ' : 'blocked: ') + (check.label || check.code || 'check'))), ' | ')" in html
     assert "function renderMutationEnablementNotice(record)" in html
-    assert "'Mutation Enablement'" in html
+    assert "label('notice.mutation_enablement', 'Mutation Enablement')" in html
     assert "detailListLine('Blocker sources', blockerSummaries.map(item => ((item.source || 'unknown') + ':' + (item.code || 'blocker') + '=' + String(item.affected_count ?? 0))), ' | ')" in html
     assert "detailLine('Reviewer label pattern', reviewerContext.reviewer_label_pattern || '')" in html
     assert "detailLine('Write route', writeRouteContract.route_template || '')" in html
@@ -910,14 +910,14 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "Chronicle Stack ローカルUI" in html
     assert "読み取り専用の前景ローカルUIです。" in html
     assert "loadDetail" in html
-    assert "Runtime Preview" in html
-    assert "Retrieval Handoff" in html
-    assert "Invocation Plan" in html
-    assert "Package Handoff Preview" in html
-    assert "Review Package Readiness" in html
-    assert "Related Links" in html
-    assert "Back to current list" in html
-    assert "Back to previous detail" in html
+    assert "label('notice.runtime_preview', 'Runtime Preview')" in html
+    assert "label('notice.retrieval_handoff', 'Retrieval Handoff')" in html
+    assert "label('notice.invocation_plan', 'Invocation Plan')" in html
+    assert "label('notice.package_handoff_preview', 'Package Handoff Preview')" in html
+    assert "label('notice.review_package_readiness', 'Review Package Readiness')" in html
+    assert "label('notice.related_links', 'Related Links')" in html
+    assert "label('button.back_current_list', 'Back to current list')" in html
+    assert "label('button.back_previous_detail', 'Back to previous detail')" in html
     assert "currentFilterLabel" in html
     assert "stateLabel('filter', value, filterValueLabel(target, value))" in html
     assert "hasActiveFilters" in html
@@ -1061,7 +1061,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "reviewQueueFilterChips" in html
     assert "summaryJobsFilterChips" in html
     assert "humanizeDetailPath" in html
-    assert "Related Links" in html
+    assert "label('notice.related_links', 'Related Links')" in html
     assert "__chronicleDetailTrail" in html
     assert "readinessBadge" in html
     assert "reviewCapabilityBadge" in html
@@ -1152,7 +1152,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "tableHtml(['detail', 'event', 'kind', 'auth', 'preview', 'review route', 'source counts']" in html
     assert "Auth aligned" in html
     assert "Auth advisory" in html
-    assert "Open review" in html
+    assert "label('button.open_review', 'Open review')" in html
     assert "package:no_context_records" in html
     assert 'data-reset-filters="all"' in html
     assert "listJumpButton(localizeTextValue('Review Advisory'), '/api/review-queue', 'reviewQueue', 'advisory')" in html
@@ -1197,9 +1197,9 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "__chronicleSorts" in html
     assert "Active view:" in html
     assert "jumpBadge(" in html
-    assert "Auth Readiness" in html
-    assert "Review Capability" in html
-    assert "Action Preview" in html
+    assert "label('notice.auth_readiness', 'Auth Readiness')" in html
+    assert "label('notice.review_capability', 'Review Capability')" in html
+    assert "label('notice.action_preview', 'Action Preview')" in html
     assert "<button disabled>Approve</button>" in html
     assert "<button disabled>Reject</button>" in html
     assert "<button disabled>Request Changes</button>" in html

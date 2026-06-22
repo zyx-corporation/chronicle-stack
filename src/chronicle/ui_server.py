@@ -145,6 +145,9 @@ UI_I18N_CATALOG: dict[str, dict[str, Any]] = {
         "button.open_review_queue": "Review Queue を開く",
         "button.open_summary_jobs": "Summary Jobs を開く",
         "button.open_runtime_config": "Runtime Config を開く",
+        "button.open_review": "レビューを開く",
+        "button.back_current_list": "現在の一覧へ戻る",
+        "button.back_previous_detail": "前の詳細へ戻る",
         "status.loading_blocked_preview": "拒否ルートプレビューを読み込み中…",
         "status.applying_review_action": "レビュー操作を適用中…",
         "status.blocked_route_preview": "拒否ルートプレビュー",
@@ -160,6 +163,17 @@ UI_I18N_CATALOG: dict[str, dict[str, Any]] = {
         "status.view": "view",
         "status.trail": "trail",
         "notice.action_preview": "Action Preview",
+        "notice.navigation": "Navigation",
+        "notice.runtime_preview": "Runtime Preview",
+        "notice.retrieval_handoff": "Retrieval Handoff",
+        "notice.package_handoff_preview": "Package Handoff Preview",
+        "notice.invocation_plan": "Invocation Plan",
+        "notice.provider_response": "Provider Response",
+        "notice.review_package_readiness": "Review Package Readiness",
+        "notice.related_links": "Related Links",
+        "notice.auth_readiness": "Auth Readiness",
+        "notice.review_capability": "Review Capability",
+        "notice.mutation_enablement": "Mutation Enablement",
         "notice.cli_parity": "CLI Parity",
         "notice.identity_assurance": "Identity Assurance",
         "notice.review_timeline": "Review Timeline",
@@ -324,9 +338,23 @@ UI_I18N_CATALOG: dict[str, dict[str, Any]] = {
             "Blocked Route Preview": "拒否ルートプレビュー",
             "Review Action Result": "レビュー操作結果",
             "Action Preview": "Action Preview",
+            "Navigation": "Navigation",
+            "Runtime Preview": "Runtime Preview",
+            "Retrieval Handoff": "Retrieval Handoff",
+            "Package Handoff Preview": "Package Handoff Preview",
+            "Invocation Plan": "Invocation Plan",
+            "Provider Response": "Provider Response",
+            "Review Package Readiness": "Review Package Readiness",
+            "Related Links": "Related Links",
+            "Auth Readiness": "Auth Readiness",
+            "Review Capability": "Review Capability",
+            "Mutation Enablement": "Mutation Enablement",
             "CLI Parity": "CLI Parity",
             "Identity Assurance": "Identity Assurance",
             "Review Timeline": "Review Timeline",
+            "Back to current list": "現在の一覧へ戻る",
+            "Back to previous detail": "前の詳細へ戻る",
+            "Open review": "レビューを開く",
             "No matching runtime records for current filter.": "現在のフィルターに一致する runtime record はありません。",
             "No matching review rows for current filter.": "現在のフィルターに一致する review row はありません。",
             "No matching summary jobs for current filter.": "現在のフィルターに一致する summary job はありません。",
@@ -361,6 +389,9 @@ UI_I18N_CATALOG: dict[str, dict[str, Any]] = {
             "Provider response": "Provider response",
         },
         "prefix": {
+            "Open review target ": "レビュー対象を開く ",
+            "Open event ": "イベントを開く ",
+            "Open context ": "コンテキストを開く ",
             "Root: ": "ルート: ",
             "Chronicle ID: ": "Chronicle ID: ",
             "Status: ": "状態: ",
@@ -444,6 +475,9 @@ UI_I18N_CATALOG: dict[str, dict[str, Any]] = {
         "button.open_review_queue": "Open Review Queue",
         "button.open_summary_jobs": "Open Summary Jobs",
         "button.open_runtime_config": "Open Runtime Config",
+        "button.open_review": "Open review",
+        "button.back_current_list": "Back to current list",
+        "button.back_previous_detail": "Back to previous detail",
         "status.loading_blocked_preview": "Loading blocked-route preview...",
         "status.applying_review_action": "Applying review action...",
         "status.blocked_route_preview": "Blocked Route Preview",
@@ -459,6 +493,17 @@ UI_I18N_CATALOG: dict[str, dict[str, Any]] = {
         "status.view": "view",
         "status.trail": "trail",
         "notice.action_preview": "Action Preview",
+        "notice.navigation": "Navigation",
+        "notice.runtime_preview": "Runtime Preview",
+        "notice.retrieval_handoff": "Retrieval Handoff",
+        "notice.package_handoff_preview": "Package Handoff Preview",
+        "notice.invocation_plan": "Invocation Plan",
+        "notice.provider_response": "Provider Response",
+        "notice.review_package_readiness": "Review Package Readiness",
+        "notice.related_links": "Related Links",
+        "notice.auth_readiness": "Auth Readiness",
+        "notice.review_capability": "Review Capability",
+        "notice.mutation_enablement": "Mutation Enablement",
         "notice.cli_parity": "CLI Parity",
         "notice.identity_assurance": "Identity Assurance",
         "notice.review_timeline": "Review Timeline",
@@ -576,6 +621,9 @@ UI_I18N_CATALOG: dict[str, dict[str, Any]] = {
         "button.open_review_queue": "打开审查队列",
         "button.open_summary_jobs": "打开摘要任务",
         "button.open_runtime_config": "打开运行时配置",
+        "button.open_review": "打开审查",
+        "button.back_current_list": "返回当前列表",
+        "button.back_previous_detail": "返回上一条详情",
         "status.loading_blocked_preview": "正在加载阻止路由预览…",
         "status.applying_review_action": "正在应用审查操作…",
         "status.blocked_route_preview": "阻止路由预览",
@@ -591,6 +639,17 @@ UI_I18N_CATALOG: dict[str, dict[str, Any]] = {
         "status.view": "view",
         "status.trail": "trail",
         "notice.action_preview": "操作预览",
+        "notice.navigation": "导航",
+        "notice.runtime_preview": "运行时预览",
+        "notice.retrieval_handoff": "检索交接",
+        "notice.package_handoff_preview": "包交接预览",
+        "notice.invocation_plan": "调用计划",
+        "notice.provider_response": "Provider 响应",
+        "notice.review_package_readiness": "审查包就绪度",
+        "notice.related_links": "相关链接",
+        "notice.auth_readiness": "认证就绪度",
+        "notice.review_capability": "审查能力",
+        "notice.mutation_enablement": "Mutation 启用情况",
         "notice.cli_parity": "CLI 一致性",
         "notice.identity_assurance": "身份保证",
         "notice.review_timeline": "审查时间线",
@@ -703,8 +762,25 @@ UI_I18N_CATALOG: dict[str, dict[str, Any]] = {
             "Detail": "详情",
             "Blocked Route Preview": "阻止路由预览",
             "Review Action Result": "审阅操作结果",
+            "Navigation": "导航",
+            "Runtime Preview": "运行时预览",
+            "Retrieval Handoff": "检索交接",
+            "Package Handoff Preview": "包交接预览",
+            "Invocation Plan": "调用计划",
+            "Provider Response": "Provider 响应",
+            "Review Package Readiness": "审查包就绪度",
+            "Related Links": "相关链接",
+            "Auth Readiness": "认证就绪度",
+            "Review Capability": "审查能力",
+            "Mutation Enablement": "Mutation 启用情况",
+            "Back to current list": "返回当前列表",
+            "Back to previous detail": "返回上一条详情",
+            "Open review": "打开审查",
         },
         "prefix": {
+            "Open review target ": "打开审查目标 ",
+            "Open event ": "打开事件 ",
+            "Open context ": "打开上下文 ",
             "Root: ": "根目录: ",
             "Status: ": "状态: ",
             "Action: ": "操作: ",
@@ -3743,7 +3819,7 @@ function renderSummaryJobRow(row, endpoint) {{
   const packageBadge = packageStatusBadge(packageStatus);
   const responseMetadata = row.response_metadata_summary || {{}};
   const targetButton = row.review_target_event_id
-    ? '<button data-detail-nav="/api/review-queue/' + esc(row.review_target_event_id) + '">Open review</button>'
+    ? '<button data-detail-nav="/api/review-queue/' + esc(row.review_target_event_id) + '">' + esc(label('button.open_review', 'Open review')) + '</button>'
     : '';
   return '<tr>'
     + '<td>' + button + '</td>'
@@ -4511,10 +4587,10 @@ function renderNavigationNotice(endpoint, record, options = {{}}) {{
   const trailButtons = options.trailButtons || '';
   const listButtons = options.listButtons || relatedListButtons(endpoint, record);
   return renderNotice(
-    'Navigation',
+    label('notice.navigation', 'Navigation'),
     activeViewSummary(endpoint, 'detail')
-      + '<p><button data-back-view="true">Back to current list</button> '
-      + (previousDetail ? '<button data-back-detail="true">Back to previous detail</button> ' : '')
+      + '<p><button data-back-view="true">' + esc(label('button.back_current_list', 'Back to current list')) + '</button> '
+      + (previousDetail ? '<button data-back-detail="true">' + esc(label('button.back_previous_detail', 'Back to previous detail')) + '</button> ' : '')
       + (hasActiveFilters() ? '<button data-reset-filters="all">' + esc(label('button.reset_filter', 'Reset Filter')) + '</button> ' : '')
       + '<span class="id">' + esc(window.__chronicleCurrentEndpoint || '/api/overview') + '</span> → '
       + '<span class="id">' + esc(endpoint) + '</span>'
@@ -4530,7 +4606,7 @@ function renderRuntimePreviewNotice(record) {{
   if (!record.runtime_record_preview) return '';
   const preview = record.runtime_record_preview;
   return renderNotice(
-    'Runtime Preview',
+    label('notice.runtime_preview', 'Runtime Preview'),
     '<p><strong>' + esc(preview.title || '') + '</strong></p>'
       + '<p>' + esc(preview.preview_text || '') + '</p>'
       + detailLine('Kind', preview.record_kind || record.runtime_record_kind || '')
@@ -4543,7 +4619,7 @@ function renderRetrievalHandoffNotice(record) {{
   if (!record.retrieval_handoff) return '';
   const handoff = record.retrieval_handoff;
   return renderNotice(
-    'Retrieval Handoff',
+    label('notice.retrieval_handoff', 'Retrieval Handoff'),
     detailLine('Query', handoff.query || '')
       + '<p>Hit counts: vector=' + esc(handoff.vector_hit_count || 0)
       + ', graph=' + esc(handoff.graph_hit_count || 0)
@@ -4559,7 +4635,7 @@ function renderPackageHandoffPreviewNotice(record) {{
   const packageReview = preview.package_review || {{}};
   const manifest = preview.package_manifest_preview || {{}};
   return renderNotice(
-    'Package Handoff Preview',
+    label('notice.package_handoff_preview', 'Package Handoff Preview'),
     statusMessageBody(preview.status, preview.message)
       + detailListLine('Eligible contexts', preview.eligible_context_ids)
       + detailListLine('Skipped records', preview.skipped_record_ids)
@@ -4573,7 +4649,7 @@ function renderInvocationPlanNotice(record) {{
   const plan = record.invocation_plan;
   const requestPreview = plan.request_preview || {{}};
   return renderNotice(
-    'Invocation Plan',
+    label('notice.invocation_plan', 'Invocation Plan'),
     detailLine('Provider', (plan.provider_kind || '') + ' / ' + (plan.provider_name || ''))
       + detailLine('Model', plan.model_name || '')
       + detailLine('Operation', plan.operation || '')
@@ -4590,7 +4666,7 @@ function renderResponseMetadataNotice(record) {{
   if (!record.response_metadata_summary || !record.response_metadata_summary.present) return '';
   const summary = record.response_metadata_summary;
   return renderNotice(
-    'Provider Response',
+    label('notice.provider_response', 'Provider Response'),
     detailLine('Response ID', summary.response_id || '')
       + detailLine('Finish reason', summary.finish_reason || '')
       + detailLine('Provider status', summary.provider_status || '')
@@ -4609,7 +4685,7 @@ function renderPackageReadinessNotice(record) {{
   const manifest = readiness.package_manifest_preview || {{}};
   const readinessButtons = moreStatusButtons(readiness.status, '/api/review-queue', 'reviewQueue', 'package:');
   return renderNotice(
-    'Review Package Readiness',
+    label('notice.review_package_readiness', 'Review Package Readiness'),
     statusMessageBody(readiness.status, readiness.message, readinessButtons)
       + detailListLine('Eligible contexts', readiness.eligible_context_ids)
       + detailListLine('Suggested commands', readiness.suggested_commands, ' | ')
@@ -4621,10 +4697,10 @@ function renderPackageReadinessNotice(record) {{
 function renderRelatedLinksNotice(record) {{
   if (!Array.isArray(record.related_links) || record.related_links.length === 0) return '';
   return renderNotice(
-    'Related Links',
+    label('notice.related_links', 'Related Links'),
     '<p>' + record.related_links.map(item =>
       '<button data-detail-nav="' + esc(item.path || '') + '">'
-      + esc(item.label || humanizeDetailPath(item.path || ''))
+      + esc(localizeTextValue(item.label || humanizeDetailPath(item.path || '')))
       + '</button>'
     ).join('') + '</p>'
   );
@@ -4635,7 +4711,7 @@ function renderAuthReadinessNotice(record) {{
   const blockerDetails = Array.isArray(notice.blocker_details) ? notice.blocker_details : [];
   const noticeButtons = moreStatusButtons(notice.status, '/api/review-queue', 'reviewQueue');
   return renderNotice(
-    'Auth Readiness',
+    label('notice.auth_readiness', 'Auth Readiness'),
     statusMessageBody(notice.status, notice.message, noticeButtons)
       + detailLine('Review capability', notice.capability_status || '')
       + detailLine('Identity assurance', notice.identity_assurance_status || '')
@@ -4650,7 +4726,7 @@ function renderReviewCapabilityNotice(record) {{
   const warnDetails = Array.isArray(capability.warning_details) ? capability.warning_details : [];
   const warnBadges = reviewWarningBadges(warnList);
   return renderNotice(
-    'Review Capability',
+    label('notice.review_capability', 'Review Capability'),
     messageParagraph(capability.message)
       + detailLine('Status', capability.status || '')
       + (warnBadges ? '<p>' + warnBadges + '</p>' : '')
@@ -4669,7 +4745,7 @@ function renderMutationEnablementNotice(record) {{
   const identityProofContract = writeRouteContract.identity_proof_contract || {{}};
   const readinessButtons = moreStatusButtons(readiness.status, '/api/review-queue', 'reviewQueue');
   return renderNotice(
-    'Mutation Enablement',
+    label('notice.mutation_enablement', 'Mutation Enablement'),
     statusMessageBody(readiness.status, readiness.message, readinessButtons)
       + detailLine('Enablement ready', readiness.enablement_ready)
       + detailLine('Enablement checks', String(readiness.enablement_satisfied_count ?? 0) + '/' + String(readiness.enablement_required_count ?? 0))
