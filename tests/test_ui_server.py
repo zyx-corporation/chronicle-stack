@@ -909,6 +909,10 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
 
     assert "Chronicle Stack ローカルUI" in html
     assert "読み取り専用の前景ローカルUIです。" in html
+    assert ".shell-grid {" in html
+    assert "#detail { position: sticky;" in html
+    assert "@media (max-width: 980px)" in html
+    assert '<div class="shell-grid">' in html
     assert "loadDetail" in html
     assert "label('notice.runtime_preview', 'Runtime Preview')" in html
     assert "label('notice.retrieval_handoff', 'Retrieval Handoff')" in html

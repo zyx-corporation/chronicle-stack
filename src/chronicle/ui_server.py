@@ -3284,20 +3284,31 @@ class ChronicleUIDataService:
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Chronicle Stack ローカルUI — {title}</title>
 <style>
-body {{ font-family: -apple-system, BlinkMacSystemFont, sans-serif; max-width: 1180px; margin: 0 auto; padding: 20px; color: #1f2937; }}
-button {{ margin: 3px; padding: 6px 9px; }}
+body {{ font-family: -apple-system, BlinkMacSystemFont, sans-serif; max-width: 1280px; margin: 0 auto; padding: 20px; color: #1f2937; background: #ffffff; }}
+button {{ margin: 3px; padding: 6px 9px; cursor: pointer; }}
 select, input {{ margin: 3px; padding: 6px 8px; }}
-.panel {{ border: 1px solid #e5e7eb; border-radius: 8px; padding: 14px; margin: 12px 0; }}
+nav {{ display: flex; flex-wrap: wrap; gap: 4px; margin: 14px 0 16px; padding-bottom: 4px; }}
+.shell-grid {{ display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(320px, 0.95fr); gap: 16px; align-items: start; }}
+.panel {{ border: 1px solid #e5e7eb; border-radius: 10px; padding: 14px; margin: 12px 0; background: #ffffff; overflow: auto; box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04); }}
+.panel > :first-child {{ margin-top: 0; }}
+#view, #detail {{ min-width: 0; }}
+#detail {{ position: sticky; top: 16px; max-height: calc(100vh - 32px); }}
 .warning {{ background: #fefce8; border-left: 4px solid #eab308; padding: 10px 12px; }}
 .notice {{ background: #eff6ff; border-left: 4px solid #3b82f6; padding: 10px 12px; margin: 10px 0; }}
 .badge {{ display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 0.85em; margin-right: 6px; }}
 .badge-warning {{ background: #fef3c7; color: #92400e; }}
 .badge-ready {{ background: #dcfce7; color: #166534; }}
 .badge-neutral {{ background: #e5e7eb; color: #374151; }}
-pre {{ white-space: pre-wrap; word-break: break-word; background: #f9fafb; padding: 12px; }}
-table {{ width: 100%; border-collapse: collapse; }}
+pre {{ white-space: pre-wrap; word-break: break-word; background: #f9fafb; padding: 12px; border-radius: 8px; overflow-x: auto; }}
+table {{ width: 100%; border-collapse: collapse; display: block; overflow-x: auto; }}
+thead, tbody {{ width: 100%; }}
 th, td {{ padding: 6px; border-bottom: 1px solid #e5e7eb; vertical-align: top; }}
+th {{ position: sticky; top: 0; background: #ffffff; }}
 .id {{ font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.85em; }}
+@media (max-width: 980px) {{
+  .shell-grid {{ grid-template-columns: 1fr; }}
+  #detail {{ position: static; max-height: none; }}
+}}
 </style>
 </head>
 <body>
@@ -3338,8 +3349,10 @@ th, td {{ padding: 6px; border-bottom: 1px solid #e5e7eb; vertical-align: top; }
   <button data-endpoint="/api/ai-index-graph-nodes">AI Index Graph Nodes</button>
   <button data-endpoint="/api/ai-index-graph-edges">AI Index Graph Edges</button>
 </nav>
-<section id="view" class="panel"><p id="shell-loading-overview">概要を読み込み中...</p></section>
-<section id="detail" class="panel"><p id="shell-select-json">テーブル行の JSON を選択して単一レコードを確認します。</p></section>
+<div class="shell-grid">
+  <section id="view" class="panel"><p id="shell-loading-overview">概要を読み込み中...</p></section>
+  <section id="detail" class="panel"><p id="shell-select-json">テーブル行の JSON を選択して単一レコードを確認します。</p></section>
+</div>
 <script>
 const idFields = ['event_id', 'context_id', 'artifact_id', 'decision_id', 'rde_record_id', 'rule_id', 'audit_id', 'lifecycle_id', 'record_id', 'node_id', 'summary_job_id'];
 const reviewWarningLabels = {review_warning_labels_json};
