@@ -924,6 +924,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert ".cell-stack > * + *" in html
     assert ".cell-details {" in html
     assert ".cell-details-body > * + *" in html
+    assert ".cell-actions {" in html
     assert "loadDetail" in html
     assert "label('notice.runtime_preview', 'Runtime Preview')" in html
     assert "label('notice.retrieval_handoff', 'Retrieval Handoff')" in html
@@ -1077,6 +1078,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "function collapsibleJsonBlock(summaryLabel, value, open = false)" in html
     assert "function noticeSection(title, body)" in html
     assert "function collapsibleSection(title, body, open = false)" in html
+    assert "label('button.actions', 'Actions')" in html
     assert "label('button.more_details', 'More details')" in html
     assert "label('label.record_json', 'Record JSON')" in html
     assert "label('label.response_json', 'Response JSON')" in html

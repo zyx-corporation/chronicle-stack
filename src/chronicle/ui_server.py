@@ -138,6 +138,7 @@ UI_I18N_CATALOG: dict[str, dict[str, Any]] = {
         "button.copy_recovery_cli": "復旧CLIをコピー",
         "button.preview_blocked_route": "拒否ルートをプレビュー",
         "button.apply": "適用",
+        "button.actions": "操作",
         "button.reset_filter": "フィルターをリセット",
         "button.clear_slice": "スライスを解除",
         "button.open_package_review": "パッケージレビューを開く",
@@ -475,6 +476,7 @@ UI_I18N_CATALOG: dict[str, dict[str, Any]] = {
         "button.copy_recovery_cli": "Copy Recovery CLI",
         "button.preview_blocked_route": "Preview Blocked Route",
         "button.apply": "Apply",
+        "button.actions": "Actions",
         "button.reset_filter": "Reset Filter",
         "button.clear_slice": "Clear Slice",
         "button.open_package_review": "Open Package Review",
@@ -628,6 +630,7 @@ UI_I18N_CATALOG: dict[str, dict[str, Any]] = {
         "button.copy_recovery_cli": "复制恢复 CLI",
         "button.preview_blocked_route": "预览阻止路由",
         "button.apply": "应用",
+        "button.actions": "操作",
         "button.reset_filter": "重置筛选",
         "button.clear_slice": "清除切片",
         "button.open_package_review": "打开包审查",
@@ -3337,6 +3340,7 @@ nav {{ display: flex; flex-wrap: wrap; gap: 4px; margin: 14px 0 16px; padding-bo
 .cell-details summary {{ cursor: pointer; color: #1f2937; font-size: 0.9em; }}
 .cell-details[open] summary {{ margin-bottom: 6px; }}
 .cell-details-body > * + * {{ margin-top: 4px; }}
+.cell-actions {{ display: flex; flex-wrap: wrap; gap: 4px; }}
 .cell-code {{ font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.85em; }}
 .json-block {{ margin: 12px 0 0; border-top: 1px solid #e5e7eb; padding-top: 12px; }}
 .json-block summary {{ cursor: pointer; font-weight: 600; color: #111827; }}
@@ -3763,7 +3767,13 @@ function previewCell(preview, previewActions, options) {{
     (options && options.previewTarget) || 'action-preview-response',
   );
   const previewButtons = renderPreviewButtons(previewActions, options);
-  return previewSummary + previewContractSummary + (previewButtons ? '<br>' + previewButtons : '');
+  return cellStack([
+    previewSummary,
+    cellDetails(label('button.more_details', 'More details'), [previewContractSummary]),
+    cellDetails(label('button.actions', 'Actions'), [
+      previewButtons ? '<div class="cell-actions">' + previewButtons + '</div>' : '',
+    ]),
+  ]);
 }}
 function reviewerCell(identity, fallbackLabel = '') {{
   const reviewerBadge = reviewerIdentityBadge(identity);
