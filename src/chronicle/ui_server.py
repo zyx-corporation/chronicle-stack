@@ -3888,7 +3888,14 @@ function renderReviewQueueRow(row, endpoint) {{
         responseSummaryLine(responseMetadata),
       ]),
     ]) + '</td>'
-    + '<td>' + stackedCell([statusBadge, readinessBadge, parityBadge, authBadge]) + '</td>'
+    + '<td>' + cellStack([
+      statusBadge,
+      cellDetails(label('button.more_details', 'More details'), [
+        readinessBadge,
+        parityBadge,
+        authBadge,
+      ]),
+    ]) + '</td>'
     + '<td>' + cellStack([
       mutationEnablementBadge(mutationEnablement),
       previewCell(preview, previewActions, previewButtonsConfig(row, {{
@@ -3933,10 +3940,10 @@ function renderSummaryJobRow(row, endpoint) {{
     + '<td>' + cellStack([
       cellMeta(row.status || ''),
       reviewBadge,
-      authBadge,
-      packageBadge,
-      mutationEnablementBadge(mutationEnablement),
       cellDetails(label('button.more_details', 'More details'), [
+        authBadge,
+        packageBadge,
+        mutationEnablementBadge(mutationEnablement),
         cellMeta(renderMutationEnablementSummary(mutationEnablement)),
       ]),
     ]) + '</td>'
