@@ -1134,6 +1134,8 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert '"Read-only": "読み取り専用"' in html
     assert '"Runtime records": "ランタイム記録"' in html
     assert '"Audit ID": "監査ID"' in html
+    assert '"GUI mutation remains disabled for this session; use the CLI review path instead.": "この session では GUI mutation は無効のままです。代わりに CLI review path を使ってください。"' in html
+    assert '"Reviewer identity is self-declared only; UI auth is not enforcing reviewer identity.": "レビュアー本人性は自己申告のみで、UI 認証はレビュアー本人性を強制していません。"' in html
     assert "Runtime auth advisory" in html
     assert "Runtime mutation preview" in html
     assert "Summary advisory" in html
