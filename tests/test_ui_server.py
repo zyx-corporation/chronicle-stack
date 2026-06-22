@@ -948,6 +948,8 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "sourceCountBadges" in html
     assert "reviewWarningBadges" in html
     assert "const reviewWarningLabels =" in html
+    assert "const uiLabelKeys =" in html
+    assert "function uiLabel(text)" in html
     assert "function reviewWarningLabel(code)" in html
     assert "function detailMessages(items, fallbackItems = [])" in html
     assert "localizeTextValue(item.message || '')" in html
@@ -1265,6 +1267,8 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "Blocked route preview stays read-only and returns the CLI fallback contract." in html
     assert "uiLabel('Status: ')" in html
     assert "uiLabel('Route: ')" in html
+    assert "uiLabel('No matching runtime records for current filter.')" in html
+    assert "uiLabel('Chronicle ID')" in html
     assert "Rollback status" in html
     assert "Durable mutation on failure" in html
     assert "Possible errors" in html

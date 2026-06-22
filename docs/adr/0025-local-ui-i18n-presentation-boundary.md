@@ -163,6 +163,23 @@ localizing empty-state copy
 localizing review warning summaries while preserving semantics
 ```
 
+Current implementation pattern in `chronicle ui`:
+
+```text
+`label(key, fallback)`            = stable catalog-backed labels for named UI keys
+`filterValueLabel(target, value)` = localized display labels for stable filter/status values
+`reviewWarningLabel(code)`        = localized display labels for review warning codes
+`uiLabel(text)`                   = localized presentation labels for repeated fact-line and helper copy
+`localizeTextValue(text)`         = fallback presentation localization for already-rendered descriptive text
+```
+
+This pattern is intentional:
+
+1. Stable machine-readable values continue to flow unchanged through API payloads.
+2. The UI resolves human-readable labels as late as possible in presentation helpers.
+3. Fact-line and detail-notice labels should prefer `uiLabel(...)` over new ad hoc inline literals.
+4. Filter, warning, and route-state labels should prefer dedicated semantic helpers over raw string translation.
+
 Examples that require a future ADR:
 
 ```text
