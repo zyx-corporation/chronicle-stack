@@ -162,6 +162,8 @@ UI_I18N_CATALOG: dict[str, dict[str, Any]] = {
         "status.detail": "詳細",
         "status.view": "view",
         "status.trail": "trail",
+        "label.record_json": "レコードJSON",
+        "label.response_json": "応答JSON",
         "notice.action_preview": "操作プレビュー",
         "notice.navigation": "ナビゲーション",
         "notice.runtime_preview": "ランタイムプレビュー",
@@ -492,6 +494,8 @@ UI_I18N_CATALOG: dict[str, dict[str, Any]] = {
         "status.detail": "Detail",
         "status.view": "view",
         "status.trail": "trail",
+        "label.record_json": "Record JSON",
+        "label.response_json": "Response JSON",
         "notice.action_preview": "Action Preview",
         "notice.navigation": "Navigation",
         "notice.runtime_preview": "Runtime Preview",
@@ -638,6 +642,8 @@ UI_I18N_CATALOG: dict[str, dict[str, Any]] = {
         "status.detail": "详情",
         "status.view": "view",
         "status.trail": "trail",
+        "label.record_json": "记录 JSON",
+        "label.response_json": "响应 JSON",
         "notice.action_preview": "操作预览",
         "notice.navigation": "导航",
         "notice.runtime_preview": "运行时预览",
@@ -3299,6 +3305,9 @@ nav {{ display: flex; flex-wrap: wrap; gap: 4px; margin: 14px 0 16px; padding-bo
 .badge-warning {{ background: #fef3c7; color: #92400e; }}
 .badge-ready {{ background: #dcfce7; color: #166534; }}
 .badge-neutral {{ background: #e5e7eb; color: #374151; }}
+.json-block {{ margin: 12px 0 0; border-top: 1px solid #e5e7eb; padding-top: 12px; }}
+.json-block summary {{ cursor: pointer; font-weight: 600; color: #111827; }}
+.json-block[open] summary {{ margin-bottom: 10px; }}
 pre {{ white-space: pre-wrap; word-break: break-word; background: #f9fafb; padding: 12px; border-radius: 8px; overflow-x: auto; }}
 table {{ width: 100%; border-collapse: collapse; display: block; overflow-x: auto; }}
 thead, tbody {{ width: 100%; }}
@@ -4549,6 +4558,13 @@ function routeHeading(endpoint) {{
 function prettyJsonPre(value) {{
   return '<pre>' + esc(JSON.stringify(value, null, 2)) + '</pre>';
 }}
+function collapsibleJsonBlock(summaryLabel, value, open = false) {{
+  return '<details class="json-block"' + (open ? ' open' : '') + '><summary>'
+    + esc(summaryLabel)
+    + '</summary>'
+    + prettyJsonPre(value)
+    + '</details>';
+}}
 function renderNotice(title, body) {{
   return '<div class="notice">' + sectionTitle(title) + body + '</div>';
 }}
@@ -5373,7 +5389,9 @@ function renderTable(endpoint, rows) {{
 function endpointBody(endpoint, payload) {{
   if (endpoint === '/api/overview') return renderOverview(payload);
   const rows = firstArray(payload);
-  return rows ? routeHeading(endpoint) + renderTable(endpoint, rows) : routeHeading(endpoint) + prettyJsonPre(payload);
+  return rows
+    ? routeHeading(endpoint) + renderTable(endpoint, rows)
+    : routeHeading(endpoint) + collapsibleJsonBlock(label('label.response_json', 'Response JSON'), payload, true);
 }}
 function detailNavigationOptions(endpoint, record) {{
   const previousDetail = window.__chronicleDetailTrail.length > 0
@@ -5412,7 +5430,9 @@ function detailNoticeBody(endpoint, record) {{
 }}
 function detailBody(endpoint, payload) {{
   const record = payload.record || {{}};
-  return routeHeading(endpoint) + detailNoticeBody(endpoint, record) + prettyJsonPre(payload);
+  return routeHeading(endpoint)
+    + detailNoticeBody(endpoint, record)
+    + collapsibleJsonBlock(label('label.record_json', 'Record JSON'), payload, false);
 }}
 async function loadEndpoint(endpoint) {{
   window.__chronicleCurrentEndpoint = endpoint;

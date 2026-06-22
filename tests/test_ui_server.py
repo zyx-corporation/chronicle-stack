@@ -913,6 +913,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "#detail { position: sticky;" in html
     assert "@media (max-width: 980px)" in html
     assert '<div class="shell-grid">' in html
+    assert ".json-block {" in html
     assert "loadDetail" in html
     assert "label('notice.runtime_preview', 'Runtime Preview')" in html
     assert "label('notice.retrieval_handoff', 'Retrieval Handoff')" in html
@@ -1058,6 +1059,9 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "statusMessageBody" in html
     assert "routeHeading" in html
     assert "prettyJsonPre" in html
+    assert "function collapsibleJsonBlock(summaryLabel, value, open = false)" in html
+    assert "label('label.record_json', 'Record JSON')" in html
+    assert "label('label.response_json', 'Response JSON')" in html
     assert "detailListLine('Auth blockers', authBoundary.blockers, ' | ')" in html
     assert "summaryJsonLine('Identity assurance counts', identityBoundary.assurance_counts)" in html
     assert "summaryJsonLine('Auth review capability counts', authBoundaryOverview.review_capability_counts)" in html
