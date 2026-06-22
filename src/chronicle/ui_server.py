@@ -3327,6 +3327,10 @@ nav {{ display: flex; flex-wrap: wrap; gap: 4px; margin: 14px 0 16px; padding-bo
 .fact-label {{ font-weight: 600; color: #374151; }}
 .fact-value {{ min-width: 0; overflow-wrap: anywhere; }}
 .fact-code {{ font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.9em; }}
+.cell-title {{ font-weight: 600; color: #111827; }}
+.cell-meta {{ color: #4b5563; font-size: 0.92em; }}
+.cell-stack > * + * {{ margin-top: 4px; }}
+.cell-code {{ font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.85em; }}
 .json-block {{ margin: 12px 0 0; border-top: 1px solid #e5e7eb; padding-top: 12px; }}
 .json-block summary {{ cursor: pointer; font-weight: 600; color: #111827; }}
 .json-block[open] summary {{ margin-bottom: 10px; }}
@@ -3719,6 +3723,25 @@ function detailJsonButton(endpoint, row) {{
 function stackedCell(parts, separator = '<br>') {{
   return parts.filter(part => part).join(separator);
 }}
+function cellTitle(text) {{
+  return text ? '<div class="cell-title">' + esc(text) + '</div>' : '';
+}}
+function cellMeta(text) {{
+  return text ? '<div class="cell-meta">' + esc(text) + '</div>' : '';
+}}
+function cellCode(text) {{
+  return text ? '<div class="cell-code">' + esc(text) + '</div>' : '';
+}}
+function cellStack(parts) {{
+  return '<div class="cell-stack">' + parts.filter(part => part).join('') + '</div>';
+}}
+function responseSummaryLine(responseMetadata) {{
+  if (!responseMetadata || !responseMetadata.present) return '';
+  return cellMeta(
+    'Response ' + String(responseMetadata.response_id || '(no response_id)')
+    + (responseMetadata.finish_reason ? ' / ' + String(responseMetadata.finish_reason) : '')
+  );
+}}
 function previewCell(preview, previewActions, options) {{
   const previewSummary = renderPreviewSummary(preview || {{}});
   const previewContractSummary = renderPreviewContractSummary(
@@ -3788,13 +3811,10 @@ function renderRuntimeRecordRow(row, endpoint) {{
     + '<td><span class="id">' + esc(row.event_id || '') + '</span></td>'
     + '<td>' + kindBadge + '</td>'
     + '<td>' + stackedCell([authBadge, mutationBadge, renderMutationEnablementSummary(mutationEnablement)]) + '</td>'
-    + '<td>' + stackedCell([
-      '<strong>' + esc(preview.title || '') + '</strong>',
-      esc(preview.preview_text || ''),
-      responseMetadata.present
-        ? 'Response ' + esc(responseMetadata.response_id || '(no response_id)')
-          + (responseMetadata.finish_reason ? ' / ' + esc(responseMetadata.finish_reason) : '')
-        : ''
+    + '<td>' + cellStack([
+      cellTitle(preview.title || ''),
+      cellMeta(preview.preview_text || ''),
+      responseSummaryLine(responseMetadata),
     ]) + '</td>'
     + '<td>' + previewCell(actionPreview, previewActions, previewButtonsConfig(row, {{
       recordId: row.review_target_event_id || row.event_id || '',
@@ -3802,7 +3822,7 @@ function renderRuntimeRecordRow(row, endpoint) {{
       successDetail: '/api/runtime-records/' + esc(row.event_id || ''),
       previewTarget: 'runtime-records-action-preview-response',
     }})) + '</td>'
-    + '<td>' + stackedCell([sourceBadges, esc(JSON.stringify(preview.source_counts || {{}}))]) + '</td>'
+    + '<td>' + cellStack([sourceBadges, cellCode(JSON.stringify(preview.source_counts || {{}}))]) + '</td>'
     + '</tr>';
 }}
 function renderReviewQueueRow(row, endpoint) {{
@@ -3827,14 +3847,11 @@ function renderReviewQueueRow(row, endpoint) {{
   const authBadge = authReadinessBadge(authReadiness.status || '');
   return '<tr>'
     + '<td>' + button + '</td>'
-    + '<td>' + stackedCell([
-      '<span class="id">' + esc(row.target_event_id || '') + '</span>',
+    + '<td>' + cellStack([
+      '<div><span class="id">' + esc(row.target_event_id || '') + '</span></div>',
       reviewKindBadge,
-      esc(row.target_summary || ''),
-      responseMetadata.present
-        ? 'Response ' + esc(responseMetadata.response_id || '(no response_id)')
-          + (responseMetadata.finish_reason ? ' / ' + esc(responseMetadata.finish_reason) : '')
-        : ''
+      cellMeta(row.target_summary || ''),
+      responseSummaryLine(responseMetadata),
     ]) + '</td>'
     + '<td>' + stackedCell([statusBadge, readinessBadge, parityBadge]) + '</td>'
     + '<td>' + authBadge + '</td>'
@@ -3867,7 +3884,7 @@ function renderSummaryJobRow(row, endpoint) {{
     : '';
   return '<tr>'
     + '<td>' + button + '</td>'
-    + '<td>' + stackedCell(['<span class="id">' + esc(row.summary_job_id || '') + '</span>', esc(row.title || ''), targetButton]) + '</td>'
+    + '<td>' + cellStack(['<div><span class="id">' + esc(row.summary_job_id || '') + '</span></div>', cellTitle(row.title || ''), targetButton]) + '</td>'
     + '<td>' + esc(row.status || '') + '</td>'
     + '<td>' + reviewBadge + '</td>'
     + '<td>' + stackedCell([authBadge, mutationEnablementBadge(mutationEnablement), renderMutationEnablementSummary(mutationEnablement)]) + '</td>'
@@ -3879,13 +3896,7 @@ function renderSummaryJobRow(row, endpoint) {{
       successDetail: '/api/summary-jobs/' + esc(row.summary_job_id || ''),
       previewTarget: 'summary-jobs-action-preview-response',
     }})) + '</td>'
-    + '<td>' + stackedCell([
-      esc(row.runtime_provider_kind || ''),
-      responseMetadata.present
-        ? 'Response ' + esc(responseMetadata.response_id || '(no response_id)')
-          + (responseMetadata.finish_reason ? ' / ' + esc(responseMetadata.finish_reason) : '')
-        : ''
-    ]) + '</td>'
+    + '<td>' + cellStack([cellMeta(row.runtime_provider_kind || ''), responseSummaryLine(responseMetadata)]) + '</td>'
     + '<td>' + esc(row.summary_source_count ?? 0) + '</td>'
     + '</tr>';
 }}

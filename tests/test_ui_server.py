@@ -919,6 +919,9 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert ".fact-value {" in html
     assert ".notice-section {" in html
     assert ".fold-section {" in html
+    assert ".cell-title {" in html
+    assert ".cell-meta {" in html
+    assert ".cell-stack > * + *" in html
     assert "loadDetail" in html
     assert "label('notice.runtime_preview', 'Runtime Preview')" in html
     assert "label('notice.retrieval_handoff', 'Retrieval Handoff')" in html
@@ -1042,6 +1045,10 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "function previewButtonsConfig(row, config)" in html
     assert "function detailJsonButton(endpoint, row)" in html
     assert "function stackedCell(parts, separator = '<br>')" in html
+    assert "function cellTitle(text)" in html
+    assert "function cellMeta(text)" in html
+    assert "function cellStack(parts)" in html
+    assert "function responseSummaryLine(responseMetadata)" in html
     assert "function previewCell(preview, previewActions, options)" in html
     assert "function reviewerCell(identity, fallbackLabel = '')" in html
     assert "function summaryIdentityCell(identityBadge, reviewerIdentity)" in html
