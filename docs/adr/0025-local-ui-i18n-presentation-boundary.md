@@ -180,6 +180,24 @@ This pattern is intentional:
 3. Fact-line and detail-notice labels should prefer `uiLabel(...)` over new ad hoc inline literals.
 4. Filter, warning, and route-state labels should prefer dedicated semantic helpers over raw string translation.
 
+Current locale normalization and fallback rule in `chronicle ui`:
+
+```text
+supported locales = `ja`, `en`, `zh-CN`
+default locale    = `ja`
+fallback locale   = `en`
+
+values beginning with `ja` normalize to `ja`
+values beginning with `zh` normalize to `zh-CN`
+unknown/empty values normalize to `en`
+```
+
+This is also intentional:
+
+1. The UI can accept practical browser/user-agent locale variants without expanding the durable locale set.
+2. The supported locale registry remains explicit and reviewable.
+3. Fallback behavior is deterministic across the Python and embedded-JavaScript presentation layers.
+
 Examples that require a future ADR:
 
 ```text
