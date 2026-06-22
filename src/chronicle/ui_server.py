@@ -3480,7 +3480,10 @@ function sortSummaryJobRows(rows) {{
 }}
 function currentFilterLabel() {{
   if (!window.__chronicleCurrentEndpoint || !window.__chronicleFilters) return '';
-  return endpointStateLabel('filter', window.__chronicleCurrentEndpoint);
+  const endpoint = window.__chronicleCurrentEndpoint;
+  const target = endpointFilterTarget(endpoint);
+  const value = target ? window.__chronicleFilters[target] || '' : '';
+  return value ? stateLabel('filter', value, filterValueLabel(target, value)) : '';
 }}
 function sortStateLabel(endpoint, sortValue) {{
   if (!sortValue) return '';
@@ -3517,11 +3520,41 @@ function currentTrailButtons() {{
     '<button data-detail-trail="' + esc(path) + '">' + esc(humanizeDetailPath(path)) + '</button>'
   ).join('');
 }}
+function filterValueLabel(target, value) {{
+  const normalizedTarget = String(target || '');
+  const normalizedValue = String(value || '');
+  if (!normalizedValue) return '';
+  if (normalizedTarget === 'runtimeRecords') {{
+    if (normalizedValue === 'preview_only') return 'Runtime mutation preview';
+    if (normalizedValue === 'advisory_only') return 'Runtime auth advisory';
+    if (normalizedValue === 'boundary_aligned') return 'Runtime identity aligned';
+    if (normalizedValue === 'retrieval_plan') return 'Runtime retrieval plans';
+    if (normalizedValue === 'response_id') return 'Runtime provider response';
+  }}
+  if (normalizedTarget === 'summaryJobs') {{
+    if (normalizedValue === 'preview_only') return 'Summary mutation preview';
+    if (normalizedValue === 'advisory_only') return 'Summary advisory';
+    if (normalizedValue === 'package_context_available') return 'Summary package ready';
+    if (normalizedValue === 'boundary_aligned') return 'Summary identity aligned';
+    if (normalizedValue === 'response_id') return 'Summary provider response';
+  }}
+  if (normalizedTarget === 'reviewQueue') {{
+    if (normalizedValue === 'advisory_only' || normalizedValue === 'advisory') return 'Review advisory';
+    if (normalizedValue === 'aligned') return 'CLI aligned';
+    if (normalizedValue === 'boundary_aligned') return 'Identity aligned';
+    if (normalizedValue === 'ui_auth_not_enabled') return 'Auth boundary warnings';
+    if (normalizedValue === 'reviewer_identity_declared_only') return 'Declared identity only';
+    if (normalizedValue === 'package:package_context_available') return 'Package ready';
+  }}
+  return normalizedValue.replaceAll('_', ' ');
+}}
 function sliceChip(filterValue, cls, resetTarget) {{
   const value = String(filterValue || '');
   if (!value) return '';
+  const filterLabel = filterValueLabel(resetTarget, value);
   return '<p>'
-    + badge('slice:' + value, cls)
+    + badge('slice:' + filterLabel, cls)
+    + ' <span class="id">' + esc(value) + '</span>'
     + ' <button data-reset-filter="' + esc(resetTarget) + '">Clear Slice</button>'
     + '</p>';
 }}

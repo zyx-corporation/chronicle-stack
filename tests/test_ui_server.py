@@ -616,6 +616,7 @@ def test_ui_html_filtering_includes_provider_response_metadata_fields(tmp_path, 
     assert "function mutationEnablementBadge(summary)" in html
     assert "function renderMutationEnablementSummary(summary)" in html
     assert "function sliceButtonRow(buttons)" in html
+    assert "function filterValueLabel(target, value)" in html
     assert "function runtimeRecordsSliceButtons()" in html
     assert "function summaryJobsSliceButtons()" in html
     assert "copyCommandButton(recoveryPath, previewTarget, 'Copy Recovery CLI')" in html
@@ -912,6 +913,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "Back to current list" in html
     assert "Back to previous detail" in html
     assert "currentFilterLabel" in html
+    assert "stateLabel('filter', value, filterValueLabel(target, value))" in html
     assert "hasActiveFilters" in html
     assert "resetFilters" in html
     assert "currentSortValue" in html
@@ -1093,6 +1095,8 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "Summary Mutation Preview" in html
     assert "Summary Package Ready" in html
     assert "Summary Provider Response" in html
+    assert "badge('slice:' + filterLabel, cls)" in html
+    assert "' <span class=\"id\">' + esc(value) + '</span>'" in html
     assert "Warning priority:" in html
     assert "summaryJsonLine('Runtime kinds', triage.runtime_record_kinds)" in html
     assert "statusMessageBody(readiness.status, readiness.message, readinessButtons)" in html
