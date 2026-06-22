@@ -78,6 +78,7 @@ Expected JSON smoke fields remain:
 
 Expected auth-readiness smoke checks include:
 
+- `/api/ui-boundary#write-route-contract`
 - `/api/overview#runtime-auth-readiness`
 - `/api/overview#mutation-readiness`
 - `/api/overview#summary-auth-readiness`

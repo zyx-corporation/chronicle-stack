@@ -120,8 +120,28 @@ def run_ui_smoke(root: Path | None = None) -> UISmokeReport:
                     endpoint,
                     expected_key in payload,
                     "ok" if expected_key in payload else f"missing key: {expected_key}",
-        )
-    )
+                )
+            )
+            if endpoint == "/api/ui-boundary":
+                ui_boundary = payload.get("ui_boundary", {})
+                write_route_contract = ui_boundary.get("write_route_contract", {})
+                checks.append(
+                    UISmokeCheck(
+                        "/api/ui-boundary#write-route-contract",
+                        isinstance(write_route_contract, dict)
+                        and bool(write_route_contract.get("route_template"))
+                        and isinstance(write_route_contract.get("actions"), list)
+                        and isinstance(write_route_contract.get("expected_request_fields"), list),
+                        (
+                            "ok"
+                            if isinstance(write_route_contract, dict)
+                            and bool(write_route_contract.get("route_template"))
+                            and isinstance(write_route_contract.get("actions"), list)
+                            and isinstance(write_route_contract.get("expected_request_fields"), list)
+                            else "ui boundary missing write route contract detail"
+                        ),
+                    )
+                )
 
         for endpoint, id_field in _DETAIL_ID_FIELDS.items():
             payload = collection_payloads.get(endpoint)
@@ -173,13 +193,16 @@ def run_ui_smoke(root: Path | None = None) -> UISmokeReport:
                 checks.append(
                     UISmokeCheck(
                         f"{endpoint}/{record_id}#mutation-enablement",
-                        isinstance(mutation_enablement, dict)
-                        and isinstance(mutation_enablement.get("blocker_summaries"), list)
-                        and isinstance(
-                            mutation_enablement.get("reviewer_context_requirements", {}).get(
-                                "effective_required_fields"
-                            ),
-                            list,
+                        (
+                            isinstance(mutation_enablement, dict)
+                            and isinstance(mutation_enablement.get("blocker_summaries"), list)
+                            and isinstance(
+                                mutation_enablement.get("reviewer_context_requirements", {}).get(
+                                    "effective_required_fields"
+                                ),
+                                list,
+                            )
+                            and isinstance(mutation_enablement.get("write_route_contract", {}).get("actions"), list)
                         ),
                         (
                             "ok"
@@ -191,6 +214,7 @@ def run_ui_smoke(root: Path | None = None) -> UISmokeReport:
                                 ),
                                 list,
                             )
+                            and isinstance(mutation_enablement.get("write_route_contract", {}).get("actions"), list)
                             else "review detail missing mutation enablement contract detail"
                         ),
                     )
@@ -257,11 +281,13 @@ def run_ui_smoke(root: Path | None = None) -> UISmokeReport:
                     UISmokeCheck(
                         f"{endpoint}/{record_id}#mutation-enablement",
                         isinstance(mutation_enablement, dict)
-                        and isinstance(mutation_enablement.get("blocker_summaries"), list),
+                        and isinstance(mutation_enablement.get("blocker_summaries"), list)
+                        and bool(mutation_enablement.get("write_route_contract", {}).get("route_template")),
                         (
                             "ok"
                             if isinstance(mutation_enablement, dict)
                             and isinstance(mutation_enablement.get("blocker_summaries"), list)
+                            and bool(mutation_enablement.get("write_route_contract", {}).get("route_template"))
                             else "runtime detail missing mutation enablement contract detail"
                         ),
                     )
@@ -297,13 +323,16 @@ def run_ui_smoke(root: Path | None = None) -> UISmokeReport:
                 checks.append(
                     UISmokeCheck(
                         f"{endpoint}/{record_id}#mutation-enablement",
-                        isinstance(mutation_enablement, dict)
-                        and isinstance(mutation_enablement.get("blocker_summaries"), list)
-                        and isinstance(
-                            mutation_enablement.get("reviewer_context_requirements", {}).get(
-                                "effective_required_fields"
-                            ),
-                            list,
+                        (
+                            isinstance(mutation_enablement, dict)
+                            and isinstance(mutation_enablement.get("blocker_summaries"), list)
+                            and isinstance(
+                                mutation_enablement.get("reviewer_context_requirements", {}).get(
+                                    "effective_required_fields"
+                                ),
+                                list,
+                            )
+                            and isinstance(mutation_enablement.get("write_route_contract", {}).get("actions"), list)
                         ),
                         (
                             "ok"
@@ -315,6 +344,7 @@ def run_ui_smoke(root: Path | None = None) -> UISmokeReport:
                                 ),
                                 list,
                             )
+                            and isinstance(mutation_enablement.get("write_route_contract", {}).get("actions"), list)
                             else "summary detail missing mutation enablement contract detail"
                         ),
                     )
@@ -408,13 +438,16 @@ def run_ui_smoke(root: Path | None = None) -> UISmokeReport:
         checks.append(
             UISmokeCheck(
                 "/api/overview#mutation-readiness",
-                isinstance(mutation_readiness, dict)
-                and isinstance(mutation_readiness.get("blocker_summaries"), list)
-                and isinstance(
-                    mutation_readiness.get("reviewer_context_requirements", {}).get(
-                        "effective_required_fields"
-                    ),
-                    list,
+                (
+                    isinstance(mutation_readiness, dict)
+                    and isinstance(mutation_readiness.get("blocker_summaries"), list)
+                    and isinstance(
+                        mutation_readiness.get("reviewer_context_requirements", {}).get(
+                            "effective_required_fields"
+                        ),
+                        list,
+                    )
+                    and bool(mutation_readiness.get("write_route_contract", {}).get("route_template"))
                 ),
                 (
                     "ok"
@@ -426,6 +459,7 @@ def run_ui_smoke(root: Path | None = None) -> UISmokeReport:
                         ),
                         list,
                     )
+                    and bool(mutation_readiness.get("write_route_contract", {}).get("route_template"))
                     else "overview missing mutation readiness contract detail"
                 ),
             )

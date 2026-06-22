@@ -134,6 +134,7 @@ class UIBoundaryMetadata:
     mutation_blocker_details: list[dict[str, str]] | None = None
     reviewer_context_requirements: dict[str, Any] | None = None
     auth_boundary_summary: dict[str, Any] | None = None
+    write_route_contract: dict[str, Any] | None = None
 
 
 def _auth_boundary_summary(metadata: UIBoundaryMetadata) -> dict[str, Any]:
@@ -326,6 +327,55 @@ def _reviewer_context_requirements(metadata: UIBoundaryMetadata) -> dict[str, An
     }
 
 
+def _ui_write_route_contract(metadata: UIBoundaryMetadata) -> dict[str, Any]:
+    reviewer_context = _reviewer_context_requirements(metadata)
+    mutation_enabled = bool(metadata.mutation_enabled)
+    actions = ["approve", "reject", "request-changes"]
+    return {
+        "route_template": "/api/review-actions/<event_id>/<action>",
+        "actions": actions,
+        "expected_request_fields": reviewer_context.get("effective_required_fields", []),
+        "optional_request_fields": ["note"],
+        "accepted_reviewer_kinds": reviewer_context.get("accepted_reviewer_kinds", []),
+        "advisory_only_reviewer_kinds": reviewer_context.get("advisory_only_reviewer_kinds", []),
+        "session_gated": bool(metadata.session_gating),
+        "mutation_enabled": mutation_enabled,
+        "success_status_code": HTTPStatus.OK.value,
+        "blocked_status_code": HTTPStatus.FORBIDDEN.value,
+        "validation_status_code": HTTPStatus.BAD_REQUEST.value,
+        "resolved_status_code": HTTPStatus.CONFLICT.value,
+        "missing_target_status_code": HTTPStatus.NOT_FOUND.value,
+        "server_error_status_code": HTTPStatus.INTERNAL_SERVER_ERROR.value,
+        "transaction_rule": (
+            "No durable GUI review result is reported as applied unless both review decision persistence and audit insertion succeed."
+        ),
+        "success_contract": {
+            "transaction_status": "decision_and_audit_persisted",
+            "rollback_status": "not_required",
+            "durable_mutation_reported": True,
+        },
+        "failure_contract": {
+            "rollback_status": "fail_closed",
+            "durable_mutation_reported_on_failure": False,
+            "possible_error_codes": [
+                "mutation_disabled",
+                "reviewer_label_required",
+                "invalid_reviewer_label",
+                "session_label_required",
+                "invalid_session_label",
+                "ui_intent_mismatch",
+                "invalid_reviewer_kind",
+                "authorization_failed",
+                "review_target_not_found",
+                "review_not_pending",
+                "invalid_json",
+                "audit_insertion_failed",
+                "decision_persistence_failed",
+            ],
+        },
+    }
+
+
 @dataclass(frozen=True)
 class UIStartupMetadata:
     """Startup metadata printed by `chronicle ui --json`."""
@@ -433,6 +483,7 @@ def build_ui_boundary_metadata(
             "mutation_blocker_details": _serialize_mutation_blocker_details(list(metadata.mutation_blockers)),
             "reviewer_context_requirements": _reviewer_context_requirements(metadata),
             "auth_boundary_summary": _auth_boundary_summary(metadata),
+            "write_route_contract": _ui_write_route_contract(metadata),
         }
     )
 
@@ -1065,6 +1116,7 @@ class ChronicleUIDataService:
             "enablement_satisfied_count": satisfied_checks,
             "enablement_required_count": len(enablement_checks),
             "reviewer_context_requirements": boundary.get("reviewer_context_requirements", {}),
+            "write_route_contract": boundary.get("write_route_contract", {}),
             "next_steps": next_steps,
         }
 
@@ -3483,6 +3535,7 @@ function renderMutationEnablementNotice(record) {{
   const blockerSummaries = Array.isArray(readiness.blocker_summaries) ? readiness.blocker_summaries : [];
   const enablementChecks = Array.isArray(readiness.enablement_checks) ? readiness.enablement_checks : [];
   const reviewerContext = readiness.reviewer_context_requirements || {{}};
+  const writeRouteContract = readiness.write_route_contract || {{}};
   const readinessButtons = moreStatusButtons(readiness.status, '/api/review-queue', 'reviewQueue');
   return renderNotice(
     'Mutation Enablement',
@@ -3497,6 +3550,10 @@ function renderMutationEnablementNotice(record) {{
       + detailLine('Reviewer label pattern', reviewerContext.reviewer_label_pattern || '')
       + detailListLine('Reviewer label examples', reviewerContext.reviewer_label_examples, ' | ')
       + detailLine('Session label pattern', reviewerContext.session_label_pattern || '')
+      + detailLine('Write route', writeRouteContract.route_template || '')
+      + detailListLine('Write actions', writeRouteContract.actions, ' | ')
+      + detailLine('Write success status', writeRouteContract.success_status_code ?? '')
+      + detailLine('Write blocked status', writeRouteContract.blocked_status_code ?? '')
       + detailListLine('Next steps', readiness.next_steps, ' | ')
   );
 }}
@@ -3786,6 +3843,7 @@ function renderOverviewRuntimeConfigPanel(runtimeConfig, runtimeConfigContract) 
   );
 }}
 function renderOverviewUiBoundaryPanel(uiBoundary) {{
+  const writeRouteContract = uiBoundary.write_route_contract || {{}};
   return renderPanel(
     sectionTitle('UI Boundary')
     + '<p>Bind scope: ' + esc(uiBoundary.bind_scope || '') + '</p>'
@@ -3795,6 +3853,11 @@ function renderOverviewUiBoundaryPanel(uiBoundary) {{
     + '<p>Authorization mode: ' + esc(uiBoundary.authorization_mode || '') + '</p>'
     + '<p>Session gating: ' + esc(uiBoundary.session_gating) + '</p>'
     + '<p>Mutation readiness: ' + esc(uiBoundary.mutation_readiness_status || '') + '</p>'
+    + detailLine('Write route', writeRouteContract.route_template || '')
+    + detailListLine('Write actions', writeRouteContract.actions, ' | ')
+    + detailListLine('Write request fields', writeRouteContract.expected_request_fields, ' | ')
+    + detailLine('Write success status', writeRouteContract.success_status_code ?? '')
+    + detailLine('Write blocked status', writeRouteContract.blocked_status_code ?? '')
   );
 }}
 function renderOverviewAuthBoundaryPanel(authBoundary, authBoundaryOverview) {{
@@ -3839,6 +3902,7 @@ function renderOverviewMutationReadinessPanel(mutationReadiness) {{
   const blockerDetails = Array.isArray(mutationReadiness.blocker_details) ? mutationReadiness.blocker_details : [];
   const blockerSummaries = Array.isArray(mutationReadiness.blocker_summaries) ? mutationReadiness.blocker_summaries : [];
   const reviewerContextRequirements = mutationReadiness.reviewer_context_requirements || {{}};
+  const writeRouteContract = mutationReadiness.write_route_contract || {{}};
   const enablementChecks = Array.isArray(mutationReadiness.enablement_checks) ? mutationReadiness.enablement_checks : [];
   return renderPanel(
     sectionTitle('Mutation Readiness')
@@ -3859,6 +3923,11 @@ function renderOverviewMutationReadinessPanel(mutationReadiness) {{
     + detailListLine('Reviewer label examples', reviewerContextRequirements.reviewer_label_examples, ' | ')
     + detailLine('Session label required', reviewerContextRequirements.session_label_required)
     + detailLine('Session label pattern', reviewerContextRequirements.session_label_pattern || '')
+    + detailLine('Write route', writeRouteContract.route_template || '')
+    + detailListLine('Write actions', writeRouteContract.actions, ' | ')
+    + detailListLine('Write request fields', writeRouteContract.expected_request_fields, ' | ')
+    + detailLine('Write success status', writeRouteContract.success_status_code ?? '')
+    + detailLine('Write blocked status', writeRouteContract.blocked_status_code ?? '')
     + detailListLine('Next steps', mutationReadiness.next_steps, ' | ')
   );
 }}

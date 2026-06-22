@@ -192,6 +192,13 @@ def test_startup_metadata(tmp_path):
     assert payload["ui_boundary"]["reviewer_context_requirements"]["session_label_pattern"] == (
         "^[a-z0-9][a-z0-9._-]{1,63}$"
     )
+    assert payload["ui_boundary"]["write_route_contract"]["route_template"] == "/api/review-actions/<event_id>/<action>"
+    assert payload["ui_boundary"]["write_route_contract"]["actions"] == [
+        "approve",
+        "reject",
+        "request-changes",
+    ]
+    assert payload["ui_boundary"]["write_route_contract"]["blocked_status_code"] == 403
     assert payload["ui_boundary"]["auth_boundary_summary"]["status"] == "auth_not_enabled"
     assert "auth_not_enabled" in payload["ui_boundary"]["auth_boundary_summary"]["blockers"]
     assert payload["ui_boundary"]["auth_boundary_summary"]["blocker_details"] == [
@@ -578,6 +585,8 @@ def test_ui_html_filtering_includes_provider_response_metadata_fields(tmp_path, 
     assert "'Mutation Enablement'" in html
     assert "detailListLine('Blocker sources', blockerSummaries.map(item => ((item.source || 'unknown') + ':' + (item.code || 'blocker') + '=' + String(item.affected_count ?? 0))), ' | ')" in html
     assert "detailLine('Reviewer label pattern', reviewerContext.reviewer_label_pattern || '')" in html
+    assert "detailLine('Write route', writeRouteContract.route_template || '')" in html
+    assert "detailListLine('Write request fields', writeRouteContract.expected_request_fields, ' | ')" in html
     assert "detailListLine('Effective reviewer fields', reviewerContextRequirements.effective_required_fields, ' | ')" in html
     assert "Review queue blocked-route preview stays read-only and returns the CLI fallback contract." in html
 
@@ -615,6 +624,7 @@ def test_ui_data_service_detail_endpoints(tmp_path):
     assert summary_detail["action_preview"]["status"] == "preview_only"
     assert summary_detail["mutation_enablement"]["enablement_ready"] is False
     assert any(item["source"] == "boundary" for item in summary_detail["mutation_enablement"]["blocker_summaries"])
+    assert summary_detail["mutation_enablement"]["write_route_contract"]["route_template"] == "/api/review-actions/<event_id>/<action>"
     assert any(link["path"] == f"/api/review-queue/{summary_detail['review_target_event_id']}" for link in summary_detail["related_links"])
     runtime_detail = service.detail_payload(f"/api/runtime-records/{ids['runtime_summary_event_id']}")["record"]
     assert "runtime_summary" in runtime_detail["payload"]
@@ -622,6 +632,7 @@ def test_ui_data_service_detail_endpoints(tmp_path):
     assert runtime_detail["auth_boundary_notice"]["status"] == "advisory_only"
     assert runtime_detail["mutation_enablement"]["enablement_ready"] is False
     assert any(item["source"] == "review_queue" for item in runtime_detail["mutation_enablement"]["blocker_summaries"])
+    assert runtime_detail["mutation_enablement"]["write_route_contract"]["success_status_code"] == 200
     assert runtime_detail["suggested_cli_family"] == "chronicle runtime summarize --record"
     assert runtime_detail["related_links"][0]["path"] == f"/api/review-queue/{ids['runtime_summary_event_id']}"
     assert runtime_detail["related_links"][0]["label"] == "Open matching review detail"
@@ -642,6 +653,11 @@ def test_ui_data_service_detail_endpoints(tmp_path):
     assert review_detail["target_event_id"] == ids["runtime_summary_event_id"]
     assert review_detail["mutation_enablement"]["enablement_ready"] is False
     assert review_detail["mutation_enablement"]["blocker_summaries"]
+    assert review_detail["mutation_enablement"]["write_route_contract"]["actions"] == [
+        "approve",
+        "reject",
+        "request-changes",
+    ]
     assert review_detail["review_preview_only"] is True
     assert review_detail["package_readiness"]["status"] == "no_context_records"
     assert review_detail["package_readiness"]["suggested_commands"][0] == "chronicle show --json"
