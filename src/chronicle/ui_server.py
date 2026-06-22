@@ -3847,7 +3847,9 @@ function sourceCountBadges(sourceCounts) {{
 function detailMessages(items, fallbackItems = []) {{
   const details = Array.isArray(items) ? items : [];
   const fallback = Array.isArray(fallbackItems) ? fallbackItems : [];
-  return details.map(item => item.message).join(' | ') || fallback.join(' | ') || '';
+  const detailMessages = details.map(item => localizeTextValue(item.message || ''));
+  if (detailMessages.length > 0) return detailMessages.join(' | ');
+  return fallback.map(item => localizeTextValue(reviewWarningLabels[String(item || '')] || String(item || ''))).join(' | ') || '';
 }}
 function reviewActionCoreDetailLines(payload, action = '', recordId = '') {{
   return ''
@@ -3897,8 +3899,8 @@ function renderReviewMutationForm(title, prefix) {{
 }}
 function renderPreviewSummary(preview) {{
   return preview.status
-    ? '<strong>' + esc(preview.status) + '</strong><br>' + esc(preview.message || '')
-    : esc(preview.message || '');
+    ? '<strong>' + esc(preview.status) + '</strong><br>' + esc(localizeTextValue(preview.message || ''))
+    : esc(localizeTextValue(preview.message || ''));
 }}
 function renderPreviewContractSummary(preview, previewTarget = 'action-preview-response') {{
   const failureContract = (preview && preview.failure_contract) || {{}};
@@ -4963,7 +4965,7 @@ function summaryJsonLine(label, value) {{
     + '</div><div class="fact-value fact-code">' + esc(JSON.stringify(value || {{}})) + '</div></div>';
 }}
 function messageParagraph(message) {{
-  return '<p>' + esc(message || '') + '</p>';
+  return '<p>' + esc(localizeTextValue(message || '')) + '</p>';
 }}
 function buttonRow(buttons) {{
   return buttons.length > 0 ? '<p>' + buttons.join('') + '</p>' : '';

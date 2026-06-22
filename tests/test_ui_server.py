@@ -949,10 +949,12 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "reviewWarningBadges" in html
     assert "const reviewWarningLabels =" in html
     assert "function detailMessages(items, fallbackItems = [])" in html
+    assert "localizeTextValue(item.message || '')" in html
     assert "function contractDetailLines(successContract, failureContract, targetId)" in html
     assert "function renderReviewActionResultPanel(title, responseStatus, path, payload, targetId, options = {})" in html
     assert "function renderReviewMutationForm(title, prefix)" in html
     assert "function renderPreviewSummary(preview)" in html
+    assert "localizeTextValue(preview.message || '')" in html
     assert "function renderPreviewButtons(previewActions, options = {})" in html
     assert "function authReadinessBadge(status)" in html
     assert "function identityAssuranceBadge(status)" in html
@@ -1072,6 +1074,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "detailListLine" in html
     assert "summaryJsonLine" in html
     assert "messageParagraph" in html
+    assert "localizeTextValue(message || '')" in html
     assert "statusMessageBody" in html
     assert "routeHeading" in html
     assert "prettyJsonPre" in html
