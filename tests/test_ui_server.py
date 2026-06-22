@@ -519,6 +519,10 @@ def test_ui_html_filtering_includes_provider_response_metadata_fields(tmp_path, 
     assert "summaryJsonLine('Provider statuses', authBoundaryOverview.provider_response_status_counts)" in html
     assert "summaryJsonLine('Provider finish reasons', runtimeRecords.provider_response_finish_reason_counts)" in html
     assert "summaryJsonLine('Provider statuses', summaryJobs.provider_response_status_counts)" in html
+    assert "function renderPreviewContractSummary(preview, previewTarget = 'action-preview-response')" in html
+    assert "copyCommandButton(recoveryPath, previewTarget, 'Copy Recovery CLI')" in html
+    assert "rollback=" in html
+    assert "errors=" in html
     assert "Review queue blocked-route preview stays read-only and returns the CLI fallback contract." in html
 
 

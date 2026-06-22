@@ -2382,6 +2382,26 @@ function renderPreviewSummary(preview) {{
     ? '<strong>' + esc(preview.status) + '</strong><br>' + esc(preview.message || '')
     : esc(preview.message || '');
 }}
+function renderPreviewContractSummary(preview, previewTarget = 'action-preview-response') {{
+  const failureContract = (preview && preview.failure_contract) || {{}};
+  const recoveryPath = failureContract.recovery_path || '';
+  const possibleErrors = Array.isArray(failureContract.possible_error_codes)
+    ? failureContract.possible_error_codes
+    : [];
+  if (!recoveryPath && possibleErrors.length === 0) return '';
+  return [
+    failureContract.rollback_status
+      ? '<br><span class="id">rollback=' + esc(failureContract.rollback_status) + '</span>'
+      : '',
+    recoveryPath
+      ? '<br><span class="id">recovery=' + esc(recoveryPath) + '</span> '
+        + copyCommandButton(recoveryPath, previewTarget, 'Copy Recovery CLI')
+      : '',
+    possibleErrors.length > 0
+      ? '<br><span class="id">errors=' + esc(possibleErrors.join(' | ')) + '</span>'
+      : '',
+  ].join('');
+}}
 function renderPreviewButtons(previewActions, options = {{}}) {{
   const actions = Array.isArray(previewActions) ? previewActions : [];
   const mutationEnabled = Boolean(options.mutationEnabled);
@@ -2439,8 +2459,12 @@ function stackedCell(parts, separator = '<br>') {{
 }}
 function previewCell(preview, previewActions, options) {{
   const previewSummary = renderPreviewSummary(preview || {{}});
+  const previewContractSummary = renderPreviewContractSummary(
+    preview || {{}},
+    (options && options.previewTarget) || 'action-preview-response',
+  );
   const previewButtons = renderPreviewButtons(previewActions, options);
-  return previewSummary + (previewButtons ? '<br>' + previewButtons : '');
+  return previewSummary + previewContractSummary + (previewButtons ? '<br>' + previewButtons : '');
 }}
 function reviewerCell(identity, fallbackLabel = '') {{
   const reviewerBadge = reviewerIdentityBadge(identity);
