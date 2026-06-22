@@ -1,6 +1,11 @@
 """Tests for Chronicle local UI i18n catalogs and helper invariants."""
 
-from chronicle.ui_i18n import DEFAULT_UI_LOCALE, FALLBACK_UI_LOCALE, SUPPORTED_UI_LOCALES
+from chronicle.ui_i18n import (
+    DEFAULT_UI_LOCALE,
+    FALLBACK_UI_LOCALE,
+    SUPPORTED_UI_LOCALES,
+    normalize_ui_locale,
+)
 from chronicle.ui_server import UI_I18N_CATALOG
 
 
@@ -50,3 +55,14 @@ def test_ui_i18n_catalog_contains_exact_and_prefix_maps_for_each_locale():
             assert isinstance(catalog["exact"], dict), locale
         if "prefix" in catalog:
             assert isinstance(catalog["prefix"], dict), locale
+
+
+def test_normalize_ui_locale_matches_supported_locale_rules():
+    assert normalize_ui_locale("ja") == "ja"
+    assert normalize_ui_locale("ja-JP") == "ja"
+    assert normalize_ui_locale("en") == "en"
+    assert normalize_ui_locale("zh") == "zh-CN"
+    assert normalize_ui_locale("zh-TW") == "zh-CN"
+    assert normalize_ui_locale("fr") == "en"
+    assert normalize_ui_locale("") == "en"
+    assert normalize_ui_locale(None) == "en"

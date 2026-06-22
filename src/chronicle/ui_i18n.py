@@ -6,6 +6,17 @@ SUPPORTED_UI_LOCALES: tuple[str, str, str] = ("ja", "en", "zh-CN")
 DEFAULT_UI_LOCALE = "ja"
 FALLBACK_UI_LOCALE = "en"
 
+
+def normalize_ui_locale(locale: str | None) -> str:
+    value = str(locale or "").strip()
+    if value in SUPPORTED_UI_LOCALES:
+        return value
+    if value.startswith("ja"):
+        return "ja"
+    if value.startswith("zh"):
+        return "zh-CN"
+    return FALLBACK_UI_LOCALE
+
 REVIEW_WARNING_TEXT: dict[str, str] = {
     "ui_auth_not_enabled": "UI auth mode is not enabled, so reviewer identity is not enforced by the local UI boundary.",
     "ui_authorization_not_enabled": "UI authorization mode is not enabled, so reviewer permissions remain advisory only.",
@@ -62,6 +73,7 @@ __all__ = [
     "AUTH_BOUNDARY_BLOCKER_TEXT",
     "AUTH_BOUNDARY_WARNING_TO_BLOCKER",
     "MUTATION_BLOCKER_TEXT",
+    "normalize_ui_locale",
     "DEFAULT_UI_LOCALE",
     "FALLBACK_UI_LOCALE",
     "REVIEW_WARNING_LABELS",
