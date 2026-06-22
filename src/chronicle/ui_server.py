@@ -146,6 +146,7 @@ UI_I18N_CATALOG: dict[str, dict[str, Any]] = {
         "button.open_summary_jobs": "要約ジョブを開く",
         "button.open_runtime_config": "ランタイム設定を開く",
         "button.open_review": "レビューを開く",
+        "button.more_details": "補助詳細",
         "button.back_current_list": "現在の一覧へ戻る",
         "button.back_previous_detail": "前の詳細へ戻る",
         "status.loading_blocked_preview": "拒否ルートプレビューを読み込み中…",
@@ -482,6 +483,7 @@ UI_I18N_CATALOG: dict[str, dict[str, Any]] = {
         "button.open_summary_jobs": "Open Summary Jobs",
         "button.open_runtime_config": "Open Runtime Config",
         "button.open_review": "Open review",
+        "button.more_details": "More details",
         "button.back_current_list": "Back to current list",
         "button.back_previous_detail": "Back to previous detail",
         "status.loading_blocked_preview": "Loading blocked-route preview...",
@@ -634,6 +636,7 @@ UI_I18N_CATALOG: dict[str, dict[str, Any]] = {
         "button.open_summary_jobs": "打开摘要任务",
         "button.open_runtime_config": "打开运行时配置",
         "button.open_review": "打开审查",
+        "button.more_details": "更多细节",
         "button.back_current_list": "返回当前列表",
         "button.back_previous_detail": "返回上一条详情",
         "status.loading_blocked_preview": "正在加载阻止路由预览…",
@@ -3330,6 +3333,10 @@ nav {{ display: flex; flex-wrap: wrap; gap: 4px; margin: 14px 0 16px; padding-bo
 .cell-title {{ font-weight: 600; color: #111827; }}
 .cell-meta {{ color: #4b5563; font-size: 0.92em; }}
 .cell-stack > * + * {{ margin-top: 4px; }}
+.cell-details {{ margin-top: 6px; }}
+.cell-details summary {{ cursor: pointer; color: #1f2937; font-size: 0.9em; }}
+.cell-details[open] summary {{ margin-bottom: 6px; }}
+.cell-details-body > * + * {{ margin-top: 4px; }}
 .cell-code {{ font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.85em; }}
 .json-block {{ margin: 12px 0 0; border-top: 1px solid #e5e7eb; padding-top: 12px; }}
 .json-block summary {{ cursor: pointer; font-weight: 600; color: #111827; }}
@@ -3735,6 +3742,13 @@ function cellCode(text) {{
 function cellStack(parts) {{
   return '<div class="cell-stack">' + parts.filter(part => part).join('') + '</div>';
 }}
+function cellDetails(summary, parts, open = false) {{
+  const body = parts.filter(part => part).join('');
+  if (!body) return '';
+  return '<details class="cell-details"' + (open ? ' open' : '') + '><summary>'
+    + esc(summary)
+    + '</summary><div class="cell-details-body">' + body + '</div></details>';
+}}
 function responseSummaryLine(responseMetadata) {{
   if (!responseMetadata || !responseMetadata.present) return '';
   return cellMeta(
@@ -3810,13 +3824,21 @@ function renderRuntimeRecordRow(row, endpoint) {{
     + '<td>' + button + '</td>'
     + '<td><span class="id">' + esc(row.event_id || '') + '</span></td>'
     + '<td>' + kindBadge + '</td>'
-    + '<td>' + stackedCell([authBadge, mutationBadge, renderMutationEnablementSummary(mutationEnablement)]) + '</td>'
+    + '<td>' + cellStack([
+      authBadge,
+      mutationBadge,
+      cellDetails(label('button.more_details', 'More details'), [
+        cellMeta(renderMutationEnablementSummary(mutationEnablement)),
+      ]),
+    ]) + '</td>'
     + '<td>' + cellStack([
       cellTitle(preview.title || ''),
       cellMeta(preview.preview_text || ''),
       sourceBadges,
-      cellCode(JSON.stringify(preview.source_counts || {{}})),
-      responseSummaryLine(responseMetadata),
+      cellDetails(label('button.more_details', 'More details'), [
+        cellCode(JSON.stringify(preview.source_counts || {{}})),
+        responseSummaryLine(responseMetadata),
+      ]),
     ]) + '</td>'
     + '<td>' + previewCell(actionPreview, previewActions, previewButtonsConfig(row, {{
       recordId: row.review_target_event_id || row.event_id || '',
@@ -3852,16 +3874,29 @@ function renderReviewQueueRow(row, endpoint) {{
       '<div><span class="id">' + esc(row.target_event_id || '') + '</span></div>',
       reviewKindBadge,
       cellMeta(row.target_summary || ''),
-      responseSummaryLine(responseMetadata),
+      cellDetails(label('button.more_details', 'More details'), [
+        responseSummaryLine(responseMetadata),
+      ]),
     ]) + '</td>'
     + '<td>' + stackedCell([statusBadge, readinessBadge, parityBadge, authBadge]) + '</td>'
-    + '<td>' + stackedCell([mutationEnablementBadge(mutationEnablement), renderMutationEnablementSummary(mutationEnablement), previewCell(preview, previewActions, previewButtonsConfig(row, {{
-      recordId: row.target_event_id || '',
-      fieldPrefix: 'review-queue',
-      successDetail: '/api/review-queue/' + esc(row.target_event_id || ''),
-      previewTarget: 'review-queue-action-preview-response',
-    }}))]) + '</td>'
-    + '<td>' + stackedCell([warnBadges, esc(warnDetails.map(item => item.message).join(' | ') || warnList.join(', ') || '(none)')]) + '</td>'
+    + '<td>' + cellStack([
+      mutationEnablementBadge(mutationEnablement),
+      previewCell(preview, previewActions, previewButtonsConfig(row, {{
+        recordId: row.target_event_id || '',
+        fieldPrefix: 'review-queue',
+        successDetail: '/api/review-queue/' + esc(row.target_event_id || ''),
+        previewTarget: 'review-queue-action-preview-response',
+      }})),
+      cellDetails(label('button.more_details', 'More details'), [
+        cellMeta(renderMutationEnablementSummary(mutationEnablement)),
+      ]),
+    ]) + '</td>'
+    + '<td>' + cellStack([
+      warnBadges,
+      cellDetails(label('button.more_details', 'More details'), [
+        cellMeta(warnDetails.map(item => item.message).join(' | ') || warnList.join(', ') || '(none)'),
+      ]),
+    ]) + '</td>'
     + '<td>' + reviewerCell(row.latest_reviewer_identity, row.latest_reviewer || '') + '</td>'
     + '</tr>';
 }}
@@ -3885,7 +3920,16 @@ function renderSummaryJobRow(row, endpoint) {{
   return '<tr>'
     + '<td>' + button + '</td>'
     + '<td>' + cellStack(['<div><span class="id">' + esc(row.summary_job_id || '') + '</span></div>', cellTitle(row.title || ''), targetButton]) + '</td>'
-    + '<td>' + cellStack([cellMeta(row.status || ''), reviewBadge, authBadge, packageBadge, mutationEnablementBadge(mutationEnablement), renderMutationEnablementSummary(mutationEnablement)]) + '</td>'
+    + '<td>' + cellStack([
+      cellMeta(row.status || ''),
+      reviewBadge,
+      authBadge,
+      packageBadge,
+      mutationEnablementBadge(mutationEnablement),
+      cellDetails(label('button.more_details', 'More details'), [
+        cellMeta(renderMutationEnablementSummary(mutationEnablement)),
+      ]),
+    ]) + '</td>'
     + '<td>' + summaryIdentityCell(identityBadge, row.latest_reviewer_identity) + '</td>'
     + '<td>' + previewCell(preview, previewActions, previewButtonsConfig(row, {{
       recordId: row.review_target_event_id || '',
@@ -3893,7 +3937,13 @@ function renderSummaryJobRow(row, endpoint) {{
       successDetail: '/api/summary-jobs/' + esc(row.summary_job_id || ''),
       previewTarget: 'summary-jobs-action-preview-response',
     }})) + '</td>'
-    + '<td>' + cellStack([cellMeta(row.runtime_provider_kind || ''), responseSummaryLine(responseMetadata), cellMeta('sources: ' + String(row.summary_source_count ?? 0))]) + '</td>'
+    + '<td>' + cellStack([
+      cellMeta(row.runtime_provider_kind || ''),
+      cellMeta('sources: ' + String(row.summary_source_count ?? 0)),
+      cellDetails(label('button.more_details', 'More details'), [
+        responseSummaryLine(responseMetadata),
+      ]),
+    ]) + '</td>'
     + '</tr>';
 }}
 function renderRuntimeRecordsTable(endpoint, rows) {{
