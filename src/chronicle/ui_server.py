@@ -219,6 +219,42 @@ def _serialize_mutation_blocker_details(blockers: list[str]) -> list[dict[str, s
     ]
 
 
+def _mutation_blocker_summaries(
+    *,
+    boundary_blockers: list[str],
+    pending_boundary_warning_counts: dict[str, int],
+) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    seen: set[tuple[str, str]] = set()
+    for blocker_code in boundary_blockers:
+        key = ("boundary", blocker_code)
+        if key in seen:
+            continue
+        seen.add(key)
+        rows.append(
+            {
+                "code": blocker_code,
+                "message": MUTATION_BLOCKER_TEXT.get(blocker_code, blocker_code.replace("_", " ")),
+                "source": "boundary",
+                "affected_count": 1,
+            }
+        )
+    for blocker_code, count in sorted(pending_boundary_warning_counts.items()):
+        key = ("review_queue", blocker_code)
+        if key in seen:
+            continue
+        seen.add(key)
+        rows.append(
+            {
+                "code": blocker_code,
+                "message": MUTATION_BLOCKER_TEXT.get(blocker_code, blocker_code.replace("_", " ")),
+                "source": "review_queue",
+                "affected_count": count,
+            }
+        )
+    return rows
+
+
 def _mutation_enablement_checks(
     *,
     boundary: dict[str, Any],
@@ -988,7 +1024,8 @@ class ChronicleUIDataService:
         advisory_rows = sum(1 for row in queue if row.get("review_capability", {}).get("can_review_now") is not True)
         blockers: list[str] = []
         next_steps: list[str] = []
-        for blocker in boundary.get("mutation_blockers", []):
+        boundary_blockers = [str(blocker) for blocker in boundary.get("mutation_blockers", [])]
+        for blocker in boundary_blockers:
             _append_mutation_blocker(blockers, next_steps, str(blocker))
         pending_boundary_warning_counts: dict[str, int] = {}
         for row in queue:
@@ -1005,6 +1042,10 @@ class ChronicleUIDataService:
             boundary=boundary,
             pending_boundary_warning_counts=pending_boundary_warning_counts,
         )
+        blocker_summaries = _mutation_blocker_summaries(
+            boundary_blockers=boundary_blockers,
+            pending_boundary_warning_counts=pending_boundary_warning_counts,
+        )
         satisfied_checks = sum(1 for check in enablement_checks if check.get("satisfied") is True)
         if ready_rows > 0:
             next_steps.append(
@@ -1017,6 +1058,7 @@ class ChronicleUIDataService:
             "advisory_row_count": advisory_rows,
             "blockers": blockers,
             "blocker_details": _serialize_mutation_blocker_details(blockers),
+            "blocker_summaries": blocker_summaries,
             "pending_boundary_warning_counts": pending_boundary_warning_counts,
             "enablement_checks": enablement_checks,
             "enablement_ready": satisfied_checks == len(enablement_checks),
@@ -3438,6 +3480,7 @@ function renderMutationEnablementNotice(record) {{
   if (!record.mutation_enablement) return '';
   const readiness = record.mutation_enablement;
   const blockerDetails = Array.isArray(readiness.blocker_details) ? readiness.blocker_details : [];
+  const blockerSummaries = Array.isArray(readiness.blocker_summaries) ? readiness.blocker_summaries : [];
   const enablementChecks = Array.isArray(readiness.enablement_checks) ? readiness.enablement_checks : [];
   const reviewerContext = readiness.reviewer_context_requirements || {{}};
   const readinessButtons = moreStatusButtons(readiness.status, '/api/review-queue', 'reviewQueue');
@@ -3447,6 +3490,7 @@ function renderMutationEnablementNotice(record) {{
       + detailLine('Enablement ready', readiness.enablement_ready)
       + detailLine('Enablement checks', String(readiness.enablement_satisfied_count ?? 0) + '/' + String(readiness.enablement_required_count ?? 0))
       + detailLine('Blockers', detailMessages(blockerDetails, readiness.blockers))
+      + detailListLine('Blocker sources', blockerSummaries.map(item => ((item.source || 'unknown') + ':' + (item.code || 'blocker') + '=' + String(item.affected_count ?? 0))), ' | ')
       + detailListLine('Checks', enablementChecks.map(check => ((check.satisfied ? 'ok: ' : 'blocked: ') + (check.label || check.code || 'check'))), ' | ')
       + detailListLine('Reviewer fields', reviewerContext.effective_required_fields, ' | ')
       + detailListLine('Reviewer kinds', reviewerContext.accepted_reviewer_kinds, ' | ')
@@ -3793,6 +3837,7 @@ function renderOverviewIdentityBoundaryPanel(identityBoundary) {{
 }}
 function renderOverviewMutationReadinessPanel(mutationReadiness) {{
   const blockerDetails = Array.isArray(mutationReadiness.blocker_details) ? mutationReadiness.blocker_details : [];
+  const blockerSummaries = Array.isArray(mutationReadiness.blocker_summaries) ? mutationReadiness.blocker_summaries : [];
   const reviewerContextRequirements = mutationReadiness.reviewer_context_requirements || {{}};
   const enablementChecks = Array.isArray(mutationReadiness.enablement_checks) ? mutationReadiness.enablement_checks : [];
   return renderPanel(
@@ -3805,6 +3850,7 @@ function renderOverviewMutationReadinessPanel(mutationReadiness) {{
     + detailLine('Enablement checks', String(mutationReadiness.enablement_satisfied_count ?? 0) + '/' + String(mutationReadiness.enablement_required_count ?? 0))
     + detailListLine('Blockers', mutationReadiness.blockers, ' | ')
     + detailLine('Blocker details', detailMessages(blockerDetails, mutationReadiness.blockers))
+    + detailListLine('Blocker sources', blockerSummaries.map(item => ((item.source || 'unknown') + ':' + (item.code || 'blocker') + '=' + String(item.affected_count ?? 0))), ' | ')
     + detailListLine('Enablement checks', enablementChecks.map(check => ((check.satisfied ? 'ok: ' : 'blocked: ') + (check.label || check.code || 'check'))), ' | ')
     + detailListLine('Effective reviewer fields', reviewerContextRequirements.effective_required_fields, ' | ')
     + detailListLine('Reviewer fields', reviewerContextRequirements.required_fields, ' | ')

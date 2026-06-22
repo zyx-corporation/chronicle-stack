@@ -13,6 +13,7 @@ It focuses on:
 - runtime record auth-readiness visibility
 - review queue auth-readiness visibility
 - summary job auth-readiness visibility
+- detail-level mutation-enablement contract visibility
 - detail-level auth-readiness notices
 - `chronicle ui-smoke` continuity for those derived surfaces
 
@@ -78,10 +79,14 @@ Expected JSON smoke fields remain:
 Expected auth-readiness smoke checks include:
 
 - `/api/overview#runtime-auth-readiness`
+- `/api/overview#mutation-readiness`
 - `/api/overview#summary-auth-readiness`
 - `/api/review-queue/<id>#auth-readiness`
+- `/api/review-queue/<id>#mutation-enablement`
 - `/api/runtime-records/<id>#auth-readiness`
+- `/api/runtime-records/<id>#mutation-enablement`
 - `/api/summary-jobs/<id>#auth-readiness`
+- `/api/summary-jobs/<id>#mutation-enablement`
 - `html-shell`
 
 ## Manual spot checks

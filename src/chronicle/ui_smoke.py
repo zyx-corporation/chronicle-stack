@@ -169,6 +169,32 @@ def run_ui_smoke(root: Path | None = None) -> UISmokeReport:
                         ),
                     )
                 )
+                mutation_enablement = record.get("mutation_enablement")
+                checks.append(
+                    UISmokeCheck(
+                        f"{endpoint}/{record_id}#mutation-enablement",
+                        isinstance(mutation_enablement, dict)
+                        and isinstance(mutation_enablement.get("blocker_summaries"), list)
+                        and isinstance(
+                            mutation_enablement.get("reviewer_context_requirements", {}).get(
+                                "effective_required_fields"
+                            ),
+                            list,
+                        ),
+                        (
+                            "ok"
+                            if isinstance(mutation_enablement, dict)
+                            and isinstance(mutation_enablement.get("blocker_summaries"), list)
+                            and isinstance(
+                                mutation_enablement.get("reviewer_context_requirements", {}).get(
+                                    "effective_required_fields"
+                                ),
+                                list,
+                            )
+                            else "review detail missing mutation enablement contract detail"
+                        ),
+                    )
+                )
                 action_preview = record.get("action_preview")
                 first_action = action_preview.get("actions", [None])[0] if isinstance(action_preview, dict) else None
                 checks.append(
@@ -226,6 +252,20 @@ def run_ui_smoke(root: Path | None = None) -> UISmokeReport:
                         ),
                     )
                 )
+                mutation_enablement = record.get("mutation_enablement")
+                checks.append(
+                    UISmokeCheck(
+                        f"{endpoint}/{record_id}#mutation-enablement",
+                        isinstance(mutation_enablement, dict)
+                        and isinstance(mutation_enablement.get("blocker_summaries"), list),
+                        (
+                            "ok"
+                            if isinstance(mutation_enablement, dict)
+                            and isinstance(mutation_enablement.get("blocker_summaries"), list)
+                            else "runtime detail missing mutation enablement contract detail"
+                        ),
+                    )
+                )
             if endpoint == "/api/summary-jobs" and detail is not None and "record" in detail:
                 record = detail["record"]
                 auth_notice = record.get("auth_boundary_notice")
@@ -250,6 +290,32 @@ def run_ui_smoke(root: Path | None = None) -> UISmokeReport:
                             if bool(record.get("identity_assurance_status"))
                             or isinstance(record.get("latest_identity_assurance"), dict)
                             else "summary detail missing identity/session assurance surface"
+                        ),
+                    )
+                )
+                mutation_enablement = record.get("mutation_enablement")
+                checks.append(
+                    UISmokeCheck(
+                        f"{endpoint}/{record_id}#mutation-enablement",
+                        isinstance(mutation_enablement, dict)
+                        and isinstance(mutation_enablement.get("blocker_summaries"), list)
+                        and isinstance(
+                            mutation_enablement.get("reviewer_context_requirements", {}).get(
+                                "effective_required_fields"
+                            ),
+                            list,
+                        ),
+                        (
+                            "ok"
+                            if isinstance(mutation_enablement, dict)
+                            and isinstance(mutation_enablement.get("blocker_summaries"), list)
+                            and isinstance(
+                                mutation_enablement.get("reviewer_context_requirements", {}).get(
+                                    "effective_required_fields"
+                                ),
+                                list,
+                            )
+                            else "summary detail missing mutation enablement contract detail"
                         ),
                     )
                 )
@@ -335,6 +401,32 @@ def run_ui_smoke(root: Path | None = None) -> UISmokeReport:
                     and isinstance(summary_jobs_summary.get("identity_assurance_counts"), dict)
                     and isinstance(summary_jobs_summary.get("reviewer_kind_counts"), dict)
                     else "overview missing summary identity/session readiness summary"
+                ),
+            )
+        )
+        mutation_readiness = overview.get("mutation_readiness")
+        checks.append(
+            UISmokeCheck(
+                "/api/overview#mutation-readiness",
+                isinstance(mutation_readiness, dict)
+                and isinstance(mutation_readiness.get("blocker_summaries"), list)
+                and isinstance(
+                    mutation_readiness.get("reviewer_context_requirements", {}).get(
+                        "effective_required_fields"
+                    ),
+                    list,
+                ),
+                (
+                    "ok"
+                    if isinstance(mutation_readiness, dict)
+                    and isinstance(mutation_readiness.get("blocker_summaries"), list)
+                    and isinstance(
+                        mutation_readiness.get("reviewer_context_requirements", {}).get(
+                            "effective_required_fields"
+                        ),
+                        list,
+                    )
+                    else "overview missing mutation readiness contract detail"
                 ),
             )
         )

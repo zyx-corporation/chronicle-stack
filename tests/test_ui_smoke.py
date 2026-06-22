@@ -90,9 +90,11 @@ def test_run_ui_smoke_success(tmp_path):
     assert any(name.endswith("#cli-parity") for name in check_names)
     assert any(name.endswith("#auth-readiness") for name in check_names)
     assert any(name.endswith("#identity-assurance") for name in check_names)
+    assert any(name.endswith("#mutation-enablement") for name in check_names)
     assert any(name.endswith("#blocked-route-preview") for name in check_names)
     assert any(name.startswith("/api/review-actions/") for name in check_names)
     assert "/api/overview#runtime-auth-readiness" in check_names
+    assert "/api/overview#mutation-readiness" in check_names
     assert "/api/overview#summary-auth-readiness" in check_names
     assert "/api/overview#summary-identity-readiness" in check_names
     assert any(name.startswith("/api/contexts/") for name in check_names)
