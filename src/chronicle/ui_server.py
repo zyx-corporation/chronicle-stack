@@ -1027,9 +1027,25 @@ class ChronicleUIDataService:
             data["runtime_record_preview"] = preview.model_dump(mode="json")
             review_row = self._review_queue_row(event.event_id)
             if review_row is not None:
+                mutation_enablement = self.mutation_readiness_summary()
+                data["review_target_event_id"] = event.event_id
+                data["review_capability_status"] = str(
+                    review_row.get("review_capability", {}).get("status", "")
+                )
                 data["auth_readiness_status"] = str(
                     review_row.get("auth_boundary_notice", {}).get("status", "")
                 )
+                data["action_preview_summary"] = review_row.get("action_preview_summary", {})
+                data["identity_assurance_status"] = str(
+                    review_row.get("latest_identity_assurance", {}).get("status", "unknown")
+                )
+                data["mutation_enablement_summary"] = self._mutation_enablement_list_summary(
+                    mutation_enablement
+                )
+                data["ui_mutation_enabled"] = bool(mutation_enablement.get("enablement_ready")) and bool(
+                    review_row.get("ui_mutation_enabled", False)
+                )
+                data["review_preview_only"] = not bool(data["ui_mutation_enabled"])
             data["response_metadata_summary"] = self._runtime_response_metadata_summary(payload=data["payload"])
             rows.append(data)
         return {"runtime_records": rows}
@@ -1079,6 +1095,11 @@ class ChronicleUIDataService:
             data["ui_mutation_enabled"] = bool(boundary.get("mutation_enabled", False))
             data["review_preview_only"] = not bool(boundary.get("mutation_enabled", False))
             rows.append(data)
+        mutation_enablement = self._mutation_enablement_list_summary(
+            self.mutation_readiness_summary(rows)
+        )
+        for row in rows:
+            row["mutation_enablement_summary"] = mutation_enablement
         return {"review_queue": rows}
 
     def summary_jobs_list(self, *, limit: int = 100) -> dict[str, Any]:
@@ -1112,6 +1133,9 @@ class ChronicleUIDataService:
                         review_row.get("cli_parity_summary", {}).get("status", "")
                     )
                     data["action_preview_summary"] = review_row.get("action_preview_summary", {})
+                    data["mutation_enablement_summary"] = self._mutation_enablement_list_summary(
+                        self.mutation_readiness_summary()
+                    )
                     data["ui_mutation_enabled"] = bool(boundary.get("mutation_enabled", False))
                     data["review_preview_only"] = not bool(boundary.get("mutation_enabled", False))
                     if review_row.get("latest_reviewer_identity") is not None:
@@ -1178,6 +1202,25 @@ class ChronicleUIDataService:
             "reviewer_context_requirements": boundary.get("reviewer_context_requirements", {}),
             "write_route_contract": boundary.get("write_route_contract", {}),
             "next_steps": next_steps,
+        }
+
+    @staticmethod
+    def _mutation_enablement_list_summary(mutation_readiness: dict[str, Any]) -> dict[str, Any]:
+        operational_readiness = mutation_readiness.get("operational_readiness", {})
+        write_route_contract = mutation_readiness.get("write_route_contract", {})
+        identity_proof_contract = write_route_contract.get("identity_proof_contract", {})
+        return {
+            "status": str(mutation_readiness.get("status", "")),
+            "enablement_ready": bool(mutation_readiness.get("enablement_ready", False)),
+            "operational_status": str(operational_readiness.get("status", "")),
+            "remaining_count": int(operational_readiness.get("remaining_count", 0) or 0),
+            "blocked_status_code": write_route_contract.get("blocked_status_code"),
+            "success_status_code": write_route_contract.get("success_status_code"),
+            "identity_proof_status": str(identity_proof_contract.get("proof_status", "")),
+            "identity_proof_fields": [
+                str(item)
+                for item in identity_proof_contract.get("required_identity_fields", [])
+            ],
         }
 
     def ai_index_status(self) -> dict[str, Any]:
@@ -2746,6 +2789,33 @@ function previewButtonsConfig(row, config) {{
     previewTarget: config.previewTarget || 'action-preview-response',
   }};
 }}
+function mutationEnablementBadge(summary) {{
+  if (!summary || !summary.status) return badge('Mutation n/a', 'badge-neutral');
+  if (summary.enablement_ready) return badge('Mutation ready', 'badge-ready');
+  return badge('Mutation preview', 'badge-warning');
+}}
+function renderMutationEnablementSummary(summary) {{
+  if (!summary || !summary.status) return '';
+  const proofFields = Array.isArray(summary.identity_proof_fields) ? summary.identity_proof_fields : [];
+  return [
+    '<span class="id">mutation=' + esc(summary.status || '') + '</span>',
+    summary.operational_status
+      ? '<span class="id">operational=' + esc(summary.operational_status) + '</span>'
+      : '',
+    typeof summary.remaining_count === 'number'
+      ? '<span class="id">remaining=' + esc(summary.remaining_count) + '</span>'
+      : '',
+    summary.blocked_status_code
+      ? '<span class="id">blocked-status=' + esc(summary.blocked_status_code) + '</span>'
+      : '',
+    summary.identity_proof_status
+      ? '<span class="id">proof-status=' + esc(summary.identity_proof_status) + '</span>'
+      : '',
+    proofFields.length > 0
+      ? '<span class="id">proof-fields=' + esc(proofFields.join(' | ')) + '</span>'
+      : '',
+  ].filter(Boolean).join('<br>');
+}}
 function detailJsonButton(endpoint, row) {{
   const path = detailPath(endpoint, row);
   return path ? '<button data-detail="' + esc(path) + '">JSON</button>' : '';
@@ -2799,6 +2869,9 @@ function listToolbar(endpoint, target, placeholder, sortOptions, filterChipHtml,
 function renderRuntimeRecordRow(row, endpoint) {{
   const button = detailJsonButton(endpoint, row);
   const preview = row.runtime_record_preview || {{}};
+  const actionPreview = row.action_preview_summary || {{}};
+  const previewActions = Array.isArray(actionPreview.actions) ? actionPreview.actions : [];
+  const mutationEnablement = row.mutation_enablement_summary || {{}};
   const responseMetadata = row.response_metadata_summary || {{}};
   const sourceBadges = sourceCountBadges(preview.source_counts || {{}});
   const authBadge = row.auth_readiness_status === 'boundary_aligned'
@@ -2806,6 +2879,7 @@ function renderRuntimeRecordRow(row, endpoint) {{
     : row.auth_readiness_status
       ? jumpBadge('Auth advisory', 'badge-warning', '/api/review-queue', 'reviewQueue', row.auth_readiness_status)
       : badge('Auth n/a', 'badge-neutral');
+  const mutationBadge = mutationEnablementBadge(mutationEnablement);
   const kindBadge = jumpBadge(
     row.runtime_record_kind || 'unknown',
     'badge-neutral',
@@ -2817,7 +2891,7 @@ function renderRuntimeRecordRow(row, endpoint) {{
     + '<td>' + button + '</td>'
     + '<td><span class="id">' + esc(row.event_id || '') + '</span></td>'
     + '<td>' + kindBadge + '</td>'
-    + '<td>' + authBadge + '</td>'
+    + '<td>' + stackedCell([authBadge, mutationBadge, renderMutationEnablementSummary(mutationEnablement)]) + '</td>'
     + '<td>' + stackedCell([
       '<strong>' + esc(preview.title || '') + '</strong>',
       esc(preview.preview_text || ''),
@@ -2826,6 +2900,12 @@ function renderRuntimeRecordRow(row, endpoint) {{
           + (responseMetadata.finish_reason ? ' / ' + esc(responseMetadata.finish_reason) : '')
         : ''
     ]) + '</td>'
+    + '<td>' + previewCell(actionPreview, previewActions, previewButtonsConfig(row, {{
+      recordId: row.review_target_event_id || row.event_id || '',
+      fieldPrefix: 'runtime-records',
+      successDetail: '/api/runtime-records/' + esc(row.event_id || ''),
+      previewTarget: 'runtime-records-action-preview-response',
+    }})) + '</td>'
     + '<td>' + stackedCell([sourceBadges, esc(JSON.stringify(preview.source_counts || {{}}))]) + '</td>'
     + '</tr>';
 }}
@@ -2837,6 +2917,7 @@ function renderReviewQueueRow(row, endpoint) {{
   const preview = row.action_preview_summary || {{}};
   const previewActions = Array.isArray(preview.actions) ? preview.actions : [];
   const authReadiness = row.auth_boundary_notice || {{}};
+  const mutationEnablement = row.mutation_enablement_summary || {{}};
   const responseMetadata = row.response_metadata_summary || {{}};
   const warnList = Array.isArray(capability.warnings) ? capability.warnings : [];
   const warnDetails = Array.isArray(capability.warning_details) ? capability.warning_details : [];
@@ -2861,12 +2942,12 @@ function renderReviewQueueRow(row, endpoint) {{
     ]) + '</td>'
     + '<td>' + stackedCell([statusBadge, readinessBadge, parityBadge]) + '</td>'
     + '<td>' + authBadge + '</td>'
-    + '<td>' + previewCell(preview, previewActions, previewButtonsConfig(row, {{
+    + '<td>' + stackedCell([mutationEnablementBadge(mutationEnablement), renderMutationEnablementSummary(mutationEnablement), previewCell(preview, previewActions, previewButtonsConfig(row, {{
       recordId: row.target_event_id || '',
       fieldPrefix: 'review-queue',
       successDetail: '/api/review-queue/' + esc(row.target_event_id || ''),
       previewTarget: 'review-queue-action-preview-response',
-    }})) + '</td>'
+    }}))]) + '</td>'
     + '<td>' + stackedCell([warnBadges, esc(warnDetails.map(item => item.message).join(' | ') || warnList.join(', ') || '(none)')]) + '</td>'
     + '<td>' + reviewerCell(row.latest_reviewer_identity, row.latest_reviewer || '') + '</td>'
     + '</tr>';
@@ -2879,6 +2960,7 @@ function renderSummaryJobRow(row, endpoint) {{
   const identityAssuranceStatus = row.identity_assurance_status || '';
   const preview = row.action_preview_summary || {{}};
   const previewActions = Array.isArray(preview.actions) ? preview.actions : [];
+  const mutationEnablement = row.mutation_enablement_summary || {{}};
   const reviewBadge = summaryReviewStatusBadge(reviewStatus);
   const authBadge = authReadinessBadge(authReadinessStatus);
   const identityBadge = identityAssuranceBadge(identityAssuranceStatus);
@@ -2892,7 +2974,7 @@ function renderSummaryJobRow(row, endpoint) {{
     + '<td>' + stackedCell(['<span class="id">' + esc(row.summary_job_id || '') + '</span>', esc(row.title || ''), targetButton]) + '</td>'
     + '<td>' + esc(row.status || '') + '</td>'
     + '<td>' + reviewBadge + '</td>'
-    + '<td>' + authBadge + '</td>'
+    + '<td>' + stackedCell([authBadge, mutationEnablementBadge(mutationEnablement), renderMutationEnablementSummary(mutationEnablement)]) + '</td>'
     + '<td>' + summaryIdentityCell(identityBadge, row.latest_reviewer_identity) + '</td>'
     + '<td>' + packageBadge + '</td>'
     + '<td>' + previewCell(preview, previewActions, previewButtonsConfig(row, {{
@@ -2916,13 +2998,23 @@ function renderRuntimeRecordsTable(endpoint, rows) {{
   const filtered = filterRows(rows, row => {{
     if (!query) return true;
     const preview = row.runtime_record_preview || {{}};
+    const actionPreview = row.action_preview_summary || {{}};
+    const mutationEnablement = row.mutation_enablement_summary || {{}};
     const responseMetadata = row.response_metadata_summary || {{}};
     return includesQuery([
       row.event_id || '',
       row.runtime_record_kind || '',
       row.auth_readiness_status || '',
+      row.review_capability_status || '',
+      row.identity_assurance_status || '',
       preview.title || '',
       preview.preview_text || '',
+      actionPreview.status || '',
+      mutationEnablement.status || '',
+      mutationEnablement.operational_status || '',
+      mutationEnablement.identity_proof_status || '',
+      String(mutationEnablement.remaining_count ?? ''),
+      String(mutationEnablement.blocked_status_code ?? ''),
       responseMetadata.response_id || '',
       responseMetadata.finish_reason || '',
       responseMetadata.provider_status || '',
@@ -2933,12 +3025,24 @@ function renderRuntimeRecordsTable(endpoint, rows) {{
     ], query);
   }});
   const sorted = sortRuntimeRows(filtered);
+  const mutationEnabled = sorted.some(row => row.ui_mutation_enabled);
   return listToolbar(endpoint, 'runtimeRecords', 'Filter runtime records...', [
       {{ value: 'latest', label: 'Latest first' }},
       {{ value: 'kind', label: 'Kind' }},
     ], runtimeRecordsFilterChips(), query)
     + emptyFilterState(query, sorted, 'No matching runtime records for current filter.')
-    + tableHtml(['detail', 'event', 'kind', 'auth', 'preview', 'source counts'], sorted.map(row => renderRuntimeRecordRow(row, endpoint)).join(''));
+    + (
+      mutationEnabled
+        ? renderReviewMutationForm('Local Review Mutation', 'runtime-records')
+        : ''
+    )
+    + actionPreviewStatus(
+      'runtime-records-action-preview-response',
+      mutationEnabled,
+      'Local mutation is enabled for this runtime-record list view. Each action still requires explicit reviewer context and writes audit-backed review history.',
+      'Runtime-record blocked-route preview stays read-only and returns the CLI fallback contract.'
+    )
+    + tableHtml(['detail', 'event', 'kind', 'auth', 'preview', 'review route', 'source counts'], sorted.map(row => renderRuntimeRecordRow(row, endpoint)).join(''));
 }}
 function renderReviewQueueTable(endpoint, rows) {{
   const query = (window.__chronicleFilters && window.__chronicleFilters.reviewQueue || '').toLowerCase();
@@ -2948,6 +3052,7 @@ function renderReviewQueueTable(endpoint, rows) {{
     const readiness = row.package_readiness_summary || {{}};
     const parity = row.cli_parity_summary || {{}};
     const authReadiness = row.auth_boundary_notice || {{}};
+    const mutationEnablement = row.mutation_enablement_summary || {{}};
     const responseMetadata = row.response_metadata_summary || {{}};
     return includesQuery([
       row.target_event_id || '',
@@ -2957,6 +3062,9 @@ function renderReviewQueueTable(endpoint, rows) {{
       readiness.label || '',
       parity.status || '',
       authReadiness.status || '',
+      mutationEnablement.status || '',
+      mutationEnablement.operational_status || '',
+      mutationEnablement.identity_proof_status || '',
       (row.latest_identity_assurance && row.latest_identity_assurance.status) || '',
       (row.latest_reviewer_identity && row.latest_reviewer_identity.kind) || '',
       (row.latest_reviewer_identity && row.latest_reviewer_identity.label) || row.latest_reviewer || '',
@@ -2996,6 +3104,7 @@ function renderSummaryJobsTable(endpoint, rows) {{
   const filtered = filterRows(rows, row => {{
     if (!query) return true;
     const responseMetadata = row.response_metadata_summary || {{}};
+    const mutationEnablement = row.mutation_enablement_summary || {{}};
     return includesQuery([
       row.summary_job_id || '',
       row.title || '',
@@ -3004,6 +3113,10 @@ function renderSummaryJobsTable(endpoint, rows) {{
       row.auth_readiness_status || '',
       row.package_readiness_status || '',
       row.identity_assurance_status || '',
+      mutationEnablement.status || '',
+      mutationEnablement.operational_status || '',
+      mutationEnablement.identity_proof_status || '',
+      String(mutationEnablement.remaining_count ?? ''),
       (row.latest_reviewer_identity && row.latest_reviewer_identity.kind) || '',
       (row.latest_reviewer_identity && row.latest_reviewer_identity.label) || '',
       row.cli_parity_status || '',

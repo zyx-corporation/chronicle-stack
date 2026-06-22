@@ -377,7 +377,7 @@ def test_ui_overview_data(tmp_path):
 
 
 def test_ui_data_service_read_endpoints(tmp_path):
-    _populate(tmp_path)
+    ids = _populate(tmp_path)
     RuntimeConfigService(tmp_path).set_local(model_name="ui-local-model", provider_name="ui-local")
     service = ChronicleUIDataService(tmp_path)
 
@@ -393,6 +393,16 @@ def test_ui_data_service_read_endpoints(tmp_path):
         "chronicle runtime"
     )
     assert service.runtime_records()["runtime_records"][0]["auth_readiness_status"] in {"advisory_only", ""}
+    runtime_summary_row = next(
+        row
+        for row in service.runtime_records()["runtime_records"]
+        if row["event_id"] == ids["runtime_summary_event_id"]
+    )
+    assert runtime_summary_row["review_target_event_id"] == ids["runtime_summary_event_id"]
+    assert runtime_summary_row["action_preview_summary"]["status"] == "preview_only"
+    assert runtime_summary_row["mutation_enablement_summary"]["status"] == "preview_only"
+    assert runtime_summary_row["mutation_enablement_summary"]["blocked_status_code"] == 403
+    assert runtime_summary_row["mutation_enablement_summary"]["identity_proof_status"] == "local_operator_advisory"
     assert len(service.review_queue()["review_queue"]) == 3
     assert len(service.summary_jobs_list()["summary_jobs"]) == 1
     assert service.summary_jobs_list()["summary_jobs"][0]["summary_job_id"].startswith("sum_")
@@ -405,6 +415,8 @@ def test_ui_data_service_read_endpoints(tmp_path):
     assert service.summary_jobs_list()["summary_jobs"][0]["action_preview_summary"]["success_contract"]["follow_up_commands"][0] == "chronicle review queue --include-resolved --json"
     assert service.summary_jobs_list()["summary_jobs"][0]["action_preview_summary"]["write_route_contract"]["route_template"] == "/api/review-actions/<event_id>/<action>"
     assert service.summary_jobs_list()["summary_jobs"][0]["identity_assurance_status"] == "unknown"
+    assert service.summary_jobs_list()["summary_jobs"][0]["mutation_enablement_summary"]["status"] == "preview_only"
+    assert service.summary_jobs_list()["summary_jobs"][0]["mutation_enablement_summary"]["remaining_count"] >= 1
     assert service.runtime_config_state()["runtime_config"]["config"]["provider_name"] == "ui-local"
     assert service.review_queue()["review_queue"][0]["review_preview_only"] is True
     assert service.review_queue()["review_queue"][0]["target_event_id"].startswith("evt_")
@@ -422,6 +434,7 @@ def test_ui_data_service_read_endpoints(tmp_path):
     assert service.review_queue()["review_queue"][0]["action_preview_summary"]["actions"][0]["post_path"].startswith(
         "/api/review-actions/evt_"
     )
+    assert service.review_queue()["review_queue"][0]["mutation_enablement_summary"]["operational_status"] == "blocked"
     assert service.review_queue()["review_queue"][0]["cli_parity_summary"]["status"] == "aligned"
     assert service.review_queue()["review_queue"][0]["cli_parity_summary"]["expected_actions"] == [
         "approve",
@@ -590,6 +603,8 @@ def test_ui_html_filtering_includes_provider_response_metadata_fields(tmp_path, 
     assert "summaryJsonLine('Provider finish reasons', runtimeRecords.provider_response_finish_reason_counts)" in html
     assert "summaryJsonLine('Provider statuses', summaryJobs.provider_response_status_counts)" in html
     assert "function renderPreviewContractSummary(preview, previewTarget = 'action-preview-response')" in html
+    assert "function mutationEnablementBadge(summary)" in html
+    assert "function renderMutationEnablementSummary(summary)" in html
     assert "copyCommandButton(recoveryPath, previewTarget, 'Copy Recovery CLI')" in html
     assert "rollback=" in html
     assert "transaction=" in html
@@ -614,6 +629,8 @@ def test_ui_html_filtering_includes_provider_response_metadata_fields(tmp_path, 
     assert "detailListLine('Write request fields', writeRouteContract.expected_request_fields, ' | ')" in html
     assert "detailListLine('Effective reviewer fields', reviewerContextRequirements.effective_required_fields, ' | ')" in html
     assert "Review queue blocked-route preview stays read-only and returns the CLI fallback contract." in html
+    assert "Runtime-record blocked-route preview stays read-only and returns the CLI fallback contract." in html
+    assert "Local mutation is enabled for this runtime-record list view." in html
 
 
 def test_ui_data_service_detail_endpoints(tmp_path):
@@ -1079,7 +1096,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "fieldPrefix: 'summary-jobs'" in html
     assert "data-success-detail" in html
     assert "listToolbar(endpoint, 'summaryJobs', 'Filter summary jobs...'" in html
-    assert "tableHtml(['detail', 'event', 'kind', 'auth', 'preview', 'source counts']" in html
+    assert "tableHtml(['detail', 'event', 'kind', 'auth', 'preview', 'review route', 'source counts']" in html
     assert "Auth aligned" in html
     assert "Auth advisory" in html
     assert "Open review" in html
@@ -1116,7 +1133,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "runtimeRecords" in html
     assert "reviewQueue" in html
     assert "listToolbar(endpoint, 'runtimeRecords', 'Filter runtime records...'" in html
-    assert "tableHtml(['detail', 'event', 'kind', 'auth', 'preview', 'source counts']" in html
+    assert "tableHtml(['detail', 'event', 'kind', 'auth', 'preview', 'review route', 'source counts']" in html
     assert "listToolbar(endpoint, 'reviewQueue', 'Filter review queue...'" in html
     assert "review-queue-action-preview-response" in html
     assert "Review queue blocked-route preview stays read-only and returns the CLI fallback contract." in html
