@@ -358,6 +358,7 @@ read-only endpoint:
 - あわせて `target_state_contract` も含まれ、`required_current_review_status`, `resolved_status_code`, `target_state_checks`, `action_target_matrix` を通じて `review_not_pending` との境界や `request-changes` が pending に残る current local review semantics を read-only に確認できます。
 - preview payload / action response には `rollback_status`, `possible_error_codes`, `recovery_path` を含む fail-closed contract metadata も含まれます。
 - `review_not_pending` / `review_target_not_found` 系の failure contract には `target_state_recovery` も含まれ、resolved queue を見るべき理由と canonical command を read-only に確認できます。
+- とくに `review_target_not_found` では `chronicle_state_command` も返り、resolved queue だけでなく current Chronicle state を見直すべきことを read-only に確認できます。
 - local UI shell では `recovery_path` をそのまま copy できる button も表示されます。
 - failure kind に応じて `recovery_commands`、成功時には `follow_up_commands` も返り、UI shell から copy できます。
 - failure payload には `failure_summary` も含まれ、warning/identity 由来の主 blocker を短く確認できます。

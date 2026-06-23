@@ -2024,6 +2024,7 @@ class ChronicleUIDataService:
                 "status": "resolved_queue_check_required",
                 "summary": "The target is no longer pending in the default queue view; inspect the resolved queue before retrying any follow-up action.",
                 "pending_queue_sufficient": False,
+                "resolved_queue_reason": "A later review decision already resolved the pending target in the current derived queue view.",
                 "resolved_queue_command": "chronicle review queue --include-resolved --json",
             }
         if error_code == "review_target_not_found":
@@ -2031,7 +2032,9 @@ class ChronicleUIDataService:
                 "status": "chronicle_state_recheck_required",
                 "summary": "The target is missing from the current Chronicle state; inspect the resolved queue and current derived state before retrying.",
                 "pending_queue_sufficient": False,
+                "resolved_queue_reason": "The review queue alone may be stale relative to the operator's expectation for this target.",
                 "resolved_queue_command": "chronicle review queue --include-resolved --json",
+                "chronicle_state_command": "chronicle show --json",
             }
         return {}
 
@@ -3307,7 +3310,9 @@ function contractDetailLines(successContract, failureContract, targetId) {{
     + detailLine('Target-state recovery status', targetStateRecovery.status || '')
     + detailLine('Target-state recovery summary', targetStateRecovery.summary || '')
     + detailLine('Pending queue sufficient', targetStateRecovery.pending_queue_sufficient)
+    + detailLine('Resolved queue reason', targetStateRecovery.resolved_queue_reason || '')
     + detailLine('Resolved queue command', targetStateRecovery.resolved_queue_command || '')
+    + detailLine('Chronicle state command', targetStateRecovery.chronicle_state_command || '')
     + detailListLine('Possible errors', (failureContract || {{}}).possible_error_codes, ' | ')
     + detailListLine('Failure families', failureFamilies.map(item => ((item.family || 'family') + ': ' + ((item.possible_error_codes || []).join(', ')))), ' | ')
     + detailListLine('Recovery commands', (failureContract || {{}}).recovery_commands, ' | ')
