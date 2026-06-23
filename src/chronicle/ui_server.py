@@ -3669,9 +3669,7 @@ function renderRuntimeRecordRow(row, endpoint) {{
     row.runtime_record_kind || 'unknown',
   );
   const runtimeRowShortcutButtons = [
-    row.review_target_event_id
-      ? detailNavButton('/api/review-queue/' + (row.review_target_event_id || ''), label('button.open_review', 'Open review'))
-      : '',
+    reviewDetailButton(row.review_target_event_id || ''),
     relatedDetailButton(row, '/api/summary-jobs/', 'Open summary job'),
     relatedDetailButton(row, '/api/artifacts/', 'Open artifact'),
   ].filter(Boolean);
@@ -3781,13 +3779,9 @@ function renderSummaryJobRow(row, endpoint) {{
   const identityBadge = identityAssuranceBadge(identityAssuranceStatus);
   const packageBadge = packageStatusBadge(packageStatus);
   const responseMetadata = row.response_metadata_summary || {{}};
-  const targetButton = row.review_target_event_id
-    ? detailNavButton('/api/review-queue/' + (row.review_target_event_id || ''), label('button.open_review', 'Open review'))
-    : '';
+  const targetButton = reviewDetailButton(row.review_target_event_id || '');
   const summaryRowShortcutButtons = [
-    row.review_target_event_id
-      ? detailNavButton('/api/review-queue/' + (row.review_target_event_id || ''), label('button.open_review', 'Open review'))
-      : '',
+    reviewDetailButton(row.review_target_event_id || ''),
     relatedDetailButton(row, '/api/artifacts/', 'Open artifact'),
   ].filter(Boolean);
   return '<tr>'
@@ -4546,6 +4540,9 @@ function detailNavButton(path, labelText) {{
   return '<button data-detail-nav="' + esc(path) + '">'
     + esc(localizeTextValue(resolvedLabel))
     + '</button>';
+}}
+function reviewDetailButton(eventId) {{
+  return eventId ? detailNavButton('/api/review-queue/' + eventId, label('button.open_review', 'Open review')) : '';
 }}
 function moreStatusButtons(status, endpoint, filterTarget, prefix = '') {{
   if (!status) return [];
