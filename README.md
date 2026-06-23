@@ -225,8 +225,10 @@ v1.2 以降では、`/api/events/<id>`, `/api/contexts/<id>`, `/api/artifacts/<i
 - [v1.7 Release Status](docs/release-status-v1.7.0.md)
 - [v1.8 Release Status](docs/release-status-v1.8.0.md)
 - [v1.7 Release Readiness](docs/release-readiness-v1.7.md)
+- [v1.8 Release Readiness](docs/release-readiness-v1.8.md)
 - [v1.7 Release Notes](docs/release-notes-v1.7.0.md)
 - [v1.7 Smoke Test Profile](docs/smoke-test-v1.7.md)
+- [v1.8 Smoke Test Profile](docs/smoke-test-v1.8.md)
 - [v1.7 Phase H Auth and GUI Mutation Design](docs/v1.7-phase-h-auth-ui-design.md)
 - [CLI リファレンス](docs/cli-reference.md)
 - [curl-based Local Deployment](docs/local-deployment-curl.md)
@@ -297,7 +299,9 @@ ruff check src/ tests/
 - v1.7.0 release status: [docs/release-status-v1.7.0.md](docs/release-status-v1.7.0.md)
 - v1.8.0 release status: [docs/release-status-v1.8.0.md](docs/release-status-v1.8.0.md)
 - v1.7.0 release readiness: [docs/release-readiness-v1.7.md](docs/release-readiness-v1.7.md)
+- v1.8.0 release readiness: [docs/release-readiness-v1.8.md](docs/release-readiness-v1.8.md)
 - v1.7.0 smoke profile: [docs/smoke-test-v1.7.md](docs/smoke-test-v1.7.md)
+- v1.8.0 smoke profile: [docs/smoke-test-v1.8.md](docs/smoke-test-v1.8.md)
 - v1.7.0 release notes: [docs/release-notes-v1.7.0.md](docs/release-notes-v1.7.0.md)
 - v1.8.0 starts as the local GUI review-route design-hardening lane after the completed v1.7.0 observability release.
 - v1.7.0 publication requires tag creation, GitHub Release publication, and installer / `ui-smoke` evidence from the tag.

@@ -27,6 +27,8 @@ Current `v1.8.0` repository progress now includes:
 ## Current release documents
 
 - `docs/adr/0027-local-gui-review-route-contract.md`
+- `docs/release-readiness-v1.8.md`
+- `docs/smoke-test-v1.8.md`
 - `docs/v1.7-phase-f-g-h-remaining-issues.md`
 - `docs/v1.7-phase-h-gated-gui-mutation-preview.md`
 
@@ -47,4 +49,5 @@ Current repository-side review for `v1.8.0` preserves the following:
 
 - `v1.7.0` remains the latest published release
 - the next release lane stays local-first and contract-driven
-- unresolved work remains implementation readiness, smoke evidence, release notes, and publication evidence
+- repository-side readiness and smoke entry points now exist for the `v1.8.0` lane
+- unresolved work remains release notes, version bump, changelog update, final smoke evidence, and publication evidence
