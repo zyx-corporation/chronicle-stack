@@ -223,6 +223,7 @@ v1.2 以降では、`/api/events/<id>`, `/api/contexts/<id>`, `/api/artifacts/<i
 - [v1.7 Phase D/E Smoke Profile](docs/smoke-test-v1.7-phase-d-e.md)
 - [v1.7 Phase F/G/H Plan](docs/v1.7-phase-f-g-h-plan.md)
 - [v1.7 Release Status](docs/release-status-v1.7.0.md)
+- [v1.8 Release Status](docs/release-status-v1.8.0.md)
 - [v1.7 Release Readiness](docs/release-readiness-v1.7.md)
 - [v1.7 Release Notes](docs/release-notes-v1.7.0.md)
 - [v1.7 Smoke Test Profile](docs/smoke-test-v1.7.md)
@@ -291,12 +292,14 @@ ruff check src/ tests/
 
 ## リリース
 
-- Latest published release: **v1.4.0**
-- Current repository-side release target: **v1.7.0**
+- Latest published release: **v1.7.0**
+- Current repository-side release target: **v1.8.0**
 - v1.7.0 release status: [docs/release-status-v1.7.0.md](docs/release-status-v1.7.0.md)
+- v1.8.0 release status: [docs/release-status-v1.8.0.md](docs/release-status-v1.8.0.md)
 - v1.7.0 release readiness: [docs/release-readiness-v1.7.md](docs/release-readiness-v1.7.md)
 - v1.7.0 smoke profile: [docs/smoke-test-v1.7.md](docs/smoke-test-v1.7.md)
 - v1.7.0 release notes: [docs/release-notes-v1.7.0.md](docs/release-notes-v1.7.0.md)
+- v1.8.0 starts as the local GUI review-route design-hardening lane after the completed v1.7.0 observability release.
 - v1.7.0 publication requires tag creation, GitHub Release publication, and installer / `ui-smoke` evidence from the tag.
 
 ## ライセンス

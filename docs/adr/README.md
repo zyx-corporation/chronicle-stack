@@ -32,5 +32,6 @@ ADRs capture decisions that affect architecture, security boundaries, data contr
 - [ADR-0024: Explicit Configured Provider Execution Boundary](0024-explicit-configured-provider-execution-boundary.md)
 - [ADR-0025: Local UI i18n Presentation Boundary](0025-local-ui-i18n-presentation-boundary.md)
 - [ADR-0026: Local Reviewer and Session Proof Representation](0026-local-reviewer-session-proof-representation.md)
+- [ADR-0027: Local GUI Review Route Contract and Expansion Boundary](0027-local-gui-review-route-contract.md)
 - [ADR-001: T-RDE, TDD, and Design-Pattern Principles](ADR-001-t-rde-tdd-and-design-patterns.md)
 - [ADR-002: i18n and Language Selection](ADR-002-i18n-and-language-selection.md)
