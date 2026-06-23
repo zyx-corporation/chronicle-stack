@@ -4733,6 +4733,13 @@ function recoveryContractDetailLines(failureContract, targetId = 'action-preview
     + (failureContract.recovery_path ? '<p>' + copyCommandButton(failureContract.recovery_path, targetId, t('button.copy_recovery_cli')) + '</p>' : '')
     + (recoveryCommands.length > 0 ? '<p>' + recoveryCommands.map(command => copyCommandButton(command, targetId, t('button.copy_cli'))).join(' ') + '</p>' : '');
 }}
+function identityBoundaryDetailLines(identityBoundary) {{
+  return detailLine('Missing identity rows', identityBoundary.missing_identity_count ?? 0)
+    + detailLine('Declared-only rows', identityBoundary.declared_identity_count ?? 0)
+    + detailLine('Session-label-missing rows', identityBoundary.session_label_missing_count ?? 0)
+    + detailListLine('Identity blockers', identityBoundary.blockers, ' | ')
+    + detailListLine('Identity next steps', identityBoundary.next_steps, ' | ');
+}}
 function renderRetrievalHandoffNotice(record) {{
   if (!record.retrieval_handoff) return '';
   const handoff = record.retrieval_handoff;
@@ -5250,11 +5257,7 @@ function renderOverviewIdentityBoundaryPanel(identityBoundary) {{
     + '</p>'
     + statusMessageBody(identityBoundary.status, identityBoundary.message)
     + metricsSection
-    + detailLine('Missing identity rows', identityBoundary.missing_identity_count ?? 0)
-    + detailLine('Declared-only rows', identityBoundary.declared_identity_count ?? 0)
-    + detailLine('Session-label-missing rows', identityBoundary.session_label_missing_count ?? 0)
-    + detailListLine('Identity blockers', identityBoundary.blockers, ' | ')
-    + detailListLine('Identity next steps', identityBoundary.next_steps, ' | ')
+    + identityBoundaryDetailLines(identityBoundary)
   );
 }}
 function renderOverviewMutationReadinessPanel(mutationReadiness) {{

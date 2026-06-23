@@ -1174,6 +1174,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "function mutationOperationalDetailLines(operationalReadiness, blockerSummaries, enablementChecks, checksLabel = 'Enablement checks')" in html
     assert "function reviewerLabelDetailLines(reviewerContext)" in html
     assert "function recoveryContractDetailLines(failureContract, targetId = 'action-preview-response')" in html
+    assert "function identityBoundaryDetailLines(identityBoundary)" in html
     assert "function renderAuthReadinessNotice(record)" in html
     assert "function renderDetailActionPreviewControls(preview, actions, mutationTargetEventId)" in html
     assert "function renderDetailActionPreviewList(preview, actions)" in html
