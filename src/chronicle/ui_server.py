@@ -2017,6 +2017,7 @@ class ChronicleUIDataService:
         write_route_contract: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         can_review_now = bool(capability.get("can_review_now", False))
+        cli_equivalent = f"chronicle review approve --event {target_event_id}"
         actions = []
         for item in review_action_commands(target_event_id):
             route_action = str(item.get("action", "")).replace("_", "-")
@@ -2032,6 +2033,18 @@ class ChronicleUIDataService:
                     "post_expected_error_code": (None if mutation_enabled else "mutation_disabled"),
                 }
             )
+        failure_contract = ChronicleUIDataService._review_action_failure_contract(
+            mutation_enabled=mutation_enabled,
+            cli_equivalent=cli_equivalent,
+            event_id=target_event_id,
+            action="approve",
+            error_code="mutation_disabled",
+        )
+        success_contract = ChronicleUIDataService._review_action_success_contract(
+            cli_equivalent=cli_equivalent,
+            event_id=target_event_id,
+            audit_id=None,
+        )
         return {
             "status": "enabled" if mutation_enabled else "preview_only",
             "ui_mutation_enabled": mutation_enabled,
@@ -2049,18 +2062,11 @@ class ChronicleUIDataService:
                     else "UI mutation is not enabled; boundary warnings still require CLI-led review."
                 )
             ),
-            "failure_contract": ChronicleUIDataService._review_action_failure_contract(
-                mutation_enabled=mutation_enabled,
-                cli_equivalent=f"chronicle review approve --event {target_event_id}",
-                event_id=target_event_id,
-                action="approve",
-                error_code="mutation_disabled",
-            ),
-            "success_contract": ChronicleUIDataService._review_action_success_contract(
-                cli_equivalent=f"chronicle review approve --event {target_event_id}",
-                event_id=target_event_id,
-                audit_id=None,
-            ),
+            "cli_equivalent": cli_equivalent,
+            "recovery_summary": str(failure_contract.get("recovery_path", "")),
+            "follow_up_summary": str((success_contract.get("follow_up_commands") or [""])[0]),
+            "failure_contract": failure_contract,
+            "success_contract": success_contract,
             "write_route_contract": write_route_contract or {},
             "actions": actions,
         }
@@ -3148,9 +3154,21 @@ function renderReviewMutationForm(title, prefix) {{
     + '<label>' + esc(uiLabel('Note')) + ' <input id="' + esc(prefix) + '-reviewer-note" placeholder="' + esc(t('placeholder.review_note')) + '"></label></p></div>';
 }}
 function renderPreviewSummary(preview) {{
-  return preview.status
+  const statusLine = preview.status
     ? '<strong>' + esc(preview.status) + '</strong><br>' + esc(localizeTextValue(preview.message || ''))
     : esc(localizeTextValue(preview.message || ''));
+  const extras = [
+    preview.cli_equivalent
+      ? '<br><span class="id">cli=' + esc(preview.cli_equivalent) + '</span>'
+      : '',
+    preview.recovery_summary
+      ? '<br><span class="id">recovery=' + esc(preview.recovery_summary) + '</span>'
+      : '',
+    preview.follow_up_summary
+      ? '<br><span class="id">follow-up=' + esc(preview.follow_up_summary) + '</span>'
+      : '',
+  ].join('');
+  return statusLine + extras;
 }}
 function renderPreviewContractSummary(preview, previewTarget = 'action-preview-response') {{
   const failureContract = (preview && preview.failure_contract) || {{}};

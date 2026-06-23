@@ -488,6 +488,12 @@ def test_ui_data_service_read_endpoints(tmp_path):
     assert service.summary_jobs_list()["summary_jobs"][0]["package_readiness_status"] == "no_context_records"
     assert service.summary_jobs_list()["summary_jobs"][0]["cli_parity_status"] == "aligned"
     assert service.summary_jobs_list()["summary_jobs"][0]["action_preview_summary"]["status"] == "preview_only"
+    assert service.summary_jobs_list()["summary_jobs"][0]["action_preview_summary"]["cli_equivalent"].startswith(
+        "chronicle review approve --event evt_"
+    )
+    assert service.summary_jobs_list()["summary_jobs"][0]["action_preview_summary"]["recovery_summary"].startswith(
+        "chronicle review approve --event evt_"
+    )
     assert service.summary_jobs_list()["summary_jobs"][0]["action_preview_summary"]["success_contract"]["follow_up_commands"][0] == "chronicle review queue --include-resolved --json"
     assert service.summary_jobs_list()["summary_jobs"][0]["action_preview_summary"]["write_route_contract"]["route_template"] == "/api/review-actions/<event_id>/<action>"
     assert service.summary_jobs_list()["summary_jobs"][0]["identity_assurance_status"] == "unknown"
@@ -504,6 +510,9 @@ def test_ui_data_service_read_endpoints(tmp_path):
     assert service.review_queue()["review_queue"][0]["package_readiness_summary"]["label"].startswith("package:")
     assert service.review_queue()["review_queue"][0]["package_readiness_summary"]["message"]
     assert service.review_queue()["review_queue"][0]["action_preview_summary"]["status"] == "preview_only"
+    assert service.review_queue()["review_queue"][0]["action_preview_summary"]["follow_up_summary"] == (
+        "chronicle review queue --include-resolved --json"
+    )
     assert service.review_queue()["review_queue"][0]["action_preview_summary"]["success_contract"]["transaction_status"] == "decision_and_audit_persisted"
     assert service.review_queue()["review_queue"][0]["action_preview_summary"]["write_route_contract"]["expected_request_fields"] == [
         "reviewer_label",
@@ -1044,6 +1053,8 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "function renderReviewActionResultPanel(title, responseStatus, path, payload, targetId, options = {})" in html
     assert "function renderReviewMutationForm(title, prefix)" in html
     assert "function renderPreviewSummary(preview)" in html
+    assert "cli=" in html
+    assert "recovery=" in html
     assert "localizeTextValue(preview.message || '')" in html
     assert "function renderPreviewButtons(previewActions, options = {})" in html
     assert "function authReadinessBadge(status)" in html
