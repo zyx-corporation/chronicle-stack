@@ -774,7 +774,7 @@ def test_ui_html_filtering_includes_provider_response_metadata_fields(tmp_path, 
     assert "detailLine('Scope note', mutationReadiness.scope_note || '')" in html
     assert "detailLine('Operational readiness', operationalReadiness.status || '')" in html
     assert "detailListLine('Remaining checks', operationalReadiness.blocking_summaries || [], ' | ')" in html
-    assert "detailListLine('Enablement checks', enablementChecks.map(check => ((check.satisfied ? 'ok: ' : 'blocked: ') + (check.label || check.code || 'check'))), ' | ')" in html
+    assert "mutationOperationalDetailLines(operationalReadiness, blockerSummaries, enablementChecks)" in html
     assert "function renderMutationEnablementNotice(record)" in html
     assert "label('notice.mutation_enablement', 'Mutation Enablement')" in html
     assert "detailListLine('Blocker sources', blockerSummaries.map(item => (item.summary || ((item.source_label || item.source || 'unknown') + ': ' + (item.message || item.code || 'blocker')))), ' | ')" in html
@@ -1171,6 +1171,8 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "function renderRuntimePreviewNotice(record)" in html
     assert "function packageContextDetailLines(packageReview, manifest, eligibleContextIds = [], extraLines = '')" in html
     assert "function writeRouteDetailLines(writeRouteContract, identityProofContract, authorizationContract, targetStateContract, includeRequestFields = false)" in html
+    assert "function mutationOperationalDetailLines(operationalReadiness, blockerSummaries, enablementChecks, checksLabel = 'Enablement checks')" in html
+    assert "function reviewerLabelDetailLines(reviewerContext)" in html
     assert "function renderAuthReadinessNotice(record)" in html
     assert "function renderDetailActionPreviewControls(preview, actions, mutationTargetEventId)" in html
     assert "function renderDetailActionPreviewList(preview, actions)" in html

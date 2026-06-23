@@ -4710,6 +4710,19 @@ function writeRouteDetailLines(writeRouteContract, identityProofContract, author
     + detailLine('Identity proof status', identityProofContract.proof_status || '')
     + detailListLine('Identity proof fields', identityProofContract.required_identity_fields, ' | ');
 }}
+function mutationOperationalDetailLines(operationalReadiness, blockerSummaries, enablementChecks, checksLabel = 'Enablement checks') {{
+  return detailLine('Operational readiness', operationalReadiness.status || '')
+    + detailLine('Operational summary', operationalReadiness.message || '')
+    + detailLine('Remaining prerequisites', operationalReadiness.remaining_count ?? 0)
+    + detailListLine('Blocker sources', blockerSummaries.map(item => (item.summary || ((item.source_label || item.source || 'unknown') + ': ' + (item.message || item.code || 'blocker')))), ' | ')
+    + detailListLine(checksLabel, enablementChecks.map(check => ((check.satisfied ? 'ok: ' : 'blocked: ') + (check.label || check.code || 'check'))), ' | ')
+    + detailListLine('Remaining checks', operationalReadiness.blocking_summaries || [], ' | ');
+}}
+function reviewerLabelDetailLines(reviewerContext) {{
+  return detailLine('Reviewer label pattern', reviewerContext.reviewer_label_pattern || '')
+    + detailListLine('Reviewer label examples', reviewerContext.reviewer_label_examples, ' | ')
+    + detailLine('Session label pattern', reviewerContext.session_label_pattern || '');
+}}
 function renderRetrievalHandoffNotice(record) {{
   if (!record.retrieval_handoff) return '';
   const handoff = record.retrieval_handoff;
@@ -4851,17 +4864,10 @@ function renderMutationEnablementNotice(record) {{
       + detailLine('Scope note', readiness.scope_note || '')
       + detailLine('Enablement ready', readiness.enablement_ready)
       + detailLine('Enablement checks', String(readiness.enablement_satisfied_count ?? 0) + '/' + String(readiness.enablement_required_count ?? 0))
-      + detailLine('Operational readiness', operationalReadiness.status || '')
-      + detailLine('Operational summary', operationalReadiness.message || '')
-      + detailLine('Remaining prerequisites', operationalReadiness.remaining_count ?? 0)
       + detailLine('Blockers', detailMessages(blockerDetails, readiness.blockers))
-      + detailListLine('Blocker sources', blockerSummaries.map(item => (item.summary || ((item.source_label || item.source || 'unknown') + ': ' + (item.message || item.code || 'blocker')))), ' | ')
-      + detailListLine('Checks', enablementChecks.map(check => ((check.satisfied ? 'ok: ' : 'blocked: ') + (check.label || check.code || 'check'))), ' | ')
-      + detailListLine('Remaining checks', operationalReadiness.blocking_summaries || [], ' | ')
+      + mutationOperationalDetailLines(operationalReadiness, blockerSummaries, enablementChecks, 'Checks')
       + reviewerContextDetailLines(reviewerContext, identityProofContract)
-      + detailLine('Reviewer label pattern', reviewerContext.reviewer_label_pattern || '')
-      + detailListLine('Reviewer label examples', reviewerContext.reviewer_label_examples, ' | ')
-      + detailLine('Session label pattern', reviewerContext.session_label_pattern || '')
+      + reviewerLabelDetailLines(reviewerContext)
       + writeRouteDetailLines(writeRouteContract, identityProofContract, authorizationContract, targetStateContract)
       + detailListLine('Next steps', readiness.next_steps, ' | ')
   );
@@ -5265,9 +5271,6 @@ function renderOverviewMutationReadinessPanel(mutationReadiness) {{
     + detailLine('Advisory rows', mutationReadiness.advisory_row_count ?? 0)
     + detailLine('Enablement ready', mutationReadiness.enablement_ready)
     + detailLine('Enablement checks', String(mutationReadiness.enablement_satisfied_count ?? 0) + '/' + String(mutationReadiness.enablement_required_count ?? 0))
-    + detailLine('Operational readiness', operationalReadiness.status || '')
-    + detailLine('Operational summary', operationalReadiness.message || '')
-    + detailLine('Remaining prerequisites', operationalReadiness.remaining_count ?? 0)
     + detailListLine('Blockers', mutationReadiness.blockers, ' | ')
     + detailLine('Blocker details', detailMessages(blockerDetails, mutationReadiness.blockers))
     + detailListLine('Durable success requirements', writeRouteContract.durable_success_requirements, ' | ')
@@ -5282,16 +5285,12 @@ function renderOverviewMutationReadinessPanel(mutationReadiness) {{
     + detailListLine('Target-state checks', targetStateContract.target_state_checks, ' | ')
     + detailListLine('Action target matrix', (targetStateContract.action_target_matrix || []).map(item => ((item.action || 'action') + ': pending=' + String(item.requires_pending) + '; queue=' + (item.resulting_queue_state || '') + '; disposition=' + (item.resulting_disposition || ''))), ' | ')
     + detailListLine('Failure families', (writeRouteContract.failure_families || []).map(item => ((item.family || 'family') + ': ' + ((item.possible_error_codes || []).join(', ')))), ' | ')
-    + detailListLine('Blocker sources', blockerSummaries.map(item => (item.summary || ((item.source_label || item.source || 'unknown') + ': ' + (item.message || item.code || 'blocker')))), ' | ')
-    + detailListLine('Enablement checks', enablementChecks.map(check => ((check.satisfied ? 'ok: ' : 'blocked: ') + (check.label || check.code || 'check'))), ' | ')
-    + detailListLine('Remaining checks', operationalReadiness.blocking_summaries || [], ' | ')
+    + mutationOperationalDetailLines(operationalReadiness, blockerSummaries, enablementChecks)
     + detailListLine('Effective reviewer fields', reviewerContextRequirements.effective_required_fields, ' | ')
     + detailListLine('Reviewer fields', reviewerContextRequirements.required_fields, ' | ')
     + reviewerContextDetailLines(reviewerContextRequirements, identityProofContract)
-    + detailLine('Reviewer label pattern', reviewerContextRequirements.reviewer_label_pattern || '')
-    + detailListLine('Reviewer label examples', reviewerContextRequirements.reviewer_label_examples, ' | ')
+    + reviewerLabelDetailLines(reviewerContextRequirements)
     + detailLine('Session label required', reviewerContextRequirements.session_label_required)
-    + detailLine('Session label pattern', reviewerContextRequirements.session_label_pattern || '')
     + writeRouteDetailLines(writeRouteContract, identityProofContract, authorizationContract, targetStateContract, true)
     + detailListLine('Next steps', mutationReadiness.next_steps, ' | ')
   );
