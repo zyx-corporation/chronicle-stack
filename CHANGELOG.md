@@ -2,6 +2,27 @@
 
 ## Unreleased
 
+### Added
+- `v1.8.0` release-track documents:
+  - `docs/release-status-v1.8.0.md`
+  - `docs/release-readiness-v1.8.md`
+  - `docs/release-notes-v1.8.0.md`
+  - `docs/smoke-test-v1.8.md`
+  - `docs/v1.8-release-remaining-issues.md`
+- Dedicated `v1.8.0` release-lane framing for local GUI review-route contract hardening.
+
+### Changed
+- Read-only local UI review-route contracts now explicitly expose:
+  - per-action route-family visibility
+  - CLI-equivalent route semantics
+  - HTTP status-code semantics for the current fail-closed local boundary
+- `v1.8.0` release-lane documents now treat `v1.7` records as historical context rather than the active release lane.
+
+### Notes
+- `Unreleased` currently represents pre-cut `v1.8.0` preparation, not a published release.
+- The active release lane remains local-first, explicit-enable, and fail-closed.
+- This preparation still does not imply hosted UI, default-on mutation, multi-user auth, hidden runtime execution, GraphRAG runtime, vector DB, graph DB, correctness proof, or security certification.
+
 ## v1.7.0 - 2026-06-23
 
 ### Added

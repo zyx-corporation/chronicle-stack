@@ -1,6 +1,6 @@
 # Chronicle Stack v1.8.0 Local GUI Review Route Contract Smoke Profile
 
-Related: `docs/release-readiness-v1.8.md`, `docs/release-status-v1.8.0.md`, `docs/adr/0027-local-gui-review-route-contract.md`, `docs/v1.7-phase-h-gated-gui-mutation-preview.md`
+Related: `docs/release-readiness-v1.8.md`, `docs/release-status-v1.8.0.md`, `docs/release-notes-v1.8.0.md`, `docs/v1.8-release-remaining-issues.md`, `docs/adr/0027-local-gui-review-route-contract.md`
 
 ## Purpose
 
@@ -81,7 +81,7 @@ When opening `chronicle ui` manually for local inspection, confirm:
 
 Preserved: read-only smoke discipline, fail-closed route contract visibility, CLI-compatible local recovery framing.
 
-Transformed: prior Phase H contract checks become a `v1.8.0` release-track smoke entry point.
+Transformed: prior Phase H contract checks are now represented through a dedicated `v1.8.0` release-track smoke entry point.
 
 Supplemented: explicit smoke emphasis on action-route and status-code contract exposure.
 
