@@ -580,10 +580,43 @@ def _ui_write_route_contract(metadata: UIBoundaryMetadata) -> dict[str, Any]:
         }
         for action in actions
     ]
+    status_code_contract = [
+        {
+            "status_code": HTTPStatus.OK.value,
+            "family": "success",
+            "when": "review decision persistence and audit insertion both succeed",
+        },
+        {
+            "status_code": HTTPStatus.BAD_REQUEST.value,
+            "family": "pre_mutation_or_gate",
+            "when": "reviewer-context or ui_intent validation fails before authorization",
+        },
+        {
+            "status_code": HTTPStatus.FORBIDDEN.value,
+            "family": "pre_mutation_or_gate",
+            "when": "mutation gate or authorization boundary blocks the write route",
+        },
+        {
+            "status_code": HTTPStatus.NOT_FOUND.value,
+            "family": "pre_mutation_or_gate",
+            "when": "the requested review target cannot be found in current Chronicle state",
+        },
+        {
+            "status_code": HTTPStatus.CONFLICT.value,
+            "family": "pre_mutation_or_gate",
+            "when": "the target is no longer pending for the requested action",
+        },
+        {
+            "status_code": HTTPStatus.INTERNAL_SERVER_ERROR.value,
+            "family": "durable_write_path",
+            "when": "a durable write-path side effect fails and the route stays fail-closed",
+        },
+    ]
     return {
         "route_template": "/api/review-actions/<event_id>/<action>",
         "actions": actions,
         "action_routes": action_routes,
+        "status_code_contract": status_code_contract,
         "expected_request_fields": reviewer_context.get("effective_required_fields", []),
         "optional_request_fields": ["note"],
         "accepted_reviewer_kinds": reviewer_context.get("accepted_reviewer_kinds", []),
@@ -4712,6 +4745,7 @@ function writeRouteDetailLines(writeRouteContract, identityProofContract, author
     + detailListLine('Write actions', writeRouteContract.actions, ' | ')
     + detailListLine('Action routes', (writeRouteContract.action_routes || []).map(item => ((item.action || 'action') + ': ' + (item.path_template || ''))), ' | ')
     + detailListLine('CLI route equivalents', (writeRouteContract.action_routes || []).map(item => ((item.action || 'action') + ': ' + (item.cli_equivalent_template || ''))), ' | ')
+    + detailListLine('Status-code contract', (writeRouteContract.status_code_contract || []).map(item => (String(item.status_code ?? '') + ': ' + (item.family || 'family') + '; ' + (item.when || ''))), ' | ')
     + (includeRequestFields ? detailListLine('Write request fields', writeRouteContract.expected_request_fields, ' | ') : '')
     + detailLine('Write success status', writeRouteContract.success_status_code ?? '')
     + detailLine('Write blocked status', writeRouteContract.blocked_status_code ?? '')

@@ -139,6 +139,14 @@ def run_ui_smoke(root: Path | None = None) -> UISmokeReport:
                             and bool(item.get("cli_equivalent_template"))
                             for item in write_route_contract.get("action_routes", [])
                         )
+                        and isinstance(write_route_contract.get("status_code_contract"), list)
+                        and all(
+                            isinstance(item, dict)
+                            and isinstance(item.get("status_code"), int)
+                            and bool(item.get("family"))
+                            and bool(item.get("when"))
+                            for item in write_route_contract.get("status_code_contract", [])
+                        )
                         and isinstance(write_route_contract.get("expected_request_fields"), list),
                         (
                             "ok"
@@ -152,6 +160,14 @@ def run_ui_smoke(root: Path | None = None) -> UISmokeReport:
                                 and bool(item.get("path_template"))
                                 and bool(item.get("cli_equivalent_template"))
                                 for item in write_route_contract.get("action_routes", [])
+                            )
+                            and isinstance(write_route_contract.get("status_code_contract"), list)
+                            and all(
+                                isinstance(item, dict)
+                                and isinstance(item.get("status_code"), int)
+                                and bool(item.get("family"))
+                                and bool(item.get("when"))
+                                for item in write_route_contract.get("status_code_contract", [])
                             )
                             and isinstance(write_route_contract.get("expected_request_fields"), list)
                             else "ui boundary missing write route contract detail"
@@ -641,6 +657,10 @@ def run_ui_smoke(root: Path | None = None) -> UISmokeReport:
                         and isinstance(
                             mutation_readiness.get("write_route_contract", {}).get("action_routes"), list
                         )
+                        and isinstance(
+                            mutation_readiness.get("write_route_contract", {}).get("status_code_contract"),
+                            list,
+                        )
                         and isinstance(mutation_readiness.get("identity_proof_contract"), dict)
                 ),
                 (
@@ -676,6 +696,10 @@ def run_ui_smoke(root: Path | None = None) -> UISmokeReport:
                     and bool(mutation_readiness.get("write_route_contract", {}).get("route_template"))
                     and isinstance(
                         mutation_readiness.get("write_route_contract", {}).get("action_routes"), list
+                    )
+                    and isinstance(
+                        mutation_readiness.get("write_route_contract", {}).get("status_code_contract"),
+                        list,
                     )
                     and isinstance(mutation_readiness.get("identity_proof_contract"), dict)
                     else "overview missing mutation readiness contract detail"

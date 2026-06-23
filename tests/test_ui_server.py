@@ -244,6 +244,38 @@ def test_startup_metadata(tmp_path):
             "cli_equivalent_template": "chronicle review request-changes --event <event_id>",
         },
     ]
+    assert payload["ui_boundary"]["write_route_contract"]["status_code_contract"] == [
+        {
+            "status_code": 200,
+            "family": "success",
+            "when": "review decision persistence and audit insertion both succeed",
+        },
+        {
+            "status_code": 400,
+            "family": "pre_mutation_or_gate",
+            "when": "reviewer-context or ui_intent validation fails before authorization",
+        },
+        {
+            "status_code": 403,
+            "family": "pre_mutation_or_gate",
+            "when": "mutation gate or authorization boundary blocks the write route",
+        },
+        {
+            "status_code": 404,
+            "family": "pre_mutation_or_gate",
+            "when": "the requested review target cannot be found in current Chronicle state",
+        },
+        {
+            "status_code": 409,
+            "family": "pre_mutation_or_gate",
+            "when": "the target is no longer pending for the requested action",
+        },
+        {
+            "status_code": 500,
+            "family": "durable_write_path",
+            "when": "a durable write-path side effect fails and the route stays fail-closed",
+        },
+    ]
     assert payload["ui_boundary"]["write_route_contract"]["blocked_status_code"] == 403
     assert payload["ui_boundary"]["write_route_contract"]["durable_success_requirements"] == [
         "route_gating_passed",
@@ -799,6 +831,7 @@ def test_ui_html_filtering_includes_provider_response_metadata_fields(tmp_path, 
     assert "detailLine('Write route', writeRouteContract.route_template || '')" in html
     assert "detailListLine('Action routes', (writeRouteContract.action_routes || []).map(item => ((item.action || 'action') + ': ' + (item.path_template || ''))), ' | ')" in html
     assert "detailListLine('CLI route equivalents', (writeRouteContract.action_routes || []).map(item => ((item.action || 'action') + ': ' + (item.cli_equivalent_template || ''))), ' | ')" in html
+    assert "detailListLine('Status-code contract', (writeRouteContract.status_code_contract || []).map(item => (String(item.status_code ?? '') + ': ' + (item.family || 'family') + '; ' + (item.when || ''))), ' | ')" in html
     assert "detailListLine('Write request fields', writeRouteContract.expected_request_fields, ' | ')" in html
     assert "detailListLine('Effective reviewer fields', reviewerContextRequirements.effective_required_fields, ' | ')" in html
     assert "Review queue blocked-route preview stays read-only and returns the CLI fallback contract." in html
