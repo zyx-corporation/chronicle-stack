@@ -4511,6 +4511,9 @@ function openEndpointButton(endpoint) {{
   if (endpoint === '/api/package-review') return listJumpButton(label('button.open_package_review', 'Open Package Review'), endpoint);
   return listJumpButton(humanizeDetailPath(endpoint), endpoint);
 }}
+function latestResponseButton(path, labelKey, fallbackLabel) {{
+  return path ? listJumpButton(label(labelKey, fallbackLabel), path) : '';
+}}
 function moreSliceButton(filterValue, endpoint, filterTarget) {{
   const value = String(filterValue || '');
   if (!value) return '';
@@ -5205,7 +5208,7 @@ function renderOverviewAuthBoundaryPanel(authBoundary, authBoundaryOverview) {{
     + metricsSection
     + detailListLine('Auth blockers', authBoundary.blockers, ' | ')
     + detailListLine('Auth blocker summaries', blockerSummaries.map(item => (item.summary || item.code || 'blocker')), ' | ')
-    + navigationCluster(authBoundaryOverview.latest_provider_response_detail_path ? [listJumpButton(label('button.open_latest_review_response', 'Open Latest Review Response'), authBoundaryOverview.latest_provider_response_detail_path)] : [])
+    + navigationCluster([latestResponseButton(authBoundaryOverview.latest_provider_response_detail_path, 'button.open_latest_review_response', 'Open Latest Review Response')])
     + detailListLine('Auth next steps', authBoundary.next_steps, ' | ')
   );
 }}
@@ -5325,7 +5328,7 @@ function renderOverviewRuntimeRecordsPanel(counts, runtimeRecords) {{
     + sliceButtonRow(runtimeRecordsSliceButtons())
     + navigationCluster([
       openEndpointButton('/api/runtime-records'),
-      runtimeRecords.latest_provider_response_detail_path ? listJumpButton(label('button.open_latest_runtime_response', 'Open Latest Runtime Response'), runtimeRecords.latest_provider_response_detail_path) : '',
+      latestResponseButton(runtimeRecords.latest_provider_response_detail_path, 'button.open_latest_runtime_response', 'Open Latest Runtime Response'),
     ])
   );
 }}
@@ -5361,7 +5364,7 @@ function renderOverviewSummaryJobsPanel(counts, summaryJobs) {{
     + sliceButtonRow(summaryJobsSliceButtons())
     + navigationCluster([
       openEndpointButton('/api/summary-jobs'),
-      summaryJobs.latest_provider_response_detail_path ? listJumpButton(label('button.open_latest_summary_response', 'Open Latest Summary Response'), summaryJobs.latest_provider_response_detail_path) : '',
+      latestResponseButton(summaryJobs.latest_provider_response_detail_path, 'button.open_latest_summary_response', 'Open Latest Summary Response'),
     ])
   );
 }}
@@ -5413,7 +5416,7 @@ function renderOverviewTriagePanel(triage, warningButtons, warningSummaries) {{
       openEndpointButton('/api/review-queue'),
       openEndpointButton('/api/runtime-records'),
       openEndpointButton('/api/summary-jobs'),
-      triage.latest_provider_response_detail_path ? listJumpButton(label('button.open_latest_review_response', 'Open Latest Review Response'), triage.latest_provider_response_detail_path) : '',
+      latestResponseButton(triage.latest_provider_response_detail_path, 'button.open_latest_review_response', 'Open Latest Review Response'),
       openEndpointButton('/api/runtime-config'),
       openEndpointButton('/api/package-review'),
       '<button data-reset-filters="all">' + esc(label('button.reset_filter', 'Reset Filter')) + '</button>',
