@@ -125,6 +125,23 @@ This ADR preserves that distinction in browser-triggered write semantics:
 
 This keeps browser-triggered writes aligned with Chronicle’s append-only and audit-visible design.
 
+## Current failure-class mapping
+
+For the current repository slice, the fail-closed browser-triggered write mapping is:
+
+```text
+mutation_disabled             = route/gate did not permit mutation attempt
+audit_insertion_failed        = audit insertion failed before durable success could be reported
+decision_persistence_failed   = audit insertion succeeded, but Chronicle primary-record append failed
+```
+
+Operational meaning:
+
+- `mutation_disabled` stays in the pre-mutation / gate-failure family
+- `audit_insertion_failed` and `decision_persistence_failed` stay separate durable-write-path failures
+- CLI recovery and follow-up hints must continue reflecting that distinction
+- future write-path expansion must preserve these classes unless a replacement ADR explicitly redefines them
+
 ## UI consequences
 
 The local UI may surface:
