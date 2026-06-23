@@ -3467,11 +3467,13 @@ function renderPreviewButtons(previewActions, options = {{}}) {{
   const fieldPrefix = options.fieldPrefix || '';
   const successDetail = options.successDetail || '';
   const previewTarget = options.previewTarget || 'action-preview-response';
-  return actions.map(item =>
+  const actionButtons = actions.map(item =>
     mutationEnabled
       ? '<button data-submit-review-action="' + esc(item.post_path || '') + '" data-review-action="' + esc(item.action || '') + '" data-review-record="' + esc(recordId) + '" data-review-fields="' + esc(fieldPrefix) + '" data-success-detail="' + esc(successDetail) + '" data-preview-target="' + esc(previewTarget) + '">' + esc(item.label || item.action || t('button.apply')) + '</button>'
       : '<button data-preview-post="' + esc(item.post_path || '') + '" data-preview-target="' + esc(previewTarget) + '">' + esc(t('button.preview_blocked_route')) + '</button>'
-  ).join(' ');
+  );
+  const extraButtons = Array.isArray(options.extraButtons) ? options.extraButtons.filter(Boolean) : [];
+  return [...actionButtons, ...extraButtons].join(' ');
 }}
 function authReadinessBadge(status) {{
   return status === 'boundary_aligned'
@@ -3506,6 +3508,7 @@ function previewButtonsConfig(row, config) {{
     fieldPrefix: config.fieldPrefix || '',
     successDetail: config.successDetail || '',
     previewTarget: config.previewTarget || 'action-preview-response',
+    extraButtons: config.extraButtons || [],
   }};
 }}
 function mutationEnablementBadge(summary) {{
@@ -3647,6 +3650,17 @@ function renderRuntimeRecordRow(row, endpoint) {{
     'runtimeRecords',
     row.runtime_record_kind || 'unknown',
   );
+  const runtimeRowShortcutButtons = [
+    row.review_target_event_id
+      ? '<button data-detail-nav="/api/review-queue/' + esc(row.review_target_event_id) + '">' + esc(label('button.open_review', 'Open review')) + '</button>'
+      : '',
+    firstRelatedLink(row, '/api/summary-jobs/')
+      ? '<button data-detail-nav="' + esc(firstRelatedLink(row, '/api/summary-jobs/').path || '') + '">' + esc(localizeTextValue(firstRelatedLink(row, '/api/summary-jobs/').label || 'Open summary job')) + '</button>'
+      : '',
+    firstRelatedLink(row, '/api/artifacts/')
+      ? '<button data-detail-nav="' + esc(firstRelatedLink(row, '/api/artifacts/').path || '') + '">' + esc(localizeTextValue(firstRelatedLink(row, '/api/artifacts/').label || 'Open artifact')) + '</button>'
+      : '',
+  ].filter(Boolean);
   return '<tr>'
     + '<td>' + button + '</td>'
     + '<td><span class="id">' + esc(row.event_id || '') + '</span></td>'
@@ -3672,6 +3686,7 @@ function renderRuntimeRecordRow(row, endpoint) {{
       fieldPrefix: 'runtime-records',
       successDetail: '/api/runtime-records/' + esc(row.event_id || ''),
       previewTarget: 'runtime-records-action-preview-response',
+      extraButtons: runtimeRowShortcutButtons,
     }})) + '</td>'
     + '</tr>';
 }}
@@ -3695,6 +3710,11 @@ function renderReviewQueueRow(row, endpoint) {{
   const readinessBadge = packageReadinessBadge(readiness);
   const parityBadge = reviewParityBadge(parity);
   const authBadge = authReadinessBadge(authReadiness.status || '');
+  const reviewRowShortcutButtons = [
+    firstRelatedLink(row, '/api/runtime-records/')
+      ? '<button data-detail-nav="' + esc(firstRelatedLink(row, '/api/runtime-records/').path || '') + '">' + esc(localizeTextValue(firstRelatedLink(row, '/api/runtime-records/').label || 'Open matching runtime record')) + '</button>'
+      : '',
+  ].filter(Boolean);
   return '<tr>'
     + '<td>' + button + '</td>'
     + '<td>' + cellStack([
@@ -3720,6 +3740,7 @@ function renderReviewQueueRow(row, endpoint) {{
         fieldPrefix: 'review-queue',
         successDetail: '/api/review-queue/' + esc(row.target_event_id || ''),
         previewTarget: 'review-queue-action-preview-response',
+        extraButtons: reviewRowShortcutButtons,
       }})),
       cellDetails(label('button.more_details', 'More details'), [
         cellMeta(renderMutationEnablementSummary(mutationEnablement)),
@@ -3751,6 +3772,14 @@ function renderSummaryJobRow(row, endpoint) {{
   const targetButton = row.review_target_event_id
     ? '<button data-detail-nav="/api/review-queue/' + esc(row.review_target_event_id) + '">' + esc(label('button.open_review', 'Open review')) + '</button>'
     : '';
+  const summaryRowShortcutButtons = [
+    row.review_target_event_id
+      ? '<button data-detail-nav="/api/review-queue/' + esc(row.review_target_event_id) + '">' + esc(label('button.open_review', 'Open review')) + '</button>'
+      : '',
+    firstRelatedLink(row, '/api/artifacts/')
+      ? '<button data-detail-nav="' + esc(firstRelatedLink(row, '/api/artifacts/').path || '') + '">' + esc(localizeTextValue(firstRelatedLink(row, '/api/artifacts/').label || 'Open artifact')) + '</button>'
+      : '',
+  ].filter(Boolean);
   return '<tr>'
     + '<td>' + button + '</td>'
     + '<td>' + cellStack(['<div><span class="id">' + esc(row.summary_job_id || '') + '</span></div>', cellTitle(row.title || ''), targetButton]) + '</td>'
@@ -3770,6 +3799,7 @@ function renderSummaryJobRow(row, endpoint) {{
       fieldPrefix: 'summary-jobs',
       successDetail: '/api/summary-jobs/' + esc(row.summary_job_id || ''),
       previewTarget: 'summary-jobs-action-preview-response',
+      extraButtons: summaryRowShortcutButtons,
     }})) + '</td>'
     + '<td>' + cellStack([
       cellMeta(row.runtime_provider_kind || ''),

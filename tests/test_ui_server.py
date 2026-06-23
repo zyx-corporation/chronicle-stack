@@ -1357,6 +1357,11 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "label('button.open_runtime_config', 'Open Runtime Config')" in html
     assert "label('button.open_package_review', 'Open Package Review')" in html
     assert "buttons.push(listJumpButton(label('button.open_review_queue', 'Open Review Queue'), '/api/review-queue'));" in html
+    assert "extraButtons: runtimeRowShortcutButtons" in html
+    assert "extraButtons: reviewRowShortcutButtons" in html
+    assert "extraButtons: summaryRowShortcutButtons" in html
+    assert "data-detail-nav=\"/api/review-queue/" in html
+    assert "Open matching runtime record" in html
     assert "const summaryLink = firstRelatedLink(record, '/api/summary-jobs/');" in html
     assert "const artifactLink = firstRelatedLink(record, '/api/artifacts/');" in html
     assert "buttons.push(listJumpButton(localizeTextValue(summaryLink.label || 'Open summary job'), summaryLink.path));" in html
