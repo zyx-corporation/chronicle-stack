@@ -164,15 +164,24 @@ The local UI must not imply:
 The current repository slice now demonstrates this ADR through:
 
 - structured reviewer-context, write-route, and identity-proof contracts on `ui_boundary` and `mutation_readiness`
+- structured authorization and target-state contracts on `ui_boundary` and `mutation_readiness`
 - shared fail-closed response contracts on blocked preview responses, enabled apply responses, and review-action failure responses
 - shared rollback / recovery / follow-up contract visibility in preview panels, result panels, and list-level preview summaries
 - separate browser-visible failure classes for `mutation_disabled`, `audit_insertion_failed`, and `decision_persistence_failed`
+
+Current local route-contract vocabulary now also makes explicit:
+
+- server-side authorization checks required before mutation may proceed
+- local single-operator authorization scope instead of hosted or multi-user authority claims
+- target-state checks required before mutation may proceed
+- current queue semantics where `approve` / `reject` resolve the pending target while `request-changes` leaves it pending
 
 The current repository slice still does not claim:
 
 - authenticated GUI mutation
 - default-on mutation behavior
 - multi-user-safe authority semantics
+- multi-user-safe target-state isolation semantics
 - stronger transactional guarantees than the local fail-closed contract already described here
 
 ## Follow-up boundary

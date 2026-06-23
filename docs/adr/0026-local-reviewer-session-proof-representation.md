@@ -116,12 +116,14 @@ The current repository slice now demonstrates this ADR through:
 - `reviewer_context_requirements` and `identity_proof_contract` on `ui_boundary` and `mutation_readiness`
 - shared reviewer/session expectation wording on blocked/apply responses and detail drilldown surfaces
 - list/detail/readiness surfaces that expose the same accepted reviewer kinds, session boundary status, and field requirements
+- route contracts that keep reviewer/session proof aligned with explicit authorization checks and explicit target-state checks
 
 The current repository slice still does not claim:
 
 - hosted reviewer identity
 - multi-user-safe authority semantics
 - stronger server-side authorization than the current local single-operator boundary
+- that reviewer/session proof fields alone define pending/resolved target-state semantics without the separate target-state contract
 
 ## Consequences
 

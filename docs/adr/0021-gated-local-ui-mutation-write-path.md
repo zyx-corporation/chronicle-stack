@@ -59,6 +59,7 @@ This means:
 5. GUI mutation must preserve a CLI-equivalent action model so parity remains inspectable rather than hidden behind UI-only behavior.
 6. Partial failure behavior must fail closed: no durable review mutation may appear successful unless audit insertion and decision persistence both complete.
 7. Read-only readiness/preview surfaces may continue to exist before mutation enablement, but they must not themselves toggle write capability.
+8. The current repository slice may describe local single-operator authorization and target-state semantics explicitly, but that description must remain local-only and must not imply multi-user-safe enforcement.
 
 ## Boundary
 
@@ -83,6 +84,16 @@ auth-readiness blockers
 CLI-equivalent commands
 mutation gating status
 read-only parity summaries
+```
+
+It may also describe the current local mutation contract as:
+
+```text
+authorized reviewer kind      = local_operator only
+authorization scope           = local single-operator boundary only
+target review status          = needs_review
+approve/reject queue result   = resolved and hidden from default pending queue
+request-changes queue result  = remains pending until a later resolving decision
 ```
 
 It must not imply:
@@ -156,3 +167,4 @@ This ADR does not:
 - choose a remote identity provider
 - replace CLI review as the default mutation path
 - treat current placeholder auth metadata as enforcement
+- claim shared-machine-safe or multi-user-safe target-state isolation semantics
