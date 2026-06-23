@@ -23,6 +23,7 @@ Current `v1.9.0` repository progress now includes:
 - a release-lane handoff from the completed `v1.8.0` contract-hardening release
 - structured `reviewer_enforcement_summary` exposure on UI boundary, mutation-readiness, and review-action surfaces
 - wording alignment that distinguishes route-enforced reviewer/session conditions from descriptive read-only metadata
+- structured `reviewer_validation_gate_summary` exposure that keeps validation, authorization, target-state, and fail-closed write-path language aligned
 
 ## Current release documents
 

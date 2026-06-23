@@ -227,6 +227,12 @@ def test_startup_metadata(tmp_path):
         "reviewer_kind",
         "ui_intent",
     ]
+    assert payload["ui_boundary"]["reviewer_validation_gate_summary"]["status"] == "read_only_preview"
+    assert payload["ui_boundary"]["reviewer_validation_gate_summary"]["validation_error_codes"][:3] == [
+        "reviewer_label_required",
+        "invalid_reviewer_label",
+        "session_label_required",
+    ]
     assert payload["ui_boundary"]["reviewer_enforcement_summary"]["route_enforcement_scope"] == (
         "browser-triggered review write route only"
     )
@@ -352,6 +358,7 @@ def test_startup_metadata_with_configured_auth_mode(tmp_path):
     )
     assert payload["ui_boundary"]["reviewer_enforcement_summary"]["status"] == "preview_contract_only"
     assert payload["ui_boundary"]["reviewer_enforcement_summary"]["session_gated"] is True
+    assert payload["ui_boundary"]["reviewer_validation_gate_summary"]["status"] == "preview_route_contract"
     assert payload["ui_boundary"]["write_route_contract"]["identity_proof_contract"]["proof_status"] == "session_gated_local_operator"
     assert payload["ui_boundary"]["write_route_contract"]["authorization_contract"]["authorization_status"] == "explicit_local_reviewer_declared"
     assert payload["ui_boundary"]["auth_boundary_summary"]["status"] == "reviewer_declared_preview"
@@ -388,6 +395,7 @@ def test_startup_metadata_with_enabled_ui_mutation(tmp_path):
     assert payload["ui_boundary"]["read_only"] is False
     assert payload["ui_boundary"]["mutation_readiness_status"] == "enabled"
     assert payload["ui_boundary"]["reviewer_enforcement_summary"]["status"] == "enforced_local_session"
+    assert payload["ui_boundary"]["reviewer_validation_gate_summary"]["status"] == "local_route_enforced"
     assert payload["ui_boundary"]["mutation_blockers"] == []
 
 
@@ -499,6 +507,8 @@ def test_ui_overview_data(tmp_path):
     assert overview["mutation_readiness"]["reviewer_enforcement_summary"]["descriptive_only_reviewer_kinds"] == [
         "user_declared"
     ]
+    assert overview["mutation_readiness"]["reviewer_validation_gate_summary"]["status"] == "read_only_preview"
+    assert overview["mutation_readiness"]["reviewer_validation_gate_summary"]["fail_closed"] is True
     assert overview["mutation_readiness"]["identity_proof_contract"]["required_reviewer_kinds_for_mutation"] == [
         "local_operator"
     ]
@@ -574,6 +584,8 @@ def test_ui_data_service_read_endpoints(tmp_path):
     assert runtime_summary_row["mutation_enablement_summary"]["remaining_summary"].startswith(
         "Capability flag enabled: "
     )
+    assert runtime_summary_row["reviewer_enforcement_status"] == "descriptive_only"
+    assert runtime_summary_row["reviewer_validation_gate_status"] == "read_only_preview"
     assert len(service.review_queue()["review_queue"]) == 3
     assert len(service.summary_jobs_list()["summary_jobs"]) == 1
     assert service.summary_jobs_list()["summary_jobs"][0]["summary_job_id"].startswith("sum_")
@@ -597,11 +609,15 @@ def test_ui_data_service_read_endpoints(tmp_path):
         "The UI remains preview-only"
     )
     assert service.summary_jobs_list()["summary_jobs"][0]["mutation_enablement_summary"]["remaining_count"] >= 1
+    assert service.summary_jobs_list()["summary_jobs"][0]["reviewer_enforcement_status"] == "descriptive_only"
+    assert service.summary_jobs_list()["summary_jobs"][0]["reviewer_validation_gate_status"] == "read_only_preview"
     assert service.runtime_config_state()["runtime_config"]["config"]["provider_name"] == "ui-local"
     assert service.review_queue()["review_queue"][0]["review_preview_only"] is True
     assert service.review_queue()["review_queue"][0]["target_event_id"].startswith("evt_")
     assert service.review_queue()["review_queue"][0]["review_capability"]["status"] == "advisory_only"
     assert service.review_queue()["review_queue"][0]["auth_boundary_notice"]["status"] == "advisory_only"
+    assert service.review_queue()["review_queue"][0]["reviewer_enforcement_status"] == "descriptive_only"
+    assert service.review_queue()["review_queue"][0]["reviewer_validation_gate_status"] == "read_only_preview"
     assert service.review_queue()["review_queue"][0]["package_readiness_summary"]["label"].startswith("package:")
     assert service.review_queue()["review_queue"][0]["package_readiness_summary"]["message"]
     assert service.review_queue()["review_queue"][0]["action_preview_summary"]["status"] == "preview_only"
@@ -902,6 +918,8 @@ def test_ui_data_service_detail_endpoints(tmp_path):
     assert summary_detail["mutation_enablement"]["enablement_ready"] is False
     assert summary_detail["mutation_enablement"]["scope_note"].startswith("The UI remains preview-only")
     assert summary_detail["mutation_enablement"]["operational_readiness"]["status"] == "blocked"
+    assert summary_detail["reviewer_enforcement_summary"]["status"] == "descriptive_only"
+    assert summary_detail["reviewer_validation_gate_summary"]["status"] == "read_only_preview"
     assert any(item["source"] == "boundary" for item in summary_detail["mutation_enablement"]["blocker_summaries"])
     assert summary_detail["mutation_enablement"]["write_route_contract"]["route_template"] == "/api/review-actions/<event_id>/<action>"
     assert any(link["path"] == f"/api/review-queue/{summary_detail['review_target_event_id']}" for link in summary_detail["related_links"])
@@ -933,6 +951,8 @@ def test_ui_data_service_detail_endpoints(tmp_path):
     assert any(link["path"] == f"/api/contexts/{ids['context_id']}" for link in retrieval_detail["related_links"])
     assert any(link["label"] == f"Open context {ids['context_id']}" for link in retrieval_detail["related_links"])
     assert retrieval_detail["auth_boundary_notice"]["status"] == "advisory_only"
+    assert retrieval_detail["reviewer_enforcement_summary"]["status"] == "descriptive_only"
+    assert retrieval_detail["reviewer_validation_gate_summary"]["status"] == "read_only_preview"
     review_detail = service.detail_payload(f"/api/review-queue/{ids['runtime_summary_event_id']}")["record"]
     assert review_detail["target_event_id"] == ids["runtime_summary_event_id"]
     assert review_detail["mutation_enablement"]["enablement_ready"] is False
@@ -949,6 +969,8 @@ def test_ui_data_service_detail_endpoints(tmp_path):
     assert review_detail["action_preview"]["write_route_contract"]["authorization_contract"]["action_authorization_matrix"][2]["action"] == "request-changes"
     assert review_detail["action_preview"]["write_route_contract"]["target_state_contract"]["action_target_matrix"][0]["resulting_queue_state"] == "resolved_hidden_by_default"
     assert review_detail["action_preview"]["write_route_contract"]["identity_proof_contract"]["proof_status"] == "local_operator_advisory"
+    assert review_detail["reviewer_enforcement_summary"]["status"] == "descriptive_only"
+    assert review_detail["reviewer_validation_gate_summary"]["status"] == "read_only_preview"
     assert review_detail["review_preview_only"] is True
     assert review_detail["package_readiness"]["status"] == "no_context_records"
     assert review_detail["package_readiness"]["suggested_commands"][0] == "chronicle show --json"
@@ -1879,6 +1901,10 @@ def test_review_action_failure_summary_uses_human_warning_text(tmp_path):
     assert payload["reviewer_enforcement_summary"]["enforced_reviewer_kinds_for_mutation"] == [
         "local_operator"
     ]
+    assert payload["reviewer_validation_gate_summary"]["status"] == "local_route_enforced"
+    assert payload["reviewer_validation_gate_summary"]["authorization_error_codes"] == [
+        "authorization_failed"
+    ]
     assert payload["reviewer_context_requirements"]["expectation_summary"].startswith(
         "Explicit local GUI mutation currently expects local_operator reviewer metadata"
     )
@@ -1923,6 +1949,7 @@ def test_review_action_applies_when_session_gated_inputs_are_complete(tmp_path):
     assert payload["write_route_contract"]["route_template"] == "/api/review-actions/<event_id>/<action>"
     assert payload["reviewer_context_requirements"]["session_boundary_status"] == "required"
     assert payload["reviewer_enforcement_summary"]["status"] == "enforced_local_session"
+    assert payload["reviewer_validation_gate_summary"]["status"] == "local_route_enforced"
     assert payload["reviewer_context_requirements"]["session_note"] == (
         "Session label is required because the current local mutation boundary is session-gated."
     )
@@ -1951,6 +1978,7 @@ def test_review_action_requires_session_label_before_authorization_check(tmp_pat
     assert payload["error_code"] == "session_label_required"
     assert payload["write_route_contract"]["blocked_status_code"] == 403
     assert payload["reviewer_enforcement_summary"]["session_gated"] is True
+    assert payload["reviewer_validation_gate_summary"]["session_gated"] is True
     assert payload["reviewer_context_requirements"]["ui_intent_note"] == (
         "ui_intent must match the requested action so preview and apply paths stay fail-closed."
     )
