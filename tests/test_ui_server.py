@@ -228,6 +228,20 @@ def test_startup_metadata(tmp_path):
         "request-changes",
     ]
     assert payload["ui_boundary"]["write_route_contract"]["blocked_status_code"] == 403
+    assert payload["ui_boundary"]["write_route_contract"]["durable_success_requirements"] == [
+        "route_gating_passed",
+        "reviewer_context_validated",
+        "decision_persisted",
+        "audit_persisted",
+    ]
+    assert payload["ui_boundary"]["write_route_contract"]["transaction_order"] == [
+        "validate route + reviewer context",
+        "perform review decision persistence attempt",
+        "perform audit insertion attempt",
+        "report success only if both durable side effects succeeded",
+    ]
+    assert payload["ui_boundary"]["write_route_contract"]["failure_families"][0]["family"] == "pre_mutation_or_gate"
+    assert payload["ui_boundary"]["write_route_contract"]["failure_families"][1]["family"] == "durable_write_path"
     assert payload["ui_boundary"]["write_route_contract"]["identity_proof_contract"]["proof_status"] == "local_operator_advisory"
     assert payload["ui_boundary"]["write_route_contract"]["identity_proof_contract"]["required_reviewer_kinds_for_mutation"] == [
         "local_operator"
@@ -514,6 +528,12 @@ def test_ui_data_service_read_endpoints(tmp_path):
         "chronicle review queue --include-resolved --json"
     )
     assert service.review_queue()["review_queue"][0]["action_preview_summary"]["success_contract"]["transaction_status"] == "decision_and_audit_persisted"
+    assert service.review_queue()["review_queue"][0]["action_preview_summary"]["write_route_contract"]["transaction_order"] == [
+        "validate route + reviewer context",
+        "perform review decision persistence attempt",
+        "perform audit insertion attempt",
+        "report success only if both durable side effects succeeded",
+    ]
     assert service.review_queue()["review_queue"][0]["action_preview_summary"]["write_route_contract"]["expected_request_fields"] == [
         "reviewer_label",
         "reviewer_kind",
@@ -719,6 +739,7 @@ def test_ui_html_filtering_includes_provider_response_metadata_fields(tmp_path, 
     assert "durable-on-failure=" in html
     assert "write-route=" in html
     assert "request-fields=" in html
+    assert "transaction-order=" in html
     assert "success-status=" in html
     assert "blocked-status=" in html
     assert "proof-status=" in html
@@ -775,6 +796,10 @@ def test_ui_data_service_detail_endpoints(tmp_path):
     assert summary_detail["action_preview"]["status"] == "preview_only"
     assert summary_detail["action_preview"]["success_contract"]["rollback_status"] == "not_required"
     assert summary_detail["action_preview"]["write_route_contract"]["blocked_status_code"] == 403
+    assert summary_detail["action_preview"]["write_route_contract"]["failure_families"][1]["possible_error_codes"] == [
+        "audit_insertion_failed",
+        "decision_persistence_failed",
+    ]
     assert summary_detail["action_preview"]["write_route_contract"]["identity_proof_contract"]["required_identity_fields"] == [
         "reviewer_label",
         "reviewer_kind",
@@ -1234,6 +1259,9 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "detailLine('UI intent required', reviewerContext.ui_intent_required)" in html
     assert "detailLine('Authority note', reviewerContext.authority_note || '')" in html
     assert "detailLine('Session label required', reviewerContextRequirements.session_label_required)" in html
+    assert "detailListLine('Durable success requirements', writeRouteContract.durable_success_requirements, ' | ')" in html
+    assert "detailListLine('Transaction order', writeRouteContract.transaction_order, ' | ')" in html
+    assert "detailListLine('Failure families', (writeRouteContract.failure_families || []).map(item => ((item.family || 'family') + ': ' + ((item.possible_error_codes || []).join(', ')))), ' | ')" in html
     assert "function renderResponseMetadataNotice(record)" in html
     assert "detailLine('Response ID', summary.response_id || '')" in html
     assert "detailLine('Usage total tokens', summary.usage_total_tokens ?? '')" in html
@@ -1491,12 +1519,19 @@ def test_http_root_and_read_only_endpoints(tmp_path):
         assert payload["error_code"] == "mutation_disabled"
         assert payload["mutation_enabled"] is False
         assert payload["success_contract"]["rollback_status"] == "not_required"
+        assert payload["success_contract"]["durable_success_requirements"] == [
+            "route_gating_passed",
+            "reviewer_context_validated",
+            "decision_persisted",
+            "audit_persisted",
+        ]
         assert payload["success_contract"]["follow_up_commands"] == [
             "chronicle review queue --include-resolved --json",
             f"chronicle review approve --event {ids['runtime_summary_event_id']}",
         ]
         assert payload["failure_contract"]["rollback_status"] == "fail_closed"
         assert payload["failure_contract"]["durable_mutation_reported_on_failure"] is False
+        assert payload["failure_contract"]["failure_families"][0]["family"] == "pre_mutation_or_gate"
         assert payload["failure_contract"]["recovery_commands"] == [
             f"chronicle review approve --event {ids['runtime_summary_event_id']}"
         ]
@@ -1573,6 +1608,12 @@ def test_http_review_action_enabled_route_applies_decision(tmp_path):
         assert payload["decision_event_id"].startswith("evt_")
         assert payload["success_contract"]["transaction_status"] == "decision_and_audit_persisted"
         assert payload["success_contract"]["rollback_status"] == "not_required"
+        assert payload["success_contract"]["durable_success_requirements"] == [
+            "route_gating_passed",
+            "reviewer_context_validated",
+            "decision_persisted",
+            "audit_persisted",
+        ]
         assert payload["success_contract"]["follow_up_commands"][0] == "chronicle review queue --include-resolved --json"
 
         history = ReviewService(tmp_path).history(event_id=ids["runtime_summary_event_id"])
@@ -1627,6 +1668,7 @@ def test_http_review_action_enabled_route_handles_audit_failure(tmp_path, monkey
         assert payload["failure_summary"] == "audit_insertion_failed; inspect local audit surface before retry"
         assert payload["failure_contract"]["rollback_status"] == "fail_closed"
         assert payload["failure_contract"]["durable_mutation_reported_on_failure"] is False
+        assert payload["failure_contract"]["failure_families"][1]["family"] == "durable_write_path"
         assert payload["failure_contract"]["recovery_commands"] == [
             f"chronicle review approve --event {ids['runtime_summary_event_id']}",
             "chronicle audit list --json",
@@ -1747,6 +1789,11 @@ def test_review_action_requires_session_label_before_authorization_check(tmp_pat
         "reviewer_label_required",
         "invalid_reviewer_label",
         "session_label_required",
+    ]
+    assert payload["failure_contract"]["failure_families"][0]["possible_error_codes"][:3] == [
+        "mutation_disabled",
+        "reviewer_label_required",
+        "invalid_reviewer_label",
     ]
 
 

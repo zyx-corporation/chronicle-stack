@@ -467,6 +467,23 @@ def _ui_write_route_contract(metadata: UIBoundaryMetadata) -> dict[str, Any]:
     identity_proof = _reviewer_identity_proof_contract(metadata)
     mutation_enabled = bool(metadata.mutation_enabled)
     actions = ["approve", "reject", "request-changes"]
+    pre_mutation_or_gate_errors = [
+        "mutation_disabled",
+        "reviewer_label_required",
+        "invalid_reviewer_label",
+        "session_label_required",
+        "invalid_session_label",
+        "ui_intent_mismatch",
+        "invalid_reviewer_kind",
+        "authorization_failed",
+        "review_target_not_found",
+        "review_not_pending",
+        "invalid_json",
+    ]
+    durable_write_path_errors = [
+        "audit_insertion_failed",
+        "decision_persistence_failed",
+    ]
     return {
         "route_template": "/api/review-actions/<event_id>/<action>",
         "actions": actions,
@@ -482,32 +499,58 @@ def _ui_write_route_contract(metadata: UIBoundaryMetadata) -> dict[str, Any]:
         "resolved_status_code": HTTPStatus.CONFLICT.value,
         "missing_target_status_code": HTTPStatus.NOT_FOUND.value,
         "server_error_status_code": HTTPStatus.INTERNAL_SERVER_ERROR.value,
+        "durable_success_requirements": [
+            "route_gating_passed",
+            "reviewer_context_validated",
+            "decision_persisted",
+            "audit_persisted",
+        ],
+        "transaction_order": [
+            "validate route + reviewer context",
+            "perform review decision persistence attempt",
+            "perform audit insertion attempt",
+            "report success only if both durable side effects succeeded",
+        ],
         "transaction_rule": (
             "No durable GUI review result is reported as applied unless both review decision persistence and audit insertion succeed."
         ),
+        "failure_families": [
+            {
+                "family": "pre_mutation_or_gate",
+                "summary": "Gate, validation, authorization, or target-state checks failed before durable success could be reported.",
+                "possible_error_codes": pre_mutation_or_gate_errors,
+            },
+            {
+                "family": "durable_write_path",
+                "summary": "A durable write-path side effect failed, so the route stays fail-closed and must not report applied success.",
+                "possible_error_codes": durable_write_path_errors,
+            },
+        ],
         "identity_proof_contract": identity_proof,
         "success_contract": {
             "transaction_status": "decision_and_audit_persisted",
             "rollback_status": "not_required",
             "durable_mutation_reported": True,
+            "durable_success_requirements": [
+                "route_gating_passed",
+                "reviewer_context_validated",
+                "decision_persisted",
+                "audit_persisted",
+            ],
         },
         "failure_contract": {
             "rollback_status": "fail_closed",
             "durable_mutation_reported_on_failure": False,
-            "possible_error_codes": [
-                "mutation_disabled",
-                "reviewer_label_required",
-                "invalid_reviewer_label",
-                "session_label_required",
-                "invalid_session_label",
-                "ui_intent_mismatch",
-                "invalid_reviewer_kind",
-                "authorization_failed",
-                "review_target_not_found",
-                "review_not_pending",
-                "invalid_json",
-                "audit_insertion_failed",
-                "decision_persistence_failed",
+            "possible_error_codes": pre_mutation_or_gate_errors + durable_write_path_errors,
+            "failure_families": [
+                {
+                    "family": "pre_mutation_or_gate",
+                    "possible_error_codes": pre_mutation_or_gate_errors,
+                },
+                {
+                    "family": "durable_write_path",
+                    "possible_error_codes": durable_write_path_errors,
+                },
             ],
         },
     }
@@ -1902,7 +1945,7 @@ class ChronicleUIDataService:
         error_code: str | None = None,
         audit_id: str | None = None,
     ) -> dict[str, Any]:
-        possible_error_codes = [
+        pre_mutation_or_gate_errors = [
             "mutation_disabled",
             "reviewer_label_required",
             "invalid_reviewer_label",
@@ -1915,6 +1958,11 @@ class ChronicleUIDataService:
             "review_not_pending",
             "invalid_json",
         ]
+        durable_write_path_errors = [
+            "audit_insertion_failed",
+            "decision_persistence_failed",
+        ]
+        possible_error_codes = pre_mutation_or_gate_errors + durable_write_path_errors
         recovery_commands = ChronicleUIDataService._review_recovery_commands(
             event_id=event_id,
             action=action,
@@ -1929,6 +1977,16 @@ class ChronicleUIDataService:
             "durable_mutation_reported_on_failure": False,
             "partial_failure_visible": True,
             "possible_error_codes": possible_error_codes,
+            "failure_families": [
+                {
+                    "family": "pre_mutation_or_gate",
+                    "possible_error_codes": pre_mutation_or_gate_errors,
+                },
+                {
+                    "family": "durable_write_path",
+                    "possible_error_codes": durable_write_path_errors,
+                },
+            ],
             "recovery_path": (
                 recovery_commands[0]
                 if recovery_commands
@@ -2004,6 +2062,12 @@ class ChronicleUIDataService:
             "rollback_status": "not_required",
             "durable_mutation_reported": True,
             "audit_insertion_required": True,
+            "durable_success_requirements": [
+                "route_gating_passed",
+                "reviewer_context_validated",
+                "decision_persisted",
+                "audit_persisted",
+            ],
             "recovery_path": follow_up_commands[0] if follow_up_commands else cli_equivalent or "Use the equivalent chronicle review CLI command for follow-up inspection.",
             "follow_up_commands": follow_up_commands,
         }
@@ -3120,12 +3184,17 @@ function reviewActionCoreDetailLines(payload, action = '', recordId = '') {{
 }}
 function contractDetailLines(successContract, failureContract, targetId) {{
   const resolvedContract = (successContract || failureContract) || {{}};
+  const failureFamilies = Array.isArray((failureContract || {{}}).failure_families)
+    ? failureContract.failure_families
+    : [];
   const lines = []
     + detailLine('Recovery path', resolvedContract.recovery_path || '')
     + detailLine('Rollback status', resolvedContract.rollback_status || '')
     + detailLine('Transaction status', (successContract || {{}}).transaction_status || '')
+    + detailListLine('Durable success requirements', (successContract || {{}}).durable_success_requirements, ' | ')
     + detailLine('Durable mutation on failure', (failureContract || {{}}).durable_mutation_reported_on_failure)
     + detailListLine('Possible errors', (failureContract || {{}}).possible_error_codes, ' | ')
+    + detailListLine('Failure families', failureFamilies.map(item => ((item.family || 'family') + ': ' + ((item.possible_error_codes || []).join(', ')))), ' | ')
     + detailListLine('Recovery commands', (failureContract || {{}}).recovery_commands, ' | ')
     + detailListLine('Follow-up commands', (successContract || {{}}).follow_up_commands, ' | ');
   return lines + (resolvedContract.recovery_path ? '<p>' + copyCommandButton(resolvedContract.recovery_path, targetId, t('button.copy_recovery_cli')) + '</p>' : '');
@@ -3185,7 +3254,10 @@ function renderPreviewContractSummary(preview, previewTarget = 'action-preview-r
   const requestFields = Array.isArray(writeRouteContract.expected_request_fields)
     ? writeRouteContract.expected_request_fields
     : [];
-  if (!recoveryPath && possibleErrors.length === 0 && followUpCommands.length === 0 && requestFields.length === 0) return '';
+  const transactionOrder = Array.isArray(writeRouteContract.transaction_order)
+    ? writeRouteContract.transaction_order
+    : [];
+  if (!recoveryPath && possibleErrors.length === 0 && followUpCommands.length === 0 && requestFields.length === 0 && transactionOrder.length === 0) return '';
   return [
     failureContract.rollback_status
       ? '<br><span class="id">rollback=' + esc(failureContract.rollback_status) + '</span>'
@@ -3201,6 +3273,9 @@ function renderPreviewContractSummary(preview, previewTarget = 'action-preview-r
       : '',
     requestFields.length > 0
       ? '<br><span class="id">request-fields=' + esc(requestFields.join(' | ')) + '</span>'
+      : '',
+    transactionOrder.length > 0
+      ? '<br><span class="id">transaction-order=' + esc(transactionOrder.join(' -> ')) + '</span>'
       : '',
     writeRouteContract.success_status_code
       ? '<br><span class="id">success-status=' + esc(writeRouteContract.success_status_code) + '</span>'
@@ -4524,6 +4599,9 @@ function renderMutationEnablementNotice(record) {{
       + detailListLine('Write actions', writeRouteContract.actions, ' | ')
       + detailLine('Write success status', writeRouteContract.success_status_code ?? '')
       + detailLine('Write blocked status', writeRouteContract.blocked_status_code ?? '')
+      + detailListLine('Durable success requirements', writeRouteContract.durable_success_requirements, ' | ')
+      + detailListLine('Transaction order', writeRouteContract.transaction_order, ' | ')
+      + detailListLine('Failure families', (writeRouteContract.failure_families || []).map(item => ((item.family || 'family') + ': ' + ((item.possible_error_codes || []).join(', ')))), ' | ')
       + detailLine('Identity proof status', identityProofContract.proof_status || '')
       + detailListLine('Identity proof fields', identityProofContract.required_identity_fields, ' | ')
       + detailListLine('Next steps', readiness.next_steps, ' | ')
@@ -4846,6 +4924,9 @@ function renderOverviewUiBoundaryPanel(uiBoundary) {{
     + detailListLine('Write request fields', writeRouteContract.expected_request_fields, ' | ')
     + detailLine('Write success status', writeRouteContract.success_status_code ?? '')
     + detailLine('Write blocked status', writeRouteContract.blocked_status_code ?? '')
+    + detailListLine('Durable success requirements', writeRouteContract.durable_success_requirements, ' | ')
+    + detailListLine('Transaction order', writeRouteContract.transaction_order, ' | ')
+    + detailListLine('Failure families', (writeRouteContract.failure_families || []).map(item => ((item.family || 'family') + ': ' + ((item.possible_error_codes || []).join(', ')))), ' | ')
     + detailLine('Identity proof status', identityProofContract.proof_status || '')
     + detailListLine('Identity proof fields', identityProofContract.required_identity_fields, ' | ')
   );
@@ -4923,6 +5004,9 @@ function renderOverviewMutationReadinessPanel(mutationReadiness) {{
     + detailLine('Remaining prerequisites', operationalReadiness.remaining_count ?? 0)
     + detailListLine('Blockers', mutationReadiness.blockers, ' | ')
     + detailLine('Blocker details', detailMessages(blockerDetails, mutationReadiness.blockers))
+    + detailListLine('Durable success requirements', writeRouteContract.durable_success_requirements, ' | ')
+    + detailListLine('Transaction order', writeRouteContract.transaction_order, ' | ')
+    + detailListLine('Failure families', (writeRouteContract.failure_families || []).map(item => ((item.family || 'family') + ': ' + ((item.possible_error_codes || []).join(', ')))), ' | ')
     + detailListLine('Blocker sources', blockerSummaries.map(item => (item.summary || ((item.source_label || item.source || 'unknown') + ': ' + (item.message || item.code || 'blocker')))), ' | ')
     + detailListLine('Enablement checks', enablementChecks.map(check => ((check.satisfied ? 'ok: ' : 'blocked: ') + (check.label || check.code || 'check'))), ' | ')
     + detailListLine('Remaining checks', operationalReadiness.blocking_summaries || [], ' | ')
