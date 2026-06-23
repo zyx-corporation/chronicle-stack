@@ -1353,7 +1353,9 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "statusMessageBody(readiness.status, readiness.message, readinessButtons)" in html
     assert "statusMessageBody(notice.status, notice.message, noticeButtons)" in html
     assert "statusMessageBody(assurance.status, assurance.message, assuranceButtons)" in html
-    assert "messageParagraph(parity.message)" in html
+    assert "statusMessageBody(parity.status, parity.message, parityButtons)" in html
+    assert "statusMessageBody(capability.status, capability.message)" in html
+    assert "statusMessageBody(preview.status, preview.message, previewButtons)" in html
     assert "detailListLine('Expected actions', parity.expected_actions)" in html
     assert "label('button.open_review_queue', 'Open Review Queue')" in html
     assert "latestResponseButton(authBoundaryOverview.latest_provider_response_detail_path, 'button.open_latest_review_response', 'Open Latest Review Response')" in html

@@ -4794,8 +4794,7 @@ function renderReviewCapabilityNotice(record) {{
   const warnBadges = reviewWarningBadges(warnList);
   return renderNotice(
     label('notice.review_capability', 'Review Capability'),
-    messageParagraph(capability.message)
-      + detailLine('Status', capability.status || '')
+    statusMessageBody(capability.status, capability.message)
       + (warnBadges ? '<p>' + warnBadges + '</p>' : '')
       + detailLine('Warnings', detailMessages(warnDetails, warnList) || '(none)')
   );
@@ -4920,9 +4919,7 @@ function renderDetailActionPreviewNotice(record) {{
     label('notice.action_preview', 'Action Preview'),
     noticeSection(
       label('status.detail', 'Detail'),
-      messageParagraph(preview.message)
-        + detailLine('Status', preview.status || '')
-        + buttonRow(previewButtons)
+      statusMessageBody(preview.status, preview.message, previewButtons)
     )
       + recoveryContractSection
       + reviewActionSection
@@ -4935,9 +4932,7 @@ function renderCliParityNotice(record) {{
   const parityButtons = moreStatusButtons(parity.status, '/api/review-queue', 'reviewQueue');
   return renderNotice(
     label('notice.cli_parity', 'CLI Parity'),
-    messageParagraph(parity.message)
-      + detailLine('Status', parity.status || '')
-      + buttonRow(parityButtons)
+    statusMessageBody(parity.status, parity.message, parityButtons)
       + detailListLine('Expected actions', parity.expected_actions)
       + detailListLine('Missing preview commands', parity.missing_preview_commands, ' | ')
       + detailListLine('Missing queue commands', parity.missing_queue_commands, ' | ')
