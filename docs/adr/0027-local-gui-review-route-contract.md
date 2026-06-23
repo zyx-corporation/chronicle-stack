@@ -63,3 +63,5 @@ The route family remains bounded by all of the following invariants:
 This boundary keeps the next release coherent: it advances the local GUI review contract without widening Chronicle Stack into a networked or silently stateful mutation product.
 
 It also preserves the already-established rule that the browser surface must remain an explicit local presentation and action shell around Chronicle’s primary JSONL record and CLI-compatible review semantics.
+
+As a concrete contract-hardening step, the repository should expose the explicit action-route family and CLI-equivalent route semantics on read-only UI contract surfaces rather than relying on only a generic route template.

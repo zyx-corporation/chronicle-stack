@@ -572,9 +572,18 @@ def _ui_write_route_contract(metadata: UIBoundaryMetadata) -> dict[str, Any]:
         "audit_insertion_failed",
         "decision_persistence_failed",
     ]
+    action_routes = [
+        {
+            "action": action,
+            "path_template": f"/api/review-actions/<event_id>/{action}",
+            "cli_equivalent_template": f"chronicle review {action} --event <event_id>",
+        }
+        for action in actions
+    ]
     return {
         "route_template": "/api/review-actions/<event_id>/<action>",
         "actions": actions,
+        "action_routes": action_routes,
         "expected_request_fields": reviewer_context.get("effective_required_fields", []),
         "optional_request_fields": ["note"],
         "accepted_reviewer_kinds": reviewer_context.get("accepted_reviewer_kinds", []),
@@ -4701,6 +4710,8 @@ function packageContextDetailLines(packageReview, manifest, eligibleContextIds =
 function writeRouteDetailLines(writeRouteContract, identityProofContract, authorizationContract, targetStateContract, includeRequestFields = false) {{
   return detailLine('Write route', writeRouteContract.route_template || '')
     + detailListLine('Write actions', writeRouteContract.actions, ' | ')
+    + detailListLine('Action routes', (writeRouteContract.action_routes || []).map(item => ((item.action || 'action') + ': ' + (item.path_template || ''))), ' | ')
+    + detailListLine('CLI route equivalents', (writeRouteContract.action_routes || []).map(item => ((item.action || 'action') + ': ' + (item.cli_equivalent_template || ''))), ' | ')
     + (includeRequestFields ? detailListLine('Write request fields', writeRouteContract.expected_request_fields, ' | ') : '')
     + detailLine('Write success status', writeRouteContract.success_status_code ?? '')
     + detailLine('Write blocked status', writeRouteContract.blocked_status_code ?? '')

@@ -95,6 +95,10 @@ def test_run_ui_smoke_success(tmp_path):
     assert any(name.endswith("#blocked-route-preview") for name in check_names)
     assert any(name.endswith("#preview-follow-up-contract") for name in check_names)
     assert any(name.startswith("/api/review-actions/") for name in check_names)
+    assert any(
+        check["name"] == "/api/ui-boundary#write-route-contract" and check["passed"]
+        for check in payload["checks"]
+    )
     assert "/api/overview#runtime-auth-readiness" in check_names
     assert "/api/overview#mutation-readiness" in check_names
     assert "/api/overview#summary-auth-readiness" in check_names

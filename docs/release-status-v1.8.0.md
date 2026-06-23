@@ -16,6 +16,14 @@ This release track currently means:
 - browser-triggered local review route contract hardening
 - local single-operator mutation-boundary clarification
 
+## Current repository-side progress
+
+Current `v1.8.0` repository progress now includes:
+
+- ADR-0027 defining the local GUI review-route expansion boundary
+- explicit read-only contract exposure of the action route family on UI boundary and mutation-readiness surfaces
+- preserved CLI-equivalent route semantics for each supported local review action
+
 ## Current release documents
 
 - `docs/adr/0027-local-gui-review-route-contract.md`

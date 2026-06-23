@@ -227,6 +227,23 @@ def test_startup_metadata(tmp_path):
         "reject",
         "request-changes",
     ]
+    assert payload["ui_boundary"]["write_route_contract"]["action_routes"] == [
+        {
+            "action": "approve",
+            "path_template": "/api/review-actions/<event_id>/approve",
+            "cli_equivalent_template": "chronicle review approve --event <event_id>",
+        },
+        {
+            "action": "reject",
+            "path_template": "/api/review-actions/<event_id>/reject",
+            "cli_equivalent_template": "chronicle review reject --event <event_id>",
+        },
+        {
+            "action": "request-changes",
+            "path_template": "/api/review-actions/<event_id>/request-changes",
+            "cli_equivalent_template": "chronicle review request-changes --event <event_id>",
+        },
+    ]
     assert payload["ui_boundary"]["write_route_contract"]["blocked_status_code"] == 403
     assert payload["ui_boundary"]["write_route_contract"]["durable_success_requirements"] == [
         "route_gating_passed",
@@ -780,6 +797,8 @@ def test_ui_html_filtering_includes_provider_response_metadata_fields(tmp_path, 
     assert "detailListLine('Blocker sources', blockerSummaries.map(item => (item.summary || ((item.source_label || item.source || 'unknown') + ': ' + (item.message || item.code || 'blocker')))), ' | ')" in html
     assert "detailLine('Reviewer label pattern', reviewerContext.reviewer_label_pattern || '')" in html
     assert "detailLine('Write route', writeRouteContract.route_template || '')" in html
+    assert "detailListLine('Action routes', (writeRouteContract.action_routes || []).map(item => ((item.action || 'action') + ': ' + (item.path_template || ''))), ' | ')" in html
+    assert "detailListLine('CLI route equivalents', (writeRouteContract.action_routes || []).map(item => ((item.action || 'action') + ': ' + (item.cli_equivalent_template || ''))), ' | ')" in html
     assert "detailListLine('Write request fields', writeRouteContract.expected_request_fields, ' | ')" in html
     assert "detailListLine('Effective reviewer fields', reviewerContextRequirements.effective_required_fields, ' | ')" in html
     assert "Review queue blocked-route preview stays read-only and returns the CLI fallback contract." in html
