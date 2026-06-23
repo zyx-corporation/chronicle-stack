@@ -980,6 +980,11 @@ class ChronicleUIDataService:
         summary_jobs_summary = self.summary_jobs_overview(summary_jobs)
         auth_boundary_overview = self.auth_boundary_overview(review_queue)
         runtime_records_summary = self.runtime_records_overview(runtime_records)
+        reviewer_boundary_overview = self.reviewer_boundary_overview(
+            runtime_records,
+            review_queue,
+            summary_jobs,
+        )
         return {
             "chronicle": {
                 "id": metadata.chronicle_id,
@@ -1013,6 +1018,7 @@ class ChronicleUIDataService:
             "auth_boundary_summary": self.ui_boundary()["ui_boundary"]["auth_boundary_summary"],
             "auth_boundary_overview": auth_boundary_overview,
             "identity_boundary_summary": identity_boundary_summary,
+            "reviewer_boundary_overview": reviewer_boundary_overview,
             "runtime_records_summary": runtime_records_summary,
             "summary_jobs_summary": summary_jobs_summary,
             "mutation_readiness": self.mutation_readiness_summary(review_queue),
@@ -1249,6 +1255,66 @@ class ChronicleUIDataService:
             "session_label_missing_count": session_label_missing_count,
             "blockers": blockers,
             "next_steps": next_steps,
+        }
+
+    def reviewer_boundary_overview(
+        self,
+        runtime_records: list[dict[str, Any]] | None = None,
+        review_queue: list[dict[str, Any]] | None = None,
+        summary_jobs: list[dict[str, Any]] | None = None,
+    ) -> dict[str, Any]:
+        runtime_rows = runtime_records if runtime_records is not None else self.runtime_records()["runtime_records"]
+        review_rows = review_queue if review_queue is not None else self.review_queue()["review_queue"]
+        summary_rows = summary_jobs if summary_jobs is not None else self.summary_jobs_list()["summary_jobs"]
+
+        runtime_enforcement_counts: dict[str, int] = {}
+        runtime_gate_counts: dict[str, int] = {}
+        review_enforcement_counts: dict[str, int] = {}
+        review_gate_counts: dict[str, int] = {}
+        summary_enforcement_counts: dict[str, int] = {}
+        summary_gate_counts: dict[str, int] = {}
+
+        for row in runtime_rows:
+            enforcement_status = str(row.get("reviewer_enforcement_status", "unknown"))
+            gate_status = str(row.get("reviewer_validation_gate_status", "unknown"))
+            runtime_enforcement_counts[enforcement_status] = (
+                runtime_enforcement_counts.get(enforcement_status, 0) + 1
+            )
+            runtime_gate_counts[gate_status] = runtime_gate_counts.get(gate_status, 0) + 1
+
+        for row in review_rows:
+            enforcement_status = str(row.get("reviewer_enforcement_status", "unknown"))
+            gate_status = str(row.get("reviewer_validation_gate_status", "unknown"))
+            review_enforcement_counts[enforcement_status] = (
+                review_enforcement_counts.get(enforcement_status, 0) + 1
+            )
+            review_gate_counts[gate_status] = review_gate_counts.get(gate_status, 0) + 1
+
+        for row in summary_rows:
+            enforcement_status = str(row.get("reviewer_enforcement_status", "unknown"))
+            gate_status = str(row.get("reviewer_validation_gate_status", "unknown"))
+            summary_enforcement_counts[enforcement_status] = (
+                summary_enforcement_counts.get(enforcement_status, 0) + 1
+            )
+            summary_gate_counts[gate_status] = summary_gate_counts.get(gate_status, 0) + 1
+
+        boundary = self.ui_boundary()["ui_boundary"]
+        enforcement_summary = boundary.get("reviewer_enforcement_summary", {})
+        gate_summary = boundary.get("reviewer_validation_gate_summary", {})
+
+        return {
+            "enforcement_status": str(enforcement_summary.get("status", "")),
+            "validation_gate_status": str(gate_summary.get("status", "")),
+            "session_gated": bool(
+                enforcement_summary.get("session_gated") or gate_summary.get("session_gated")
+            ),
+            "route_enforced": bool(gate_summary.get("fail_closed", False)),
+            "runtime_record_enforcement_counts": runtime_enforcement_counts,
+            "runtime_record_validation_gate_counts": runtime_gate_counts,
+            "review_queue_enforcement_counts": review_enforcement_counts,
+            "review_queue_validation_gate_counts": review_gate_counts,
+            "summary_job_enforcement_counts": summary_enforcement_counts,
+            "summary_job_validation_gate_counts": summary_gate_counts,
         }
 
     def overview_triage(
@@ -3856,6 +3922,12 @@ function renderRuntimeRecordRow(row, endpoint) {{
       ? jumpBadge(label('badge.auth_advisory', 'Auth advisory'), 'badge-warning', '/api/review-queue', 'reviewQueue', row.auth_readiness_status)
       : badge(label('badge.auth_na', 'Auth n/a'), 'badge-neutral');
   const mutationBadge = mutationEnablementBadge(mutationEnablement);
+  const reviewerEnforcementBadge = row.reviewer_enforcement_status
+    ? badge('Reviewer enforcement: ' + row.reviewer_enforcement_status, 'badge-neutral')
+    : '';
+  const reviewerGateBadge = row.reviewer_validation_gate_status
+    ? badge('Reviewer gate: ' + row.reviewer_validation_gate_status, 'badge-neutral')
+    : '';
   const kindBadge = jumpBadge(
     row.runtime_record_kind || 'unknown',
     'badge-neutral',
@@ -3875,6 +3947,8 @@ function renderRuntimeRecordRow(row, endpoint) {{
     + '<td>' + cellStack([
       authBadge,
       mutationBadge,
+      reviewerEnforcementBadge,
+      reviewerGateBadge,
       cellDetails(label('button.more_details', 'More details'), [
         cellMeta(renderMutationEnablementSummary(mutationEnablement)),
       ]),
@@ -3917,6 +3991,12 @@ function renderReviewQueueRow(row, endpoint) {{
   const readinessBadge = packageReadinessBadge(readiness);
   const parityBadge = reviewParityBadge(parity);
   const authBadge = authReadinessBadge(authReadiness.status || '');
+  const reviewerEnforcementBadge = row.reviewer_enforcement_status
+    ? badge('Reviewer enforcement: ' + row.reviewer_enforcement_status, 'badge-neutral')
+    : '';
+  const reviewerGateBadge = row.reviewer_validation_gate_status
+    ? badge('Reviewer gate: ' + row.reviewer_validation_gate_status, 'badge-neutral')
+    : '';
   const reviewRowShortcutButtons = [
     relatedDetailButton(row, '/api/runtime-records/', 'Open matching runtime record'),
   ].filter(Boolean);
@@ -3932,6 +4012,8 @@ function renderReviewQueueRow(row, endpoint) {{
     ]) + '</td>'
     + '<td>' + cellStack([
       statusBadge,
+      reviewerEnforcementBadge,
+      reviewerGateBadge,
       cellDetails(label('button.more_details', 'More details'), [
         readinessBadge,
         parityBadge,
@@ -3974,6 +4056,12 @@ function renderSummaryJobRow(row, endpoint) {{
   const identityBadge = identityAssuranceBadge(identityAssuranceStatus);
   const packageBadge = packageStatusBadge(packageStatus);
   const responseMetadata = row.response_metadata_summary || {{}};
+  const reviewerEnforcementBadge = row.reviewer_enforcement_status
+    ? badge('Reviewer enforcement: ' + row.reviewer_enforcement_status, 'badge-neutral')
+    : '';
+  const reviewerGateBadge = row.reviewer_validation_gate_status
+    ? badge('Reviewer gate: ' + row.reviewer_validation_gate_status, 'badge-neutral')
+    : '';
   const targetButton = reviewDetailButton(row.review_target_event_id || '');
   const summaryRowShortcutButtons = [
     reviewDetailButton(row.review_target_event_id || ''),
@@ -3985,6 +4073,8 @@ function renderSummaryJobRow(row, endpoint) {{
     + '<td>' + cellStack([
       cellMeta(row.status || ''),
       reviewBadge,
+      reviewerEnforcementBadge,
+      reviewerGateBadge,
       cellDetails(label('button.more_details', 'More details'), [
         authBadge,
         packageBadge,
@@ -5462,6 +5552,23 @@ function renderOverviewIdentityBoundaryPanel(identityBoundary) {{
     + identityBoundaryDetailLines(identityBoundary)
   );
 }}
+function renderOverviewReviewerBoundaryPanel(reviewerBoundary) {{
+  const metricsBody =
+    summaryJsonLine('Runtime enforcement counts', reviewerBoundary.runtime_record_enforcement_counts)
+      + summaryJsonLine('Runtime gate counts', reviewerBoundary.runtime_record_validation_gate_counts)
+      + summaryJsonLine('Review enforcement counts', reviewerBoundary.review_queue_enforcement_counts)
+      + summaryJsonLine('Review gate counts', reviewerBoundary.review_queue_validation_gate_counts)
+      + summaryJsonLine('Summary enforcement counts', reviewerBoundary.summary_job_enforcement_counts)
+      + summaryJsonLine('Summary gate counts', reviewerBoundary.summary_job_validation_gate_counts);
+  return renderPanel(
+    sectionTitle(label('section.reviewer_boundary', 'Reviewer Boundary'))
+    + detailLine('Enforcement status', reviewerBoundary.enforcement_status || '')
+    + detailLine('Validation gate status', reviewerBoundary.validation_gate_status || '')
+    + detailLine('Session gated', reviewerBoundary.session_gated)
+    + detailLine('Fail closed route checks', reviewerBoundary.route_enforced)
+    + metricsSection(metricsBody)
+  );
+}}
 function renderOverviewMutationReadinessPanel(mutationReadiness) {{
   const blockerDetails = Array.isArray(mutationReadiness.blocker_details) ? mutationReadiness.blocker_details : [];
   const blockerSummaries = Array.isArray(mutationReadiness.blocker_summaries) ? mutationReadiness.blocker_summaries : [];
@@ -5667,6 +5774,7 @@ const overviewPanelRenderers = [
   data => renderOverviewUiBoundaryPanel(data.uiBoundary),
   data => renderOverviewAuthBoundaryPanel(data.authBoundary, data.authBoundaryOverview),
   data => renderOverviewIdentityBoundaryPanel(data.identityBoundary),
+  data => renderOverviewReviewerBoundaryPanel(data.reviewerBoundary),
   data => renderOverviewMutationReadinessPanel(data.mutationReadiness),
   data => renderOverviewAiIndexPanel(data.aiIndex, data.counts),
   data => renderOverviewRuntimeRecordsPanel(data.counts, data.runtimeRecords),
@@ -5684,6 +5792,7 @@ function renderOverview(payload) {{
   const authBoundary = payload.auth_boundary_summary || uiBoundary.auth_boundary_summary || {{}};
   const authBoundaryOverview = payload.auth_boundary_overview || {{}};
   const identityBoundary = payload.identity_boundary_summary || {{}};
+  const reviewerBoundary = payload.reviewer_boundary_overview || {{}};
   const aiIndex = payload.ai_index || {{}};
   const triage = payload.triage || {{}};
   const mutationReadiness = payload.mutation_readiness || {{}};
@@ -5700,6 +5809,7 @@ function renderOverview(payload) {{
     chronicle,
     counts,
     identityBoundary,
+    reviewerBoundary,
     mutationReadiness,
     runtime,
     runtimeConfig,

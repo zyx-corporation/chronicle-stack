@@ -478,6 +478,17 @@ def test_ui_overview_data(tmp_path):
     assert overview["auth_boundary_overview"]["latest_provider_response_detail_path"] is None
     assert overview["identity_boundary_summary"]["status"] == "identity_unavailable"
     assert overview["identity_boundary_summary"]["missing_identity_count"] == 3
+    assert overview["reviewer_boundary_overview"]["enforcement_status"] == "descriptive_only"
+    assert overview["reviewer_boundary_overview"]["validation_gate_status"] == "read_only_preview"
+    assert overview["reviewer_boundary_overview"]["runtime_record_enforcement_counts"] == {
+        "descriptive_only": 2
+    }
+    assert overview["reviewer_boundary_overview"]["review_queue_validation_gate_counts"] == {
+        "read_only_preview": 3
+    }
+    assert overview["reviewer_boundary_overview"]["summary_job_enforcement_counts"] == {
+        "descriptive_only": 1
+    }
     assert overview["mutation_readiness"]["status"] == "preview_only"
     assert overview["mutation_readiness"]["scope_note"].startswith("The UI remains preview-only")
     assert "Define explicit local auth boundary." in overview["mutation_readiness"]["next_steps"]
@@ -1288,6 +1299,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "function renderOverviewRuntimeBoundaryPanel(runtime)" in html
     assert "function renderOverviewAuthBoundaryPanel(authBoundary, authBoundaryOverview)" in html
     assert "function renderOverviewIdentityBoundaryPanel(identityBoundary)" in html
+    assert "function renderOverviewReviewerBoundaryPanel(reviewerBoundary)" in html
     assert "function overviewRuntimeRecordCountButtons(counts, runtimeRecords)" in html
     assert "function renderOverviewRuntimeRecordsPanel(counts, runtimeRecords)" in html
     assert "function overviewSummaryJobCountButtons(counts, summaryJobs)" in html
@@ -1299,6 +1311,8 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "function overviewTriageNavigationCluster(triage)" in html
     assert "function overviewTriageJumpButtons()" in html
     assert "const overviewPanelRenderers = [" in html
+    assert "summaryJsonLine('Runtime enforcement counts', reviewerBoundary.runtime_record_enforcement_counts)" in html
+    assert "detailLine('Validation gate status', reviewerBoundary.validation_gate_status || '')" in html
     assert "function renderOverviewPanels(data)" in html
     assert "const detailPathResolvers =" in html
     assert "function endpointBody(endpoint, payload)" in html

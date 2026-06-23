@@ -301,24 +301,26 @@ ruff check src/ tests/
 
 ## リリース
 
-- Latest published release: **v1.8.0**
-- Current repository-side release target: **v1.9.0**
+- Latest published release: **v1.9.0**
+- Current repository-side release target: **v1.10.0**
 - v1.7.0 release status: [docs/release-status-v1.7.0.md](docs/release-status-v1.7.0.md)
 - v1.8.0 release status: [docs/release-status-v1.8.0.md](docs/release-status-v1.8.0.md)
 - v1.9.0 release status: [docs/release-status-v1.9.0.md](docs/release-status-v1.9.0.md)
+- v1.10.0 release status: [docs/release-status-v1.10.0.md](docs/release-status-v1.10.0.md)
 - v1.7.0 release readiness: [docs/release-readiness-v1.7.md](docs/release-readiness-v1.7.md)
 - v1.9.0 release readiness: [docs/release-readiness-v1.9.md](docs/release-readiness-v1.9.md)
 - v1.8.0 release readiness: [docs/release-readiness-v1.8.md](docs/release-readiness-v1.8.md)
 - v1.9.0 release notes: [docs/release-notes-v1.9.0.md](docs/release-notes-v1.9.0.md)
 - v1.8.0 release notes: [docs/release-notes-v1.8.0.md](docs/release-notes-v1.8.0.md)
 - v1.9.0 remaining issues: [docs/v1.9-release-remaining-issues.md](docs/v1.9-release-remaining-issues.md)
+- v1.10.0 remaining issues: [docs/v1.10-release-remaining-issues.md](docs/v1.10-release-remaining-issues.md)
 - v1.8.0 remaining issues: [docs/v1.8-release-remaining-issues.md](docs/v1.8-release-remaining-issues.md)
 - v1.7.0 smoke profile: [docs/smoke-test-v1.7.md](docs/smoke-test-v1.7.md)
 - v1.9.0 smoke profile: [docs/smoke-test-v1.9.md](docs/smoke-test-v1.9.md)
 - v1.8.0 smoke profile: [docs/smoke-test-v1.8.md](docs/smoke-test-v1.8.md)
 - v1.7.0 release notes: [docs/release-notes-v1.7.0.md](docs/release-notes-v1.7.0.md)
-- v1.8.0 publication is complete and now serves as the immediate historical baseline.
-- `v1.9.0` is the active repository-side reviewer/session enforcement-boundary release lane.
+- v1.9.0 publication is complete and now serves as the immediate historical baseline.
+- `v1.10.0` is the active repository-side reviewer-boundary observability release lane.
 
 ## ライセンス
 
