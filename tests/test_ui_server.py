@@ -453,6 +453,7 @@ def test_ui_overview_data(tmp_path):
     assert overview["runtime_records_summary"]["mutation_operational_counts"]["blocked"] == 2
     assert overview["runtime_records_summary"]["provider_response_present_count"] == 0
     assert overview["runtime_records_summary"]["provider_response_absent_count"] == 2
+    assert overview["runtime_records_summary"]["latest_provider_response_detail_path"] is None
     assert overview["summary_jobs_summary"]["status_counts"]["pending_review"] == 1
     assert overview["summary_jobs_summary"]["review_capability_counts"]["advisory_only"] == 1
     assert overview["summary_jobs_summary"]["auth_readiness_counts"]["advisory_only"] == 1
@@ -460,6 +461,7 @@ def test_ui_overview_data(tmp_path):
     assert overview["summary_jobs_summary"]["mutation_readiness_counts"]["preview_only"] == 1
     assert overview["summary_jobs_summary"]["mutation_operational_counts"]["blocked"] == 1
     assert overview["summary_jobs_summary"]["provider_response_present_count"] == 0
+    assert overview["summary_jobs_summary"]["latest_provider_response_detail_path"] is None
     assert overview["summary_jobs_summary"]["identity_assurance_counts"]["unknown"] == 1
     assert overview["summary_jobs_summary"]["reviewer_kind_counts"]["unknown"] == 1
     assert overview["summary_jobs_summary"]["runtime_provider_counts"]["disabled"] == 1
@@ -658,6 +660,7 @@ def test_ui_data_service_exposes_provider_response_metadata_in_read_only_views(t
     assert overview["runtime_records_summary"]["provider_response_finish_reason_counts"]["stop"] == 1
     assert overview["runtime_records_summary"]["provider_response_status_counts"]["ok"] == 1
     assert overview["runtime_records_summary"]["mutation_readiness_counts"]["preview_only"] == 1
+    assert overview["runtime_records_summary"]["latest_provider_response_detail_path"] == f"/api/runtime-records/{result.event_id}"
     assert overview["auth_boundary_overview"]["provider_response_present_count"] == 1
     assert overview["auth_boundary_overview"]["provider_response_finish_reason_counts"]["stop"] == 1
     assert overview["auth_boundary_overview"]["provider_response_status_counts"]["ok"] == 1
@@ -665,6 +668,7 @@ def test_ui_data_service_exposes_provider_response_metadata_in_read_only_views(t
     assert overview["summary_jobs_summary"]["provider_response_finish_reason_counts"]["stop"] == 1
     assert overview["summary_jobs_summary"]["provider_response_status_counts"]["ok"] == 1
     assert overview["summary_jobs_summary"]["mutation_readiness_counts"]["preview_only"] == 1
+    assert overview["summary_jobs_summary"]["latest_provider_response_detail_path"] == f"/api/summary-jobs/{summary_job_row['summary_job_id']}"
     assert overview["triage"]["provider_response_present_reviews"] == 1
 
     runtime_detail = service.detail_payload(f"/api/runtime-records/{result.event_id}")
@@ -1344,6 +1348,8 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "label('button.open_review_queue', 'Open Review Queue')" in html
     assert "label('button.open_runtime_records', 'Open Runtime Records')" in html
     assert "label('button.open_summary_jobs', 'Open Summary Jobs')" in html
+    assert "label('button.open_latest_runtime_response', 'Open Latest Runtime Response')" in html
+    assert "label('button.open_latest_summary_response', 'Open Latest Summary Response')" in html
     assert "label('button.open_runtime_config', 'Open Runtime Config')" in html
     assert "label('button.open_package_review', 'Open Package Review')" in html
     assert "buttons.push(listJumpButton(label('button.open_review_queue', 'Open Review Queue'), '/api/review-queue'));" in html

@@ -898,6 +898,7 @@ class ChronicleUIDataService:
         finish_reason_counts: dict[str, int] = {}
         provider_status_counts: dict[str, int] = {}
         response_present_count = 0
+        latest_provider_response_detail_path: str | None = None
         for row in rows:
             kind = str(row.get("runtime_record_kind", "unknown"))
             auth_status = str(row.get("auth_readiness_status", "unknown"))
@@ -915,6 +916,10 @@ class ChronicleUIDataService:
             )
             if isinstance(response_summary, dict) and response_summary.get("present") is True:
                 response_present_count += 1
+                if latest_provider_response_detail_path is None:
+                    event_id = str(row.get("event_id", ""))
+                    if event_id.startswith("evt_"):
+                        latest_provider_response_detail_path = f"/api/runtime-records/{event_id}"
                 finish_reason = str(response_summary.get("finish_reason") or "unknown")
                 provider_status = str(response_summary.get("provider_status") or "unknown")
                 finish_reason_counts[finish_reason] = finish_reason_counts.get(finish_reason, 0) + 1
@@ -928,6 +933,7 @@ class ChronicleUIDataService:
             "provider_response_absent_count": len(rows) - response_present_count,
             "provider_response_finish_reason_counts": finish_reason_counts,
             "provider_response_status_counts": provider_status_counts,
+            "latest_provider_response_detail_path": latest_provider_response_detail_path,
         }
 
     def auth_boundary_overview(self, review_queue: list[dict[str, Any]] | None = None) -> dict[str, Any]:
@@ -1003,6 +1009,7 @@ class ChronicleUIDataService:
         provider_status_counts: dict[str, int] = {}
         response_present_count = 0
         source_count_total = 0
+        latest_provider_response_detail_path: str | None = None
         for row in rows:
             status = str(row.get("status", "unknown"))
             review_status = str(row.get("review_capability_status", "unknown"))
@@ -1030,6 +1037,10 @@ class ChronicleUIDataService:
             response_summary = row.get("response_metadata_summary", {})
             if isinstance(response_summary, dict) and response_summary.get("present") is True:
                 response_present_count += 1
+                if latest_provider_response_detail_path is None:
+                    summary_job_id = str(row.get("summary_job_id", ""))
+                    if summary_job_id.startswith("sum_"):
+                        latest_provider_response_detail_path = f"/api/summary-jobs/{summary_job_id}"
                 finish_reason = str(response_summary.get("finish_reason") or "unknown")
                 provider_status = str(response_summary.get("provider_status") or "unknown")
                 finish_reason_counts[finish_reason] = finish_reason_counts.get(finish_reason, 0) + 1
@@ -1047,6 +1058,7 @@ class ChronicleUIDataService:
             "provider_response_absent_count": len(rows) - response_present_count,
             "provider_response_finish_reason_counts": finish_reason_counts,
             "provider_response_status_counts": provider_status_counts,
+            "latest_provider_response_detail_path": latest_provider_response_detail_path,
             "identity_assurance_counts": assurance_counts,
             "reviewer_kind_counts": reviewer_kind_counts,
             "summary_source_total": source_count_total,
@@ -5242,7 +5254,9 @@ function renderOverviewRuntimeRecordsPanel(counts, runtimeRecords) {{
     + '</p>'
     + metricsSection
     + sliceButtonRow(runtimeRecordsSliceButtons())
-    + '<p>' + listJumpButton(label('button.open_runtime_records', 'Open Runtime Records'), '/api/runtime-records') + '</p>'
+    + '<p>' + listJumpButton(label('button.open_runtime_records', 'Open Runtime Records'), '/api/runtime-records')
+    + (runtimeRecords.latest_provider_response_detail_path ? listJumpButton(label('button.open_latest_runtime_response', 'Open Latest Runtime Response'), runtimeRecords.latest_provider_response_detail_path) : '')
+    + '</p>'
   );
 }}
 function renderOverviewSummaryJobsPanel(counts, summaryJobs) {{
@@ -5275,7 +5289,9 @@ function renderOverviewSummaryJobsPanel(counts, summaryJobs) {{
     + metricsSection
     + detailLine('Source refs total', summaryJobs.summary_source_total ?? 0)
     + sliceButtonRow(summaryJobsSliceButtons())
-    + '<p>' + listJumpButton(label('button.open_summary_jobs', 'Open Summary Jobs'), '/api/summary-jobs') + '</p>'
+    + '<p>' + listJumpButton(label('button.open_summary_jobs', 'Open Summary Jobs'), '/api/summary-jobs')
+    + (summaryJobs.latest_provider_response_detail_path ? listJumpButton(label('button.open_latest_summary_response', 'Open Latest Summary Response'), summaryJobs.latest_provider_response_detail_path) : '')
+    + '</p>'
   );
 }}
 function renderOverviewTriagePanel(triage, warningButtons, warningSummaries) {{
