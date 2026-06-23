@@ -4427,6 +4427,9 @@ function sliceChip(filterValue, cls, resetTarget) {{
 function sliceBadge(text, count, cls) {{
   return badge(text + ': ' + count, cls);
 }}
+function overviewCountButton(text, count, cls, endpoint, filterTarget, filterValue) {{
+  return overviewJumpButton(sliceBadge(text, esc(count ?? 0), cls), endpoint, filterTarget, filterValue);
+}}
 function filterChips(target, cls) {{
   const filterValue = String((window.__chronicleFilters && window.__chronicleFilters[target]) || '');
   return sliceChip(filterValue, cls, target);
@@ -5195,10 +5198,10 @@ function renderOverviewAuthBoundaryPanel(authBoundary, authBoundaryOverview) {{
   return renderPanel(
     sectionTitle(label('section.auth_boundary', 'Auth Boundary'))
     + '<p>'
-    + overviewJumpButton(sliceBadge(reviewWarningLabel('ui_auth_not_enabled'), esc(authBoundaryOverview.auth_warning_count ?? 0), 'badge-warning'), '/api/review-queue', 'reviewQueue', 'ui_auth_not_enabled')
-    + overviewJumpButton(sliceBadge(reviewWarningLabel('ui_authorization_not_enabled'), esc(authBoundaryOverview.authorization_warning_count ?? 0), 'badge-warning'), '/api/review-queue', 'reviewQueue', 'ui_authorization_not_enabled')
-    + overviewJumpButton(sliceBadge(reviewWarningLabel('no_reviewer_identity_recorded'), esc(authBoundaryOverview.missing_identity_count ?? 0), 'badge-warning'), '/api/review-queue', 'reviewQueue', 'no_reviewer_identity_recorded')
-    + overviewJumpButton(sliceBadge(label('overview.provider_response', 'Provider response'), esc(authBoundaryOverview.provider_response_present_count ?? 0), 'badge-ready'), '/api/review-queue', 'reviewQueue', 'response_id')
+    + overviewCountButton(reviewWarningLabel('ui_auth_not_enabled'), authBoundaryOverview.auth_warning_count, 'badge-warning', '/api/review-queue', 'reviewQueue', 'ui_auth_not_enabled')
+    + overviewCountButton(reviewWarningLabel('ui_authorization_not_enabled'), authBoundaryOverview.authorization_warning_count, 'badge-warning', '/api/review-queue', 'reviewQueue', 'ui_auth_not_enabled')
+    + overviewCountButton(reviewWarningLabel('no_reviewer_identity_recorded'), authBoundaryOverview.missing_identity_count, 'badge-warning', '/api/review-queue', 'reviewQueue', 'no_reviewer_identity_recorded')
+    + overviewCountButton(label('overview.provider_response', 'Provider response'), authBoundaryOverview.provider_response_present_count, 'badge-ready', '/api/review-queue', 'reviewQueue', 'response_id')
     + '</p>'
     + detailLine('Status', authBoundary.status || '')
     + '<p>' + esc(authBoundary.message || '') + '</p>'
@@ -5221,9 +5224,9 @@ function renderOverviewIdentityBoundaryPanel(identityBoundary) {{
   return renderPanel(
     sectionTitle(label('section.identity_boundary', 'Identity Boundary'))
     + '<p>'
-    + overviewJumpButton(sliceBadge(reviewWarningLabel('reviewer_identity_declared_only'), esc(identityBoundary.declared_identity_count ?? 0), 'badge-warning'), '/api/review-queue', 'reviewQueue', 'reviewer_identity_declared_only')
-    + overviewJumpButton(sliceBadge(reviewWarningLabel('reviewer_session_label_missing'), esc(identityBoundary.session_label_missing_count ?? 0), 'badge-warning'), '/api/review-queue', 'reviewQueue', 'reviewer_session_label_missing')
-    + overviewJumpButton(sliceBadge(uiLabel('Identity aligned'), esc((identityBoundary.assurance_counts && identityBoundary.assurance_counts.boundary_aligned) ?? 0), 'badge-ready'), '/api/review-queue', 'reviewQueue', 'boundary_aligned')
+    + overviewCountButton(reviewWarningLabel('reviewer_identity_declared_only'), identityBoundary.declared_identity_count, 'badge-warning', '/api/review-queue', 'reviewQueue', 'reviewer_identity_declared_only')
+    + overviewCountButton(reviewWarningLabel('reviewer_session_label_missing'), identityBoundary.session_label_missing_count, 'badge-warning', '/api/review-queue', 'reviewQueue', 'reviewer_session_label_missing')
+    + overviewCountButton(uiLabel('Identity aligned'), (identityBoundary.assurance_counts && identityBoundary.assurance_counts.boundary_aligned) ?? 0, 'badge-ready', '/api/review-queue', 'reviewQueue', 'boundary_aligned')
     + '</p>'
     + detailLine('Status', identityBoundary.status || '')
     + '<p>' + esc(identityBoundary.message || '') + '</p>'
@@ -5319,10 +5322,10 @@ function renderOverviewRuntimeRecordsPanel(counts, runtimeRecords) {{
   return renderPanel(
     sectionTitle(label('section.runtime_records', 'Runtime Records'))
     + '<p>'
-    + overviewJumpButton(sliceBadge(label('section.runtime_records', 'Runtime Records'), esc(counts.runtime_records ?? 0), 'badge-neutral'), '/api/runtime-records')
-    + overviewJumpButton(sliceBadge(filterValueLabel('runtimeRecords', 'response_id'), esc(runtimeRecords.provider_response_present_count ?? 0), 'badge-ready'), '/api/runtime-records', 'runtimeRecords', 'response_id')
-    + overviewJumpButton(sliceBadge(filterValueLabel('runtimeRecords', 'advisory_only'), esc((runtimeRecords.auth_readiness_counts && runtimeRecords.auth_readiness_counts.advisory_only) ?? 0), 'badge-warning'), '/api/runtime-records', 'runtimeRecords', 'advisory_only')
-    + overviewJumpButton(sliceBadge(filterValueLabel('runtimeRecords', 'preview_only'), esc((runtimeRecords.mutation_readiness_counts && runtimeRecords.mutation_readiness_counts.preview_only) ?? 0), 'badge-warning'), '/api/runtime-records', 'runtimeRecords', 'preview_only')
+    + overviewCountButton(label('section.runtime_records', 'Runtime Records'), counts.runtime_records, 'badge-neutral', '/api/runtime-records')
+    + overviewCountButton(filterValueLabel('runtimeRecords', 'response_id'), runtimeRecords.provider_response_present_count, 'badge-ready', '/api/runtime-records', 'runtimeRecords', 'response_id')
+    + overviewCountButton(filterValueLabel('runtimeRecords', 'advisory_only'), (runtimeRecords.auth_readiness_counts && runtimeRecords.auth_readiness_counts.advisory_only) ?? 0, 'badge-warning', '/api/runtime-records', 'runtimeRecords', 'advisory_only')
+    + overviewCountButton(filterValueLabel('runtimeRecords', 'preview_only'), (runtimeRecords.mutation_readiness_counts && runtimeRecords.mutation_readiness_counts.preview_only) ?? 0, 'badge-warning', '/api/runtime-records', 'runtimeRecords', 'preview_only')
     + '</p>'
     + metricsSection
     + sliceButtonRow(runtimeRecordsSliceButtons())
@@ -5351,13 +5354,13 @@ function renderOverviewSummaryJobsPanel(counts, summaryJobs) {{
   return renderPanel(
     sectionTitle(label('section.summary_jobs', 'Summary Jobs'))
     + '<p>'
-    + overviewJumpButton(sliceBadge(label('section.summary_jobs', 'Summary Jobs'), esc(counts.summary_jobs ?? 0), 'badge-neutral'), '/api/summary-jobs')
-    + overviewJumpButton(sliceBadge(filterValueLabel('summaryJobs', 'response_id'), esc(summaryJobs.provider_response_present_count ?? 0), 'badge-ready'), '/api/summary-jobs', 'summaryJobs', 'response_id')
-    + overviewJumpButton(sliceBadge(filterValueLabel('summaryJobs', 'advisory_only'), esc((summaryJobs.review_capability_counts && summaryJobs.review_capability_counts.advisory_only) ?? 0), 'badge-warning'), '/api/summary-jobs', 'summaryJobs', 'advisory_only')
-    + overviewJumpButton(sliceBadge(label('overview.summary_auth_advisory', 'Summary auth advisory'), esc((summaryJobs.auth_readiness_counts && summaryJobs.auth_readiness_counts.advisory_only) ?? 0), 'badge-warning'), '/api/summary-jobs', 'summaryJobs', 'advisory_only')
-    + overviewJumpButton(sliceBadge(filterValueLabel('summaryJobs', 'package_context_available'), esc((summaryJobs.package_readiness_counts && summaryJobs.package_readiness_counts.package_context_available) ?? 0), 'badge-ready'), '/api/summary-jobs', 'summaryJobs', 'package_context_available')
-    + overviewJumpButton(sliceBadge(filterValueLabel('summaryJobs', 'boundary_aligned'), esc((summaryJobs.identity_assurance_counts && summaryJobs.identity_assurance_counts.boundary_aligned) ?? 0), 'badge-ready'), '/api/summary-jobs', 'summaryJobs', 'boundary_aligned')
-    + overviewJumpButton(sliceBadge(filterValueLabel('summaryJobs', 'preview_only'), esc((summaryJobs.mutation_readiness_counts && summaryJobs.mutation_readiness_counts.preview_only) ?? 0), 'badge-warning'), '/api/summary-jobs', 'summaryJobs', 'preview_only')
+    + overviewCountButton(label('section.summary_jobs', 'Summary Jobs'), counts.summary_jobs, 'badge-neutral', '/api/summary-jobs')
+    + overviewCountButton(filterValueLabel('summaryJobs', 'response_id'), summaryJobs.provider_response_present_count, 'badge-ready', '/api/summary-jobs', 'summaryJobs', 'response_id')
+    + overviewCountButton(filterValueLabel('summaryJobs', 'advisory_only'), (summaryJobs.review_capability_counts && summaryJobs.review_capability_counts.advisory_only) ?? 0, 'badge-warning', '/api/summary-jobs', 'summaryJobs', 'advisory_only')
+    + overviewCountButton(label('overview.summary_auth_advisory', 'Summary auth advisory'), (summaryJobs.auth_readiness_counts && summaryJobs.auth_readiness_counts.advisory_only) ?? 0, 'badge-warning', '/api/summary-jobs', 'summaryJobs', 'advisory_only')
+    + overviewCountButton(filterValueLabel('summaryJobs', 'package_context_available'), (summaryJobs.package_readiness_counts && summaryJobs.package_readiness_counts.package_context_available) ?? 0, 'badge-ready', '/api/summary-jobs', 'summaryJobs', 'package_context_available')
+    + overviewCountButton(filterValueLabel('summaryJobs', 'boundary_aligned'), (summaryJobs.identity_assurance_counts && summaryJobs.identity_assurance_counts.boundary_aligned) ?? 0, 'badge-ready', '/api/summary-jobs', 'summaryJobs', 'boundary_aligned')
+    + overviewCountButton(filterValueLabel('summaryJobs', 'preview_only'), (summaryJobs.mutation_readiness_counts && summaryJobs.mutation_readiness_counts.preview_only) ?? 0, 'badge-warning', '/api/summary-jobs', 'summaryJobs', 'preview_only')
     + '</p>'
     + metricsSection
     + detailLine('Source refs total', summaryJobs.summary_source_total ?? 0)
@@ -5383,25 +5386,25 @@ function renderOverviewTriagePanel(triage, warningButtons, warningSummaries) {{
   return renderPanel(
     sectionTitle(label('section.triage', 'Triage'))
     + '<p>'
-    + overviewJumpButton(sliceBadge(filterValueLabel('reviewQueue', 'review_requested'), esc(triage.needs_attention_reviews ?? 0), 'badge-warning'), '/api/review-queue', 'reviewQueue', 'review_requested')
+    + overviewCountButton(filterValueLabel('reviewQueue', 'review_requested'), triage.needs_attention_reviews, 'badge-warning', '/api/review-queue', 'reviewQueue', 'review_requested')
     + '</p>'
     + '<p>'
-    + overviewJumpButton(sliceBadge(filterValueLabel('reviewQueue', 'ready'), esc(triage.ready_now_reviews ?? 0), 'badge-ready'), '/api/review-queue', 'reviewQueue', 'ready')
-    + overviewJumpButton(sliceBadge(filterValueLabel('reviewQueue', 'advisory'), esc(triage.advisory_only_reviews ?? 0), 'badge-warning'), '/api/review-queue', 'reviewQueue', 'advisory')
+    + overviewCountButton(filterValueLabel('reviewQueue', 'ready'), triage.ready_now_reviews, 'badge-ready', '/api/review-queue', 'reviewQueue', 'ready')
+    + overviewCountButton(filterValueLabel('reviewQueue', 'advisory'), triage.advisory_only_reviews, 'badge-warning', '/api/review-queue', 'reviewQueue', 'advisory')
     + '</p>'
     + '<p>'
-    + overviewJumpButton(sliceBadge(filterValueLabel('reviewQueue', 'package:package_context_available'), esc(triage.package_ready_reviews ?? 0), 'badge-ready'), '/api/review-queue', 'reviewQueue', 'package:package_context_available')
+    + overviewCountButton(filterValueLabel('reviewQueue', 'package:package_context_available'), triage.package_ready_reviews, 'badge-ready', '/api/review-queue', 'reviewQueue', 'package:package_context_available')
     + '</p>'
     + '<p>'
-    + overviewJumpButton(sliceBadge(filterValueLabel('reviewQueue', 'aligned'), esc(triage.cli_parity_aligned_reviews ?? 0), 'badge-ready'), '/api/review-queue', 'reviewQueue', 'aligned')
-    + overviewJumpButton(sliceBadge(filterValueLabel('reviewQueue', 'drift_detected'), esc(triage.cli_parity_drift_reviews ?? 0), 'badge-warning'), '/api/review-queue', 'reviewQueue', 'drift_detected')
+    + overviewCountButton(filterValueLabel('reviewQueue', 'aligned'), triage.cli_parity_aligned_reviews, 'badge-ready', '/api/review-queue', 'reviewQueue', 'aligned')
+    + overviewCountButton(filterValueLabel('reviewQueue', 'drift_detected'), triage.cli_parity_drift_reviews, 'badge-warning', '/api/review-queue', 'reviewQueue', 'drift_detected')
     + '</p>'
     + '<p>'
-    + overviewJumpButton(sliceBadge(filterValueLabel('reviewQueue', 'boundary_aligned'), esc(triage.identity_boundary_aligned_reviews ?? 0), 'badge-ready'), '/api/review-queue', 'reviewQueue', 'boundary_aligned')
-    + overviewJumpButton(sliceBadge(reviewWarningLabel('reviewer_identity_declared_only'), esc(triage.identity_declared_only_reviews ?? 0), 'badge-warning'), '/api/review-queue', 'reviewQueue', 'reviewer_identity_declared_only')
+    + overviewCountButton(filterValueLabel('reviewQueue', 'boundary_aligned'), triage.identity_boundary_aligned_reviews, 'badge-ready', '/api/review-queue', 'reviewQueue', 'boundary_aligned')
+    + overviewCountButton(reviewWarningLabel('reviewer_identity_declared_only'), triage.identity_declared_only_reviews, 'badge-warning', '/api/review-queue', 'reviewQueue', 'reviewer_identity_declared_only')
     + '</p>'
     + '<p>'
-    + overviewJumpButton(sliceBadge(filterValueLabel('reviewQueue', 'response_id'), esc(triage.provider_response_present_reviews ?? 0), 'badge-ready'), '/api/review-queue', 'reviewQueue', 'response_id')
+    + overviewCountButton(filterValueLabel('reviewQueue', 'response_id'), triage.provider_response_present_reviews, 'badge-ready', '/api/review-queue', 'reviewQueue', 'response_id')
     + '</p>'
     + '<p>' + (warningButtons || '') + '</p>'
     + metricsSection

@@ -730,7 +730,7 @@ def test_ui_html_filtering_includes_provider_response_metadata_fields(tmp_path, 
     assert "responseMetadata.provider_status || ''" in html
     assert "String(responseMetadata.usage_total_tokens ?? '')" in html
     assert "...(Array.isArray(responseMetadata.response_keys) ? responseMetadata.response_keys : [])" in html
-    assert "sliceBadge(label('overview.provider_response', 'Provider response')" in html
+    assert "overviewCountButton(label('overview.provider_response', 'Provider response')" in html
     assert "summaryJsonLine('Provider finish reasons', authBoundaryOverview.provider_response_finish_reason_counts)" in html
     assert "summaryJsonLine('Provider statuses', authBoundaryOverview.provider_response_status_counts)" in html
     assert "summaryJsonLine('Provider finish reasons', runtimeRecords.provider_response_finish_reason_counts)" in html
@@ -1223,6 +1223,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "function firstRelatedLink(record, prefix)" in html
     assert "function openEndpointButton(endpoint)" in html
     assert "function latestResponseButton(path, labelKey, fallbackLabel)" in html
+    assert "function overviewCountButton(text, count, cls, endpoint, filterTarget, filterValue)" in html
     assert "function detailNavButton(path, labelText)" in html
     assert "function reviewDetailButton(eventId)" in html
     assert "function relatedDetailButton(record, prefix, fallbackLabel = '')" in html
