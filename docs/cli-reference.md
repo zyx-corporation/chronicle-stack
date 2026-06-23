@@ -479,8 +479,12 @@ chronicle runtime invoke --text "Source text" --operation summarize --execute-co
 
 ```bash
 chronicle summary run --id sum_xxx
+chronicle summary run --id sum_xxx --operation rewrite
 chronicle summary run --id sum_xxx --max-sentences 2
 chronicle summary run --id sum_xxx --draft-title "Runtime Re-draft"
+chronicle summary run --id sum_xxx --artifact-title "Runtime Output"
+chronicle summary run --id sum_xxx --record
+chronicle summary run --id sum_xxx --param tone=concise
 chronicle summary run --id sum_xxx --execute-configured-provider
 chronicle summary run --id sum_xxx --json
 ```
@@ -489,11 +493,14 @@ chronicle summary run --id sum_xxx --json
 
 - 既存の pending-review summary job を explicit runtime boundary 経由で再実行する
 - source refs と prompt provenance を runtime-backed draft に引き継ぐ
+- `--operation summarize` のときは summary path、その他の operation は configured-provider/runtime invoke path を使う
 - no external model API
 - no hidden background execution
 - generated output remains pending review
 - 出力は `runtime_manual` provenance を持つ draft summary job / draft artifact として保存される
 - configured provider 実行時は `runtime_http_manual` provenance と `external_call_made=true` を持つ
+- `--record` を付けると review-oriented `assistant_output` event としても保存される
+- non-summarize operation では `--artifact-title` と `--param key=value` も使える
 
 ### chronicle summary invoke-plan
 

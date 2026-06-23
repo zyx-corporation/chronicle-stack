@@ -155,7 +155,7 @@ overview の runtime records panel でも auth readiness の派生集計を read
 
 ## Summary job re-run
 
-`chronicle summary run --id sum_xxx` は、既存の summary job を explicit manual runtime boundary に通し直し、短縮結果を新しい pending-review draft として保存します。
+`chronicle summary run --id sum_xxx` は、既存の summary job を explicit runtime boundary に通し直し、`summarize` では短縮結果を、他の operation では configured-provider runtime output を新しい pending-review draft として保存します。
 
 この再実行でも:
 
@@ -164,6 +164,14 @@ overview の runtime records panel でも auth readiness の派生集計を read
 - prompt provenance is preserved
 - generated_by = runtime_manual
 - Primary Chronicle records remain authoritative
+
+configured provider を explicit に使う場合は:
+
+- `--execute-configured-provider` が必須
+- `--operation rewrite` など summarize 以外の operation も使える
+- `--record` で review-oriented `assistant_output` event としても残せる
+- `--artifact-title` で draft artifact としても残せる
+- `--param key=value` で operation-specific parameter を repeatable に渡せる
 
 ## Summary job invocation dry-run
 

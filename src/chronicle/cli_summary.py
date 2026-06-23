@@ -9,6 +9,7 @@ from typing import Annotated
 
 import typer
 
+from chronicle.models.artifact import ArtifactType
 from chronicle.models.summary_job import SummarySourceRef
 from chronicle.services.runtime_service import RuntimeService
 from chronicle.services.summary_job_service import SummaryJobService
@@ -25,6 +26,16 @@ def _parse_source_ref(value: str) -> SummarySourceRef:
         record_type, record_id = value.split(":", 1)
         return SummarySourceRef(record_id=record_id, record_type=record_type)
     return SummarySourceRef(record_id=value)
+
+
+def _parse_key_value(value: str) -> tuple[str, str]:
+    if "=" not in value:
+        raise typer.BadParameter("Expected key=value.")
+    key, raw_value = value.split("=", 1)
+    key = key.strip()
+    if not key:
+        raise typer.BadParameter("Expected non-empty key in key=value.")
+    return key, raw_value
 
 
 @summary_app.command("create")
@@ -98,8 +109,13 @@ def summary_show_cmd(
 @summary_app.command("run")
 def summary_run_cmd(
     summary_job_id: Annotated[str, typer.Option("--id", help="Source summary job ID.")],
+    operation: Annotated[str, typer.Option("--operation", help="Runtime operation to run against the source summary job.")] = "summarize",
     max_sentences: Annotated[int, typer.Option("--max-sentences", min=1, help="Maximum number of sentences to keep.")] = 3,
     draft_title: Annotated[str | None, typer.Option("--draft-title", help="Override title for the generated runtime-backed draft summary job.")] = None,
+    record: Annotated[bool, typer.Option("--record", help="Persist the runtime-backed output as an assistant_output event requiring review.")] = False,
+    artifact_title: Annotated[str | None, typer.Option("--artifact-title", help="Also persist the runtime-backed output as a draft artifact with this title.")] = None,
+    artifact_type: Annotated[ArtifactType, typer.Option("--artifact-type", help="Artifact type to use with --artifact-title.")] = ArtifactType.OTHER,
+    param: Annotated[list[str] | None, typer.Option("--param", help="Operation-specific parameter as key=value. Repeatable.")] = None,
     execute_configured_provider: Annotated[
         bool,
         typer.Option(
@@ -112,26 +128,52 @@ def summary_run_cmd(
     """Re-run a local draft through the explicit manual runtime boundary."""
 
     source_job = SummaryJobService().get(summary_job_id)
-    result = RuntimeService().summarize(
-        text=source_job.summary_text,
-        max_sentences=max_sentences,
-        draft_title=draft_title or f"Runtime Draft: {source_job.title}",
-        execute_configured_provider=execute_configured_provider,
-        source_refs=source_job.source_refs,
-        tags=["summary-run", summary_job_id],
-        prompt=source_job.provenance.prompt or f"summary run from {summary_job_id}",
-        operator="summary-run",
-    )
+    params = dict(_parse_key_value(item) for item in (param or []))
+    runtime = RuntimeService()
+    if operation == "summarize":
+        result = runtime.summarize(
+            text=source_job.summary_text,
+            max_sentences=max_sentences,
+            record=record,
+            draft_title=draft_title or f"Runtime Draft: {source_job.title}",
+            execute_configured_provider=execute_configured_provider,
+            source_refs=source_job.source_refs,
+            tags=["summary-run", summary_job_id],
+            prompt=source_job.provenance.prompt or f"summary run from {summary_job_id}",
+            operator="summary-run",
+        )
+    else:
+        result = runtime.invoke(
+            text=source_job.summary_text,
+            operation=operation,
+            record=record,
+            execute_configured_provider=execute_configured_provider,
+            draft_summary_title=draft_title or f"Runtime Draft: {source_job.title}",
+            artifact_title=artifact_title,
+            artifact_type=artifact_type,
+            source_refs=source_job.source_refs,
+            prompt=source_job.provenance.prompt or f"summary run from {summary_job_id}",
+            extra_params=params,
+        )
     if json_output:
         typer.echo(json.dumps(result.model_dump(mode="json"), ensure_ascii=False, indent=2))
         return
 
     typer.echo("Summary job re-run through explicit runtime boundary")
     typer.echo(f"Source summary job: {summary_job_id}")
-    typer.echo(f"Generated: {result.generated_text}")
-    if result.draft_summary_job_id:
+    typer.echo(f"Operation: {operation}")
+    typer.echo(f"Generated: {getattr(result, 'generated_text', getattr(result, 'output_text', ''))}")
+    if getattr(result, "event_id", None):
+        typer.echo(f"Event: {result.event_id}")
+    if getattr(result, "draft_summary_job_id", None):
         typer.echo(f"Draft summary job: {result.draft_summary_job_id}")
-    typer.echo("Boundary: explicit manual runtime only, no external model API, review remains required.")
+    if getattr(result, "artifact_id", None):
+        typer.echo(f"Artifact: {result.artifact_id}")
+    typer.echo(
+        "Boundary: explicit configured-provider execution only, review remains required."
+        if getattr(result, "external_call_made", False)
+        else "Boundary: explicit manual runtime only, no external model API, review remains required."
+    )
 
 
 @summary_app.command("invoke-plan")
