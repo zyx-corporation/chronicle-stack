@@ -102,6 +102,7 @@ flowchart TD
 | Read-only UI visibility for placeholder AI index | v1.7 Phase E 相当 実装済み |
 | Explicit local runtime summarize MVP | v1.7 Phase F 実装済み |
 | Local retrieval dry-run plan MVP | v1.7 Phase G skeleton 実装済み |
+| v1.7 runtime/review/package local UI release preparation | v1.7.0準備中 |
 | GraphRAG query engine | 将来構想 |
 | Full interactive editing UI | 将来構想 |
 
@@ -221,6 +222,10 @@ v1.2 以降では、`/api/events/<id>`, `/api/contexts/<id>`, `/api/artifacts/<i
 - [v1.7 Phase D/E Progress](docs/v1.7-phase-d-e-progress.md)
 - [v1.7 Phase D/E Smoke Profile](docs/smoke-test-v1.7-phase-d-e.md)
 - [v1.7 Phase F/G/H Plan](docs/v1.7-phase-f-g-h-plan.md)
+- [v1.7 Release Status](docs/release-status-v1.7.0.md)
+- [v1.7 Release Readiness](docs/release-readiness-v1.7.md)
+- [v1.7 Release Notes](docs/release-notes-v1.7.0.md)
+- [v1.7 Smoke Test Profile](docs/smoke-test-v1.7.md)
 - [v1.7 Phase H Auth and GUI Mutation Design](docs/v1.7-phase-h-auth-ui-design.md)
 - [CLI リファレンス](docs/cli-reference.md)
 - [curl-based Local Deployment](docs/local-deployment-curl.md)
@@ -286,12 +291,13 @@ ruff check src/ tests/
 
 ## リリース
 
-- Latest published release: **v1.2.0**
-- Current repository-side release target: **v1.3.0**
-- v1.3.0 release readiness: [docs/release-readiness-v1.3.md](docs/release-readiness-v1.3.md)
-- v1.3.0 smoke profile: [docs/smoke-test-v1.3.md](docs/smoke-test-v1.3.md)
-- v1.3.0 release notes: [docs/release-notes-v1.3.0.md](docs/release-notes-v1.3.0.md)
-- v1.3.0 publication requires tag creation, GitHub Release publication, and installer smoke from the tag.
+- Latest published release: **v1.4.0**
+- Current repository-side release target: **v1.7.0**
+- v1.7.0 release status: [docs/release-status-v1.7.0.md](docs/release-status-v1.7.0.md)
+- v1.7.0 release readiness: [docs/release-readiness-v1.7.md](docs/release-readiness-v1.7.md)
+- v1.7.0 smoke profile: [docs/smoke-test-v1.7.md](docs/smoke-test-v1.7.md)
+- v1.7.0 release notes: [docs/release-notes-v1.7.0.md](docs/release-notes-v1.7.0.md)
+- v1.7.0 publication requires tag creation, GitHub Release publication, and installer / `ui-smoke` evidence from the tag.
 
 ## ライセンス
 

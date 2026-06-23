@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## v1.7.0 - 2026-06-23
+
 ### Added
 - Local placeholder AI index CLI surface:
   - `chronicle ai-index status`
