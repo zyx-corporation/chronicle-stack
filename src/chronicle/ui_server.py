@@ -4689,6 +4689,27 @@ function packageContextDetailLines(packageReview, manifest, eligibleContextIds =
     + detailListLine('Package warnings', packageReview && packageReview.package_warnings)
     + detailListLine('Manifest refs', manifest && manifest.referenced_records);
 }}
+function writeRouteDetailLines(writeRouteContract, identityProofContract, authorizationContract, targetStateContract, includeRequestFields = false) {{
+  return detailLine('Write route', writeRouteContract.route_template || '')
+    + detailListLine('Write actions', writeRouteContract.actions, ' | ')
+    + (includeRequestFields ? detailListLine('Write request fields', writeRouteContract.expected_request_fields, ' | ') : '')
+    + detailLine('Write success status', writeRouteContract.success_status_code ?? '')
+    + detailLine('Write blocked status', writeRouteContract.blocked_status_code ?? '')
+    + detailListLine('Durable success requirements', writeRouteContract.durable_success_requirements, ' | ')
+    + detailListLine('Transaction order', writeRouteContract.transaction_order, ' | ')
+    + detailLine('Authorization status', authorizationContract.authorization_status || '')
+    + detailLine('Required assurance', authorizationContract.required_identity_assurance_status || '')
+    + detailLine('Pending target required', authorizationContract.target_pending_required)
+    + detailListLine('Authorization checks', authorizationContract.server_side_checks, ' | ')
+    + detailListLine('Action authorization matrix', (authorizationContract.action_authorization_matrix || []).map(item => ((item.action || 'action') + ': intent=' + (item.ui_intent || '') + '; pending=' + String(item.pending_required) + '; note=' + (item.note_status || ''))), ' | ')
+    + detailLine('Required review status', targetStateContract.required_current_review_status || '')
+    + detailLine('Resolved status code', targetStateContract.resolved_status_code ?? '')
+    + detailListLine('Target-state checks', targetStateContract.target_state_checks, ' | ')
+    + detailListLine('Action target matrix', (targetStateContract.action_target_matrix || []).map(item => ((item.action || 'action') + ': pending=' + String(item.requires_pending) + '; queue=' + (item.resulting_queue_state || '') + '; disposition=' + (item.resulting_disposition || ''))), ' | ')
+    + detailListLine('Failure families', (writeRouteContract.failure_families || []).map(item => ((item.family || 'family') + ': ' + ((item.possible_error_codes || []).join(', ')))), ' | ')
+    + detailLine('Identity proof status', identityProofContract.proof_status || '')
+    + detailListLine('Identity proof fields', identityProofContract.required_identity_fields, ' | ');
+}}
 function renderRetrievalHandoffNotice(record) {{
   if (!record.retrieval_handoff) return '';
   const handoff = record.retrieval_handoff;
@@ -4841,24 +4862,7 @@ function renderMutationEnablementNotice(record) {{
       + detailLine('Reviewer label pattern', reviewerContext.reviewer_label_pattern || '')
       + detailListLine('Reviewer label examples', reviewerContext.reviewer_label_examples, ' | ')
       + detailLine('Session label pattern', reviewerContext.session_label_pattern || '')
-      + detailLine('Write route', writeRouteContract.route_template || '')
-      + detailListLine('Write actions', writeRouteContract.actions, ' | ')
-      + detailLine('Write success status', writeRouteContract.success_status_code ?? '')
-      + detailLine('Write blocked status', writeRouteContract.blocked_status_code ?? '')
-      + detailListLine('Durable success requirements', writeRouteContract.durable_success_requirements, ' | ')
-      + detailListLine('Transaction order', writeRouteContract.transaction_order, ' | ')
-      + detailLine('Authorization status', authorizationContract.authorization_status || '')
-      + detailLine('Required assurance', authorizationContract.required_identity_assurance_status || '')
-      + detailLine('Pending target required', authorizationContract.target_pending_required)
-      + detailListLine('Authorization checks', authorizationContract.server_side_checks, ' | ')
-      + detailListLine('Action authorization matrix', (authorizationContract.action_authorization_matrix || []).map(item => ((item.action || 'action') + ': intent=' + (item.ui_intent || '') + '; pending=' + String(item.pending_required) + '; note=' + (item.note_status || ''))), ' | ')
-      + detailLine('Required review status', targetStateContract.required_current_review_status || '')
-      + detailLine('Resolved status code', targetStateContract.resolved_status_code ?? '')
-      + detailListLine('Target-state checks', targetStateContract.target_state_checks, ' | ')
-      + detailListLine('Action target matrix', (targetStateContract.action_target_matrix || []).map(item => ((item.action || 'action') + ': pending=' + String(item.requires_pending) + '; queue=' + (item.resulting_queue_state || '') + '; disposition=' + (item.resulting_disposition || ''))), ' | ')
-      + detailListLine('Failure families', (writeRouteContract.failure_families || []).map(item => ((item.family || 'family') + ': ' + ((item.possible_error_codes || []).join(', ')))), ' | ')
-      + detailLine('Identity proof status', identityProofContract.proof_status || '')
-      + detailListLine('Identity proof fields', identityProofContract.required_identity_fields, ' | ')
+      + writeRouteDetailLines(writeRouteContract, identityProofContract, authorizationContract, targetStateContract)
       + detailListLine('Next steps', readiness.next_steps, ' | ')
   );
 }}
@@ -5288,13 +5292,7 @@ function renderOverviewMutationReadinessPanel(mutationReadiness) {{
     + detailListLine('Reviewer label examples', reviewerContextRequirements.reviewer_label_examples, ' | ')
     + detailLine('Session label required', reviewerContextRequirements.session_label_required)
     + detailLine('Session label pattern', reviewerContextRequirements.session_label_pattern || '')
-    + detailLine('Write route', writeRouteContract.route_template || '')
-    + detailListLine('Write actions', writeRouteContract.actions, ' | ')
-    + detailListLine('Write request fields', writeRouteContract.expected_request_fields, ' | ')
-    + detailLine('Write success status', writeRouteContract.success_status_code ?? '')
-    + detailLine('Write blocked status', writeRouteContract.blocked_status_code ?? '')
-    + detailLine('Identity proof status', identityProofContract.proof_status || '')
-    + detailListLine('Identity proof fields', identityProofContract.required_identity_fields, ' | ')
+    + writeRouteDetailLines(writeRouteContract, identityProofContract, authorizationContract, targetStateContract, true)
     + detailListLine('Next steps', mutationReadiness.next_steps, ' | ')
   );
 }}
