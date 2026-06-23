@@ -1289,6 +1289,8 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "detailListLine('Target-state checks', targetStateContract.target_state_checks, ' | ')" in html
     assert "detailListLine('Action target matrix', (targetStateContract.action_target_matrix || []).map(item => ((item.action || 'action') + ': pending=' + String(item.requires_pending) + '; queue=' + (item.resulting_queue_state || '') + '; disposition=' + (item.resulting_disposition || ''))), ' | ')" in html
     assert "detailListLine('Failure families', (writeRouteContract.failure_families || []).map(item => ((item.family || 'family') + ': ' + ((item.possible_error_codes || []).join(', ')))), ' | ')" in html
+    assert "detailLine('Target-state recovery status', targetStateRecovery.status || '')" in html
+    assert "detailLine('Resolved queue command', targetStateRecovery.resolved_queue_command || '')" in html
     assert "function renderResponseMetadataNotice(record)" in html
     assert "detailLine('Response ID', summary.response_id || '')" in html
     assert "detailLine('Usage total tokens', summary.usage_total_tokens ?? '')" in html
@@ -1822,6 +1824,48 @@ def test_review_action_requires_session_label_before_authorization_check(tmp_pat
         "reviewer_label_required",
         "invalid_reviewer_label",
     ]
+
+
+def test_review_action_reports_resolved_queue_recovery_when_target_not_pending(tmp_path):
+    ids = _populate(tmp_path)
+    review_service = ReviewService(tmp_path)
+    review_service.approve(
+        event_id=ids["runtime_summary_event_id"],
+        reviewer="alice",
+        reviewer_kind=ReviewerIdentityKind.LOCAL_OPERATOR,
+        session_label="ui-test-session",
+        note="resolve before browser retry",
+    )
+    service = ChronicleUIDataService(
+        tmp_path,
+        mutation_capability_flag=True,
+        enable_ui_mutation=True,
+        auth_mode=UIAuthMode.LOOPBACK_LOCAL,
+        authorization_mode=UIAuthorizationMode.REVIEWER_DECLARED,
+    )
+
+    status, payload = service.review_action_response(
+        f"/api/review-actions/{ids['runtime_summary_event_id']}/approve",
+        {
+            "reviewer_label": "alice",
+            "reviewer_kind": "local_operator",
+            "session_label": "ui-test-session",
+            "ui_intent": "approve",
+        },
+    )
+
+    assert status == 409
+    assert payload["error_code"] == "review_not_pending"
+    assert payload["failure_summary"] == "review_not_pending; inspect resolved queue state before retry"
+    assert payload["failure_contract"]["target_state_recovery"]["status"] == "resolved_queue_check_required"
+    assert payload["failure_contract"]["target_state_recovery"]["pending_queue_sufficient"] is False
+    assert payload["failure_contract"]["target_state_recovery"]["resolved_queue_command"] == (
+        "chronicle review queue --include-resolved --json"
+    )
+    assert "resolved queue" in payload["failure_contract"]["target_state_recovery"]["summary"]
+    assert payload["failure_contract"]["recovery_commands"][0] == (
+        "chronicle review queue --include-resolved --json"
+    )
 
 
 def test_review_action_rejects_invalid_reviewer_label_format(tmp_path):

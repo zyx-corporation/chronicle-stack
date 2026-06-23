@@ -2018,6 +2018,24 @@ class ChronicleUIDataService:
         return [command for index, command in enumerate(commands) if command and command not in commands[:index]]
 
     @staticmethod
+    def _review_action_target_state_recovery(error_code: str | None) -> dict[str, Any]:
+        if error_code == "review_not_pending":
+            return {
+                "status": "resolved_queue_check_required",
+                "summary": "The target is no longer pending in the default queue view; inspect the resolved queue before retrying any follow-up action.",
+                "pending_queue_sufficient": False,
+                "resolved_queue_command": "chronicle review queue --include-resolved --json",
+            }
+        if error_code == "review_target_not_found":
+            return {
+                "status": "chronicle_state_recheck_required",
+                "summary": "The target is missing from the current Chronicle state; inspect the resolved queue and current derived state before retrying.",
+                "pending_queue_sufficient": False,
+                "resolved_queue_command": "chronicle review queue --include-resolved --json",
+            }
+        return {}
+
+    @staticmethod
     def _warning_message(code: str) -> str:
         return REVIEW_WARNING_TEXT.get(code, code.replace("_", " "))
 
@@ -2059,6 +2077,7 @@ class ChronicleUIDataService:
             error_code=error_code,
             audit_id=audit_id,
         )
+        target_state_recovery = ChronicleUIDataService._review_action_target_state_recovery(error_code)
         return {
             "transaction_rule": (
                 "No durable GUI review result is reported as applied unless both review decision persistence and audit insertion succeed."
@@ -2083,6 +2102,7 @@ class ChronicleUIDataService:
                 else cli_equivalent or "Use the equivalent chronicle review CLI command for recovery or inspection."
             ),
             "recovery_commands": recovery_commands,
+            "target_state_recovery": target_state_recovery,
         }
 
     @staticmethod
@@ -3277,12 +3297,17 @@ function contractDetailLines(successContract, failureContract, targetId) {{
   const failureFamilies = Array.isArray((failureContract || {{}}).failure_families)
     ? failureContract.failure_families
     : [];
+  const targetStateRecovery = (failureContract || {{}}).target_state_recovery || {{}};
   const lines = []
     + detailLine('Recovery path', resolvedContract.recovery_path || '')
     + detailLine('Rollback status', resolvedContract.rollback_status || '')
     + detailLine('Transaction status', (successContract || {{}}).transaction_status || '')
     + detailListLine('Durable success requirements', (successContract || {{}}).durable_success_requirements, ' | ')
     + detailLine('Durable mutation on failure', (failureContract || {{}}).durable_mutation_reported_on_failure)
+    + detailLine('Target-state recovery status', targetStateRecovery.status || '')
+    + detailLine('Target-state recovery summary', targetStateRecovery.summary || '')
+    + detailLine('Pending queue sufficient', targetStateRecovery.pending_queue_sufficient)
+    + detailLine('Resolved queue command', targetStateRecovery.resolved_queue_command || '')
     + detailListLine('Possible errors', (failureContract || {{}}).possible_error_codes, ' | ')
     + detailListLine('Failure families', failureFamilies.map(item => ((item.family || 'family') + ': ' + ((item.possible_error_codes || []).join(', ')))), ' | ')
     + detailListLine('Recovery commands', (failureContract || {{}}).recovery_commands, ' | ')
