@@ -1221,6 +1221,8 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "function tableHtml(headers, body)" in html
     assert "function packageReviewButtons(record)" in html
     assert "function firstRelatedLink(record, prefix)" in html
+    assert "function detailNavButton(path, labelText)" in html
+    assert "function relatedDetailButton(record, prefix, fallbackLabel = '')" in html
     assert "function runtimeRelatedButtons(record)" in html
     assert "function reviewRelatedButtons(record)" in html
     assert "function summaryRelatedButtons(record)" in html
@@ -1361,8 +1363,9 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "extraButtons: runtimeRowShortcutButtons" in html
     assert "extraButtons: reviewRowShortcutButtons" in html
     assert "extraButtons: summaryRowShortcutButtons" in html
-    assert "data-detail-nav=\"/api/review-queue/" in html
     assert "Open matching runtime record" in html
+    assert "detailNavButton('/api/review-queue/' + (row.review_target_event_id || '')," in html
+    assert "relatedDetailButton(row, '/api/runtime-records/', 'Open matching runtime record')" in html
     assert "const summaryLink = firstRelatedLink(record, '/api/summary-jobs/');" in html
     assert "const artifactLink = firstRelatedLink(record, '/api/artifacts/');" in html
     assert "buttons.push(listJumpButton(localizeTextValue(summaryLink.label || 'Open summary job'), summaryLink.path));" in html

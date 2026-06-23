@@ -3670,14 +3670,10 @@ function renderRuntimeRecordRow(row, endpoint) {{
   );
   const runtimeRowShortcutButtons = [
     row.review_target_event_id
-      ? '<button data-detail-nav="/api/review-queue/' + esc(row.review_target_event_id) + '">' + esc(label('button.open_review', 'Open review')) + '</button>'
+      ? detailNavButton('/api/review-queue/' + (row.review_target_event_id || ''), label('button.open_review', 'Open review'))
       : '',
-    firstRelatedLink(row, '/api/summary-jobs/')
-      ? '<button data-detail-nav="' + esc(firstRelatedLink(row, '/api/summary-jobs/').path || '') + '">' + esc(localizeTextValue(firstRelatedLink(row, '/api/summary-jobs/').label || 'Open summary job')) + '</button>'
-      : '',
-    firstRelatedLink(row, '/api/artifacts/')
-      ? '<button data-detail-nav="' + esc(firstRelatedLink(row, '/api/artifacts/').path || '') + '">' + esc(localizeTextValue(firstRelatedLink(row, '/api/artifacts/').label || 'Open artifact')) + '</button>'
-      : '',
+    relatedDetailButton(row, '/api/summary-jobs/', 'Open summary job'),
+    relatedDetailButton(row, '/api/artifacts/', 'Open artifact'),
   ].filter(Boolean);
   return '<tr>'
     + '<td>' + button + '</td>'
@@ -3729,9 +3725,7 @@ function renderReviewQueueRow(row, endpoint) {{
   const parityBadge = reviewParityBadge(parity);
   const authBadge = authReadinessBadge(authReadiness.status || '');
   const reviewRowShortcutButtons = [
-    firstRelatedLink(row, '/api/runtime-records/')
-      ? '<button data-detail-nav="' + esc(firstRelatedLink(row, '/api/runtime-records/').path || '') + '">' + esc(localizeTextValue(firstRelatedLink(row, '/api/runtime-records/').label || 'Open matching runtime record')) + '</button>'
-      : '',
+    relatedDetailButton(row, '/api/runtime-records/', 'Open matching runtime record'),
   ].filter(Boolean);
   return '<tr>'
     + '<td>' + button + '</td>'
@@ -3788,15 +3782,13 @@ function renderSummaryJobRow(row, endpoint) {{
   const packageBadge = packageStatusBadge(packageStatus);
   const responseMetadata = row.response_metadata_summary || {{}};
   const targetButton = row.review_target_event_id
-    ? '<button data-detail-nav="/api/review-queue/' + esc(row.review_target_event_id) + '">' + esc(label('button.open_review', 'Open review')) + '</button>'
+    ? detailNavButton('/api/review-queue/' + (row.review_target_event_id || ''), label('button.open_review', 'Open review'))
     : '';
   const summaryRowShortcutButtons = [
     row.review_target_event_id
-      ? '<button data-detail-nav="/api/review-queue/' + esc(row.review_target_event_id) + '">' + esc(label('button.open_review', 'Open review')) + '</button>'
+      ? detailNavButton('/api/review-queue/' + (row.review_target_event_id || ''), label('button.open_review', 'Open review'))
       : '',
-    firstRelatedLink(row, '/api/artifacts/')
-      ? '<button data-detail-nav="' + esc(firstRelatedLink(row, '/api/artifacts/').path || '') + '">' + esc(localizeTextValue(firstRelatedLink(row, '/api/artifacts/').label || 'Open artifact')) + '</button>'
-      : '',
+    relatedDetailButton(row, '/api/artifacts/', 'Open artifact'),
   ].filter(Boolean);
   return '<tr>'
     + '<td>' + button + '</td>'
@@ -4548,6 +4540,13 @@ function navigationCluster(buttons) {{
   const items = Array.isArray(buttons) ? buttons.filter(Boolean) : [];
   return items.length > 0 ? '<p>' + items.join('') + '</p>' : '';
 }}
+function detailNavButton(path, labelText) {{
+  if (!path) return '';
+  const resolvedLabel = labelText || humanizeDetailPath(path);
+  return '<button data-detail-nav="' + esc(path) + '">'
+    + esc(localizeTextValue(resolvedLabel))
+    + '</button>';
+}}
 function moreStatusButtons(status, endpoint, filterTarget, prefix = '') {{
   if (!status) return [];
   return [listJumpButton(label('status.more', 'More') + ' ' + status, endpoint, filterTarget, prefix + status)];
@@ -4589,6 +4588,10 @@ function packageReviewButtons(record) {{
 function firstRelatedLink(record, prefix) {{
   const links = Array.isArray(record.related_links) ? record.related_links : [];
   return links.find(item => String(item.path || '').startsWith(prefix)) || null;
+}}
+function relatedDetailButton(record, prefix, fallbackLabel = '') {{
+  const link = firstRelatedLink(record, prefix);
+  return link ? detailNavButton(link.path || '', link.label || fallbackLabel) : '';
 }}
 function runtimeRelatedButtons(record) {{
   const buttons = [listJumpButton(label('button.open_runtime_records', 'Open Runtime Records'), '/api/runtime-records')];
@@ -4752,11 +4755,7 @@ function renderRelatedLinksNotice(record) {{
   if (!Array.isArray(record.related_links) || record.related_links.length === 0) return '';
   return renderNotice(
     label('notice.related_links', 'Related Links'),
-    '<p>' + record.related_links.map(item =>
-      '<button data-detail-nav="' + esc(item.path || '') + '">'
-      + esc(localizeTextValue(item.label || humanizeDetailPath(item.path || '')))
-      + '</button>'
-    ).join('') + '</p>'
+    '<p>' + record.related_links.map(item => detailNavButton(item.path || '', item.label || '')).join('') + '</p>'
   );
 }}
 function renderAuthReadinessNotice(record) {{
