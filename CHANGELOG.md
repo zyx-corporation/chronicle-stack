@@ -2,6 +2,29 @@
 
 ## Unreleased
 
+## v1.9.0 - 2026-06-23
+
+### Added
+- `v1.9.0` release-track documents:
+  - `docs/release-status-v1.9.0.md`
+  - `docs/release-readiness-v1.9.md`
+  - `docs/release-notes-v1.9.0.md`
+  - `docs/smoke-test-v1.9.md`
+  - `docs/v1.9-release-remaining-issues.md`
+- Dedicated `v1.9.0` release-lane framing for local reviewer/session enforcement-boundary hardening.
+- Explicit `reviewer_enforcement_summary` visibility for route-enforced versus descriptive-only reviewer/session conditions.
+- Explicit `reviewer_validation_gate_summary` visibility for validation, authorization, target-state, and durable-write failure families.
+
+### Changed
+- Project version finalized as `1.9.0`.
+- `v1.9.0` release-lane documents now treat `v1.8` records as historical context rather than the active release lane.
+
+### Notes
+- `v1.9.0` is a local reviewer/session enforcement-boundary release over `v1.8.0`.
+- Repository-side release preparation is complete, but external publication remains a separate release-operator step.
+- The release remains local-first, explicit-enable, and fail-closed.
+- `v1.9.0` still does not imply hosted auth, default-on mutation, multi-user-safe authority, hidden runtime execution, GraphRAG runtime, vector DB, graph DB, correctness proof, or security certification.
+
 ## v1.8.0 - 2026-06-23
 
 ### Added

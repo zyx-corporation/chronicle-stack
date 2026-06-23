@@ -226,11 +226,15 @@ v1.2 以降では、`/api/events/<id>`, `/api/contexts/<id>`, `/api/artifacts/<i
 - [v1.8 Release Status](docs/release-status-v1.8.0.md)
 - [v1.9 Release Status](docs/release-status-v1.9.0.md)
 - [v1.7 Release Readiness](docs/release-readiness-v1.7.md)
+- [v1.9 Release Readiness](docs/release-readiness-v1.9.md)
 - [v1.8 Release Readiness](docs/release-readiness-v1.8.md)
+- [v1.9 Release Notes](docs/release-notes-v1.9.0.md)
 - [v1.8 Release Notes](docs/release-notes-v1.8.0.md)
+- [v1.9 Release Remaining Issues](docs/v1.9-release-remaining-issues.md)
 - [v1.8 Release Remaining Issues](docs/v1.8-release-remaining-issues.md)
 - [v1.7 Release Notes](docs/release-notes-v1.7.0.md)
 - [v1.7 Smoke Test Profile](docs/smoke-test-v1.7.md)
+- [v1.9 Smoke Test Profile](docs/smoke-test-v1.9.md)
 - [v1.8 Smoke Test Profile](docs/smoke-test-v1.8.md)
 - [v1.7 Phase H Auth and GUI Mutation Design](docs/v1.7-phase-h-auth-ui-design.md)
 - [CLI リファレンス](docs/cli-reference.md)
@@ -303,14 +307,18 @@ ruff check src/ tests/
 - v1.8.0 release status: [docs/release-status-v1.8.0.md](docs/release-status-v1.8.0.md)
 - v1.9.0 release status: [docs/release-status-v1.9.0.md](docs/release-status-v1.9.0.md)
 - v1.7.0 release readiness: [docs/release-readiness-v1.7.md](docs/release-readiness-v1.7.md)
+- v1.9.0 release readiness: [docs/release-readiness-v1.9.md](docs/release-readiness-v1.9.md)
 - v1.8.0 release readiness: [docs/release-readiness-v1.8.md](docs/release-readiness-v1.8.md)
+- v1.9.0 release notes: [docs/release-notes-v1.9.0.md](docs/release-notes-v1.9.0.md)
 - v1.8.0 release notes: [docs/release-notes-v1.8.0.md](docs/release-notes-v1.8.0.md)
+- v1.9.0 remaining issues: [docs/v1.9-release-remaining-issues.md](docs/v1.9-release-remaining-issues.md)
 - v1.8.0 remaining issues: [docs/v1.8-release-remaining-issues.md](docs/v1.8-release-remaining-issues.md)
 - v1.7.0 smoke profile: [docs/smoke-test-v1.7.md](docs/smoke-test-v1.7.md)
+- v1.9.0 smoke profile: [docs/smoke-test-v1.9.md](docs/smoke-test-v1.9.md)
 - v1.8.0 smoke profile: [docs/smoke-test-v1.8.md](docs/smoke-test-v1.8.md)
 - v1.7.0 release notes: [docs/release-notes-v1.7.0.md](docs/release-notes-v1.7.0.md)
-- v1.8.0 starts as the local GUI review-route design-hardening lane after the completed v1.7.0 observability release.
-- v1.8.0 publication is complete; `v1.9.0` starts as the local reviewer/session enforcement-boundary lane.
+- v1.8.0 publication is complete and now serves as the immediate historical baseline.
+- `v1.9.0` is the active repository-side reviewer/session enforcement-boundary release lane.
 
 ## ライセンス
 
