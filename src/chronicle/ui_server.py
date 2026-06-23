@@ -4591,6 +4591,9 @@ function collapsibleSection(title, body, open = false) {{
     + body
     + '</details>';
 }}
+function metricsSection(body) {{
+  return collapsibleSection(label('section.metrics', 'Metrics'), body, false);
+}}
 function renderNotice(title, body) {{
   return '<div class="notice">' + sectionTitle(title) + body + '</div>';
 }}
@@ -5198,13 +5201,10 @@ function renderOverviewUiBoundaryPanel(uiBoundary) {{
 }}
 function renderOverviewAuthBoundaryPanel(authBoundary, authBoundaryOverview) {{
   const blockerSummaries = Array.isArray(authBoundary.blocker_summaries) ? authBoundary.blocker_summaries : [];
-  const metricsSection = collapsibleSection(
-    label('section.metrics', 'Metrics'),
+  const metricsBody =
     summaryJsonLine('Auth review capability counts', authBoundaryOverview.review_capability_counts)
       + summaryJsonLine('Provider finish reasons', authBoundaryOverview.provider_response_finish_reason_counts)
-      + summaryJsonLine('Provider statuses', authBoundaryOverview.provider_response_status_counts),
-    false
-  );
+      + summaryJsonLine('Provider statuses', authBoundaryOverview.provider_response_status_counts);
   return renderPanel(
     sectionTitle(label('section.auth_boundary', 'Auth Boundary'))
     + '<p>'
@@ -5217,7 +5217,7 @@ function renderOverviewAuthBoundaryPanel(authBoundary, authBoundaryOverview) {{
     + detailLine('Scope note', authBoundary.scope_note || '')
     + detailLine('Session gating', authBoundary.session_gating)
     + detailLine('Shared machine safe', authBoundary.shared_machine_safe)
-    + metricsSection
+    + metricsSection(metricsBody)
     + detailListLine('Auth blockers', authBoundary.blockers, ' | ')
     + detailListLine('Auth blocker summaries', blockerSummaries.map(item => (item.summary || item.code || 'blocker')), ' | ')
     + navigationCluster([latestResponseButton(authBoundaryOverview.latest_provider_response_detail_path, 'button.open_latest_review_response', 'Open Latest Review Response')])
@@ -5225,11 +5225,7 @@ function renderOverviewAuthBoundaryPanel(authBoundary, authBoundaryOverview) {{
   );
 }}
 function renderOverviewIdentityBoundaryPanel(identityBoundary) {{
-  const metricsSection = collapsibleSection(
-    label('section.metrics', 'Metrics'),
-    summaryJsonLine('Identity assurance counts', identityBoundary.assurance_counts),
-    false
-  );
+  const metricsBody = summaryJsonLine('Identity assurance counts', identityBoundary.assurance_counts);
   return renderPanel(
     sectionTitle(label('section.identity_boundary', 'Identity Boundary'))
     + '<p>'
@@ -5238,7 +5234,7 @@ function renderOverviewIdentityBoundaryPanel(identityBoundary) {{
     + overviewCountButton(uiLabel('Identity aligned'), (identityBoundary.assurance_counts && identityBoundary.assurance_counts.boundary_aligned) ?? 0, 'badge-ready', '/api/review-queue', 'reviewQueue', 'boundary_aligned')
     + '</p>'
     + statusMessageBody(identityBoundary.status, identityBoundary.message)
-    + metricsSection
+    + metricsSection(metricsBody)
     + identityBoundaryDetailLines(identityBoundary)
   );
 }}
@@ -5299,16 +5295,13 @@ function renderOverviewAiIndexPanel(aiIndex, counts) {{
   );
 }}
 function renderOverviewRuntimeRecordsPanel(counts, runtimeRecords) {{
-  const metricsSection = collapsibleSection(
-    label('section.metrics', 'Metrics'),
+  const metricsBody =
     summaryJsonLine('Runtime kinds', runtimeRecords.kind_counts)
       + summaryJsonLine('Auth readiness counts', runtimeRecords.auth_readiness_counts)
       + summaryJsonLine('Mutation readiness counts', runtimeRecords.mutation_readiness_counts)
       + summaryJsonLine('Mutation operational counts', runtimeRecords.mutation_operational_counts)
       + summaryJsonLine('Provider finish reasons', runtimeRecords.provider_response_finish_reason_counts)
-      + summaryJsonLine('Provider statuses', runtimeRecords.provider_response_status_counts),
-    false
-  );
+      + summaryJsonLine('Provider statuses', runtimeRecords.provider_response_status_counts);
   return renderPanel(
     sectionTitle(label('section.runtime_records', 'Runtime Records'))
     + '<p>'
@@ -5317,7 +5310,7 @@ function renderOverviewRuntimeRecordsPanel(counts, runtimeRecords) {{
     + overviewCountButton(filterValueLabel('runtimeRecords', 'advisory_only'), (runtimeRecords.auth_readiness_counts && runtimeRecords.auth_readiness_counts.advisory_only) ?? 0, 'badge-warning', '/api/runtime-records', 'runtimeRecords', 'advisory_only')
     + overviewCountButton(filterValueLabel('runtimeRecords', 'preview_only'), (runtimeRecords.mutation_readiness_counts && runtimeRecords.mutation_readiness_counts.preview_only) ?? 0, 'badge-warning', '/api/runtime-records', 'runtimeRecords', 'preview_only')
     + '</p>'
-    + metricsSection
+    + metricsSection(metricsBody)
     + sliceButtonRow(runtimeRecordsSliceButtons())
     + navigationCluster([
       openEndpointButton('/api/runtime-records'),
@@ -5326,8 +5319,7 @@ function renderOverviewRuntimeRecordsPanel(counts, runtimeRecords) {{
   );
 }}
 function renderOverviewSummaryJobsPanel(counts, summaryJobs) {{
-  const metricsSection = collapsibleSection(
-    label('section.metrics', 'Metrics'),
+  const metricsBody =
     summaryJsonLine('Status counts', summaryJobs.status_counts)
       + summaryJsonLine('Review capability counts', summaryJobs.review_capability_counts)
       + summaryJsonLine('Auth readiness counts', summaryJobs.auth_readiness_counts)
@@ -5338,9 +5330,7 @@ function renderOverviewSummaryJobsPanel(counts, summaryJobs) {{
       + summaryJsonLine('Provider statuses', summaryJobs.provider_response_status_counts)
       + summaryJsonLine('Identity assurance counts', summaryJobs.identity_assurance_counts)
       + summaryJsonLine('Reviewer kind counts', summaryJobs.reviewer_kind_counts)
-      + summaryJsonLine('Runtime provider counts', summaryJobs.runtime_provider_counts),
-    false
-  );
+      + summaryJsonLine('Runtime provider counts', summaryJobs.runtime_provider_counts);
   return renderPanel(
     sectionTitle(label('section.summary_jobs', 'Summary Jobs'))
     + '<p>'
@@ -5352,7 +5342,7 @@ function renderOverviewSummaryJobsPanel(counts, summaryJobs) {{
     + overviewCountButton(filterValueLabel('summaryJobs', 'boundary_aligned'), (summaryJobs.identity_assurance_counts && summaryJobs.identity_assurance_counts.boundary_aligned) ?? 0, 'badge-ready', '/api/summary-jobs', 'summaryJobs', 'boundary_aligned')
     + overviewCountButton(filterValueLabel('summaryJobs', 'preview_only'), (summaryJobs.mutation_readiness_counts && summaryJobs.mutation_readiness_counts.preview_only) ?? 0, 'badge-warning', '/api/summary-jobs', 'summaryJobs', 'preview_only')
     + '</p>'
-    + metricsSection
+    + metricsSection(metricsBody)
     + detailLine('Source refs total', summaryJobs.summary_source_total ?? 0)
     + sliceButtonRow(summaryJobsSliceButtons())
     + navigationCluster([
@@ -5362,17 +5352,14 @@ function renderOverviewSummaryJobsPanel(counts, summaryJobs) {{
   );
 }}
 function renderOverviewTriagePanel(triage, warningButtons, warningSummaries) {{
-  const metricsSection = collapsibleSection(
-    label('section.metrics', 'Metrics'),
+  const metricsBody =
     summaryJsonLine('Runtime kinds', triage.runtime_record_kinds)
       + summaryJsonLine('Review capability counts', triage.review_capability_counts)
       + summaryJsonLine('Package readiness counts', triage.package_readiness_counts)
       + summaryJsonLine('CLI parity counts', triage.cli_parity_counts)
       + summaryJsonLine('Identity assurance counts', triage.identity_assurance_counts)
       + summaryJsonLine('Reviewer kind counts', triage.reviewer_kind_counts)
-      + summaryJsonLine('Warning counts', triage.warning_counts),
-    false
-  );
+      + summaryJsonLine('Warning counts', triage.warning_counts);
   return renderPanel(
     sectionTitle(label('section.triage', 'Triage'))
     + '<p>'
@@ -5397,7 +5384,7 @@ function renderOverviewTriagePanel(triage, warningButtons, warningSummaries) {{
     + overviewCountButton(filterValueLabel('reviewQueue', 'response_id'), triage.provider_response_present_reviews, 'badge-ready', '/api/review-queue', 'reviewQueue', 'response_id')
     + '</p>'
     + '<p>' + (warningButtons || '') + '</p>'
-    + metricsSection
+    + metricsSection(metricsBody)
     + '<p>' + esc(label('overview.warning_priority', 'Warning priority')) + ': '
     + (warningSummaries.length > 0
       ? warningSummaries.map(item =>

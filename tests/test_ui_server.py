@@ -1251,6 +1251,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "function collapsibleJsonBlock(summaryLabel, value, open = false)" in html
     assert "function noticeSection(title, body)" in html
     assert "function collapsibleSection(title, body, open = false)" in html
+    assert "function metricsSection(body)" in html
     assert "label('button.actions', 'Actions')" in html
     assert "label('button.more_details', 'More details')" in html
     assert "label('label.record_json', 'Record JSON')" in html
