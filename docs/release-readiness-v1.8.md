@@ -18,7 +18,7 @@ It includes:
 - preserved fail-closed browser-triggered review mutation contract
 - `v1.8` release readiness
 - `v1.8` smoke profile
-- future `v1.8` release notes
+- `v1.8` release notes
 - future version bump to `1.8.0`
 - future changelog update for `v1.8.0`
 
@@ -88,4 +88,4 @@ Transformed: scattered `v1.8.0` design-hardening progress becomes one release-re
 
 Supplemented: explicit release framing for route-family semantics, status-code semantics, and local reviewer/session contract boundaries.
 
-Unresolved: actual `v1.8.0` release notes, version bump, changelog entry, publication evidence, and any future stronger enforcement beyond the current local contract surface.
+Unresolved: final `v1.8.0` version bump, changelog entry, publication evidence, and any future stronger enforcement beyond the current local contract surface.

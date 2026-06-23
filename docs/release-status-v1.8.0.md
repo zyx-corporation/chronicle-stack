@@ -23,12 +23,15 @@ Current `v1.8.0` repository progress now includes:
 - ADR-0027 defining the local GUI review-route expansion boundary
 - explicit read-only contract exposure of the action route family on UI boundary and mutation-readiness surfaces
 - preserved CLI-equivalent route semantics for each supported local review action
+- explicit `v1.8.0` release-notes and remaining-issues entry points
 
 ## Current release documents
 
 - `docs/adr/0027-local-gui-review-route-contract.md`
 - `docs/release-readiness-v1.8.md`
+- `docs/release-notes-v1.8.0.md`
 - `docs/smoke-test-v1.8.md`
+- `docs/v1.8-release-remaining-issues.md`
 - `docs/v1.7-phase-f-g-h-remaining-issues.md`
 - `docs/v1.7-phase-h-gated-gui-mutation-preview.md`
 
@@ -50,4 +53,5 @@ Current repository-side review for `v1.8.0` preserves the following:
 - `v1.7.0` remains the latest published release
 - the next release lane stays local-first and contract-driven
 - repository-side readiness and smoke entry points now exist for the `v1.8.0` lane
-- unresolved work remains release notes, version bump, changelog update, final smoke evidence, and publication evidence
+- release-notes and remaining-issues entry points now also exist for the `v1.8.0` lane
+- unresolved work remains version bump, changelog update, final smoke evidence, and publication evidence
