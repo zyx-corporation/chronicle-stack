@@ -1319,11 +1319,19 @@ class ChronicleUIDataService:
         operational_readiness = mutation_readiness.get("operational_readiness", {})
         write_route_contract = mutation_readiness.get("write_route_contract", {})
         identity_proof_contract = write_route_contract.get("identity_proof_contract", {})
+        blocking_summaries = [
+            str(item)
+            for item in operational_readiness.get("blocking_summaries", [])
+            if str(item)
+        ]
         return {
             "status": str(mutation_readiness.get("status", "")),
+            "message": str(mutation_readiness.get("message", "")),
+            "scope_note": str(mutation_readiness.get("scope_note", "")),
             "enablement_ready": bool(mutation_readiness.get("enablement_ready", False)),
             "operational_status": str(operational_readiness.get("status", "")),
             "remaining_count": int(operational_readiness.get("remaining_count", 0) or 0),
+            "remaining_summary": blocking_summaries[0] if blocking_summaries else "",
             "blocked_status_code": write_route_contract.get("blocked_status_code"),
             "success_status_code": write_route_contract.get("success_status_code"),
             "identity_proof_status": str(identity_proof_contract.get("proof_status", "")),
@@ -3258,11 +3266,20 @@ function renderMutationEnablementSummary(summary) {{
   const proofFields = Array.isArray(summary.identity_proof_fields) ? summary.identity_proof_fields : [];
   return [
     '<span class="id">mutation=' + esc(summary.status || '') + '</span>',
+    summary.message
+      ? '<span class="id">message=' + esc(summary.message) + '</span>'
+      : '',
+    summary.scope_note
+      ? '<span class="id">scope=' + esc(summary.scope_note) + '</span>'
+      : '',
     summary.operational_status
       ? '<span class="id">operational=' + esc(summary.operational_status) + '</span>'
       : '',
     typeof summary.remaining_count === 'number'
       ? '<span class="id">remaining=' + esc(summary.remaining_count) + '</span>'
+      : '',
+    summary.remaining_summary
+      ? '<span class="id">remaining-summary=' + esc(summary.remaining_summary) + '</span>'
       : '',
     summary.blocked_status_code
       ? '<span class="id">blocked-status=' + esc(summary.blocked_status_code) + '</span>'

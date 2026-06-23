@@ -470,8 +470,15 @@ def test_ui_data_service_read_endpoints(tmp_path):
     assert runtime_summary_row["review_target_event_id"] == ids["runtime_summary_event_id"]
     assert runtime_summary_row["action_preview_summary"]["status"] == "preview_only"
     assert runtime_summary_row["mutation_enablement_summary"]["status"] == "preview_only"
+    assert "explicit local write enablement still requires" in runtime_summary_row["mutation_enablement_summary"]["message"]
+    assert runtime_summary_row["mutation_enablement_summary"]["scope_note"].startswith(
+        "The UI remains preview-only"
+    )
     assert runtime_summary_row["mutation_enablement_summary"]["blocked_status_code"] == 403
     assert runtime_summary_row["mutation_enablement_summary"]["identity_proof_status"] == "local_operator_advisory"
+    assert runtime_summary_row["mutation_enablement_summary"]["remaining_summary"].startswith(
+        "Capability flag enabled: "
+    )
     assert len(service.review_queue()["review_queue"]) == 3
     assert len(service.summary_jobs_list()["summary_jobs"]) == 1
     assert service.summary_jobs_list()["summary_jobs"][0]["summary_job_id"].startswith("sum_")
@@ -485,6 +492,9 @@ def test_ui_data_service_read_endpoints(tmp_path):
     assert service.summary_jobs_list()["summary_jobs"][0]["action_preview_summary"]["write_route_contract"]["route_template"] == "/api/review-actions/<event_id>/<action>"
     assert service.summary_jobs_list()["summary_jobs"][0]["identity_assurance_status"] == "unknown"
     assert service.summary_jobs_list()["summary_jobs"][0]["mutation_enablement_summary"]["status"] == "preview_only"
+    assert service.summary_jobs_list()["summary_jobs"][0]["mutation_enablement_summary"]["scope_note"].startswith(
+        "The UI remains preview-only"
+    )
     assert service.summary_jobs_list()["summary_jobs"][0]["mutation_enablement_summary"]["remaining_count"] >= 1
     assert service.runtime_config_state()["runtime_config"]["config"]["provider_name"] == "ui-local"
     assert service.review_queue()["review_queue"][0]["review_preview_only"] is True
@@ -504,6 +514,7 @@ def test_ui_data_service_read_endpoints(tmp_path):
         "/api/review-actions/evt_"
     )
     assert service.review_queue()["review_queue"][0]["mutation_enablement_summary"]["operational_status"] == "blocked"
+    assert service.review_queue()["review_queue"][0]["mutation_enablement_summary"]["remaining_summary"]
     assert service.review_queue()["review_queue"][0]["cli_parity_summary"]["status"] == "aligned"
     assert service.review_queue()["review_queue"][0]["cli_parity_summary"]["expected_actions"] == [
         "approve",
@@ -680,6 +691,9 @@ def test_ui_html_filtering_includes_provider_response_metadata_fields(tmp_path, 
     assert "function renderPreviewContractSummary(preview, previewTarget = 'action-preview-response')" in html
     assert "function mutationEnablementBadge(summary)" in html
     assert "function renderMutationEnablementSummary(summary)" in html
+    assert "message=" in html
+    assert "scope=" in html
+    assert "remaining-summary=" in html
     assert "function sliceButtonRow(buttons)" in html
     assert "function filterValueLabel(target, value)" in html
     assert "function reviewQueueSliceButtons()" in html
