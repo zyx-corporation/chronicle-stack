@@ -5351,6 +5351,29 @@ function renderOverviewSummaryJobsPanel(counts, summaryJobs) {{
     + endpointLatestResponseCluster('/api/summary-jobs', summaryJobs.latest_provider_response_detail_path, 'button.open_latest_summary_response', 'Open Latest Summary Response')
   );
 }}
+function overviewTriageCountRows(triage) {{
+  return buttonRow([
+    overviewCountButton(filterValueLabel('reviewQueue', 'review_requested'), triage.needs_attention_reviews, 'badge-warning', '/api/review-queue', 'reviewQueue', 'review_requested'),
+  ])
+    + buttonRow([
+      overviewCountButton(filterValueLabel('reviewQueue', 'ready'), triage.ready_now_reviews, 'badge-ready', '/api/review-queue', 'reviewQueue', 'ready'),
+      overviewCountButton(filterValueLabel('reviewQueue', 'advisory'), triage.advisory_only_reviews, 'badge-warning', '/api/review-queue', 'reviewQueue', 'advisory'),
+    ])
+    + buttonRow([
+      overviewCountButton(filterValueLabel('reviewQueue', 'package:package_context_available'), triage.package_ready_reviews, 'badge-ready', '/api/review-queue', 'reviewQueue', 'package:package_context_available'),
+    ])
+    + buttonRow([
+      overviewCountButton(filterValueLabel('reviewQueue', 'aligned'), triage.cli_parity_aligned_reviews, 'badge-ready', '/api/review-queue', 'reviewQueue', 'aligned'),
+      overviewCountButton(filterValueLabel('reviewQueue', 'drift_detected'), triage.cli_parity_drift_reviews, 'badge-warning', '/api/review-queue', 'reviewQueue', 'drift_detected'),
+    ])
+    + buttonRow([
+      overviewCountButton(filterValueLabel('reviewQueue', 'boundary_aligned'), triage.identity_boundary_aligned_reviews, 'badge-ready', '/api/review-queue', 'reviewQueue', 'boundary_aligned'),
+      overviewCountButton(reviewWarningLabel('reviewer_identity_declared_only'), triage.identity_declared_only_reviews, 'badge-warning', '/api/review-queue', 'reviewQueue', 'reviewer_identity_declared_only'),
+    ])
+    + buttonRow([
+      overviewCountButton(filterValueLabel('reviewQueue', 'response_id'), triage.provider_response_present_reviews, 'badge-ready', '/api/review-queue', 'reviewQueue', 'response_id'),
+    ]);
+}}
 function renderOverviewTriagePanel(triage, warningButtons, warningSummaries) {{
   const metricsBody =
     summaryJsonLine('Runtime kinds', triage.runtime_record_kinds)
@@ -5362,27 +5385,7 @@ function renderOverviewTriagePanel(triage, warningButtons, warningSummaries) {{
       + summaryJsonLine('Warning counts', triage.warning_counts);
   return renderPanel(
     sectionTitle(label('section.triage', 'Triage'))
-    + '<p>'
-    + overviewCountButton(filterValueLabel('reviewQueue', 'review_requested'), triage.needs_attention_reviews, 'badge-warning', '/api/review-queue', 'reviewQueue', 'review_requested')
-    + '</p>'
-    + '<p>'
-    + overviewCountButton(filterValueLabel('reviewQueue', 'ready'), triage.ready_now_reviews, 'badge-ready', '/api/review-queue', 'reviewQueue', 'ready')
-    + overviewCountButton(filterValueLabel('reviewQueue', 'advisory'), triage.advisory_only_reviews, 'badge-warning', '/api/review-queue', 'reviewQueue', 'advisory')
-    + '</p>'
-    + '<p>'
-    + overviewCountButton(filterValueLabel('reviewQueue', 'package:package_context_available'), triage.package_ready_reviews, 'badge-ready', '/api/review-queue', 'reviewQueue', 'package:package_context_available')
-    + '</p>'
-    + '<p>'
-    + overviewCountButton(filterValueLabel('reviewQueue', 'aligned'), triage.cli_parity_aligned_reviews, 'badge-ready', '/api/review-queue', 'reviewQueue', 'aligned')
-    + overviewCountButton(filterValueLabel('reviewQueue', 'drift_detected'), triage.cli_parity_drift_reviews, 'badge-warning', '/api/review-queue', 'reviewQueue', 'drift_detected')
-    + '</p>'
-    + '<p>'
-    + overviewCountButton(filterValueLabel('reviewQueue', 'boundary_aligned'), triage.identity_boundary_aligned_reviews, 'badge-ready', '/api/review-queue', 'reviewQueue', 'boundary_aligned')
-    + overviewCountButton(reviewWarningLabel('reviewer_identity_declared_only'), triage.identity_declared_only_reviews, 'badge-warning', '/api/review-queue', 'reviewQueue', 'reviewer_identity_declared_only')
-    + '</p>'
-    + '<p>'
-    + overviewCountButton(filterValueLabel('reviewQueue', 'response_id'), triage.provider_response_present_reviews, 'badge-ready', '/api/review-queue', 'reviewQueue', 'response_id')
-    + '</p>'
+    + overviewTriageCountRows(triage)
     + '<p>' + (warningButtons || '') + '</p>'
     + metricsSection(metricsBody)
     + '<p>' + esc(label('overview.warning_priority', 'Warning priority')) + ': '
