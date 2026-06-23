@@ -1200,6 +1200,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "function renderOverviewTriagePanel(triage, warningButtons, warningSummaries)" in html
     assert "function overviewWarningButtons(warningSummaries)" in html
     assert "function overviewWarningPriorityBadges(warningSummaries)" in html
+    assert "function overviewTriageJumpButtons()" in html
     assert "const overviewPanelRenderers = [" in html
     assert "function renderOverviewPanels(data)" in html
     assert "const detailPathResolvers =" in html
@@ -1415,12 +1416,14 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "package:no_context_records" in html
     assert 'data-reset-filters="all"' in html
     assert "listJumpButton(filterValueLabel('reviewQueue', 'advisory'), '/api/review-queue', 'reviewQueue', 'advisory')" in html
+    assert "listJumpButton(filterValueLabel('reviewQueue', 'package:package_context_available'), '/api/review-queue', 'reviewQueue', 'package:package_context_available')" in html
     assert "listJumpButton(filterValueLabel('reviewQueue', 'aligned'), '/api/review-queue', 'reviewQueue', 'aligned')" in html
     assert "listJumpButton(filterValueLabel('reviewQueue', 'boundary_aligned'), '/api/review-queue', 'reviewQueue', 'boundary_aligned')" in html
     assert "listJumpButton(reviewWarningLabel('ui_auth_not_enabled'), '/api/review-queue', 'reviewQueue', 'ui_auth_not_enabled')" in html
     assert "listJumpButton(reviewWarningLabel('reviewer_identity_declared_only'), '/api/review-queue', 'reviewQueue', 'reviewer_identity_declared_only')" in html
     assert "listJumpButton(filterValueLabel('runtimeRecords', 'retrieval_plan'), '/api/runtime-records', 'runtimeRecords', 'retrieval_plan')" in html
     assert "overviewWarningPriorityBadges(warningSummaries)" in html
+    assert "overviewTriageJumpButtons()" in html
     assert "data-detail-nav" in html
     assert "data-detail-trail" in html
     assert "data-back-view" in html

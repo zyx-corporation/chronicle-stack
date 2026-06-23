@@ -5398,14 +5398,7 @@ function renderOverviewTriagePanel(triage, warningButtons, warningSummaries) {{
       '<button data-reset-filters="all">' + esc(label('button.reset_filter', 'Reset Filter')) + '</button>',
     ])
     + sliceButtonRow(reviewQueueSliceButtons())
-    + '<p>' + listJumpButton(filterValueLabel('reviewQueue', 'advisory'), '/api/review-queue', 'reviewQueue', 'advisory')
-    + listJumpButton(filterValueLabel('reviewQueue', 'package:package_context_available'), '/api/review-queue', 'reviewQueue', 'package:package_context_available')
-    + listJumpButton(filterValueLabel('reviewQueue', 'aligned'), '/api/review-queue', 'reviewQueue', 'aligned')
-    + listJumpButton(filterValueLabel('reviewQueue', 'boundary_aligned'), '/api/review-queue', 'reviewQueue', 'boundary_aligned')
-    + listJumpButton(reviewWarningLabel('ui_auth_not_enabled'), '/api/review-queue', 'reviewQueue', 'ui_auth_not_enabled')
-    + listJumpButton(reviewWarningLabel('reviewer_identity_declared_only'), '/api/review-queue', 'reviewQueue', 'reviewer_identity_declared_only')
-    + listJumpButton(filterValueLabel('runtimeRecords', 'retrieval_plan'), '/api/runtime-records', 'runtimeRecords', 'retrieval_plan')
-    + '</p>'
+    + '<p>' + overviewTriageJumpButtons() + '</p>'
   );
 }}
 function overviewWarningButtons(warningSummaries) {{
@@ -5424,6 +5417,17 @@ function overviewWarningPriorityBadges(warningSummaries) {{
         sliceBadge((item.label || item.code || 'warning'), item.count ?? 0, 'badge-warning')
       ).join('')
     : '(none)';
+}}
+function overviewTriageJumpButtons() {{
+  return [
+    listJumpButton(filterValueLabel('reviewQueue', 'advisory'), '/api/review-queue', 'reviewQueue', 'advisory'),
+    listJumpButton(filterValueLabel('reviewQueue', 'package:package_context_available'), '/api/review-queue', 'reviewQueue', 'package:package_context_available'),
+    listJumpButton(filterValueLabel('reviewQueue', 'aligned'), '/api/review-queue', 'reviewQueue', 'aligned'),
+    listJumpButton(filterValueLabel('reviewQueue', 'boundary_aligned'), '/api/review-queue', 'reviewQueue', 'boundary_aligned'),
+    listJumpButton(reviewWarningLabel('ui_auth_not_enabled'), '/api/review-queue', 'reviewQueue', 'ui_auth_not_enabled'),
+    listJumpButton(reviewWarningLabel('reviewer_identity_declared_only'), '/api/review-queue', 'reviewQueue', 'reviewer_identity_declared_only'),
+    listJumpButton(filterValueLabel('runtimeRecords', 'retrieval_plan'), '/api/runtime-records', 'runtimeRecords', 'retrieval_plan'),
+  ].join('');
 }}
 const overviewPanelRenderers = [
   data => renderOverviewHeaderPanel(data.chronicle),
