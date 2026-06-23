@@ -1300,6 +1300,8 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "function renderOverviewAuthBoundaryPanel(authBoundary, authBoundaryOverview)" in html
     assert "function renderOverviewIdentityBoundaryPanel(identityBoundary)" in html
     assert "function renderOverviewReviewerBoundaryPanel(reviewerBoundary)" in html
+    assert "function reviewerBoundaryFilterValue(kind, status)" in html
+    assert "function reviewerBoundaryCountButtons(target, endpoint, enforcementCounts, gateCounts)" in html
     assert "function overviewRuntimeRecordCountButtons(counts, runtimeRecords)" in html
     assert "function renderOverviewRuntimeRecordsPanel(counts, runtimeRecords)" in html
     assert "function overviewSummaryJobCountButtons(counts, summaryJobs)" in html
@@ -1313,6 +1315,10 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "const overviewPanelRenderers = [" in html
     assert "label('overview.reviewer_runtime_enforcement_counts', 'Runtime enforcement counts')" in html
     assert "label('ui.label.validation_gate_status', 'Validation gate status')" in html
+    assert "reviewerBoundaryFilterValue('reviewer_enforcement', status)" in html
+    assert "sliceButtonRow(reviewerBoundaryListButtons('runtimeRecords', '/api/runtime-records', sorted))" in html
+    assert "sliceButtonRow(reviewerBoundaryListButtons('reviewQueue', '/api/review-queue', sorted))" in html
+    assert "sliceButtonRow(reviewerBoundaryListButtons('summaryJobs', '/api/summary-jobs', sorted))" in html
     assert "function renderOverviewPanels(data)" in html
     assert "const detailPathResolvers =" in html
     assert "function endpointBody(endpoint, payload)" in html

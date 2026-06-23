@@ -15,6 +15,7 @@ Current `v1.10.0` repository progress includes:
 - accepted ADR scope for reviewer-boundary observability
 - overview aggregation for reviewer enforcement and validation-gate states
 - read-only list-surface badges for existing reviewer boundary row statuses
+- direct overview-to-list slice/filter navigation for reviewer-boundary statuses
 - release-readiness, release-notes, and smoke-profile entry points for the lane
 - i18n-ready presentation routing for reviewer-boundary labels and metrics
 

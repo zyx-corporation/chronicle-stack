@@ -4103,6 +4103,8 @@ function renderRuntimeRecordsTable(endpoint, rows) {{
   const query = (window.__chronicleFilters && window.__chronicleFilters.runtimeRecords || '').toLowerCase();
   const filtered = filterRows(rows, row => {{
     if (!query) return true;
+    if (matchesReviewerBoundaryFilter(query, row.reviewer_enforcement_status, row.reviewer_validation_gate_status)) return true;
+    if (query.startsWith('reviewer_enforcement:') || query.startsWith('reviewer_gate:')) return false;
     const preview = row.runtime_record_preview || {{}};
     const actionPreview = row.action_preview_summary || {{}};
     const mutationEnablement = row.mutation_enablement_summary || {{}};
@@ -4111,6 +4113,8 @@ function renderRuntimeRecordsTable(endpoint, rows) {{
       row.event_id || '',
       row.runtime_record_kind || '',
       row.auth_readiness_status || '',
+      row.reviewer_enforcement_status || '',
+      row.reviewer_validation_gate_status || '',
       row.review_capability_status || '',
       row.identity_assurance_status || '',
       preview.title || '',
@@ -4139,6 +4143,7 @@ function renderRuntimeRecordsTable(endpoint, rows) {{
       {{ value: 'kind', label: t('sort.runtime.kind') }},
     ], runtimeRecordsFilterChips(), query)
     + sliceButtonRow(runtimeRecordsSliceButtons())
+    + sliceButtonRow(reviewerBoundaryListButtons('runtimeRecords', '/api/runtime-records', sorted))
     + emptyFilterState(query, sorted, uiLabel('No matching runtime records for current filter.'), 'runtimeRecords')
     + (
       mutationEnabled
@@ -4164,6 +4169,8 @@ function renderReviewQueueTable(endpoint, rows) {{
   const query = (window.__chronicleFilters && window.__chronicleFilters.reviewQueue || '').toLowerCase();
   const filtered = filterRows(rows, row => {{
     if (!query) return true;
+    if (matchesReviewerBoundaryFilter(query, row.reviewer_enforcement_status, row.reviewer_validation_gate_status)) return true;
+    if (query.startsWith('reviewer_enforcement:') || query.startsWith('reviewer_gate:')) return false;
     const capability = row.review_capability || {{}};
     const readiness = row.package_readiness_summary || {{}};
     const parity = row.cli_parity_summary || {{}};
@@ -4174,6 +4181,8 @@ function renderReviewQueueTable(endpoint, rows) {{
       row.target_event_id || '',
       row.target_summary || '',
       row.review_kind || '',
+      row.reviewer_enforcement_status || '',
+      row.reviewer_validation_gate_status || '',
       capability.status || '',
       readiness.label || '',
       parity.status || '',
@@ -4202,6 +4211,7 @@ function renderReviewQueueTable(endpoint, rows) {{
       {{ value: 'reviewer', label: t('sort.review.reviewer') }},
     ], reviewQueueFilterChips(), query)
     + sliceButtonRow(reviewQueueSliceButtons())
+    + sliceButtonRow(reviewerBoundaryListButtons('reviewQueue', '/api/review-queue', sorted))
     + emptyFilterState(query, sorted, uiLabel('No matching review rows for current filter.'), 'reviewQueue')
     + (
       mutationEnabled
@@ -4227,6 +4237,8 @@ function renderSummaryJobsTable(endpoint, rows) {{
   const query = (window.__chronicleFilters && window.__chronicleFilters.summaryJobs || '').toLowerCase();
   const filtered = filterRows(rows, row => {{
     if (!query) return true;
+    if (matchesReviewerBoundaryFilter(query, row.reviewer_enforcement_status, row.reviewer_validation_gate_status)) return true;
+    if (query.startsWith('reviewer_enforcement:') || query.startsWith('reviewer_gate:')) return false;
     const responseMetadata = row.response_metadata_summary || {{}};
     const mutationEnablement = row.mutation_enablement_summary || {{}};
     return includesQuery([
@@ -4235,6 +4247,8 @@ function renderSummaryJobsTable(endpoint, rows) {{
       row.status || '',
       row.review_capability_status || '',
       row.auth_readiness_status || '',
+      row.reviewer_enforcement_status || '',
+      row.reviewer_validation_gate_status || '',
       row.package_readiness_status || '',
       row.identity_assurance_status || '',
       mutationEnablement.status || '',
@@ -4263,6 +4277,7 @@ function renderSummaryJobsTable(endpoint, rows) {{
       {{ value: 'title', label: t('sort.summary.title') }},
     ], summaryJobsFilterChips(), query)
     + sliceButtonRow(summaryJobsSliceButtons())
+    + sliceButtonRow(reviewerBoundaryListButtons('summaryJobs', '/api/summary-jobs', sorted))
     + emptyFilterState(query, sorted, uiLabel('No matching summary jobs for current filter.'), 'summaryJobs')
     + (
       mutationEnabled
@@ -4342,6 +4357,31 @@ function textInput(id, placeholder) {{
 }}
 function filterRows(rows, predicate) {{
   return rows.filter(predicate);
+}}
+function reviewerBoundaryFilterValue(kind, status) {{
+  return String(kind || '') + ':' + String(status || '');
+}}
+function reviewerBoundaryStatusLabel(kind, status) {{
+  const normalizedKind = String(kind || '');
+  const normalizedStatus = String(status || '');
+  if (!normalizedStatus) return '';
+  if (normalizedKind === 'reviewer_enforcement') {{
+    return label('badge.reviewer_enforcement', 'Reviewer enforcement') + ': ' + normalizedStatus;
+  }}
+  if (normalizedKind === 'reviewer_gate') {{
+    return label('badge.reviewer_gate', 'Reviewer gate') + ': ' + normalizedStatus;
+  }}
+  return normalizedStatus;
+}}
+function matchesReviewerBoundaryFilter(filterValue, enforcementStatus, gateStatus) {{
+  const normalizedFilter = String(filterValue || '');
+  if (normalizedFilter.startsWith('reviewer_enforcement:')) {{
+    return normalizedFilter === reviewerBoundaryFilterValue('reviewer_enforcement', enforcementStatus || '');
+  }}
+  if (normalizedFilter.startsWith('reviewer_gate:')) {{
+    return normalizedFilter === reviewerBoundaryFilterValue('reviewer_gate', gateStatus || '');
+  }}
+  return false;
 }}
 function includesQuery(values, query) {{
   return JSON.stringify(values).toLowerCase().includes(query);
@@ -4656,6 +4696,12 @@ function filterValueLabel(target, value) {{
   const normalizedTarget = String(target || '');
   const normalizedValue = String(value || '');
   if (!normalizedValue) return '';
+  if (normalizedValue.startsWith('reviewer_enforcement:')) {{
+    return reviewerBoundaryStatusLabel('reviewer_enforcement', normalizedValue.split(':').slice(1).join(':'));
+  }}
+  if (normalizedValue.startsWith('reviewer_gate:')) {{
+    return reviewerBoundaryStatusLabel('reviewer_gate', normalizedValue.split(':').slice(1).join(':'));
+  }}
   if (normalizedTarget === 'runtimeRecords') {{
     if (normalizedValue === 'preview_only') return label('filter.runtime.preview_only', 'Runtime mutation preview');
     if (normalizedValue === 'advisory_only') return label('filter.runtime.advisory_only', 'Runtime auth advisory');
@@ -4721,6 +4767,58 @@ function filterChips(target, cls) {{
 }}
 function sliceButtonRow(buttons) {{
   return buttons.length > 0 ? '<p>' + buttons.join('') + '</p>' : '';
+}}
+function reviewerBoundaryListButtons(target, endpoint, rows) {{
+  const enforcementCounts = {{}};
+  const gateCounts = {{}};
+  (rows || []).forEach(row => {{
+    const enforcementStatus = String(row.reviewer_enforcement_status || '');
+    const gateStatus = String(row.reviewer_validation_gate_status || '');
+    if (enforcementStatus) enforcementCounts[enforcementStatus] = (enforcementCounts[enforcementStatus] || 0) + 1;
+    if (gateStatus) gateCounts[gateStatus] = (gateCounts[gateStatus] || 0) + 1;
+  }});
+  return [
+    ...Object.entries(enforcementCounts).map(([status]) =>
+      listJumpButton(
+        reviewerBoundaryStatusLabel('reviewer_enforcement', status),
+        endpoint,
+        target,
+        reviewerBoundaryFilterValue('reviewer_enforcement', status),
+      )
+    ),
+    ...Object.entries(gateCounts).map(([status]) =>
+      listJumpButton(
+        reviewerBoundaryStatusLabel('reviewer_gate', status),
+        endpoint,
+        target,
+        reviewerBoundaryFilterValue('reviewer_gate', status),
+      )
+    ),
+  ];
+}}
+function reviewerBoundaryCountButtons(target, endpoint, enforcementCounts, gateCounts) {{
+  return [
+    ...Object.entries(enforcementCounts || {{}}).map(([status, count]) =>
+      overviewCountButton(
+        reviewerBoundaryStatusLabel('reviewer_enforcement', status),
+        count,
+        'badge-neutral',
+        endpoint,
+        target,
+        reviewerBoundaryFilterValue('reviewer_enforcement', status),
+      )
+    ),
+    ...Object.entries(gateCounts || {{}}).map(([status, count]) =>
+      overviewCountButton(
+        reviewerBoundaryStatusLabel('reviewer_gate', status),
+        count,
+        'badge-neutral',
+        endpoint,
+        target,
+        reviewerBoundaryFilterValue('reviewer_gate', status),
+      )
+    ),
+  ].join('');
 }}
 function reviewQueueFilterChips() {{
   return filterChips('reviewQueue', 'badge-warning');
@@ -5566,6 +5664,9 @@ function renderOverviewReviewerBoundaryPanel(reviewerBoundary) {{
     + detailLine(label('ui.label.validation_gate_status', 'Validation gate status'), reviewerBoundary.validation_gate_status || '')
     + detailLine(label('ui.label.session_gated', 'Session gated'), reviewerBoundary.session_gated)
     + detailLine(label('ui.label.fail_closed_route_checks', 'Fail closed route checks'), reviewerBoundary.route_enforced)
+    + '<p>' + reviewerBoundaryCountButtons('runtimeRecords', '/api/runtime-records', reviewerBoundary.runtime_record_enforcement_counts, reviewerBoundary.runtime_record_validation_gate_counts) + '</p>'
+    + '<p>' + reviewerBoundaryCountButtons('reviewQueue', '/api/review-queue', reviewerBoundary.review_queue_enforcement_counts, reviewerBoundary.review_queue_validation_gate_counts) + '</p>'
+    + '<p>' + reviewerBoundaryCountButtons('summaryJobs', '/api/summary-jobs', reviewerBoundary.summary_job_enforcement_counts, reviewerBoundary.summary_job_validation_gate_counts) + '</p>'
     + metricsSection(metricsBody)
   );
 }}
