@@ -1324,9 +1324,11 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "detailLine('Resolved queue reason', targetStateRecovery.resolved_queue_reason || '')" in html
     assert "detailLine('Resolved queue command', targetStateRecovery.resolved_queue_command || '')" in html
     assert "detailLine('Chronicle state command', targetStateRecovery.chronicle_state_command || '')" in html
+    assert "function responseMetadataDetailLines(summary)" in html
     assert "function renderResponseMetadataNotice(record)" in html
     assert "detailLine('Response ID', summary.response_id || '')" in html
     assert "detailLine('Usage total tokens', summary.usage_total_tokens ?? '')" in html
+    assert "responseMetadataDetailLines(summary)" in html
     assert '"Action": "操作"' in html
     assert '"Rollback status": "ロールバック状態"' in html
     assert '"Response ID": "応答ID"' in html

@@ -4801,20 +4801,23 @@ function renderInvocationPlanNotice(record) {{
       + detailListLine('Notes', plan.notes, ' | ')
   );
 }}
+function responseMetadataDetailLines(summary) {{
+  return detailLine('Response ID', summary.response_id || '')
+    + detailLine('Finish reason', summary.finish_reason || '')
+    + detailLine('Provider status', summary.provider_status || '')
+    + detailLine('Usage input tokens', summary.usage_input_tokens ?? '')
+    + detailLine('Usage output tokens', summary.usage_output_tokens ?? '')
+    + detailLine('Usage total tokens', summary.usage_total_tokens ?? '')
+    + detailLine('Metadata fields', summary.metadata_count ?? 0)
+    + detailLine('Top-level response keys', summary.response_key_count ?? 0)
+    + detailListLine('Response keys', summary.response_keys, ' | ');
+}}
 function renderResponseMetadataNotice(record) {{
   if (!record.response_metadata_summary || !record.response_metadata_summary.present) return '';
   const summary = record.response_metadata_summary;
   return renderNotice(
     label('notice.provider_response', 'Provider Response'),
-    detailLine('Response ID', summary.response_id || '')
-      + detailLine('Finish reason', summary.finish_reason || '')
-      + detailLine('Provider status', summary.provider_status || '')
-      + detailLine('Usage input tokens', summary.usage_input_tokens ?? '')
-      + detailLine('Usage output tokens', summary.usage_output_tokens ?? '')
-      + detailLine('Usage total tokens', summary.usage_total_tokens ?? '')
-      + detailLine('Metadata fields', summary.metadata_count ?? 0)
-      + detailLine('Top-level response keys', summary.response_key_count ?? 0)
-      + detailListLine('Response keys', summary.response_keys, ' | ')
+    responseMetadataDetailLines(summary)
   );
 }}
 function renderPackageReadinessNotice(record) {{
