@@ -4723,6 +4723,16 @@ function reviewerLabelDetailLines(reviewerContext) {{
     + detailListLine('Reviewer label examples', reviewerContext.reviewer_label_examples, ' | ')
     + detailLine('Session label pattern', reviewerContext.session_label_pattern || '');
 }}
+function recoveryContractDetailLines(failureContract, targetId = 'action-preview-response') {{
+  const recoveryCommands = Array.isArray(failureContract.recovery_commands) ? failureContract.recovery_commands : [];
+  return detailLine('Rollback status', failureContract.rollback_status || '')
+    + detailLine('Durable mutation on failure', failureContract.durable_mutation_reported_on_failure)
+    + detailLine('Recovery path', failureContract.recovery_path || '')
+    + detailListLine('Possible errors', failureContract.possible_error_codes, ' | ')
+    + detailListLine('Recovery commands', recoveryCommands, ' | ')
+    + (failureContract.recovery_path ? '<p>' + copyCommandButton(failureContract.recovery_path, targetId, t('button.copy_recovery_cli')) + '</p>' : '')
+    + (recoveryCommands.length > 0 ? '<p>' + recoveryCommands.map(command => copyCommandButton(command, targetId, t('button.copy_cli'))).join(' ') + '</p>' : '');
+}}
 function renderRetrievalHandoffNotice(record) {{
   if (!record.retrieval_handoff) return '';
   const handoff = record.retrieval_handoff;
@@ -4914,13 +4924,7 @@ function renderDetailActionPreviewNotice(record) {{
   ];
   const recoveryContractSection = noticeSection(
     label('section.recovery_contract', 'Recovery Contract'),
-    detailLine('Rollback status', failureContract.rollback_status || '')
-      + detailLine('Durable mutation on failure', failureContract.durable_mutation_reported_on_failure)
-      + detailLine('Recovery path', failureContract.recovery_path || '')
-      + detailListLine('Possible errors', failureContract.possible_error_codes, ' | ')
-      + detailListLine('Recovery commands', failureContract.recovery_commands, ' | ')
-      + (failureContract.recovery_path ? '<p>' + copyCommandButton(failureContract.recovery_path, 'action-preview-response', t('button.copy_recovery_cli')) + '</p>' : '')
-      + ((failureContract.recovery_commands || []).length > 0 ? '<p>' + (failureContract.recovery_commands || []).map(command => copyCommandButton(command, 'action-preview-response', t('button.copy_cli'))).join(' ') + '</p>' : '')
+    recoveryContractDetailLines(failureContract, 'action-preview-response')
   );
   const reviewActionSection = noticeSection(
     label('section.review_action', 'Review Action'),
