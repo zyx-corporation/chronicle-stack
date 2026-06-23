@@ -219,6 +219,11 @@ def run_ui_smoke(root: Path | None = None) -> UISmokeReport:
                                 ),
                                 list,
                             )
+                            and bool(
+                                mutation_enablement.get("reviewer_context_requirements", {}).get(
+                                    "expectation_summary"
+                                )
+                            )
                             and isinstance(mutation_enablement.get("write_route_contract", {}).get("actions"), list)
                             and isinstance(mutation_enablement.get("identity_proof_contract"), dict)
                         ),
@@ -248,6 +253,11 @@ def run_ui_smoke(root: Path | None = None) -> UISmokeReport:
                                     "required_reviewer_kinds_for_mutation"
                                 ),
                                 list,
+                            )
+                            and bool(
+                                mutation_enablement.get("reviewer_context_requirements", {}).get(
+                                    "expectation_summary"
+                                )
                             )
                             and isinstance(mutation_enablement.get("write_route_contract", {}).get("actions"), list)
                             and isinstance(mutation_enablement.get("identity_proof_contract"), dict)
@@ -582,14 +592,19 @@ def run_ui_smoke(root: Path | None = None) -> UISmokeReport:
                         ),
                         list,
                     )
-                    and isinstance(
-                        mutation_readiness.get("reviewer_context_requirements", {}).get(
-                            "required_reviewer_kinds_for_mutation"
-                        ),
-                        list,
-                    )
-                    and bool(mutation_readiness.get("write_route_contract", {}).get("route_template"))
-                    and isinstance(mutation_readiness.get("identity_proof_contract"), dict)
+                        and isinstance(
+                            mutation_readiness.get("reviewer_context_requirements", {}).get(
+                                "required_reviewer_kinds_for_mutation"
+                            ),
+                            list,
+                        )
+                        and bool(
+                            mutation_readiness.get("reviewer_context_requirements", {}).get(
+                                "expectation_summary"
+                            )
+                        )
+                        and bool(mutation_readiness.get("write_route_contract", {}).get("route_template"))
+                        and isinstance(mutation_readiness.get("identity_proof_contract"), dict)
                 ),
                 (
                     "ok"
@@ -615,6 +630,11 @@ def run_ui_smoke(root: Path | None = None) -> UISmokeReport:
                             "required_reviewer_kinds_for_mutation"
                         ),
                         list,
+                    )
+                    and bool(
+                        mutation_readiness.get("reviewer_context_requirements", {}).get(
+                            "expectation_summary"
+                        )
                     )
                     and bool(mutation_readiness.get("write_route_contract", {}).get("route_template"))
                     and isinstance(mutation_readiness.get("identity_proof_contract"), dict)

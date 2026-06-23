@@ -373,6 +373,11 @@ def _reviewer_context_requirements(metadata: UIBoundaryMetadata) -> dict[str, An
     effective_required_fields = ["reviewer_label", "reviewer_kind", "ui_intent"]
     if metadata.session_gating:
         effective_required_fields.append("session_label")
+    expectation_summary = (
+        "Explicit local GUI mutation currently expects local_operator reviewer metadata, matching ui_intent, and a session label inside the session-gated loopback-local boundary."
+        if metadata.session_gating
+        else "Preview/read-only review context currently expects local_operator reviewer metadata and matching ui_intent; session labels remain optional until session-gated local mutation is enabled."
+    )
     return {
         "required_fields": ["reviewer_label", "reviewer_kind", "ui_intent"],
         "effective_required_fields": effective_required_fields,
@@ -386,6 +391,7 @@ def _reviewer_context_requirements(metadata: UIBoundaryMetadata) -> dict[str, An
         "advisory_only_reviewer_kinds": [ReviewerIdentityKind.USER_DECLARED.value],
         "session_boundary_status": "required" if metadata.session_gating else "optional",
         "ui_intent_required": True,
+        "expectation_summary": expectation_summary,
         "authority_note": "Request reviewer metadata is required local context, but it is not sufficient proof of authority on its own.",
         "reviewer_label_note": "Reviewer label must identify the local operator consistently enough for audit and review history drilldown.",
         "reviewer_kind_note": "Only local_operator is currently eligible for explicit local GUI mutation; user_declared remains advisory-only metadata.",
@@ -3016,7 +3022,38 @@ function detailMessages(items, fallbackItems = []) {{
   if (detailMessages.length > 0) return detailMessages.join(' | ');
   return fallback.map(item => reviewWarningLabel(item)).join(' | ') || '';
 }}
+function reviewerContextDetailLines(reviewerContext, identityProofContract = {{}}) {{
+  const effectiveFields = Array.isArray(reviewerContext.effective_required_fields)
+    ? reviewerContext.effective_required_fields
+    : [];
+  const acceptedKinds = Array.isArray(reviewerContext.accepted_reviewer_kinds)
+    ? reviewerContext.accepted_reviewer_kinds
+    : [];
+  const advisoryKinds = Array.isArray(reviewerContext.advisory_only_reviewer_kinds)
+    ? reviewerContext.advisory_only_reviewer_kinds
+    : [];
+  const sessionExamples = Array.isArray(reviewerContext.session_label_examples)
+    ? reviewerContext.session_label_examples
+    : [];
+  return ''
+    + detailLine('Reviewer expectation summary', reviewerContext.expectation_summary || '')
+    + detailListLine('Reviewer fields', effectiveFields, ' | ')
+    + detailListLine('Reviewer kinds', acceptedKinds, ' | ')
+    + detailListLine('Advisory-only reviewer kinds', advisoryKinds, ' | ')
+    + detailLine('Session boundary', reviewerContext.session_boundary_status || '')
+    + detailLine('UI intent required', reviewerContext.ui_intent_required)
+    + detailListLine('Session label examples', sessionExamples, ' | ')
+    + detailLine('Authority note', reviewerContext.authority_note || '')
+    + detailLine('Reviewer label note', reviewerContext.reviewer_label_note || '')
+    + detailLine('Reviewer kind note', reviewerContext.reviewer_kind_note || '')
+    + detailLine('Session note', reviewerContext.session_note || '')
+    + detailLine('UI intent note', reviewerContext.ui_intent_note || '')
+    + detailLine('Identity proof note', identityProofContract.proof_note || '');
+}}
 function reviewActionCoreDetailLines(payload, action = '', recordId = '') {{
+  const reviewerContext = payload.reviewer_context_requirements || {{}};
+  const writeRouteContract = payload.write_route_contract || {{}};
+  const identityProofContract = writeRouteContract.identity_proof_contract || {{}};
   return ''
     + detailLine('Action', payload.action || action || '')
     + detailLine('Event', payload.event_id || recordId || '')
@@ -3025,7 +3062,8 @@ function reviewActionCoreDetailLines(payload, action = '', recordId = '') {{
     + detailLine('Identity assurance message', payload.identity_assurance_message || '')
     + detailLine('CLI equivalent', payload.cli_equivalent || '')
     + detailLine('Failure summary', payload.failure_summary || '')
-    + detailLine('Warnings', detailMessages(payload.warning_details, payload.warning_codes));
+    + detailLine('Warnings', detailMessages(payload.warning_details, payload.warning_codes))
+    + reviewerContextDetailLines(reviewerContext, identityProofContract);
 }}
 function contractDetailLines(successContract, failureContract, targetId) {{
   const resolvedContract = (successContract || failureContract) || {{}};
@@ -4401,8 +4439,7 @@ function renderMutationEnablementNotice(record) {{
       + detailListLine('Blocker sources', blockerSummaries.map(item => (item.summary || ((item.source_label || item.source || 'unknown') + ': ' + (item.message || item.code || 'blocker')))), ' | ')
       + detailListLine('Checks', enablementChecks.map(check => ((check.satisfied ? 'ok: ' : 'blocked: ') + (check.label || check.code || 'check'))), ' | ')
       + detailListLine('Remaining checks', operationalReadiness.blocking_summaries || [], ' | ')
-      + detailListLine('Reviewer fields', reviewerContext.effective_required_fields, ' | ')
-      + detailListLine('Reviewer kinds', reviewerContext.accepted_reviewer_kinds, ' | ')
+      + reviewerContextDetailLines(reviewerContext, identityProofContract)
       + detailLine('Reviewer label pattern', reviewerContext.reviewer_label_pattern || '')
       + detailListLine('Reviewer label examples', reviewerContext.reviewer_label_examples, ' | ')
       + detailLine('Session label pattern', reviewerContext.session_label_pattern || '')
@@ -4811,7 +4848,7 @@ function renderOverviewMutationReadinessPanel(mutationReadiness) {{
     + detailListLine('Remaining checks', operationalReadiness.blocking_summaries || [], ' | ')
     + detailListLine('Effective reviewer fields', reviewerContextRequirements.effective_required_fields, ' | ')
     + detailListLine('Reviewer fields', reviewerContextRequirements.required_fields, ' | ')
-    + detailListLine('Accepted reviewer kinds', reviewerContextRequirements.accepted_reviewer_kinds, ' | ')
+    + reviewerContextDetailLines(reviewerContextRequirements, identityProofContract)
     + detailLine('Reviewer label pattern', reviewerContextRequirements.reviewer_label_pattern || '')
     + detailListLine('Reviewer label examples', reviewerContextRequirements.reviewer_label_examples, ' | ')
     + detailLine('Session label required', reviewerContextRequirements.session_label_required)
