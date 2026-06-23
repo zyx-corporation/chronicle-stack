@@ -133,12 +133,41 @@ The local UI may surface:
 - reviewer field requirements in read-only readiness surfaces
 - accepted reviewer kinds and session requirements in read-only readiness surfaces
 - exact rollback status, error code class, failure summary, and CLI recovery hints
+- the same fail-closed contract vocabulary across blocked preview, apply response, list-level preview summaries, and detail drilldown surfaces
+- thin list-level CLI fallback/follow-up hints before operators open full detail views
 
 The local UI must not imply:
 
 - that enabled controls bypass server-side checks
 - that reviewer form input alone grants authority
 - that a blocked or partially failed route has durably applied a review decision
+
+## Current repository alignment
+
+The current repository slice now demonstrates this ADR through:
+
+- structured reviewer-context, write-route, and identity-proof contracts on `ui_boundary` and `mutation_readiness`
+- shared fail-closed response contracts on blocked preview responses, enabled apply responses, and review-action failure responses
+- shared rollback / recovery / follow-up contract visibility in preview panels, result panels, and list-level preview summaries
+- separate browser-visible failure classes for `mutation_disabled`, `audit_insertion_failed`, and `decision_persistence_failed`
+
+The current repository slice still does not claim:
+
+- authenticated GUI mutation
+- default-on mutation behavior
+- multi-user-safe authority semantics
+- stronger transactional guarantees than the local fail-closed contract already described here
+
+## Follow-up boundary
+
+Future mutation expansion should treat this ADR as the semantic floor, not merely historical context.
+
+Before widening mutation capability, follow-up work should keep these invariants aligned:
+
+- reviewer/session proof representation
+- fail-closed error-class mapping
+- CLI-equivalent recovery visibility
+- shared wording across overview, list, preview, and detail surfaces
 
 ## Consequences
 
