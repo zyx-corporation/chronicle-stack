@@ -44,6 +44,8 @@ chronicle 1.7.0
 
 Repository-side verification now passes for this checkout after editable reinstall refreshed the CLI package metadata to `1.7.0`.
 
+External release execution has also been completed for `v1.7.0`, including GitHub Release publication, tag/main equivalence confirmation, clean installer smoke, and tag-based `ui-smoke` evidence.
+
 ## Boundary confirmation
 
 v1.7.0 does not introduce:
@@ -63,7 +65,7 @@ v1.7.0 does not introduce:
 - security certification
 - legal/governance finalization
 
-## Release-operator steps after merge
+## Release-operator reference
 
 Use:
 
@@ -73,7 +75,7 @@ docs/release-tag-policy.md
 docs/smoke-test-v1.7.md
 ```
 
-External release execution should be tracked separately with tag creation, GitHub Release publication, clean installer smoke, reinstall smoke, `chronicle ui-smoke`, and any local Phase H spot-check evidence.
+External release execution has been completed for `v1.7.0`; keep these documents as the reference for any follow-up evidence review or corrective release work.
 
 ## Warning classification
 
@@ -93,6 +95,6 @@ Transformed: scattered v1.7 phase completion notes become one repo-side release 
 
 Supplemented: explicit release framing for AI index, runtime, retrieval-plan, and Phase H readiness surfaces.
 
-Unresolved: stronger authenticated GUI mutation, richer authorization enforcement, broader provider execution, deeper retrieval-plan composition, and external `v1.7.0` release publication.
+Unresolved: stronger authenticated GUI mutation, richer authorization enforcement, and deeper provider/runtime expansion beyond the current local observability slice.
 
 Deviation risks: treating gated-local-write preparation as default GUI mutation, overstating provider/runtime maturity, or treating smoke as certification.

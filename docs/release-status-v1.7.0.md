@@ -2,7 +2,7 @@
 
 ## Status
 
-Repository-side release preparation for v1.7.0 is complete.
+Repository-side release preparation for v1.7.0 is complete, and external `v1.7.0` release publication has been completed.
 
 Latest published release before this track:
 
@@ -73,6 +73,17 @@ Observed `chronicle ui-smoke --json` top-level release fields:
 }
 ```
 
+## External release execution state
+
+The following external release-execution evidence has also been captured:
+
+- `origin/main` and `v1.7.0^{}` both resolve to `141c08224299311ee380c4216f4c04142a7c5da2`
+- GitHub Release URL: [Chronicle Stack v1.7.0](https://github.com/zyx-corporation/chronicle-stack/releases/tag/v1.7.0)
+- clean tag-based installer smoke completed in `/tmp/chronicle-stack-v1.7.0-install-smoke`
+- installed tag-based CLI reported `chronicle 1.7.0`
+- installed tag checkout `HEAD` and `v1.7.0^{}` matched
+- tag-based `ui-smoke` evidence was recorded from `/tmp/chronicle-stack-v1.7.0-ui-smoke/ui-smoke.json`
+
 ## Boundary
 
 v1.7.0 does not add daemon/service installation, hosted UI, default-on GUI mutation, authenticated GUI mutation, hidden provider execution, GraphRAG runtime, vector DB, graph DB, correctness proof, security certification, or legal/governance finalization.
@@ -94,4 +105,4 @@ Transformed: v1.7 phase milestones become one release-target status surface.
 
 Supplemented: explicit release-status discoverability for v1.7 repo-side preparation.
 
-Unresolved: external `v1.7.0` tag publication, tag-based installer smoke evidence, stronger auth/authz enforcement, and broader provider/runtime expansion.
+Unresolved: stronger auth/authz enforcement and broader provider/runtime expansion.
