@@ -160,6 +160,50 @@ def _serialize_review_warning_details(warnings: list[str]) -> list[dict[str, str
     ]
 
 
+def _identity_boundary_summary_message(status: str) -> str:
+    messages = {
+        "boundary_aligned": "Recorded reviewer identity metadata is aligned with the current preview auth boundary.",
+        "partially_aligned": "Some reviewer identity metadata is present, but boundary alignment remains incomplete.",
+        "identity_unavailable": "Reviewer identity assurance is not yet available in the current derived queue view.",
+    }
+    return messages.get(status, status.replace("_", " "))
+
+
+def _auth_readiness_message(
+    *,
+    capability_status: str,
+    assurance_status: str,
+    has_blockers: bool,
+) -> str:
+    if capability_status == "ready" and assurance_status == "boundary_aligned" and not has_blockers:
+        return "Current review metadata is aligned with the preview auth boundary, while GUI mutation remains disabled."
+    if has_blockers:
+        return "Current review metadata remains advisory only until auth, authorization, and reviewer identity boundaries are explicit."
+    if assurance_status != "unknown":
+        return "Some reviewer identity metadata is present, but auth-boundary alignment remains incomplete."
+    return "Auth-boundary readiness is not yet available in the current derived detail view."
+
+
+def _identity_assurance_message(
+    *,
+    reviewer_auth_mode: str,
+    boundary_auth_mode: str,
+) -> str:
+    if reviewer_auth_mode == "none":
+        return "Reviewer identity is self-declared only; UI auth is not enforcing reviewer identity."
+    if boundary_auth_mode == "not_enabled":
+        return "Reviewer identity carries local session metadata, but UI auth/authz is not enabled."
+    return "Reviewer identity metadata is aligned with the current UI auth boundary."
+
+
+def _review_capability_message(can_review_now: bool) -> str:
+    return (
+        "Boundary and reviewer identity conditions are aligned for future mutation-capable review."
+        if can_review_now
+        else "Review remains CLI-led and read-only in UI; see warnings for unmet boundary conditions."
+    )
+
+
 def _append_mutation_blocker(
     blockers: list[str],
     next_steps: list[str],
@@ -844,13 +888,11 @@ class ChronicleUIDataService:
 
         if assurance_counts.get("boundary_aligned", 0) > 0 and not blockers:
             status = "boundary_aligned"
-            message = "Recorded reviewer identity metadata is aligned with the current preview auth boundary."
         elif assurance_counts:
             status = "partially_aligned"
-            message = "Some reviewer identity metadata is present, but boundary alignment remains incomplete."
         else:
             status = "identity_unavailable"
-            message = "Reviewer identity assurance is not yet available in the current derived queue view."
+        message = _identity_boundary_summary_message(status)
 
         return {
             "status": status,
@@ -1540,16 +1582,17 @@ class ChronicleUIDataService:
         capability_status = str(capability.get("status", "unknown"))
         if capability_status == "ready" and assurance_status == "boundary_aligned" and not blockers:
             status = "boundary_aligned"
-            message = "Current review metadata is aligned with the preview auth boundary, while GUI mutation remains disabled."
         elif blockers:
             status = "advisory_only"
-            message = "Current review metadata remains advisory only until auth, authorization, and reviewer identity boundaries are explicit."
         elif assurance_status != "unknown":
             status = assurance_status
-            message = "Some reviewer identity metadata is present, but auth-boundary alignment remains incomplete."
         else:
             status = capability_status
-            message = "Auth-boundary readiness is not yet available in the current derived detail view."
+        message = _auth_readiness_message(
+            capability_status=capability_status,
+            assurance_status=assurance_status,
+            has_blockers=bool(blockers),
+        )
 
         return {
             "status": status,
@@ -1621,13 +1664,14 @@ class ChronicleUIDataService:
         session_gating = bool(boundary.get("session_gating", False))
         if identity.auth_mode.value == "none":
             status = "declared_only"
-            message = "Reviewer identity is self-declared only; UI auth is not enforcing reviewer identity."
         elif boundary_auth_mode == "not_enabled":
             status = "local_session_unverified"
-            message = "Reviewer identity carries local session metadata, but UI auth/authz is not enabled."
         else:
             status = "boundary_aligned"
-            message = "Reviewer identity metadata is aligned with the current UI auth boundary."
+        message = _identity_assurance_message(
+            reviewer_auth_mode=identity.auth_mode.value,
+            boundary_auth_mode=str(boundary_auth_mode),
+        )
         return {
             "status": status,
             "reviewer_auth_mode": identity.auth_mode.value,
@@ -1668,11 +1712,7 @@ class ChronicleUIDataService:
             warnings.append("reviewer_session_label_missing")
 
         can_review_now = len(warnings) == 0
-        message = (
-            "Boundary and reviewer identity conditions are aligned for future mutation-capable review."
-            if can_review_now
-            else "Review remains CLI-led and read-only in UI; see warnings for unmet boundary conditions."
-        )
+        message = _review_capability_message(can_review_now)
         return {
             "status": "ready" if can_review_now else "advisory_only",
             "can_review_now": can_review_now,
