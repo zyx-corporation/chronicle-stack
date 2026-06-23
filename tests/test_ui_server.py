@@ -933,6 +933,7 @@ def test_ui_runtime_detail_supports_invocation_plan(tmp_path):
     assert detail["invocation_plan"]["provider_kind"] == "http"
     assert detail["invocation_plan"]["invocation_ready"] is False
     assert "network_not_allowed_by_contract" in detail["invocation_plan"]["blocking_reasons"]
+    assert detail["invocation_plan"]["execution_request"]["prompt"] == "Invocation summary prompt."
     assert any(link["path"].startswith("/api/summary-jobs/") for link in detail["related_links"])
 
 
@@ -1422,6 +1423,9 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "detailListLine('Blocker summaries', blockerSummaries.map(item => (item.summary || item.code || 'blocker')), ' | ')" in html
     assert "label('notice.review_capability', 'Review Capability')" in html
     assert "label('notice.action_preview', 'Action Preview')" in html
+    assert "summaryJsonLine('Execution request', executionRequest)" in html
+    assert "downstreamCommands.map(command => copyCommandButton(command, 'action-preview-response', t('button.copy_cli')))" in html
+    assert "ui.label.execution_request" in html
     assert "uiLabel('Approve')" in html
     assert "uiLabel('Reject')" in html
     assert "uiLabel('Request Changes')" in html

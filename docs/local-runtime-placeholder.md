@@ -119,6 +119,8 @@ retrieval plan の detail view では、downstream runtime へ渡す前の hando
 
 runtime invocation plan を記録した場合は、local UI の `/api/runtime-records/<event_id>` detail から read-only で確認できます。
 
+その detail では request preview に加えて execution request contract も read-only で見え、`downstream_commands` に含まれる `chronicle runtime execute-plan ...` などの CLI をその場で copy できます。
+
 `chronicle runtime execute-plan --event evt_xxx --execute-configured-provider` は、その recorded invocation plan に含まれる execution request contract を使って explicit/manual 再実行します。ここでも hidden execution は起きず、configured provider への crossing は毎回明示 flag が必要です。
 
 summary job 由来の invocation dry-run では、runtime record detail から対応する `/api/summary-jobs/<summary_job_id>` へ辿れます。

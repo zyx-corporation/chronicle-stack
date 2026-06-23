@@ -567,6 +567,7 @@ chronicle runtime invoke-plan --text "Source text" --json
 - HTTP provider では `allow_network` が false の場合に block reason を返す
 - `--source` / `--prompt` / `--param key=value` を dry-run plan と recorded execution request contract に保持できる
 - `--record` 指定時のみ review-oriented `assistant_output` event として記録する
+- recorded invocation plan detail を local UI で開くと、execution request と downstream CLI を read-only / copyable に確認できる
 
 ### chronicle runtime execute-plan
 

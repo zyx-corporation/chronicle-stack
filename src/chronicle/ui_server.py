@@ -3039,6 +3039,7 @@ const uiLabelKeys = {{
   'Network allowed by contract': 'ui.label.network_allowed_by_contract',
   'Blocking reasons': 'ui.label.blocking_reasons',
   'Request preview': 'ui.label.request_preview',
+  'Execution request': 'ui.label.execution_request',
   'Downstream commands': 'ui.label.downstream_commands',
   'Notes': 'ui.label.notes',
   'Response ID': 'ui.label.response_id',
@@ -4613,6 +4614,8 @@ function renderInvocationPlanNotice(record) {{
   if (!record.invocation_plan) return '';
   const plan = record.invocation_plan;
   const requestPreview = plan.request_preview || {{}};
+  const executionRequest = plan.execution_request || {{}};
+  const downstreamCommands = Array.isArray(plan.downstream_commands) ? plan.downstream_commands : [];
   return renderNotice(
     label('notice.invocation_plan', 'Invocation Plan'),
     detailLine('Provider', (plan.provider_kind || '') + ' / ' + (plan.provider_name || ''))
@@ -4623,7 +4626,9 @@ function renderInvocationPlanNotice(record) {{
       + detailLine('Network allowed by contract', plan.network_allowed_by_contract)
       + detailListLine('Blocking reasons', plan.blocking_reasons, ' | ')
       + summaryJsonLine('Request preview', requestPreview)
+      + summaryJsonLine('Execution request', executionRequest)
       + detailListLine('Downstream commands', plan.downstream_commands, ' | ')
+      + (downstreamCommands.length > 0 ? '<p>' + downstreamCommands.map(command => copyCommandButton(command, 'action-preview-response', t('button.copy_cli'))).join(' ') + '</p>' : '')
       + detailListLine('Notes', plan.notes, ' | ')
   );
 }}
