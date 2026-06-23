@@ -224,6 +224,7 @@ v1.2 以降では、`/api/events/<id>`, `/api/contexts/<id>`, `/api/artifacts/<i
 - [v1.7 Phase F/G/H Plan](docs/v1.7-phase-f-g-h-plan.md)
 - [v1.7 Release Status](docs/release-status-v1.7.0.md)
 - [v1.8 Release Status](docs/release-status-v1.8.0.md)
+- [v1.9 Release Status](docs/release-status-v1.9.0.md)
 - [v1.7 Release Readiness](docs/release-readiness-v1.7.md)
 - [v1.8 Release Readiness](docs/release-readiness-v1.8.md)
 - [v1.8 Release Notes](docs/release-notes-v1.8.0.md)
@@ -297,9 +298,10 @@ ruff check src/ tests/
 ## リリース
 
 - Latest published release: **v1.8.0**
-- Current repository-side release target: **TBD after v1.8.0**
+- Current repository-side release target: **v1.9.0**
 - v1.7.0 release status: [docs/release-status-v1.7.0.md](docs/release-status-v1.7.0.md)
 - v1.8.0 release status: [docs/release-status-v1.8.0.md](docs/release-status-v1.8.0.md)
+- v1.9.0 release status: [docs/release-status-v1.9.0.md](docs/release-status-v1.9.0.md)
 - v1.7.0 release readiness: [docs/release-readiness-v1.7.md](docs/release-readiness-v1.7.md)
 - v1.8.0 release readiness: [docs/release-readiness-v1.8.md](docs/release-readiness-v1.8.md)
 - v1.8.0 release notes: [docs/release-notes-v1.8.0.md](docs/release-notes-v1.8.0.md)
@@ -308,7 +310,7 @@ ruff check src/ tests/
 - v1.8.0 smoke profile: [docs/smoke-test-v1.8.md](docs/smoke-test-v1.8.md)
 - v1.7.0 release notes: [docs/release-notes-v1.7.0.md](docs/release-notes-v1.7.0.md)
 - v1.8.0 starts as the local GUI review-route design-hardening lane after the completed v1.7.0 observability release.
-- v1.8.0 publication is complete; the next repository-side release target is not yet fixed.
+- v1.8.0 publication is complete; `v1.9.0` starts as the local reviewer/session enforcement-boundary lane.
 
 ## ライセンス
 
