@@ -1430,6 +1430,11 @@ def test_http_root_and_read_only_endpoints(tmp_path):
         assert payload["action"] == "approve"
         assert payload["error_code"] == "mutation_disabled"
         assert payload["mutation_enabled"] is False
+        assert payload["success_contract"]["rollback_status"] == "not_required"
+        assert payload["success_contract"]["follow_up_commands"] == [
+            "chronicle review queue --include-resolved --json",
+            f"chronicle review approve --event {ids['runtime_summary_event_id']}",
+        ]
         assert payload["failure_contract"]["rollback_status"] == "fail_closed"
         assert payload["failure_contract"]["durable_mutation_reported_on_failure"] is False
         assert payload["failure_contract"]["recovery_commands"] == [
@@ -1447,6 +1452,10 @@ def test_http_root_and_read_only_endpoints(tmp_path):
         assert status == 403
         payload = json.loads(body)
         assert payload["action"] == "request-changes"
+        assert payload["success_contract"]["follow_up_commands"] == [
+            "chronicle review queue --include-resolved --json",
+            f"chronicle review request-changes --event {ids['runtime_summary_event_id']}",
+        ]
         assert payload["failure_contract"]["rollback_status"] == "fail_closed"
         assert payload["failure_contract"]["recovery_commands"] == [
             f"chronicle review request-changes --event {ids['runtime_summary_event_id']}"
@@ -1603,6 +1612,10 @@ def test_review_action_failure_summary_uses_human_warning_text(tmp_path):
             "message": "Reviewer identity is self-declared and has not been strengthened by a local auth boundary.",
         }
     ]
+    assert payload["success_contract"]["follow_up_commands"] == [
+        "chronicle review queue --include-resolved --json",
+        f"chronicle review approve --event {ids['runtime_summary_event_id']}",
+    ]
     assert "Reviewer identity is self-declared" in payload["failure_summary"]
     assert "reviewer_identity_declared_only" not in payload["failure_summary"]
 
@@ -1657,6 +1670,10 @@ def test_review_action_requires_session_label_before_authorization_check(tmp_pat
     assert status == 400
     assert payload["error_code"] == "session_label_required"
     assert payload["write_route_contract"]["blocked_status_code"] == 403
+    assert payload["success_contract"]["follow_up_commands"] == [
+        "chronicle review queue --include-resolved --json",
+        f"chronicle review approve --event {ids['runtime_summary_event_id']}",
+    ]
     assert payload["failure_contract"]["possible_error_codes"][1:4] == [
         "reviewer_label_required",
         "invalid_reviewer_label",

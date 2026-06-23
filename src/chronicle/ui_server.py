@@ -2240,6 +2240,7 @@ class ChronicleUIDataService:
         if action not in {"approve", "reject", "request-changes"}:
             return None
         boundary = self.ui_boundary()["ui_boundary"]
+        cli_equivalent = f"chronicle review {action} --event {event_id}"
         return (
             HTTPStatus.FORBIDDEN,
             {
@@ -2250,12 +2251,16 @@ class ChronicleUIDataService:
                 "error_code": "mutation_disabled",
                 "message": self._review_action_failure_message("mutation_disabled"),
                 "mutation_enabled": False,
-                "cli_equivalent": f"chronicle review {action} --event {event_id}",
+                "cli_equivalent": cli_equivalent,
                 "reviewer_context_requirements": boundary.get("reviewer_context_requirements", {}),
                 "write_route_contract": boundary.get("write_route_contract", {}),
+                "success_contract": self._review_action_success_contract(
+                    cli_equivalent=cli_equivalent,
+                    event_id=event_id,
+                ),
                 "failure_contract": self._review_action_failure_contract(
                     mutation_enabled=False,
-                    cli_equivalent=f"chronicle review {action} --event {event_id}",
+                    cli_equivalent=cli_equivalent,
                     event_id=event_id,
                     action=action,
                     error_code="mutation_disabled",
@@ -2284,6 +2289,11 @@ class ChronicleUIDataService:
         boundary = self.ui_boundary()["ui_boundary"]
         reviewer_context_requirements = boundary.get("reviewer_context_requirements", {})
         write_route_contract = boundary.get("write_route_contract", {})
+        cli_equivalent = f"chronicle review {action} --event {event_id}"
+        success_contract = self._review_action_success_contract(
+            cli_equivalent=cli_equivalent,
+            event_id=event_id,
+        )
         if not boundary.get("mutation_enabled", False):
             return self.review_action_blocked_response(path)
 
@@ -2308,9 +2318,10 @@ class ChronicleUIDataService:
                     "mutation_enabled": True,
                     "reviewer_context_requirements": reviewer_context_requirements,
                     "write_route_contract": write_route_contract,
+                    "success_contract": success_contract,
                     "failure_contract": self._review_action_failure_contract(
                         mutation_enabled=True,
-                        cli_equivalent=f"chronicle review {action} --event {event_id}",
+                        cli_equivalent=cli_equivalent,
                         event_id=event_id,
                         action=action,
                         error_code="reviewer_label_required",
@@ -2330,9 +2341,10 @@ class ChronicleUIDataService:
                     "mutation_enabled": True,
                     "reviewer_context_requirements": reviewer_context_requirements,
                     "write_route_contract": write_route_contract,
+                    "success_contract": success_contract,
                     "failure_contract": self._review_action_failure_contract(
                         mutation_enabled=True,
-                        cli_equivalent=f"chronicle review {action} --event {event_id}",
+                        cli_equivalent=cli_equivalent,
                         event_id=event_id,
                         action=action,
                         error_code="invalid_reviewer_label",
@@ -2352,9 +2364,10 @@ class ChronicleUIDataService:
                     "mutation_enabled": True,
                     "reviewer_context_requirements": reviewer_context_requirements,
                     "write_route_contract": write_route_contract,
+                    "success_contract": success_contract,
                     "failure_contract": self._review_action_failure_contract(
                         mutation_enabled=True,
-                        cli_equivalent=f"chronicle review {action} --event {event_id}",
+                        cli_equivalent=cli_equivalent,
                         event_id=event_id,
                         action=action,
                         error_code="session_label_required",
@@ -2374,9 +2387,10 @@ class ChronicleUIDataService:
                     "mutation_enabled": True,
                     "reviewer_context_requirements": reviewer_context_requirements,
                     "write_route_contract": write_route_contract,
+                    "success_contract": success_contract,
                     "failure_contract": self._review_action_failure_contract(
                         mutation_enabled=True,
-                        cli_equivalent=f"chronicle review {action} --event {event_id}",
+                        cli_equivalent=cli_equivalent,
                         event_id=event_id,
                         action=action,
                         error_code="invalid_session_label",
@@ -2396,9 +2410,10 @@ class ChronicleUIDataService:
                     "mutation_enabled": True,
                     "reviewer_context_requirements": reviewer_context_requirements,
                     "write_route_contract": write_route_contract,
+                    "success_contract": success_contract,
                     "failure_contract": self._review_action_failure_contract(
                         mutation_enabled=True,
-                        cli_equivalent=f"chronicle review {action} --event {event_id}",
+                        cli_equivalent=cli_equivalent,
                         event_id=event_id,
                         action=action,
                         error_code="ui_intent_mismatch",
@@ -2420,9 +2435,10 @@ class ChronicleUIDataService:
                     "mutation_enabled": True,
                     "reviewer_context_requirements": reviewer_context_requirements,
                     "write_route_contract": write_route_contract,
+                    "success_contract": success_contract,
                     "failure_contract": self._review_action_failure_contract(
                         mutation_enabled=True,
-                        cli_equivalent=f"chronicle review {action} --event {event_id}",
+                        cli_equivalent=cli_equivalent,
                         event_id=event_id,
                         action=action,
                         error_code="invalid_reviewer_kind",
@@ -2464,10 +2480,11 @@ class ChronicleUIDataService:
                         warning_codes=capability.get("warnings", []),
                         identity_assurance_status=str(assurance.get("status", "")),
                     ),
-                    "cli_equivalent": f"chronicle review {action} --event {event_id}",
+                    "cli_equivalent": cli_equivalent,
+                    "success_contract": success_contract,
                     "failure_contract": self._review_action_failure_contract(
                         mutation_enabled=True,
-                        cli_equivalent=f"chronicle review {action} --event {event_id}",
+                        cli_equivalent=cli_equivalent,
                         event_id=event_id,
                         action=action,
                         error_code="authorization_failed",
@@ -2489,9 +2506,10 @@ class ChronicleUIDataService:
                     "mutation_enabled": True,
                     "reviewer_context_requirements": reviewer_context_requirements,
                     "write_route_contract": write_route_contract,
+                    "success_contract": success_contract,
                     "failure_contract": self._review_action_failure_contract(
                         mutation_enabled=True,
-                        cli_equivalent=f"chronicle review {action} --event {event_id}",
+                        cli_equivalent=cli_equivalent,
                         event_id=event_id,
                         action=action,
                         error_code="review_target_not_found",
@@ -2512,12 +2530,13 @@ class ChronicleUIDataService:
                     "failure_summary": self._review_action_failure_summary(
                         error_code="review_not_pending",
                     ),
-                    "cli_equivalent": f"chronicle review {action} --event {event_id}",
+                    "cli_equivalent": cli_equivalent,
                     "reviewer_context_requirements": reviewer_context_requirements,
                     "write_route_contract": write_route_contract,
+                    "success_contract": success_contract,
                     "failure_contract": self._review_action_failure_contract(
                         mutation_enabled=True,
-                        cli_equivalent=f"chronicle review {action} --event {event_id}",
+                        cli_equivalent=cli_equivalent,
                         event_id=event_id,
                         action=action,
                         error_code="review_not_pending",
@@ -2548,12 +2567,13 @@ class ChronicleUIDataService:
                     "failure_summary": self._review_action_failure_summary(
                         error_code="audit_insertion_failed",
                     ),
-                    "cli_equivalent": f"chronicle review {action} --event {event_id}",
+                    "cli_equivalent": cli_equivalent,
                     "reviewer_context_requirements": reviewer_context_requirements,
                     "write_route_contract": write_route_contract,
+                    "success_contract": success_contract,
                     "failure_contract": self._review_action_failure_contract(
                         mutation_enabled=True,
-                        cli_equivalent=f"chronicle review {action} --event {event_id}",
+                        cli_equivalent=cli_equivalent,
                         event_id=event_id,
                         action=action,
                         error_code="audit_insertion_failed",
@@ -2576,12 +2596,13 @@ class ChronicleUIDataService:
                     "failure_summary": self._review_action_failure_summary(
                         error_code="decision_persistence_failed",
                     ),
-                    "cli_equivalent": f"chronicle review {action} --event {event_id}",
+                    "cli_equivalent": cli_equivalent,
                     "reviewer_context_requirements": reviewer_context_requirements,
                     "write_route_contract": write_route_contract,
+                    "success_contract": success_contract,
                     "failure_contract": self._review_action_failure_contract(
                         mutation_enabled=True,
-                        cli_equivalent=f"chronicle review {action} --event {event_id}",
+                        cli_equivalent=cli_equivalent,
                         event_id=event_id,
                         action=action,
                         error_code="decision_persistence_failed",
@@ -2598,13 +2619,13 @@ class ChronicleUIDataService:
                 "action": action,
                 "audit_id": result.audit_id,
                 "decision_event_id": result.review_event_id,
-                "cli_equivalent": f"chronicle review {action} --event {event_id}",
+                "cli_equivalent": cli_equivalent,
                 "mutation_enabled": True,
                 "reviewer_identity": result.reviewer_identity.model_dump(mode="json"),
                 "reviewer_context_requirements": reviewer_context_requirements,
                 "write_route_contract": write_route_contract,
                 "success_contract": self._review_action_success_contract(
-                    cli_equivalent=f"chronicle review {action} --event {event_id}",
+                    cli_equivalent=cli_equivalent,
                     event_id=event_id,
                     audit_id=result.audit_id,
                 ),

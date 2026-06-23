@@ -290,6 +290,8 @@ def run_ui_smoke(root: Path | None = None) -> UISmokeReport:
                         and blocked[1].get("error_code") == "mutation_disabled"
                         and isinstance(blocked[1].get("reviewer_context_requirements"), dict)
                         and bool(blocked[1].get("write_route_contract", {}).get("route_template"))
+                        and isinstance(blocked[1].get("success_contract"), dict)
+                        and isinstance(blocked[1].get("success_contract", {}).get("follow_up_commands"), list)
                         and isinstance(blocked[1].get("failure_contract"), dict)
                         and blocked[1].get("failure_contract", {}).get("rollback_status") == "fail_closed",
                         (
@@ -299,6 +301,8 @@ def run_ui_smoke(root: Path | None = None) -> UISmokeReport:
                             and blocked[1].get("error_code") == "mutation_disabled"
                             and isinstance(blocked[1].get("reviewer_context_requirements"), dict)
                             and bool(blocked[1].get("write_route_contract", {}).get("route_template"))
+                            and isinstance(blocked[1].get("success_contract"), dict)
+                            and isinstance(blocked[1].get("success_contract", {}).get("follow_up_commands"), list)
                             and isinstance(blocked[1].get("failure_contract"), dict)
                             and blocked[1].get("failure_contract", {}).get("rollback_status") == "fail_closed"
                             else "blocked review action route contract missing"
