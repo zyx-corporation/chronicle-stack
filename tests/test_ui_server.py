@@ -251,6 +251,9 @@ def test_startup_metadata(tmp_path):
         "review_capability_ready",
         "pending_target_state",
     ]
+    assert payload["ui_boundary"]["write_route_contract"]["target_state_contract"]["required_current_review_status"] == "needs_review"
+    assert payload["ui_boundary"]["write_route_contract"]["target_state_contract"]["resolved_status_code"] == 409
+    assert payload["ui_boundary"]["write_route_contract"]["target_state_contract"]["action_target_matrix"][2]["resulting_queue_state"] == "remains_pending"
     assert payload["ui_boundary"]["write_route_contract"]["identity_proof_contract"]["proof_status"] == "local_operator_advisory"
     assert payload["ui_boundary"]["write_route_contract"]["identity_proof_contract"]["required_reviewer_kinds_for_mutation"] == [
         "local_operator"
@@ -550,6 +553,7 @@ def test_ui_data_service_read_endpoints(tmp_path):
         "ui_intent",
     ]
     assert service.review_queue()["review_queue"][0]["action_preview_summary"]["write_route_contract"]["authorization_contract"]["action_authorization_matrix"][0]["action"] == "approve"
+    assert service.review_queue()["review_queue"][0]["action_preview_summary"]["write_route_contract"]["target_state_contract"]["target_state_checks"][2] == "target_pending_for_requested_action"
     assert service.review_queue()["review_queue"][0]["action_preview_summary"]["actions"][0]["post_path"].startswith(
         "/api/review-actions/evt_"
     )
@@ -752,6 +756,7 @@ def test_ui_html_filtering_includes_provider_response_metadata_fields(tmp_path, 
     assert "request-fields=" in html
     assert "transaction-order=" in html
     assert "authorization-checks=" in html
+    assert "target-state-checks=" in html
     assert "success-status=" in html
     assert "blocked-status=" in html
     assert "proof-status=" in html
@@ -813,6 +818,7 @@ def test_ui_data_service_detail_endpoints(tmp_path):
         "decision_persistence_failed",
     ]
     assert summary_detail["action_preview"]["write_route_contract"]["authorization_contract"]["server_side_checks"][2] == "review_capability_ready"
+    assert summary_detail["action_preview"]["write_route_contract"]["target_state_contract"]["action_target_matrix"][1]["resulting_disposition"] == "reject"
     assert summary_detail["action_preview"]["write_route_contract"]["identity_proof_contract"]["required_identity_fields"] == [
         "reviewer_label",
         "reviewer_kind",
@@ -866,6 +872,7 @@ def test_ui_data_service_detail_endpoints(tmp_path):
     assert review_detail["action_preview"]["success_contract"]["follow_up_commands"][0] == "chronicle review queue --include-resolved --json"
     assert review_detail["action_preview"]["write_route_contract"]["success_status_code"] == 200
     assert review_detail["action_preview"]["write_route_contract"]["authorization_contract"]["action_authorization_matrix"][2]["action"] == "request-changes"
+    assert review_detail["action_preview"]["write_route_contract"]["target_state_contract"]["action_target_matrix"][0]["resulting_queue_state"] == "resolved_hidden_by_default"
     assert review_detail["action_preview"]["write_route_contract"]["identity_proof_contract"]["proof_status"] == "local_operator_advisory"
     assert review_detail["review_preview_only"] is True
     assert review_detail["package_readiness"]["status"] == "no_context_records"
@@ -1278,6 +1285,9 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "detailLine('Authorization status', authorizationContract.authorization_status || '')" in html
     assert "detailListLine('Authorization checks', authorizationContract.server_side_checks, ' | ')" in html
     assert "detailListLine('Action authorization matrix', (authorizationContract.action_authorization_matrix || []).map(item => ((item.action || 'action') + ': intent=' + (item.ui_intent || '') + '; pending=' + String(item.pending_required) + '; note=' + (item.note_status || ''))), ' | ')" in html
+    assert "detailLine('Required review status', targetStateContract.required_current_review_status || '')" in html
+    assert "detailListLine('Target-state checks', targetStateContract.target_state_checks, ' | ')" in html
+    assert "detailListLine('Action target matrix', (targetStateContract.action_target_matrix || []).map(item => ((item.action || 'action') + ': pending=' + String(item.requires_pending) + '; queue=' + (item.resulting_queue_state || '') + '; disposition=' + (item.resulting_disposition || ''))), ' | ')" in html
     assert "detailListLine('Failure families', (writeRouteContract.failure_families || []).map(item => ((item.family || 'family') + ': ' + ((item.possible_error_codes || []).join(', ')))), ' | ')" in html
     assert "function renderResponseMetadataNotice(record)" in html
     assert "detailLine('Response ID', summary.response_id || '')" in html
