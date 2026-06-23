@@ -462,9 +462,56 @@ def _reviewer_identity_proof_contract(metadata: UIBoundaryMetadata) -> dict[str,
     }
 
 
+def _ui_authorization_contract(metadata: UIBoundaryMetadata) -> dict[str, Any]:
+    return {
+        "authorization_status": (
+            "explicit_local_reviewer_declared"
+            if metadata.authorization_mode == UIAuthorizationMode.REVIEWER_DECLARED
+            else "advisory_only"
+        ),
+        "required_authorization_mode": UIAuthorizationMode.REVIEWER_DECLARED,
+        "required_identity_assurance_status": "boundary_aligned",
+        "required_review_capability_status": "ready",
+        "target_pending_required": True,
+        "server_side_checks": [
+            "mutation_enabled",
+            "reviewer_identity_assurance_boundary_aligned",
+            "review_capability_ready",
+            "pending_target_state",
+        ],
+        "scope_note": (
+            "Current browser-triggered authorization is a local single-operator boundary only; it does not claim hosted or multi-user-safe authority semantics."
+        ),
+        "action_authorization_matrix": [
+            {
+                "action": "approve",
+                "ui_intent": "approve",
+                "pending_required": True,
+                "note_status": "optional",
+                "authorized_reviewer_kinds": [ReviewerIdentityKind.LOCAL_OPERATOR.value],
+            },
+            {
+                "action": "reject",
+                "ui_intent": "reject",
+                "pending_required": True,
+                "note_status": "optional",
+                "authorized_reviewer_kinds": [ReviewerIdentityKind.LOCAL_OPERATOR.value],
+            },
+            {
+                "action": "request-changes",
+                "ui_intent": "request-changes",
+                "pending_required": True,
+                "note_status": "optional",
+                "authorized_reviewer_kinds": [ReviewerIdentityKind.LOCAL_OPERATOR.value],
+            },
+        ],
+    }
+
+
 def _ui_write_route_contract(metadata: UIBoundaryMetadata) -> dict[str, Any]:
     reviewer_context = _reviewer_context_requirements(metadata)
     identity_proof = _reviewer_identity_proof_contract(metadata)
+    authorization_contract = _ui_authorization_contract(metadata)
     mutation_enabled = bool(metadata.mutation_enabled)
     actions = ["approve", "reject", "request-changes"]
     pre_mutation_or_gate_errors = [
@@ -527,6 +574,7 @@ def _ui_write_route_contract(metadata: UIBoundaryMetadata) -> dict[str, Any]:
             },
         ],
         "identity_proof_contract": identity_proof,
+        "authorization_contract": authorization_contract,
         "success_contract": {
             "transaction_status": "decision_and_audit_persisted",
             "rollback_status": "not_required",
@@ -3244,6 +3292,7 @@ function renderPreviewContractSummary(preview, previewTarget = 'action-preview-r
   const successContract = (preview && preview.success_contract) || {{}};
   const writeRouteContract = (preview && preview.write_route_contract) || {{}};
   const identityProofContract = writeRouteContract.identity_proof_contract || {{}};
+  const authorizationContract = writeRouteContract.authorization_contract || {{}};
   const recoveryPath = failureContract.recovery_path || '';
   const possibleErrors = Array.isArray(failureContract.possible_error_codes)
     ? failureContract.possible_error_codes
@@ -3257,7 +3306,10 @@ function renderPreviewContractSummary(preview, previewTarget = 'action-preview-r
   const transactionOrder = Array.isArray(writeRouteContract.transaction_order)
     ? writeRouteContract.transaction_order
     : [];
-  if (!recoveryPath && possibleErrors.length === 0 && followUpCommands.length === 0 && requestFields.length === 0 && transactionOrder.length === 0) return '';
+  const serverSideChecks = Array.isArray(authorizationContract.server_side_checks)
+    ? authorizationContract.server_side_checks
+    : [];
+  if (!recoveryPath && possibleErrors.length === 0 && followUpCommands.length === 0 && requestFields.length === 0 && transactionOrder.length === 0 && serverSideChecks.length === 0) return '';
   return [
     failureContract.rollback_status
       ? '<br><span class="id">rollback=' + esc(failureContract.rollback_status) + '</span>'
@@ -3276,6 +3328,9 @@ function renderPreviewContractSummary(preview, previewTarget = 'action-preview-r
       : '',
     transactionOrder.length > 0
       ? '<br><span class="id">transaction-order=' + esc(transactionOrder.join(' -> ')) + '</span>'
+      : '',
+    serverSideChecks.length > 0
+      ? '<br><span class="id">authorization-checks=' + esc(serverSideChecks.join(' | ')) + '</span>'
       : '',
     writeRouteContract.success_status_code
       ? '<br><span class="id">success-status=' + esc(writeRouteContract.success_status_code) + '</span>'
@@ -4577,6 +4632,7 @@ function renderMutationEnablementNotice(record) {{
   const reviewerContext = readiness.reviewer_context_requirements || {{}};
   const writeRouteContract = readiness.write_route_contract || {{}};
   const identityProofContract = writeRouteContract.identity_proof_contract || {{}};
+  const authorizationContract = writeRouteContract.authorization_contract || {{}};
   const readinessButtons = moreStatusButtons(readiness.status, '/api/review-queue', 'reviewQueue');
   return renderNotice(
     label('notice.mutation_enablement', 'Mutation Enablement'),
@@ -4601,6 +4657,11 @@ function renderMutationEnablementNotice(record) {{
       + detailLine('Write blocked status', writeRouteContract.blocked_status_code ?? '')
       + detailListLine('Durable success requirements', writeRouteContract.durable_success_requirements, ' | ')
       + detailListLine('Transaction order', writeRouteContract.transaction_order, ' | ')
+      + detailLine('Authorization status', authorizationContract.authorization_status || '')
+      + detailLine('Required assurance', authorizationContract.required_identity_assurance_status || '')
+      + detailLine('Pending target required', authorizationContract.target_pending_required)
+      + detailListLine('Authorization checks', authorizationContract.server_side_checks, ' | ')
+      + detailListLine('Action authorization matrix', (authorizationContract.action_authorization_matrix || []).map(item => ((item.action || 'action') + ': intent=' + (item.ui_intent || '') + '; pending=' + String(item.pending_required) + '; note=' + (item.note_status || ''))), ' | ')
       + detailListLine('Failure families', (writeRouteContract.failure_families || []).map(item => ((item.family || 'family') + ': ' + ((item.possible_error_codes || []).join(', ')))), ' | ')
       + detailLine('Identity proof status', identityProofContract.proof_status || '')
       + detailListLine('Identity proof fields', identityProofContract.required_identity_fields, ' | ')
@@ -4910,6 +4971,7 @@ function renderOverviewRuntimeConfigPanel(runtimeConfig, runtimeConfigContract) 
 function renderOverviewUiBoundaryPanel(uiBoundary) {{
   const writeRouteContract = uiBoundary.write_route_contract || {{}};
   const identityProofContract = writeRouteContract.identity_proof_contract || {{}};
+  const authorizationContract = writeRouteContract.authorization_contract || {{}};
   return renderPanel(
     sectionTitle(label('section.ui_boundary', 'UI Boundary'))
     + detailLine('Bind scope', uiBoundary.bind_scope || '')
@@ -4926,6 +4988,11 @@ function renderOverviewUiBoundaryPanel(uiBoundary) {{
     + detailLine('Write blocked status', writeRouteContract.blocked_status_code ?? '')
     + detailListLine('Durable success requirements', writeRouteContract.durable_success_requirements, ' | ')
     + detailListLine('Transaction order', writeRouteContract.transaction_order, ' | ')
+    + detailLine('Authorization status', authorizationContract.authorization_status || '')
+    + detailLine('Required assurance', authorizationContract.required_identity_assurance_status || '')
+    + detailLine('Pending target required', authorizationContract.target_pending_required)
+    + detailListLine('Authorization checks', authorizationContract.server_side_checks, ' | ')
+    + detailListLine('Action authorization matrix', (authorizationContract.action_authorization_matrix || []).map(item => ((item.action || 'action') + ': intent=' + (item.ui_intent || '') + '; pending=' + String(item.pending_required) + '; note=' + (item.note_status || ''))), ' | ')
     + detailListLine('Failure families', (writeRouteContract.failure_families || []).map(item => ((item.family || 'family') + ': ' + ((item.possible_error_codes || []).join(', ')))), ' | ')
     + detailLine('Identity proof status', identityProofContract.proof_status || '')
     + detailListLine('Identity proof fields', identityProofContract.required_identity_fields, ' | ')
@@ -4988,6 +5055,7 @@ function renderOverviewMutationReadinessPanel(mutationReadiness) {{
   const reviewerContextRequirements = mutationReadiness.reviewer_context_requirements || {{}};
   const writeRouteContract = mutationReadiness.write_route_contract || {{}};
   const identityProofContract = writeRouteContract.identity_proof_contract || {{}};
+  const authorizationContract = writeRouteContract.authorization_contract || {{}};
   const enablementChecks = Array.isArray(mutationReadiness.enablement_checks) ? mutationReadiness.enablement_checks : [];
   const operationalReadiness = mutationReadiness.operational_readiness || {{}};
   return renderPanel(
@@ -5006,6 +5074,11 @@ function renderOverviewMutationReadinessPanel(mutationReadiness) {{
     + detailLine('Blocker details', detailMessages(blockerDetails, mutationReadiness.blockers))
     + detailListLine('Durable success requirements', writeRouteContract.durable_success_requirements, ' | ')
     + detailListLine('Transaction order', writeRouteContract.transaction_order, ' | ')
+    + detailLine('Authorization status', authorizationContract.authorization_status || '')
+    + detailLine('Required assurance', authorizationContract.required_identity_assurance_status || '')
+    + detailLine('Pending target required', authorizationContract.target_pending_required)
+    + detailListLine('Authorization checks', authorizationContract.server_side_checks, ' | ')
+    + detailListLine('Action authorization matrix', (authorizationContract.action_authorization_matrix || []).map(item => ((item.action || 'action') + ': intent=' + (item.ui_intent || '') + '; pending=' + String(item.pending_required) + '; note=' + (item.note_status || ''))), ' | ')
     + detailListLine('Failure families', (writeRouteContract.failure_families || []).map(item => ((item.family || 'family') + ': ' + ((item.possible_error_codes || []).join(', ')))), ' | ')
     + detailListLine('Blocker sources', blockerSummaries.map(item => (item.summary || ((item.source_label || item.source || 'unknown') + ': ' + (item.message || item.code || 'blocker')))), ' | ')
     + detailListLine('Enablement checks', enablementChecks.map(check => ((check.satisfied ? 'ok: ' : 'blocked: ') + (check.label || check.code || 'check'))), ' | ')

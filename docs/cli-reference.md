@@ -354,6 +354,7 @@ read-only endpoint:
 - overview の `Mutation Readiness` panel でも、その reviewer field / accepted reviewer kind / session label requirement を read-only に確認できます。
 - write-capable route family は `POST /api/review-actions/<event_id>/<action>` です。`reviewer_label`, `reviewer_kind`, `session_label`, `ui_intent` を JSON body で受け、gate 条件が崩れていれば fail closed で戻ります。
 - 同じ write-route contract には `durable_success_requirements`, `transaction_order`, `failure_families` も含まれ、browser-triggered write の成功条件・実行順序・失敗族を read-only に確認できます。
+- さらに `authorization_contract` も含まれ、`authorization_status`, `required_identity_assurance_status`, `target_pending_required`, `server_side_checks`, `action_authorization_matrix` を通じて `authorization_failed` が外れる条件と action ごとの server-side check を read-only に確認できます。
 - preview payload / action response には `rollback_status`, `possible_error_codes`, `recovery_path` を含む fail-closed contract metadata も含まれます。
 - local UI shell では `recovery_path` をそのまま copy できる button も表示されます。
 - failure kind に応じて `recovery_commands`、成功時には `follow_up_commands` も返り、UI shell から copy できます。

@@ -242,6 +242,15 @@ def test_startup_metadata(tmp_path):
     ]
     assert payload["ui_boundary"]["write_route_contract"]["failure_families"][0]["family"] == "pre_mutation_or_gate"
     assert payload["ui_boundary"]["write_route_contract"]["failure_families"][1]["family"] == "durable_write_path"
+    assert payload["ui_boundary"]["write_route_contract"]["authorization_contract"]["authorization_status"] == "advisory_only"
+    assert payload["ui_boundary"]["write_route_contract"]["authorization_contract"]["required_identity_assurance_status"] == "boundary_aligned"
+    assert payload["ui_boundary"]["write_route_contract"]["authorization_contract"]["target_pending_required"] is True
+    assert payload["ui_boundary"]["write_route_contract"]["authorization_contract"]["server_side_checks"] == [
+        "mutation_enabled",
+        "reviewer_identity_assurance_boundary_aligned",
+        "review_capability_ready",
+        "pending_target_state",
+    ]
     assert payload["ui_boundary"]["write_route_contract"]["identity_proof_contract"]["proof_status"] == "local_operator_advisory"
     assert payload["ui_boundary"]["write_route_contract"]["identity_proof_contract"]["required_reviewer_kinds_for_mutation"] == [
         "local_operator"
@@ -281,6 +290,7 @@ def test_startup_metadata_with_configured_auth_mode(tmp_path):
         "Explicit local GUI mutation currently expects local_operator reviewer metadata"
     )
     assert payload["ui_boundary"]["write_route_contract"]["identity_proof_contract"]["proof_status"] == "session_gated_local_operator"
+    assert payload["ui_boundary"]["write_route_contract"]["authorization_contract"]["authorization_status"] == "explicit_local_reviewer_declared"
     assert payload["ui_boundary"]["auth_boundary_summary"]["status"] == "reviewer_declared_preview"
 
 
@@ -539,6 +549,7 @@ def test_ui_data_service_read_endpoints(tmp_path):
         "reviewer_kind",
         "ui_intent",
     ]
+    assert service.review_queue()["review_queue"][0]["action_preview_summary"]["write_route_contract"]["authorization_contract"]["action_authorization_matrix"][0]["action"] == "approve"
     assert service.review_queue()["review_queue"][0]["action_preview_summary"]["actions"][0]["post_path"].startswith(
         "/api/review-actions/evt_"
     )
@@ -740,6 +751,7 @@ def test_ui_html_filtering_includes_provider_response_metadata_fields(tmp_path, 
     assert "write-route=" in html
     assert "request-fields=" in html
     assert "transaction-order=" in html
+    assert "authorization-checks=" in html
     assert "success-status=" in html
     assert "blocked-status=" in html
     assert "proof-status=" in html
@@ -800,6 +812,7 @@ def test_ui_data_service_detail_endpoints(tmp_path):
         "audit_insertion_failed",
         "decision_persistence_failed",
     ]
+    assert summary_detail["action_preview"]["write_route_contract"]["authorization_contract"]["server_side_checks"][2] == "review_capability_ready"
     assert summary_detail["action_preview"]["write_route_contract"]["identity_proof_contract"]["required_identity_fields"] == [
         "reviewer_label",
         "reviewer_kind",
@@ -852,6 +865,7 @@ def test_ui_data_service_detail_endpoints(tmp_path):
     assert review_detail["mutation_enablement"]["operational_readiness"]["blocking_summaries"]
     assert review_detail["action_preview"]["success_contract"]["follow_up_commands"][0] == "chronicle review queue --include-resolved --json"
     assert review_detail["action_preview"]["write_route_contract"]["success_status_code"] == 200
+    assert review_detail["action_preview"]["write_route_contract"]["authorization_contract"]["action_authorization_matrix"][2]["action"] == "request-changes"
     assert review_detail["action_preview"]["write_route_contract"]["identity_proof_contract"]["proof_status"] == "local_operator_advisory"
     assert review_detail["review_preview_only"] is True
     assert review_detail["package_readiness"]["status"] == "no_context_records"
@@ -1261,6 +1275,9 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "detailLine('Session label required', reviewerContextRequirements.session_label_required)" in html
     assert "detailListLine('Durable success requirements', writeRouteContract.durable_success_requirements, ' | ')" in html
     assert "detailListLine('Transaction order', writeRouteContract.transaction_order, ' | ')" in html
+    assert "detailLine('Authorization status', authorizationContract.authorization_status || '')" in html
+    assert "detailListLine('Authorization checks', authorizationContract.server_side_checks, ' | ')" in html
+    assert "detailListLine('Action authorization matrix', (authorizationContract.action_authorization_matrix || []).map(item => ((item.action || 'action') + ': intent=' + (item.ui_intent || '') + '; pending=' + String(item.pending_required) + '; note=' + (item.note_status || ''))), ' | ')" in html
     assert "detailListLine('Failure families', (writeRouteContract.failure_families || []).map(item => ((item.family || 'family') + ': ' + ((item.possible_error_codes || []).join(', ')))), ' | ')" in html
     assert "function renderResponseMetadataNotice(record)" in html
     assert "detailLine('Response ID', summary.response_id || '')" in html
