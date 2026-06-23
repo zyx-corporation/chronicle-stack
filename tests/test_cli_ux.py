@@ -56,11 +56,12 @@ def test_injection_plan_help_shows_record_option(tmp_path):
 
 
 def test_runtime_help_lists_retrieve_plan(tmp_path):
-    """runtime --help must list summarize, invoke-plan, config, and retrieve-plan."""
+    """runtime --help must list summarize, invoke-plan, execute-plan, config, and retrieve-plan."""
     result = _run(tmp_path, "runtime", "--help")
     assert result.exit_code == 0
     assert "summarize" in result.stdout
     assert "invoke-plan" in result.stdout
+    assert "execute-plan" in result.stdout
     assert "config" in result.stdout
     assert "retrieve-plan" in result.stdout
 

@@ -8,6 +8,8 @@ from urllib import error as urllib_error
 from urllib import request as urllib_request
 
 from chronicle.errors import (
+    RuntimeInvocationPlanExecutionRequestMissingError,
+    RuntimeInvocationPlanNotFoundError,
     RuntimeProviderCredentialMissingError,
     RuntimeProviderExternalContextNotAllowedError,
     RuntimeProviderExecutionNotEnabledError,
@@ -326,14 +328,17 @@ class RuntimeService:
         text: str,
         operation: str = "summarize",
         record: bool = False,
-        source_ref_count: int = 0,
+        source_refs: list[SummarySourceRef] | None = None,
+        prompt: str = "",
         extra_params: dict[str, str] | None = None,
     ) -> RuntimeInvocationPlan:
         return self._invocation_plan(
             text=text,
             operation=operation,
             record=record,
-            source_ref_count=source_ref_count,
+            source_refs=source_refs or [],
+            prompt=prompt,
+            source_ref_count_override=None,
             extra_params=extra_params or {},
         )
 
@@ -344,7 +349,8 @@ class RuntimeService:
         summary_title: str,
         summary_text: str,
         prompt: str = "",
-        source_ref_count: int = 0,
+        source_refs: list[SummarySourceRef] | None = None,
+        source_ref_count: int | None = None,
         operation: str = "summarize",
         record: bool = False,
     ) -> RuntimeInvocationPlan:
@@ -352,12 +358,13 @@ class RuntimeService:
             text=summary_text,
             operation=operation,
             record=record,
-            source_ref_count=source_ref_count,
+            source_refs=source_refs or [],
+            prompt=prompt,
+            source_ref_count_override=source_ref_count,
             request_context={
                 "summary_job_id": summary_job_id,
                 "summary_title": summary_title,
                 "prompt": prompt,
-                "source_ref_count": str(source_ref_count),
             },
             summary_label=f"summary {summary_job_id} {operation}",
         )
@@ -368,7 +375,9 @@ class RuntimeService:
         text: str,
         operation: str,
         record: bool,
-        source_ref_count: int = 0,
+        source_refs: list[SummarySourceRef],
+        prompt: str,
+        source_ref_count_override: int | None,
         extra_params: dict[str, str] | None = None,
         request_context: dict[str, str] | None = None,
         summary_label: str | None = None,
@@ -378,6 +387,7 @@ class RuntimeService:
         blocking_reasons: list[str] = []
         would_use_network = config.provider_kind == RuntimeProviderKind.HTTP
         network_allowed = bool(config.allow_network)
+        source_ref_count = source_ref_count_override if source_ref_count_override is not None else len(source_refs)
 
         if config.provider_kind == RuntimeProviderKind.DISABLED:
             blocking_reasons.append("runtime_provider_disabled")
@@ -395,6 +405,8 @@ class RuntimeService:
             text=text,
             request_context={
                 **(request_context or {}),
+                "prompt": prompt,
+                "source_ref_count": str(source_ref_count),
                 "param_count": str(len(extra_params or {})),
                 "param_keys": ",".join(sorted((extra_params or {}).keys())),
             },
@@ -410,6 +422,13 @@ class RuntimeService:
             invocation_ready=invocation_ready,
             blocking_reasons=blocking_reasons,
             request_preview=request_preview,
+            execution_request={
+                "text": text,
+                "operation": operation,
+                "prompt": prompt,
+                "params": extra_params or {},
+                "source_refs": [ref.model_dump(mode="json") for ref in source_refs],
+            },
             downstream_commands=self._invocation_downstream_commands(operation, invocation_ready),
             notes=self._invocation_notes(config=config, invocation_ready=invocation_ready),
         )
@@ -439,7 +458,62 @@ class RuntimeService:
         )
         plan.recorded = True
         plan.event_id = event.event_id
+        plan.downstream_commands = self._recorded_plan_downstream_commands(
+            event_id=event.event_id,
+            operation=plan.operation,
+            invocation_ready=plan.invocation_ready,
+            commands=plan.downstream_commands,
+        )
         return plan
+
+    def invoke_recorded_plan(
+        self,
+        *,
+        event_id: str,
+        record: bool = False,
+        draft_summary_title: str | None = None,
+        artifact_title: str | None = None,
+        artifact_type: ArtifactType = ArtifactType.OTHER,
+        execute_configured_provider: bool = False,
+    ) -> RuntimeExecutionResult:
+        event = self._event_by_id(event_id)
+        payload = getattr(event, "payload", {})
+        if "runtime_invocation_plan" not in payload:
+            raise RuntimeInvocationPlanNotFoundError(event_id)
+
+        plan = RuntimeInvocationPlan.model_validate(payload["runtime_invocation_plan"])
+        execution_request = plan.execution_request
+        if not execution_request:
+            raise RuntimeInvocationPlanExecutionRequestMissingError(event_id)
+
+        text = execution_request.get("text")
+        operation = execution_request.get("operation")
+        if not isinstance(text, str) or not isinstance(operation, str):
+            raise RuntimeInvocationPlanExecutionRequestMissingError(event_id)
+
+        prompt = execution_request.get("prompt", "")
+        params = execution_request.get("params", {})
+        source_ref_payloads = execution_request.get("source_refs", [])
+        if not isinstance(prompt, str) or not isinstance(params, dict) or not isinstance(source_ref_payloads, list):
+            raise RuntimeInvocationPlanExecutionRequestMissingError(event_id)
+
+        source_refs = [
+            SummarySourceRef.model_validate(item)
+            for item in source_ref_payloads
+            if isinstance(item, dict)
+        ]
+        return self.invoke(
+            text=text,
+            operation=operation,
+            record=record,
+            execute_configured_provider=execute_configured_provider,
+            draft_summary_title=draft_summary_title,
+            artifact_title=artifact_title,
+            artifact_type=artifact_type,
+            source_refs=source_refs,
+            prompt=prompt,
+            extra_params={str(key): str(value) for key, value in params.items()},
+        )
 
     def _assistant_output_event_type(self):
         from chronicle.models.event import EventType
@@ -590,6 +664,29 @@ class RuntimeService:
         else:
             notes.append("contract boundary is blocked until configuration warnings are resolved")
         return notes
+
+    @staticmethod
+    def _recorded_plan_downstream_commands(
+        *,
+        event_id: str,
+        operation: str,
+        invocation_ready: bool,
+        commands: list[str],
+    ) -> list[str]:
+        recorded_commands = list(commands)
+        if invocation_ready:
+            recorded_commands.append(
+                f"chronicle runtime execute-plan --event {event_id} --execute-configured-provider"
+            )
+        else:
+            recorded_commands.append(f"chronicle runtime execute-plan --event {event_id}")
+        return recorded_commands
+
+    def _event_by_id(self, event_id: str):
+        for event in self.chronicle.jsonl.read_all():
+            if event.event_id == event_id:
+                return event
+        raise RuntimeInvocationPlanNotFoundError(event_id)
 
     def _summarize_with_active_boundary(
         self,

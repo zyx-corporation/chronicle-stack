@@ -220,3 +220,21 @@ class RuntimeProviderExternalContextNotAllowedError(ChronicleError):
             message="Configured provider execution requested external context, but the stored contract does not allow it.",
             hint="Either remove the external context inputs or reconfigure the provider contract with `--allow-external-context`.",
         )
+
+
+class RuntimeInvocationPlanNotFoundError(ChronicleError):
+    def __init__(self, event_id: str) -> None:
+        super().__init__(
+            code="RUNTIME_INVOCATION_PLAN_NOT_FOUND",
+            message=f"Runtime invocation plan event not found: {event_id}",
+            hint="Pass an `evt_...` assistant_output record created by `chronicle runtime invoke-plan --record` or `chronicle summary invoke-plan --record`.",
+        )
+
+
+class RuntimeInvocationPlanExecutionRequestMissingError(ChronicleError):
+    def __init__(self, event_id: str) -> None:
+        super().__init__(
+            code="RUNTIME_INVOCATION_PLAN_EXECUTION_REQUEST_MISSING",
+            message=f"Recorded runtime invocation plan is missing execution request details: {event_id}",
+            hint="Recreate the invocation plan with the current Chronicle version, then retry `chronicle runtime execute-plan`.",
+        )

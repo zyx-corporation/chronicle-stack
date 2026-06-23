@@ -171,7 +171,7 @@ def test_runtime_invoke_plan_json_shape(tmp_path):
 
     assert result.exit_code == 0
     payload = json.loads(result.stdout)
-    for key in ["provider_kind", "provider_name", "model_name", "operation", "invocation_ready", "blocking_reasons", "notes"]:
+    for key in ["provider_kind", "provider_name", "model_name", "operation", "invocation_ready", "blocking_reasons", "execution_request", "notes"]:
         assert key in payload, f"Missing key '{key}' in runtime invoke-plan"
 
 

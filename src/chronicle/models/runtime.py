@@ -159,6 +159,7 @@ class RuntimeInvocationPlan(BaseModel):
     invocation_ready: bool = False
     blocking_reasons: list[str] = Field(default_factory=list)
     request_preview: dict[str, str] = Field(default_factory=dict)
+    execution_request: dict[str, object] = Field(default_factory=dict)
     downstream_commands: list[str] = Field(default_factory=list)
     notes: list[str] = Field(default_factory=list)
     recorded: bool = False

@@ -140,18 +140,21 @@ def runtime_invoke_plan_cmd(
     text: Annotated[str, typer.Option("--text", help="Source text for a provider invocation dry-run plan.")],
     operation: Annotated[str, typer.Option("--operation", help="Planned provider operation name.")] = "summarize",
     source: Annotated[list[str] | None, typer.Option("--source", help="Source reference, e.g. event:evt_x or ctx_x. Repeatable.")] = None,
+    prompt: Annotated[str, typer.Option("--prompt", help="Optional prompt/provenance note to preserve in the dry-run plan.")] = "",
     param: Annotated[list[str] | None, typer.Option("--param", help="Operation-specific parameter as key=value. Repeatable.")] = None,
     record: Annotated[bool, typer.Option("--record", help="Persist the invocation dry-run plan as an assistant_output event requiring review.")] = False,
     json_output: Annotated[bool, typer.Option("--json")] = False,
 ) -> None:
     """Show an explicit provider invocation dry-run plan without invoking it."""
     try:
+        source_refs = [_parse_source_ref(item) for item in (source or [])]
         params = dict(_parse_key_value(item) for item in (param or []))
         plan = RuntimeService().invocation_plan(
             text=text,
             operation=operation,
             record=record,
-            source_ref_count=len(source or []),
+            source_refs=source_refs,
+            prompt=prompt,
             extra_params=params,
         )
         if json_output:
@@ -169,6 +172,63 @@ def runtime_invoke_plan_cmd(
         if plan.event_id:
             typer.echo(f"Event: {plan.event_id}")
         typer.echo("Boundary: dry-run contract only, no provider execution, no external call performed.")
+    except ChronicleError as exc:
+        handle_error(exc, json_output)
+
+
+@runtime_app.command("execute-plan")
+def runtime_execute_plan_cmd(
+    event_id: Annotated[str, typer.Option("--event", help="Recorded runtime invocation plan event ID.")],
+    record: Annotated[bool, typer.Option("--record", help="Persist the configured-provider output as an assistant_output event requiring review.")] = False,
+    draft_summary_title: Annotated[
+        str | None,
+        typer.Option("--draft-summary-title", help="Also persist the configured-provider output as a pending-review summary job with this title."),
+    ] = None,
+    artifact_title: Annotated[
+        str | None,
+        typer.Option("--artifact-title", help="Also persist the configured-provider output as a draft artifact with this title."),
+    ] = None,
+    artifact_type: Annotated[
+        ArtifactType,
+        typer.Option("--artifact-type", help="Artifact type to use with --artifact-title."),
+    ] = ArtifactType.OTHER,
+    execute_configured_provider: Annotated[
+        bool,
+        typer.Option(
+            "--execute-configured-provider",
+            help="Explicitly invoke the configured provider contract for this recorded plan.",
+        ),
+    ] = False,
+    json_output: Annotated[bool, typer.Option("--json")] = False,
+) -> None:
+    """Execute a previously recorded runtime invocation plan through the explicit boundary."""
+    try:
+        result = RuntimeService().invoke_recorded_plan(
+            event_id=event_id,
+            record=record,
+            draft_summary_title=draft_summary_title,
+            artifact_title=artifact_title,
+            artifact_type=artifact_type,
+            execute_configured_provider=execute_configured_provider,
+        )
+        if json_output:
+            _dump_json(result.model_dump(mode="json"))
+            return
+
+        typer.echo("Chronicle Runtime Recorded Plan Execution")
+        typer.echo(f"Plan event: {event_id}")
+        typer.echo(f"Operation: {result.operation}")
+        typer.echo(f"Generated: {result.output_text}")
+        typer.echo(f"Recorded: {result.recorded}")
+        if result.event_id:
+            typer.echo(f"Event: {result.event_id}")
+        if result.draft_summary_job_id:
+            typer.echo(f"Draft summary job: {result.draft_summary_job_id}")
+        if result.artifact_id:
+            typer.echo(f"Artifact: {result.artifact_id}")
+        if result.version_id:
+            typer.echo(f"Version: {result.version_id}")
+        typer.echo("Boundary: explicit configured-provider execution only, review required before trust.")
     except ChronicleError as exc:
         handle_error(exc, json_output)
 

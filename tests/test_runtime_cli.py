@@ -680,6 +680,83 @@ def test_runtime_invoke_plan_carries_param_preview(tmp_path: Path) -> None:
     payload = json.loads(result.stdout)
     assert payload["request_preview"]["param_count"] == "2"
     assert payload["request_preview"]["param_keys"] == "audience,tone"
+    assert payload["execution_request"]["params"] == {"tone": "concise", "audience": "operator"}
+
+
+def test_runtime_execute_plan_runs_recorded_http_invocation(tmp_path: Path) -> None:
+    os.chdir(str(tmp_path))
+    runner.invoke(app, ["init", "--title", "Runtime Execute Plan Chronicle"])
+    server, thread = _start_runtime_server()
+    os.environ["OPENAI_API_KEY"] = "test-key"
+    _RuntimeHandler.expected_params = {"tone": "concise"}
+    try:
+        runner.invoke(
+            app,
+            [
+                "runtime",
+                "config",
+                "set-http",
+                "--base-url",
+                f"http://127.0.0.1:{server.server_port}",
+                "--model",
+                "http-model",
+                "--api-key-env",
+                "OPENAI_API_KEY",
+                "--allow-network",
+                "--allow-external-context",
+            ],
+        )
+
+        plan_result = runner.invoke(
+            app,
+            [
+                "runtime",
+                "invoke-plan",
+                "--text",
+                "Rewrite this explicitly.",
+                "--operation",
+                "rewrite",
+                "--source",
+                "event:evt_runtime_source",
+                "--prompt",
+                "Rewrite for operator handoff.",
+                "--param",
+                "tone=concise",
+                "--record",
+                "--json",
+            ],
+        )
+        assert plan_result.exit_code == 0, plan_result.stderr
+        plan_payload = json.loads(plan_result.stdout)
+
+        result = runner.invoke(
+            app,
+            [
+                "runtime",
+                "execute-plan",
+                "--event",
+                plan_payload["event_id"],
+                "--record",
+                "--artifact-title",
+                "Recorded Plan Rewrite",
+                "--execute-configured-provider",
+                "--json",
+            ],
+        )
+    finally:
+        _RuntimeHandler.expected_params = {}
+        server.shutdown()
+        thread.join(timeout=2)
+        os.environ.pop("OPENAI_API_KEY", None)
+
+    assert result.exit_code == 0, result.stderr
+    payload = json.loads(result.stdout)
+    assert payload["operation"] == "rewrite"
+    assert payload["recorded"] is True
+    assert payload["artifact_id"].startswith("art_")
+    assert payload["params"] == {"tone": "concise"}
+    assert payload["source_refs"][0]["record_id"] == "evt_runtime_source"
+    assert payload["prompt"] == "Rewrite for operator handoff."
 
 
 def test_runtime_invoke_can_pass_operation_params(tmp_path: Path) -> None:

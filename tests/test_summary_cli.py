@@ -364,6 +364,8 @@ def test_summary_invoke_plan_carries_summary_context(tmp_path: Path) -> None:
     assert payload["request_preview"]["summary_title"] == "Source Draft"
     assert payload["request_preview"]["prompt"] == "Condense the source draft."
     assert payload["request_preview"]["source_ref_count"] == "1"
+    assert payload["execution_request"]["prompt"] == "Condense the source draft."
+    assert payload["execution_request"]["source_refs"][0]["record_id"] == "evt_source"
 
     search_result = runner.invoke(app, ["search", source_job["summary_job_id"], "--json"])
     assert search_result.exit_code == 0

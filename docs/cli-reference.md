@@ -517,6 +517,7 @@ chronicle summary invoke-plan --id sum_xxx --json
 - no provider execution
 - no external call performed
 - summary job ID / title / prompt / source-ref count を request preview に含める
+- recorded plan には explicit 再実行用の execution request contract も保持される
 - `--record` 指定時のみ review-oriented `assistant_output` event として記録する
 
 ### chronicle runtime retrieve-plan
@@ -552,6 +553,7 @@ chronicle runtime retrieve-plan --query "release note context" --json
 ```bash
 chronicle runtime invoke-plan --text "Source text"
 chronicle runtime invoke-plan --text "Source text" --operation summarize
+chronicle runtime invoke-plan --text "Source text" --source event:evt_x --prompt "Rewrite with context"
 chronicle runtime invoke-plan --text "Source text" --record
 chronicle runtime invoke-plan --text "Source text" --json
 ```
@@ -563,7 +565,26 @@ chronicle runtime invoke-plan --text "Source text" --json
 - no external call performed
 - `invocation_ready` は contract boundary 上の ready / blocked を示すだけで、実行完了を意味しない
 - HTTP provider では `allow_network` が false の場合に block reason を返す
+- `--source` / `--prompt` / `--param key=value` を dry-run plan と recorded execution request contract に保持できる
 - `--record` 指定時のみ review-oriented `assistant_output` event として記録する
+
+### chronicle runtime execute-plan
+
+```bash
+chronicle runtime execute-plan --event evt_xxx
+chronicle runtime execute-plan --event evt_xxx --execute-configured-provider
+chronicle runtime execute-plan --event evt_xxx --record --artifact-title "Runtime Output" --execute-configured-provider
+chronicle runtime execute-plan --event evt_xxx --draft-summary-title "Runtime Draft" --execute-configured-provider --json
+```
+
+方針:
+
+- `runtime invoke-plan --record` または `summary invoke-plan --record` で残した event だけを対象にする
+- recorded plan に含まれる execution request contract を使って explicit 再実行する
+- `--execute-configured-provider` が無ければ fail closed
+- no hidden background execution
+- generated output remains review-required derived output
+- `--record` / `--draft-summary-title` / `--artifact-title` は通常の `runtime invoke` と同じ review-oriented persistence contract に従う
 
 ### chronicle runtime config show / set-local / set-http / disable
 

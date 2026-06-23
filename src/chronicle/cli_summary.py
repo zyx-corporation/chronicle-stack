@@ -191,7 +191,7 @@ def summary_invoke_plan_cmd(
         summary_title=source_job.title,
         summary_text=source_job.summary_text,
         prompt=source_job.provenance.prompt,
-        source_ref_count=len(source_job.source_refs),
+        source_refs=source_job.source_refs,
         operation=operation,
         record=record,
     )
