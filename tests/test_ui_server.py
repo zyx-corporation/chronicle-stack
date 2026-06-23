@@ -1221,6 +1221,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "function tableHtml(headers, body)" in html
     assert "function packageReviewButtons(record)" in html
     assert "function firstRelatedLink(record, prefix)" in html
+    assert "function openEndpointButton(endpoint)" in html
     assert "function detailNavButton(path, labelText)" in html
     assert "function reviewDetailButton(eventId)" in html
     assert "function relatedDetailButton(record, prefix, fallbackLabel = '')" in html
@@ -1360,7 +1361,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "label('button.open_latest_summary_response', 'Open Latest Summary Response')" in html
     assert "label('button.open_runtime_config', 'Open Runtime Config')" in html
     assert "label('button.open_package_review', 'Open Package Review')" in html
-    assert "buttons.push(listJumpButton(label('button.open_review_queue', 'Open Review Queue'), '/api/review-queue'));" in html
+    assert "buttons.push(openEndpointButton('/api/review-queue'));" in html
     assert "extraButtons: runtimeRowShortcutButtons" in html
     assert "extraButtons: reviewRowShortcutButtons" in html
     assert "extraButtons: summaryRowShortcutButtons" in html
@@ -1369,6 +1370,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "relatedDetailButton(row, '/api/runtime-records/', 'Open matching runtime record')" in html
     assert "const summaryLink = firstRelatedLink(record, '/api/summary-jobs/');" in html
     assert "const artifactLink = firstRelatedLink(record, '/api/artifacts/');" in html
+    assert "const buttons = [openEndpointButton('/api/runtime-records')];" in html
     assert "buttons.push(listJumpButton(localizeTextValue(summaryLink.label || 'Open summary job'), summaryLink.path));" in html
     assert "buttons.push(listJumpButton(localizeTextValue(artifactLink.label || 'Open artifact'), artifactLink.path));" in html
     assert "label('label.table_runtime', 'Runtime')" in html
