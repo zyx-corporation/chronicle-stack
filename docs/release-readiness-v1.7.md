@@ -42,6 +42,8 @@ Expected version:
 chronicle 1.7.0
 ```
 
+Repository-side verification now passes for this checkout after editable reinstall refreshed the CLI package metadata to `1.7.0`.
+
 ## Boundary confirmation
 
 v1.7.0 does not introduce:

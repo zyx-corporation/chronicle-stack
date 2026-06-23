@@ -2,7 +2,7 @@
 
 ## Status
 
-Repository-side release preparation for v1.7.0 is in progress.
+Repository-side release preparation for v1.7.0 is complete.
 
 Latest published release before this track:
 
@@ -42,6 +42,37 @@ It includes:
 - [v1.7 Phase F/G/H Closeout Summary](v1.7-phase-f-g-h-closeout-summary.md)
 - [v1.7 Phase H Readiness Status](v1.7-phase-h-readiness-status.md)
 
+## Repository-side verification state
+
+Repository-side verification has been completed with:
+
+```bash
+python -m pip install -e ".[dev]"
+chronicle --version
+ruff check src/ tests/
+pytest
+chronicle ui-smoke
+chronicle ui-smoke --json
+```
+
+Observed version after editable reinstall:
+
+```text
+chronicle 1.7.0
+```
+
+Observed `chronicle ui-smoke --json` top-level release fields:
+
+```json
+{
+  "passed": true,
+  "read_only": true,
+  "server_started": false,
+  "browser_required": false,
+  "external_runtime": false
+}
+```
+
 ## Boundary
 
 v1.7.0 does not add daemon/service installation, hosted UI, default-on GUI mutation, authenticated GUI mutation, hidden provider execution, GraphRAG runtime, vector DB, graph DB, correctness proof, security certification, or legal/governance finalization.
@@ -63,4 +94,4 @@ Transformed: v1.7 phase milestones become one release-target status surface.
 
 Supplemented: explicit release-status discoverability for v1.7 repo-side preparation.
 
-Unresolved: external `v1.7.0` tag publication, installer smoke evidence, stronger auth/authz enforcement, and broader provider/runtime expansion.
+Unresolved: external `v1.7.0` tag publication, tag-based installer smoke evidence, stronger auth/authz enforcement, and broader provider/runtime expansion.

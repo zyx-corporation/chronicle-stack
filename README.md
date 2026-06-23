@@ -102,7 +102,7 @@ flowchart TD
 | Read-only UI visibility for placeholder AI index | v1.7 Phase E 相当 実装済み |
 | Explicit local runtime summarize MVP | v1.7 Phase F 実装済み |
 | Local retrieval dry-run plan MVP | v1.7 Phase G skeleton 実装済み |
-| v1.7 runtime/review/package local UI release preparation | v1.7.0準備中 |
+| v1.7 runtime/review/package local UI release preparation | v1.7.0準備済み |
 | GraphRAG query engine | 将来構想 |
 | Full interactive editing UI | 将来構想 |
 
