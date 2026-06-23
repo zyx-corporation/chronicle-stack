@@ -69,13 +69,7 @@ chronicle ui-smoke
 chronicle ui-smoke --json
 ```
 
-Expected current version before final release cut:
-
-```text
-chronicle 1.7.0
-```
-
-Expected release version at the actual `v1.8.0` cut:
+Expected version:
 
 ```text
 chronicle 1.8.0
@@ -98,4 +92,4 @@ Transformed: scattered `v1.8.0` contract-hardening progress becomes one release-
 
 Supplemented: explicit release framing for action-route family visibility and status-code contract visibility.
 
-Unresolved: final `v1.8.0` version bump, changelog entry, publication evidence, and any stronger enforcement beyond the current local route contract surface.
+Unresolved: publication evidence and any stronger enforcement beyond the current local route contract surface.

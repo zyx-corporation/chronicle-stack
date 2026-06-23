@@ -4,7 +4,7 @@ Related: `docs/adr/0023-browser-triggered-review-write-semantics.md`, `docs/adr/
 
 ## Decision
 
-Chronicle Stack `v1.8.0` becomes ready for repository-side release preparation when the local GUI review-route contract-hardening slice, release notes, smoke profile, release status, version bump, and changelog update are merged with passing CI.
+Chronicle Stack `v1.8.0` is ready for repository-side release preparation after the local GUI review-route contract-hardening slice, release notes, smoke profile, release status, version bump, and changelog update are merged with passing CI.
 
 ## Scope
 
@@ -19,8 +19,8 @@ It includes:
 - `v1.8` release readiness
 - `v1.8` smoke profile
 - `v1.8` release notes
-- future version bump to `1.8.0`
-- future changelog update for `v1.8.0`
+- version bump to `1.8.0`
+- changelog update for `v1.8.0`
 
 ## Required verification
 
@@ -33,19 +33,15 @@ chronicle ui-smoke
 chronicle ui-smoke --json
 ```
 
-Expected current version before final release cut:
-
-```text
-chronicle 1.7.0
-```
-
-Expected release version at the actual `v1.8.0` cut:
+Expected version:
 
 ```text
 chronicle 1.8.0
 ```
 
-Current repository-side verification for this track is still pre-release framing and contract hardening, not final release execution.
+Current repository-side verification for this track now reflects the finalized `1.8.0` package version and completed repo-side release-preparation state.
+
+Repository-side verification now passes for this checkout, including editable reinstall, `chronicle --version = 1.8.0`, full `pytest`, and local `ui-smoke --json`.
 
 ## Boundary confirmation
 
@@ -88,4 +84,4 @@ Transformed: scattered `v1.8.0` design-hardening progress becomes one release-re
 
 Supplemented: explicit release framing for route-family semantics, status-code semantics, and local reviewer/session contract boundaries.
 
-Unresolved: final `v1.8.0` version bump, changelog entry, publication evidence, and any future stronger enforcement beyond the current local contract surface.
+Unresolved: publication evidence and any future stronger enforcement beyond the current local contract surface.

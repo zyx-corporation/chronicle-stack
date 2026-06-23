@@ -1,3 +1,3 @@
-"""Chronicle Core v0.1 — local-first record of context, artifacts, decisions, and diffs."""
+"""Chronicle Stack — local-first record of context, artifacts, decisions, and diffs."""
 
-__version__ = "0.1.0"
+__version__ = "1.8.0"

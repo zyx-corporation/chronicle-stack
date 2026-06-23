@@ -102,7 +102,7 @@ flowchart TD
 | Read-only UI visibility for placeholder AI index | v1.7 Phase E 相当 実装済み |
 | Explicit local runtime summarize MVP | v1.7 Phase F 実装済み |
 | Local retrieval dry-run plan MVP | v1.7 Phase G skeleton 実装済み |
-| v1.7 runtime/review/package local UI release preparation | v1.7.0準備済み |
+| v1.8 local GUI review-route contract hardening release preparation | v1.8.0準備済み |
 | GraphRAG query engine | 将来構想 |
 | Full interactive editing UI | 将来構想 |
 
@@ -297,7 +297,7 @@ ruff check src/ tests/
 ## リリース
 
 - Latest published release: **v1.7.0**
-- Current repository-side release target: **v1.8.0**
+- Current repository-side release target: **v1.8.0**（repo-side preparation complete）
 - v1.7.0 release status: [docs/release-status-v1.7.0.md](docs/release-status-v1.7.0.md)
 - v1.8.0 release status: [docs/release-status-v1.8.0.md](docs/release-status-v1.8.0.md)
 - v1.7.0 release readiness: [docs/release-readiness-v1.7.md](docs/release-readiness-v1.7.md)
@@ -308,7 +308,7 @@ ruff check src/ tests/
 - v1.8.0 smoke profile: [docs/smoke-test-v1.8.md](docs/smoke-test-v1.8.md)
 - v1.7.0 release notes: [docs/release-notes-v1.7.0.md](docs/release-notes-v1.7.0.md)
 - v1.8.0 starts as the local GUI review-route design-hardening lane after the completed v1.7.0 observability release.
-- v1.7.0 publication requires tag creation, GitHub Release publication, and installer / `ui-smoke` evidence from the tag.
+- v1.8.0 repo-side preparation is complete; tag creation, GitHub Release publication, and installer / `ui-smoke` evidence remain explicit release-operator steps.
 
 ## ライセンス
 

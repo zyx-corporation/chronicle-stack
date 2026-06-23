@@ -27,10 +27,10 @@ chronicle ui-smoke
 chronicle ui-smoke --json
 ```
 
-Expected current version before release cut:
+Expected version:
 
 ```text
-chronicle 1.7.0
+chronicle 1.8.0
 ```
 
 Expected JSON smoke fields:
@@ -85,4 +85,4 @@ Transformed: prior Phase H contract checks are now represented through a dedicat
 
 Supplemented: explicit smoke emphasis on action-route and status-code contract exposure.
 
-Unresolved: final `v1.8.0` release evidence, release notes, version bump, and publication workflow.
+Unresolved: final `v1.8.0` release evidence and publication workflow.

@@ -2,10 +2,10 @@
 
 ## Status
 
-Repository-side release preparation for `v1.8.0` is in progress.
+Repository-side release preparation for `v1.8.0` is complete.
 
 - Latest published release before this track: `v1.7.0`
-- Current repository-side release target: `v1.8.0`
+- Current repository-side release target: `v1.8.0` (repo-side preparation complete)
 
 ## Release scope
 
@@ -41,11 +41,19 @@ These older records still provide adjacent historical context for the current re
 - `docs/v1.7-phase-f-g-h-remaining-issues.md`
 - `docs/v1.7-phase-h-gated-gui-mutation-preview.md`
 
+## Repository-side verification
+
+Current repository-side release-preparation verification for `v1.8.0` now includes:
+
+- editable reinstall refreshed package metadata to `1.8.0`
+- local CLI reported `chronicle 1.8.0`
+- full repository test suite passed
+- local `ui-smoke --json` passed from `/tmp/chronicle-stack-v1.8.0-repo-smoke.HZj8ST/ui-smoke.json`
+
 ## Boundary notes
 
-This release-status document does not yet imply:
+This release-status document still does not imply:
 
-- final version-bump execution
 - external release publication
 - default-on GUI mutation
 - hosted authentication or multi-user operator flows
@@ -60,4 +68,6 @@ Current repository-side review for `v1.8.0` preserves the following:
 - the next release lane stays local-first and contract-driven
 - repository-side readiness and smoke entry points now exist for the `v1.8.0` lane
 - release-notes and remaining-issues entry points now also exist for the `v1.8.0` lane
-- unresolved work remains version bump, changelog update, final smoke evidence, and publication evidence
+- version bump and changelog update are now complete for the `v1.8.0` lane
+- repository-side version and smoke verification now also pass at `1.8.0`
+- unresolved work remains final smoke evidence and publication evidence
