@@ -5391,15 +5391,7 @@ function renderOverviewTriagePanel(triage, warningButtons, warningSummaries) {{
     + '<p>' + esc(label('overview.warning_priority', 'Warning priority')) + ': '
     + overviewWarningPriorityBadges(warningSummaries)
     + '</p>'
-    + navigationCluster([
-      openEndpointButton('/api/review-queue'),
-      openEndpointButton('/api/runtime-records'),
-      openEndpointButton('/api/summary-jobs'),
-      latestResponseButton(triage.latest_provider_response_detail_path, 'button.open_latest_review_response', 'Open Latest Review Response'),
-      openEndpointButton('/api/runtime-config'),
-      openEndpointButton('/api/package-review'),
-      '<button data-reset-filters="all">' + esc(label('button.reset_filter', 'Reset Filter')) + '</button>',
-    ])
+    + overviewTriageNavigationCluster(triage)
     + sliceButtonRow(reviewQueueSliceButtons())
     + '<p>' + overviewTriageJumpButtons() + '</p>'
   );
@@ -5420,6 +5412,17 @@ function overviewWarningPriorityBadges(warningSummaries) {{
         sliceBadge((item.label || item.code || 'warning'), item.count ?? 0, 'badge-warning')
       ).join('')
     : '(none)';
+}}
+function overviewTriageNavigationCluster(triage) {{
+  return navigationCluster([
+    openEndpointButton('/api/review-queue'),
+    openEndpointButton('/api/runtime-records'),
+    openEndpointButton('/api/summary-jobs'),
+    latestResponseButton(triage.latest_provider_response_detail_path, 'button.open_latest_review_response', 'Open Latest Review Response'),
+    openEndpointButton('/api/runtime-config'),
+    openEndpointButton('/api/package-review'),
+    '<button data-reset-filters="all">' + esc(label('button.reset_filter', 'Reset Filter')) + '</button>',
+  ]);
 }}
 function overviewTriageJumpButtons() {{
   return [
