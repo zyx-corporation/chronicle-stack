@@ -5386,11 +5386,7 @@ function renderOverviewTriagePanel(triage, warningButtons, warningSummaries) {{
     + '<p>' + (warningButtons || '') + '</p>'
     + metricsSection(metricsBody)
     + '<p>' + esc(label('overview.warning_priority', 'Warning priority')) + ': '
-    + (warningSummaries.length > 0
-      ? warningSummaries.map(item =>
-          sliceBadge((item.label || item.code || 'warning'), item.count ?? 0, 'badge-warning')
-        ).join('')
-      : '(none)')
+    + overviewWarningPriorityBadges(warningSummaries)
     + '</p>'
     + navigationCluster([
       openEndpointButton('/api/review-queue'),
@@ -5421,6 +5417,13 @@ function overviewWarningButtons(warningSummaries) {{
       item.code || ''
     )
   ).join('');
+}}
+function overviewWarningPriorityBadges(warningSummaries) {{
+  return warningSummaries.length > 0
+    ? warningSummaries.map(item =>
+        sliceBadge((item.label || item.code || 'warning'), item.count ?? 0, 'badge-warning')
+      ).join('')
+    : '(none)';
 }}
 const overviewPanelRenderers = [
   data => renderOverviewHeaderPanel(data.chronicle),

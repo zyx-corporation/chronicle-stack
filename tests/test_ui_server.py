@@ -1199,6 +1199,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "function renderOverviewSummaryJobsPanel(counts, summaryJobs)" in html
     assert "function renderOverviewTriagePanel(triage, warningButtons, warningSummaries)" in html
     assert "function overviewWarningButtons(warningSummaries)" in html
+    assert "function overviewWarningPriorityBadges(warningSummaries)" in html
     assert "const overviewPanelRenderers = [" in html
     assert "function renderOverviewPanels(data)" in html
     assert "const detailPathResolvers =" in html
@@ -1419,6 +1420,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "listJumpButton(reviewWarningLabel('ui_auth_not_enabled'), '/api/review-queue', 'reviewQueue', 'ui_auth_not_enabled')" in html
     assert "listJumpButton(reviewWarningLabel('reviewer_identity_declared_only'), '/api/review-queue', 'reviewQueue', 'reviewer_identity_declared_only')" in html
     assert "listJumpButton(filterValueLabel('runtimeRecords', 'retrieval_plan'), '/api/runtime-records', 'runtimeRecords', 'retrieval_plan')" in html
+    assert "overviewWarningPriorityBadges(warningSummaries)" in html
     assert "data-detail-nav" in html
     assert "data-detail-trail" in html
     assert "data-back-view" in html
