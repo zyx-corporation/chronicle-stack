@@ -92,4 +92,4 @@ Transformed: scattered `v1.8.0` contract-hardening progress becomes one release-
 
 Supplemented: explicit release framing for action-route family visibility and status-code contract visibility.
 
-Unresolved: publication evidence and any stronger enforcement beyond the current local route contract surface.
+Unresolved: any stronger enforcement beyond the current local route contract surface.

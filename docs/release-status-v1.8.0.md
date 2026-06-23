@@ -2,10 +2,19 @@
 
 ## Status
 
-Repository-side release preparation for `v1.8.0` is complete.
+Repository-side release preparation for `v1.8.0` is complete, and external `v1.8.0` release publication has been completed.
 
-- Latest published release before this track: `v1.7.0`
-- Current repository-side release target: `v1.8.0` (repo-side preparation complete)
+Latest published release before this track:
+
+```text
+v1.7.0
+```
+
+Current repository-side release target:
+
+```text
+v1.8.0
+```
 
 ## Release scope
 
@@ -50,11 +59,22 @@ Current repository-side release-preparation verification for `v1.8.0` now includ
 - full repository test suite passed
 - local `ui-smoke --json` passed from `/tmp/chronicle-stack-v1.8.0-repo-smoke.HZj8ST/ui-smoke.json`
 
+## External release execution state
+
+The following external release-execution evidence has also been captured:
+
+- `origin/main` and `v1.8.0` both resolved to `b81f7e1a441685b6a00db63da7c52b49fa643dcb`
+- GitHub Release URL: [Chronicle Stack v1.8.0](https://github.com/zyx-corporation/chronicle-stack/releases/tag/v1.8.0)
+- clean tag-based installer smoke completed in `/tmp/chronicle-stack-v1.8.0-install-smoke`
+- installed tag-based CLI reported `chronicle 1.8.0`
+- installed tag checkout `HEAD` and `v1.8.0^{}` matched
+- tag-based `ui-smoke` evidence was recorded from `/tmp/chronicle-stack-v1.8.0-tag-ui-smoke/ui-smoke.json`
+- moved-tag opt-out installer smoke completed in `/tmp/chronicle-stack-v1.8.0-optout-smoke`
+
 ## Boundary notes
 
 This release-status document still does not imply:
 
-- external release publication
 - default-on GUI mutation
 - hosted authentication or multi-user operator flows
 - hidden provider execution
@@ -64,10 +84,11 @@ This release-status document still does not imply:
 
 Current repository-side review for `v1.8.0` preserves the following:
 
-- `v1.7.0` remains the latest published release
+- `v1.7.0` was the latest published release before this track
 - the next release lane stays local-first and contract-driven
 - repository-side readiness and smoke entry points now exist for the `v1.8.0` lane
 - release-notes and remaining-issues entry points now also exist for the `v1.8.0` lane
 - version bump and changelog update are now complete for the `v1.8.0` lane
 - repository-side version and smoke verification now also pass at `1.8.0`
-- unresolved work remains final smoke evidence and publication evidence
+- external publication and tag-based installer / `ui-smoke` evidence are now also complete
+- unresolved work moves to whatever release lane follows `v1.8.0`

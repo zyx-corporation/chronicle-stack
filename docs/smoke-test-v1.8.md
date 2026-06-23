@@ -85,4 +85,4 @@ Transformed: prior Phase H contract checks are now represented through a dedicat
 
 Supplemented: explicit smoke emphasis on action-route and status-code contract exposure.
 
-Unresolved: final `v1.8.0` release evidence and publication workflow.
+Unresolved: any follow-on release workflow after the completed `v1.8.0` publication.

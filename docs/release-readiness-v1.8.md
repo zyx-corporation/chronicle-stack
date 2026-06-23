@@ -84,4 +84,4 @@ Transformed: scattered `v1.8.0` design-hardening progress becomes one release-re
 
 Supplemented: explicit release framing for route-family semantics, status-code semantics, and local reviewer/session contract boundaries.
 
-Unresolved: publication evidence and any future stronger enforcement beyond the current local contract surface.
+Unresolved: any future stronger enforcement beyond the current local contract surface.
