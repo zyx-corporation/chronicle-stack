@@ -129,6 +129,8 @@ overview の Runtime Records / Summary Jobs panel でも、provider response が
 
 list row の Actions でも compact shortcut が出るため、runtime / review / summary の各一覧から関連 detail に 1-click で着地できます。
 
+filter 条件で row が消えた場合の empty state にも一覧ショートカットが残るため、runtime / review / summary 間の回遊は no-match 状態でも途切れません。
+
 `chronicle runtime execute-plan --event evt_xxx --execute-configured-provider` は、その recorded invocation plan に含まれる execution request contract を使って explicit/manual 再実行します。ここでも hidden execution は起きず、configured provider への crossing は毎回明示 flag が必要です。
 
 summary job 由来の invocation dry-run では、runtime record detail から対応する `/api/summary-jobs/<summary_job_id>` へ辿れます。

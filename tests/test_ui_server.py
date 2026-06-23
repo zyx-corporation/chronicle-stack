@@ -1214,7 +1214,8 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "function reviewerCell(identity, fallbackLabel = '')" in html
     assert "function summaryIdentityCell(identityBadge, reviewerIdentity)" in html
     assert "function resetFilterButton(query, target)" in html
-    assert "function emptyFilterState(query, rows, message)" in html
+    assert "function emptyFilterButtons(target)" in html
+    assert "function emptyFilterState(query, rows, message, target)" in html
     assert "function listToolbar(endpoint, target, placeholder, sortOptions, filterChipHtml, query)" in html
     assert "function actionPreviewStatus(targetId, mutationEnabled, enabledMessage, disabledMessage)" in html
     assert "function tableHtml(headers, body)" in html
@@ -1404,6 +1405,9 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "uiLabel('No matching runtime records for current filter.')" in html
     assert "uiLabel('No matching review rows for current filter.')" in html
     assert "uiLabel('No matching summary jobs for current filter.')" in html
+    assert "if (target === 'runtimeRecords')" in html
+    assert "if (target === 'reviewQueue')" in html
+    assert "if (target === 'summaryJobs')" in html
     assert "CLI aligned" in html
     assert "Open Runtime Records" in html
     assert "Open Review Queue" in html

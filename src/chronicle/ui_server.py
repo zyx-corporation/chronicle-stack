@@ -3610,8 +3610,26 @@ function summaryIdentityCell(identityBadge, reviewerIdentity) {{
 function resetFilterButton(query, target) {{
   return query ? '<p><button data-reset-filter="' + esc(target) + '">' + esc(label('button.reset_filter', 'Reset Filter')) + '</button></p>' : '';
 }}
-function emptyFilterState(query, rows, message) {{
-  return query && rows.length === 0 ? '<p>' + esc(message) + '</p>' : '';
+function emptyFilterButtons(target) {{
+  if (target === 'runtimeRecords') return [
+    listJumpButton(label('button.open_runtime_records', 'Open Runtime Records'), '/api/runtime-records'),
+    listJumpButton(label('button.open_review_queue', 'Open Review Queue'), '/api/review-queue'),
+  ].join('');
+  if (target === 'reviewQueue') return [
+    listJumpButton(label('button.open_review_queue', 'Open Review Queue'), '/api/review-queue'),
+    listJumpButton(label('button.open_runtime_records', 'Open Runtime Records'), '/api/runtime-records'),
+    listJumpButton(label('button.open_summary_jobs', 'Open Summary Jobs'), '/api/summary-jobs'),
+  ].join('');
+  if (target === 'summaryJobs') return [
+    listJumpButton(label('button.open_summary_jobs', 'Open Summary Jobs'), '/api/summary-jobs'),
+    listJumpButton(label('button.open_review_queue', 'Open Review Queue'), '/api/review-queue'),
+  ].join('');
+  return '';
+}}
+function emptyFilterState(query, rows, message, target) {{
+  return query && rows.length === 0
+    ? '<div><p>' + esc(message) + '</p><p>' + emptyFilterButtons(target) + '</p></div>'
+    : '';
 }}
 function actionPreviewStatus(targetId, mutationEnabled, enabledMessage, disabledMessage) {{
   return '<div id="' + esc(targetId) + '"><p>'
@@ -3850,7 +3868,7 @@ function renderRuntimeRecordsTable(endpoint, rows) {{
       {{ value: 'kind', label: t('sort.runtime.kind') }},
     ], runtimeRecordsFilterChips(), query)
     + sliceButtonRow(runtimeRecordsSliceButtons())
-    + emptyFilterState(query, sorted, uiLabel('No matching runtime records for current filter.'))
+    + emptyFilterState(query, sorted, uiLabel('No matching runtime records for current filter.'), 'runtimeRecords')
     + (
       mutationEnabled
         ? renderReviewMutationForm(uiLabel('Local Review Mutation'), 'runtime-records')
@@ -3913,7 +3931,7 @@ function renderReviewQueueTable(endpoint, rows) {{
       {{ value: 'reviewer', label: t('sort.review.reviewer') }},
     ], reviewQueueFilterChips(), query)
     + sliceButtonRow(reviewQueueSliceButtons())
-    + emptyFilterState(query, sorted, uiLabel('No matching review rows for current filter.'))
+    + emptyFilterState(query, sorted, uiLabel('No matching review rows for current filter.'), 'reviewQueue')
     + (
       mutationEnabled
         ? renderReviewMutationForm(uiLabel('Local Review Mutation'), 'review-queue')
@@ -3974,7 +3992,7 @@ function renderSummaryJobsTable(endpoint, rows) {{
       {{ value: 'title', label: t('sort.summary.title') }},
     ], summaryJobsFilterChips(), query)
     + sliceButtonRow(summaryJobsSliceButtons())
-    + emptyFilterState(query, sorted, uiLabel('No matching summary jobs for current filter.'))
+    + emptyFilterState(query, sorted, uiLabel('No matching summary jobs for current filter.'), 'summaryJobs')
     + (
       mutationEnabled
         ? renderReviewMutationForm(uiLabel('Summary Review Mutation'), 'summary-jobs')
