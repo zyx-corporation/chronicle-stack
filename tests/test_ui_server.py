@@ -1416,6 +1416,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "Auth Boundary Warnings" in html
     assert "warnings.slice(0, 2).forEach" in html
     assert "function buttonRow(buttons)" in html
+    assert "function navigationCluster(buttons)" in html
     assert "function moreStatusButtons(status, endpoint, filterTarget, prefix = '')" in html
     assert "const previewButtons = [" in html
     assert "const parityButtons = moreStatusButtons(parity.status, '/api/review-queue', 'reviewQueue');" in html

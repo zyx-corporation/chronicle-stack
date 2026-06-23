@@ -3614,21 +3614,21 @@ function emptyFilterButtons(target) {{
   if (target === 'runtimeRecords') return [
     listJumpButton(label('button.open_runtime_records', 'Open Runtime Records'), '/api/runtime-records'),
     listJumpButton(label('button.open_review_queue', 'Open Review Queue'), '/api/review-queue'),
-  ].join('');
+  ];
   if (target === 'reviewQueue') return [
     listJumpButton(label('button.open_review_queue', 'Open Review Queue'), '/api/review-queue'),
     listJumpButton(label('button.open_runtime_records', 'Open Runtime Records'), '/api/runtime-records'),
     listJumpButton(label('button.open_summary_jobs', 'Open Summary Jobs'), '/api/summary-jobs'),
-  ].join('');
+  ];
   if (target === 'summaryJobs') return [
     listJumpButton(label('button.open_summary_jobs', 'Open Summary Jobs'), '/api/summary-jobs'),
     listJumpButton(label('button.open_review_queue', 'Open Review Queue'), '/api/review-queue'),
-  ].join('');
-  return '';
+  ];
+  return [];
 }}
 function emptyFilterState(query, rows, message, target) {{
   return query && rows.length === 0
-    ? '<div><p>' + esc(message) + '</p><p>' + emptyFilterButtons(target) + '</p></div>'
+    ? '<div><p>' + esc(message) + '</p>' + navigationCluster(emptyFilterButtons(target)) + '</div>'
     : '';
 }}
 function actionPreviewStatus(targetId, mutationEnabled, enabledMessage, disabledMessage) {{
@@ -4544,6 +4544,10 @@ function messageParagraph(message) {{
 function buttonRow(buttons) {{
   return buttons.length > 0 ? '<p>' + buttons.join('') + '</p>' : '';
 }}
+function navigationCluster(buttons) {{
+  const items = Array.isArray(buttons) ? buttons.filter(Boolean) : [];
+  return items.length > 0 ? '<p>' + items.join('') + '</p>' : '';
+}}
 function moreStatusButtons(status, endpoint, filterTarget, prefix = '') {{
   if (!status) return [];
   return [listJumpButton(label('status.more', 'More') + ' ' + status, endpoint, filterTarget, prefix + status)];
@@ -4624,7 +4628,7 @@ function relatedListButtons(detailEndpoint, record) {{
   if (detailEndpoint.startsWith('/api/review-queue/')) buttons.push(...reviewRelatedButtons(record));
   if (detailEndpoint.startsWith('/api/summary-jobs/')) buttons.push(...summaryRelatedButtons(record));
   buttons.push(...packageReviewButtons(record));
-  return buttons.join('');
+  return navigationCluster(buttons);
 }}
 function renderNavigationNotice(endpoint, record, options = {{}}) {{
   const filterLabel = options.filterLabel || '';
@@ -5197,7 +5201,7 @@ function renderOverviewAuthBoundaryPanel(authBoundary, authBoundaryOverview) {{
     + metricsSection
     + detailListLine('Auth blockers', authBoundary.blockers, ' | ')
     + detailListLine('Auth blocker summaries', blockerSummaries.map(item => (item.summary || item.code || 'blocker')), ' | ')
-    + (authBoundaryOverview.latest_provider_response_detail_path ? '<p>' + listJumpButton(label('button.open_latest_review_response', 'Open Latest Review Response'), authBoundaryOverview.latest_provider_response_detail_path) + '</p>' : '')
+    + navigationCluster(authBoundaryOverview.latest_provider_response_detail_path ? [listJumpButton(label('button.open_latest_review_response', 'Open Latest Review Response'), authBoundaryOverview.latest_provider_response_detail_path)] : [])
     + detailListLine('Auth next steps', authBoundary.next_steps, ' | ')
   );
 }}
@@ -5315,9 +5319,10 @@ function renderOverviewRuntimeRecordsPanel(counts, runtimeRecords) {{
     + '</p>'
     + metricsSection
     + sliceButtonRow(runtimeRecordsSliceButtons())
-    + '<p>' + listJumpButton(label('button.open_runtime_records', 'Open Runtime Records'), '/api/runtime-records')
-    + (runtimeRecords.latest_provider_response_detail_path ? listJumpButton(label('button.open_latest_runtime_response', 'Open Latest Runtime Response'), runtimeRecords.latest_provider_response_detail_path) : '')
-    + '</p>'
+    + navigationCluster([
+      listJumpButton(label('button.open_runtime_records', 'Open Runtime Records'), '/api/runtime-records'),
+      runtimeRecords.latest_provider_response_detail_path ? listJumpButton(label('button.open_latest_runtime_response', 'Open Latest Runtime Response'), runtimeRecords.latest_provider_response_detail_path) : '',
+    ])
   );
 }}
 function renderOverviewSummaryJobsPanel(counts, summaryJobs) {{
@@ -5350,9 +5355,10 @@ function renderOverviewSummaryJobsPanel(counts, summaryJobs) {{
     + metricsSection
     + detailLine('Source refs total', summaryJobs.summary_source_total ?? 0)
     + sliceButtonRow(summaryJobsSliceButtons())
-    + '<p>' + listJumpButton(label('button.open_summary_jobs', 'Open Summary Jobs'), '/api/summary-jobs')
-    + (summaryJobs.latest_provider_response_detail_path ? listJumpButton(label('button.open_latest_summary_response', 'Open Latest Summary Response'), summaryJobs.latest_provider_response_detail_path) : '')
-    + '</p>'
+    + navigationCluster([
+      listJumpButton(label('button.open_summary_jobs', 'Open Summary Jobs'), '/api/summary-jobs'),
+      summaryJobs.latest_provider_response_detail_path ? listJumpButton(label('button.open_latest_summary_response', 'Open Latest Summary Response'), summaryJobs.latest_provider_response_detail_path) : '',
+    ])
   );
 }}
 function renderOverviewTriagePanel(triage, warningButtons, warningSummaries) {{
@@ -5399,13 +5405,15 @@ function renderOverviewTriagePanel(triage, warningButtons, warningSummaries) {{
         ).join('')
       : '(none)')
     + '</p>'
-    + '<p>' + listJumpButton(label('button.open_review_queue', 'Open Review Queue'), '/api/review-queue')
-    + listJumpButton(label('button.open_runtime_records', 'Open Runtime Records'), '/api/runtime-records')
-    + listJumpButton(label('button.open_summary_jobs', 'Open Summary Jobs'), '/api/summary-jobs')
-    + (triage.latest_provider_response_detail_path ? listJumpButton(label('button.open_latest_review_response', 'Open Latest Review Response'), triage.latest_provider_response_detail_path) : '')
-    + listJumpButton(label('button.open_runtime_config', 'Open Runtime Config'), '/api/runtime-config')
-    + listJumpButton(label('button.open_package_review', 'Open Package Review'), '/api/package-review')
-    + '<button data-reset-filters="all">' + esc(label('button.reset_filter', 'Reset Filter')) + '</button></p>'
+    + navigationCluster([
+      listJumpButton(label('button.open_review_queue', 'Open Review Queue'), '/api/review-queue'),
+      listJumpButton(label('button.open_runtime_records', 'Open Runtime Records'), '/api/runtime-records'),
+      listJumpButton(label('button.open_summary_jobs', 'Open Summary Jobs'), '/api/summary-jobs'),
+      triage.latest_provider_response_detail_path ? listJumpButton(label('button.open_latest_review_response', 'Open Latest Review Response'), triage.latest_provider_response_detail_path) : '',
+      listJumpButton(label('button.open_runtime_config', 'Open Runtime Config'), '/api/runtime-config'),
+      listJumpButton(label('button.open_package_review', 'Open Package Review'), '/api/package-review'),
+      '<button data-reset-filters="all">' + esc(label('button.reset_filter', 'Reset Filter')) + '</button>',
+    ])
     + sliceButtonRow(reviewQueueSliceButtons())
     + '<p>' + listJumpButton(filterValueLabel('reviewQueue', 'advisory'), '/api/review-queue', 'reviewQueue', 'advisory')
     + listJumpButton(filterValueLabel('reviewQueue', 'package:package_context_available'), '/api/review-queue', 'reviewQueue', 'package:package_context_available')
