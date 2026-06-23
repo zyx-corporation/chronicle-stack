@@ -1212,6 +1212,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "function actionPreviewStatus(targetId, mutationEnabled, enabledMessage, disabledMessage)" in html
     assert "function tableHtml(headers, body)" in html
     assert "function packageReviewButtons(record)" in html
+    assert "function firstRelatedLink(record, prefix)" in html
     assert "function runtimeRelatedButtons(record)" in html
     assert "function reviewRelatedButtons(record)" in html
     assert "function summaryRelatedButtons(record)" in html
@@ -1346,6 +1347,10 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "label('button.open_runtime_config', 'Open Runtime Config')" in html
     assert "label('button.open_package_review', 'Open Package Review')" in html
     assert "buttons.push(listJumpButton(label('button.open_review_queue', 'Open Review Queue'), '/api/review-queue'));" in html
+    assert "const summaryLink = firstRelatedLink(record, '/api/summary-jobs/');" in html
+    assert "const artifactLink = firstRelatedLink(record, '/api/artifacts/');" in html
+    assert "buttons.push(listJumpButton(localizeTextValue(summaryLink.label || 'Open summary job'), summaryLink.path));" in html
+    assert "buttons.push(listJumpButton(localizeTextValue(artifactLink.label || 'Open artifact'), artifactLink.path));" in html
     assert "label('label.table_runtime', 'Runtime')" in html
     assert "label('label.table_target', 'Target')" in html
     assert "summary-jobs-action-preview-response" in html

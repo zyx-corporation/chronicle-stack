@@ -4510,10 +4510,18 @@ function packageReviewButtons(record) {{
     ? [listJumpButton(label('button.open_package_review', 'Open Package Review'), '/api/package-review')]
     : [];
 }}
+function firstRelatedLink(record, prefix) {{
+  const links = Array.isArray(record.related_links) ? record.related_links : [];
+  return links.find(item => String(item.path || '').startsWith(prefix)) || null;
+}}
 function runtimeRelatedButtons(record) {{
   const buttons = [listJumpButton(label('button.open_runtime_records', 'Open Runtime Records'), '/api/runtime-records')];
   const runtimeKind = record.runtime_record_kind || (record.runtime_record_preview && record.runtime_record_preview.record_kind) || '';
   if (runtimeKind) buttons.push(moreSliceButton(runtimeKind, '/api/runtime-records', 'runtimeRecords'));
+  const summaryLink = firstRelatedLink(record, '/api/summary-jobs/');
+  if (summaryLink) buttons.push(listJumpButton(localizeTextValue(summaryLink.label || 'Open summary job'), summaryLink.path));
+  const artifactLink = firstRelatedLink(record, '/api/artifacts/');
+  if (artifactLink) buttons.push(listJumpButton(localizeTextValue(artifactLink.label || 'Open artifact'), artifactLink.path));
   return buttons;
 }}
 function reviewRelatedButtons(record) {{
