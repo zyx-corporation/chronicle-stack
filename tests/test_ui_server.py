@@ -370,8 +370,11 @@ def test_ui_overview_data(tmp_path):
     assert overview["identity_boundary_summary"]["status"] == "identity_unavailable"
     assert overview["identity_boundary_summary"]["missing_identity_count"] == 3
     assert overview["mutation_readiness"]["status"] == "preview_only"
+    assert overview["mutation_readiness"]["scope_note"].startswith("The UI remains preview-only")
     assert "Define explicit local auth boundary." in overview["mutation_readiness"]["next_steps"]
     assert overview["mutation_readiness"]["blocker_details"][0]["code"] == "write_routes_disabled"
+    assert overview["mutation_readiness"]["blocker_summaries"][0]["source_label"] == "Boundary prerequisites"
+    assert overview["mutation_readiness"]["blocker_summaries"][0]["summary"].startswith("Boundary prerequisites: ")
     assert overview["mutation_readiness"]["pending_boundary_warning_counts"]["reviewer_identity_missing"] == 3
     assert overview["mutation_readiness"]["enablement_ready"] is False
     assert overview["mutation_readiness"]["enablement_satisfied_count"] == 1
@@ -398,6 +401,9 @@ def test_ui_overview_data(tmp_path):
         "authorization_boundary",
         "reviewer_identity",
     ]
+    assert overview["mutation_readiness"]["operational_readiness"]["blocking_summaries"][0].startswith(
+        "Capability flag enabled: "
+    )
     assert overview["runtime_records_summary"]["kind_counts"]["summary"] == 1
     assert overview["runtime_records_summary"]["kind_counts"]["retrieval_plan"] == 1
     assert overview["runtime_records_summary"]["auth_readiness_counts"]["advisory_only"] == 2
@@ -682,12 +688,13 @@ def test_ui_html_filtering_includes_provider_response_metadata_fields(tmp_path, 
     assert "errors=" in html
     assert "follow-up=" in html
     assert "detailLine('Enablement ready', mutationReadiness.enablement_ready)" in html
+    assert "detailLine('Scope note', mutationReadiness.scope_note || '')" in html
     assert "detailLine('Operational readiness', operationalReadiness.status || '')" in html
-    assert "detailListLine('Remaining checks', (operationalReadiness.unsatisfied_checks || []).map(item => ((item.label || item.code || 'check') + ': ' + (item.detail || ''))), ' | ')" in html
+    assert "detailListLine('Remaining checks', operationalReadiness.blocking_summaries || [], ' | ')" in html
     assert "detailListLine('Enablement checks', enablementChecks.map(check => ((check.satisfied ? 'ok: ' : 'blocked: ') + (check.label || check.code || 'check'))), ' | ')" in html
     assert "function renderMutationEnablementNotice(record)" in html
     assert "label('notice.mutation_enablement', 'Mutation Enablement')" in html
-    assert "detailListLine('Blocker sources', blockerSummaries.map(item => ((item.source || 'unknown') + ':' + (item.code || 'blocker') + '=' + String(item.affected_count ?? 0))), ' | ')" in html
+    assert "detailListLine('Blocker sources', blockerSummaries.map(item => (item.summary || ((item.source_label || item.source || 'unknown') + ': ' + (item.message || item.code || 'blocker')))), ' | ')" in html
     assert "detailLine('Reviewer label pattern', reviewerContext.reviewer_label_pattern || '')" in html
     assert "detailLine('Write route', writeRouteContract.route_template || '')" in html
     assert "detailListLine('Write request fields', writeRouteContract.expected_request_fields, ' | ')" in html
@@ -736,6 +743,7 @@ def test_ui_data_service_detail_endpoints(tmp_path):
         "ui_intent",
     ]
     assert summary_detail["mutation_enablement"]["enablement_ready"] is False
+    assert summary_detail["mutation_enablement"]["scope_note"].startswith("The UI remains preview-only")
     assert summary_detail["mutation_enablement"]["operational_readiness"]["status"] == "blocked"
     assert any(item["source"] == "boundary" for item in summary_detail["mutation_enablement"]["blocker_summaries"])
     assert summary_detail["mutation_enablement"]["write_route_contract"]["route_template"] == "/api/review-actions/<event_id>/<action>"
@@ -746,6 +754,10 @@ def test_ui_data_service_detail_endpoints(tmp_path):
     assert runtime_detail["auth_boundary_notice"]["status"] == "advisory_only"
     assert runtime_detail["mutation_enablement"]["enablement_ready"] is False
     assert runtime_detail["mutation_enablement"]["operational_readiness"]["remaining_count"] >= 1
+    assert any(
+        item["summary"].startswith("Pending review queue")
+        for item in runtime_detail["mutation_enablement"]["blocker_summaries"]
+    )
     assert any(item["source"] == "review_queue" for item in runtime_detail["mutation_enablement"]["blocker_summaries"])
     assert runtime_detail["mutation_enablement"]["write_route_contract"]["success_status_code"] == 200
     assert runtime_detail["suggested_cli_family"] == "chronicle runtime summarize --record"
@@ -774,6 +786,7 @@ def test_ui_data_service_detail_endpoints(tmp_path):
         "request-changes",
     ]
     assert review_detail["mutation_enablement"]["operational_readiness"]["unsatisfied_checks"]
+    assert review_detail["mutation_enablement"]["operational_readiness"]["blocking_summaries"]
     assert review_detail["action_preview"]["success_contract"]["follow_up_commands"][0] == "chronicle review queue --include-resolved --json"
     assert review_detail["action_preview"]["write_route_contract"]["success_status_code"] == 200
     assert review_detail["action_preview"]["write_route_contract"]["identity_proof_contract"]["proof_status"] == "local_operator_advisory"

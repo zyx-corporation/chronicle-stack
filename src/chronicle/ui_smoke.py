@@ -196,7 +196,17 @@ def run_ui_smoke(root: Path | None = None) -> UISmokeReport:
                         (
                             isinstance(mutation_enablement, dict)
                             and isinstance(mutation_enablement.get("blocker_summaries"), list)
+                            and all(
+                                isinstance(item, dict) and bool(item.get("summary"))
+                                for item in mutation_enablement.get("blocker_summaries", [])
+                            )
                             and isinstance(mutation_enablement.get("operational_readiness"), dict)
+                            and isinstance(
+                                mutation_enablement.get("operational_readiness", {}).get(
+                                    "blocking_summaries"
+                                ),
+                                list,
+                            )
                             and isinstance(
                                 mutation_enablement.get("reviewer_context_requirements", {}).get(
                                     "effective_required_fields"
@@ -216,7 +226,17 @@ def run_ui_smoke(root: Path | None = None) -> UISmokeReport:
                             "ok"
                             if isinstance(mutation_enablement, dict)
                             and isinstance(mutation_enablement.get("blocker_summaries"), list)
+                            and all(
+                                isinstance(item, dict) and bool(item.get("summary"))
+                                for item in mutation_enablement.get("blocker_summaries", [])
+                            )
                             and isinstance(mutation_enablement.get("operational_readiness"), dict)
+                            and isinstance(
+                                mutation_enablement.get("operational_readiness", {}).get(
+                                    "blocking_summaries"
+                                ),
+                                list,
+                            )
                             and isinstance(
                                 mutation_enablement.get("reviewer_context_requirements", {}).get(
                                     "effective_required_fields"
@@ -329,13 +349,31 @@ def run_ui_smoke(root: Path | None = None) -> UISmokeReport:
                         f"{endpoint}/{record_id}#mutation-enablement",
                         isinstance(mutation_enablement, dict)
                         and isinstance(mutation_enablement.get("blocker_summaries"), list)
+                        and all(
+                            isinstance(item, dict) and bool(item.get("summary"))
+                            for item in mutation_enablement.get("blocker_summaries", [])
+                        )
                         and isinstance(mutation_enablement.get("operational_readiness"), dict)
+                        and isinstance(
+                            mutation_enablement.get("operational_readiness", {}).get("blocking_summaries"),
+                            list,
+                        )
                         and bool(mutation_enablement.get("write_route_contract", {}).get("route_template")),
                         (
                             "ok"
                             if isinstance(mutation_enablement, dict)
                             and isinstance(mutation_enablement.get("blocker_summaries"), list)
+                            and all(
+                                isinstance(item, dict) and bool(item.get("summary"))
+                                for item in mutation_enablement.get("blocker_summaries", [])
+                            )
                             and isinstance(mutation_enablement.get("operational_readiness"), dict)
+                            and isinstance(
+                                mutation_enablement.get("operational_readiness", {}).get(
+                                    "blocking_summaries"
+                                ),
+                                list,
+                            )
                             and bool(mutation_enablement.get("write_route_contract", {}).get("route_template"))
                             else "runtime detail missing mutation enablement contract detail"
                         ),
@@ -529,7 +567,15 @@ def run_ui_smoke(root: Path | None = None) -> UISmokeReport:
                 (
                     isinstance(mutation_readiness, dict)
                     and isinstance(mutation_readiness.get("blocker_summaries"), list)
+                    and all(
+                        isinstance(item, dict) and bool(item.get("summary"))
+                        for item in mutation_readiness.get("blocker_summaries", [])
+                    )
                     and isinstance(mutation_readiness.get("operational_readiness"), dict)
+                    and isinstance(
+                        mutation_readiness.get("operational_readiness", {}).get("blocking_summaries"),
+                        list,
+                    )
                     and isinstance(
                         mutation_readiness.get("reviewer_context_requirements", {}).get(
                             "effective_required_fields"
@@ -549,7 +595,15 @@ def run_ui_smoke(root: Path | None = None) -> UISmokeReport:
                     "ok"
                     if isinstance(mutation_readiness, dict)
                     and isinstance(mutation_readiness.get("blocker_summaries"), list)
+                    and all(
+                        isinstance(item, dict) and bool(item.get("summary"))
+                        for item in mutation_readiness.get("blocker_summaries", [])
+                    )
                     and isinstance(mutation_readiness.get("operational_readiness"), dict)
+                    and isinstance(
+                        mutation_readiness.get("operational_readiness", {}).get("blocking_summaries"),
+                        list,
+                    )
                     and isinstance(
                         mutation_readiness.get("reviewer_context_requirements", {}).get(
                             "effective_required_fields"

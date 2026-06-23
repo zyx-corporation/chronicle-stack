@@ -226,6 +226,21 @@ def _serialize_mutation_blocker_details(blockers: list[str]) -> list[dict[str, s
     ]
 
 
+def _mutation_blocker_source_label(source: str) -> str:
+    return {
+        "boundary": "Boundary prerequisites",
+        "review_queue": "Pending review queue",
+    }.get(source, source.replace("_", " "))
+
+
+def _mutation_scope_note(boundary: dict[str, Any]) -> str:
+    if boundary.get("mutation_enabled", False):
+        return "Browser apply is available only inside the explicit loopback-local session boundary."
+    if boundary.get("mutation_capability_flag", False):
+        return "Capability intent is recorded, but the UI remains preview-only until local session enablement, auth, authorization, reviewer identity, and session proof align."
+    return "The UI remains preview-only until explicit local write capability, session enablement, auth, authorization, reviewer identity, and session proof are configured."
+
+
 def _mutation_blocker_summaries(
     *,
     boundary_blockers: list[str],
@@ -243,7 +258,12 @@ def _mutation_blocker_summaries(
                 "code": blocker_code,
                 "message": MUTATION_BLOCKER_TEXT.get(blocker_code, blocker_code.replace("_", " ")),
                 "source": "boundary",
+                "source_label": _mutation_blocker_source_label("boundary"),
                 "affected_count": 1,
+                "summary": (
+                    "Boundary prerequisites: "
+                    + MUTATION_BLOCKER_TEXT.get(blocker_code, blocker_code.replace("_", " "))
+                ),
             }
         )
     for blocker_code, count in sorted(pending_boundary_warning_counts.items()):
@@ -256,7 +276,12 @@ def _mutation_blocker_summaries(
                 "code": blocker_code,
                 "message": MUTATION_BLOCKER_TEXT.get(blocker_code, blocker_code.replace("_", " ")),
                 "source": "review_queue",
+                "source_label": _mutation_blocker_source_label("review_queue"),
                 "affected_count": count,
+                "summary": (
+                    f"Pending review queue ({count}): "
+                    + MUTATION_BLOCKER_TEXT.get(blocker_code, blocker_code.replace("_", " "))
+                ),
             }
         )
     return rows
@@ -331,6 +356,10 @@ def _mutation_operational_readiness(
         "remaining_count": len(unsatisfied),
         "blocking_codes": [str(item.get("code", "")) for item in unsatisfied],
         "blocking_labels": [str(item.get("label", item.get("code", ""))) for item in unsatisfied],
+        "blocking_summaries": [
+            f"{str(item.get('label', item.get('code', 'check')))}: {str(item.get('detail', ''))}"
+            for item in unsatisfied
+        ],
         "unsatisfied_checks": unsatisfied,
         "message": (
             "All explicit local mutation prerequisites are currently satisfied."
@@ -1228,6 +1257,7 @@ class ChronicleUIDataService:
         return {
             "status": boundary.get("mutation_readiness_status", "preview_only"),
             "message": boundary.get("mutation_readiness_message", "GUI mutation remains disabled."),
+            "scope_note": _mutation_scope_note(boundary),
             "ready_row_count": ready_rows,
             "advisory_row_count": advisory_rows,
             "blockers": blockers,
@@ -4361,15 +4391,16 @@ function renderMutationEnablementNotice(record) {{
   return renderNotice(
     label('notice.mutation_enablement', 'Mutation Enablement'),
     statusMessageBody(readiness.status, readiness.message, readinessButtons)
+      + detailLine('Scope note', readiness.scope_note || '')
       + detailLine('Enablement ready', readiness.enablement_ready)
       + detailLine('Enablement checks', String(readiness.enablement_satisfied_count ?? 0) + '/' + String(readiness.enablement_required_count ?? 0))
       + detailLine('Operational readiness', operationalReadiness.status || '')
       + detailLine('Operational summary', operationalReadiness.message || '')
       + detailLine('Remaining prerequisites', operationalReadiness.remaining_count ?? 0)
       + detailLine('Blockers', detailMessages(blockerDetails, readiness.blockers))
-      + detailListLine('Blocker sources', blockerSummaries.map(item => ((item.source || 'unknown') + ':' + (item.code || 'blocker') + '=' + String(item.affected_count ?? 0))), ' | ')
+      + detailListLine('Blocker sources', blockerSummaries.map(item => (item.summary || ((item.source_label || item.source || 'unknown') + ': ' + (item.message || item.code || 'blocker')))), ' | ')
       + detailListLine('Checks', enablementChecks.map(check => ((check.satisfied ? 'ok: ' : 'blocked: ') + (check.label || check.code || 'check'))), ' | ')
-      + detailListLine('Remaining checks', (operationalReadiness.unsatisfied_checks || []).map(item => ((item.label || item.code || 'check') + ': ' + (item.detail || ''))), ' | ')
+      + detailListLine('Remaining checks', operationalReadiness.blocking_summaries || [], ' | ')
       + detailListLine('Reviewer fields', reviewerContext.effective_required_fields, ' | ')
       + detailListLine('Reviewer kinds', reviewerContext.accepted_reviewer_kinds, ' | ')
       + detailLine('Reviewer label pattern', reviewerContext.reviewer_label_pattern || '')
@@ -4765,6 +4796,7 @@ function renderOverviewMutationReadinessPanel(mutationReadiness) {{
     sectionTitle(label('section.mutation_readiness', 'Mutation Readiness'))
     + detailLine('Status', mutationReadiness.status || '')
     + '<p>' + esc(mutationReadiness.message || '') + '</p>'
+    + detailLine('Scope note', mutationReadiness.scope_note || '')
     + detailLine('Ready rows', mutationReadiness.ready_row_count ?? 0)
     + detailLine('Advisory rows', mutationReadiness.advisory_row_count ?? 0)
     + detailLine('Enablement ready', mutationReadiness.enablement_ready)
@@ -4774,9 +4806,9 @@ function renderOverviewMutationReadinessPanel(mutationReadiness) {{
     + detailLine('Remaining prerequisites', operationalReadiness.remaining_count ?? 0)
     + detailListLine('Blockers', mutationReadiness.blockers, ' | ')
     + detailLine('Blocker details', detailMessages(blockerDetails, mutationReadiness.blockers))
-    + detailListLine('Blocker sources', blockerSummaries.map(item => ((item.source || 'unknown') + ':' + (item.code || 'blocker') + '=' + String(item.affected_count ?? 0))), ' | ')
+    + detailListLine('Blocker sources', blockerSummaries.map(item => (item.summary || ((item.source_label || item.source || 'unknown') + ': ' + (item.message || item.code || 'blocker')))), ' | ')
     + detailListLine('Enablement checks', enablementChecks.map(check => ((check.satisfied ? 'ok: ' : 'blocked: ') + (check.label || check.code || 'check'))), ' | ')
-    + detailListLine('Remaining checks', (operationalReadiness.unsatisfied_checks || []).map(item => ((item.label || item.code || 'check') + ': ' + (item.detail || ''))), ' | ')
+    + detailListLine('Remaining checks', operationalReadiness.blocking_summaries || [], ' | ')
     + detailListLine('Effective reviewer fields', reviewerContextRequirements.effective_required_fields, ' | ')
     + detailListLine('Reviewer fields', reviewerContextRequirements.required_fields, ' | ')
     + detailListLine('Accepted reviewer kinds', reviewerContextRequirements.accepted_reviewer_kinds, ' | ')
