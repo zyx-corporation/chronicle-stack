@@ -4679,6 +4679,13 @@ function renderRuntimePreviewNotice(record) {{
       + detailLine('CLI', preview.suggested_cli_family || '')
   );
 }}
+function packageContextDetailLines(packageReview, manifest, eligibleContextIds = [], extraLines = '') {{
+  return detailListLine('Eligible contexts', eligibleContextIds)
+    + extraLines
+    + detailLine('Package review status', (packageReview && packageReview.status) || '(not available)')
+    + detailListLine('Package warnings', packageReview && packageReview.package_warnings)
+    + detailListLine('Manifest refs', manifest && manifest.referenced_records);
+}}
 function renderRetrievalHandoffNotice(record) {{
   if (!record.retrieval_handoff) return '';
   const handoff = record.retrieval_handoff;
@@ -4701,11 +4708,12 @@ function renderPackageHandoffPreviewNotice(record) {{
   return renderNotice(
     label('notice.package_handoff_preview', 'Package Handoff Preview'),
     statusMessageBody(preview.status, preview.message)
-      + detailListLine('Eligible contexts', preview.eligible_context_ids)
-      + detailListLine('Skipped records', preview.skipped_record_ids)
-      + detailLine('Package review status', packageReview.status || '(not available)')
-      + detailListLine('Package warnings', packageReview.package_warnings)
-      + detailListLine('Manifest refs', manifest.referenced_records)
+      + packageContextDetailLines(
+        packageReview,
+        manifest,
+        preview.eligible_context_ids,
+        detailListLine('Skipped records', preview.skipped_record_ids),
+      )
   );
 }}
 function renderInvocationPlanNotice(record) {{
@@ -4755,11 +4763,12 @@ function renderPackageReadinessNotice(record) {{
   return renderNotice(
     label('notice.review_package_readiness', 'Review Package Readiness'),
     statusMessageBody(readiness.status, readiness.message, readinessButtons)
-      + detailListLine('Eligible contexts', readiness.eligible_context_ids)
-      + detailListLine('Suggested commands', readiness.suggested_commands, ' | ')
-      + detailLine('Package review status', packageReview.status || '(not available)')
-      + detailListLine('Package warnings', packageReview.package_warnings)
-      + detailListLine('Manifest refs', manifest.referenced_records)
+      + packageContextDetailLines(
+        packageReview,
+        manifest,
+        readiness.eligible_context_ids,
+        detailListLine('Suggested commands', readiness.suggested_commands, ' | '),
+      )
   );
 }}
 function renderRelatedLinksNotice(record) {{
