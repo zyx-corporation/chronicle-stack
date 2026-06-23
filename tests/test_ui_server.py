@@ -1195,7 +1195,9 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "function renderOverviewRuntimeBoundaryPanel(runtime)" in html
     assert "function renderOverviewAuthBoundaryPanel(authBoundary, authBoundaryOverview)" in html
     assert "function renderOverviewIdentityBoundaryPanel(identityBoundary)" in html
+    assert "function overviewRuntimeRecordCountButtons(counts, runtimeRecords)" in html
     assert "function renderOverviewRuntimeRecordsPanel(counts, runtimeRecords)" in html
+    assert "function overviewSummaryJobCountButtons(counts, summaryJobs)" in html
     assert "function renderOverviewSummaryJobsPanel(counts, summaryJobs)" in html
     assert "function overviewTriageCountRows(triage)" in html
     assert "function renderOverviewTriagePanel(triage, warningButtons, warningSummaries)" in html
@@ -1376,6 +1378,8 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "label('button.open_summary_jobs', 'Open Summary Jobs')" in html
     assert "endpointLatestResponseCluster('/api/runtime-records', runtimeRecords.latest_provider_response_detail_path, 'button.open_latest_runtime_response', 'Open Latest Runtime Response')" in html
     assert "endpointLatestResponseCluster('/api/summary-jobs', summaryJobs.latest_provider_response_detail_path, 'button.open_latest_summary_response', 'Open Latest Summary Response')" in html
+    assert "overviewRuntimeRecordCountButtons(counts, runtimeRecords)" in html
+    assert "overviewSummaryJobCountButtons(counts, summaryJobs)" in html
     assert "label('button.open_runtime_config', 'Open Runtime Config')" in html
     assert "label('button.open_package_review', 'Open Package Review')" in html
     assert "buttons.push(openEndpointButton('/api/review-queue'));" in html

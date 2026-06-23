@@ -5300,6 +5300,14 @@ function renderOverviewAiIndexPanel(aiIndex, counts) {{
     + detailLine('Needs-review records', counts.review_queue ?? 0)
   );
 }}
+function overviewRuntimeRecordCountButtons(counts, runtimeRecords) {{
+  return buttonRow([
+    overviewCountButton(label('section.runtime_records', 'Runtime Records'), counts.runtime_records, 'badge-neutral', '/api/runtime-records'),
+    overviewCountButton(filterValueLabel('runtimeRecords', 'response_id'), runtimeRecords.provider_response_present_count, 'badge-ready', '/api/runtime-records', 'runtimeRecords', 'response_id'),
+    overviewCountButton(filterValueLabel('runtimeRecords', 'advisory_only'), (runtimeRecords.auth_readiness_counts && runtimeRecords.auth_readiness_counts.advisory_only) ?? 0, 'badge-warning', '/api/runtime-records', 'runtimeRecords', 'advisory_only'),
+    overviewCountButton(filterValueLabel('runtimeRecords', 'preview_only'), (runtimeRecords.mutation_readiness_counts && runtimeRecords.mutation_readiness_counts.preview_only) ?? 0, 'badge-warning', '/api/runtime-records', 'runtimeRecords', 'preview_only'),
+  ]);
+}}
 function renderOverviewRuntimeRecordsPanel(counts, runtimeRecords) {{
   const metricsBody =
     summaryJsonLine('Runtime kinds', runtimeRecords.kind_counts)
@@ -5310,16 +5318,22 @@ function renderOverviewRuntimeRecordsPanel(counts, runtimeRecords) {{
       + summaryJsonLine('Provider statuses', runtimeRecords.provider_response_status_counts);
   return renderPanel(
     sectionTitle(label('section.runtime_records', 'Runtime Records'))
-    + '<p>'
-    + overviewCountButton(label('section.runtime_records', 'Runtime Records'), counts.runtime_records, 'badge-neutral', '/api/runtime-records')
-    + overviewCountButton(filterValueLabel('runtimeRecords', 'response_id'), runtimeRecords.provider_response_present_count, 'badge-ready', '/api/runtime-records', 'runtimeRecords', 'response_id')
-    + overviewCountButton(filterValueLabel('runtimeRecords', 'advisory_only'), (runtimeRecords.auth_readiness_counts && runtimeRecords.auth_readiness_counts.advisory_only) ?? 0, 'badge-warning', '/api/runtime-records', 'runtimeRecords', 'advisory_only')
-    + overviewCountButton(filterValueLabel('runtimeRecords', 'preview_only'), (runtimeRecords.mutation_readiness_counts && runtimeRecords.mutation_readiness_counts.preview_only) ?? 0, 'badge-warning', '/api/runtime-records', 'runtimeRecords', 'preview_only')
-    + '</p>'
+    + overviewRuntimeRecordCountButtons(counts, runtimeRecords)
     + metricsSection(metricsBody)
     + sliceButtonRow(runtimeRecordsSliceButtons())
     + endpointLatestResponseCluster('/api/runtime-records', runtimeRecords.latest_provider_response_detail_path, 'button.open_latest_runtime_response', 'Open Latest Runtime Response')
   );
+}}
+function overviewSummaryJobCountButtons(counts, summaryJobs) {{
+  return buttonRow([
+    overviewCountButton(label('section.summary_jobs', 'Summary Jobs'), counts.summary_jobs, 'badge-neutral', '/api/summary-jobs'),
+    overviewCountButton(filterValueLabel('summaryJobs', 'response_id'), summaryJobs.provider_response_present_count, 'badge-ready', '/api/summary-jobs', 'summaryJobs', 'response_id'),
+    overviewCountButton(filterValueLabel('summaryJobs', 'advisory_only'), (summaryJobs.review_capability_counts && summaryJobs.review_capability_counts.advisory_only) ?? 0, 'badge-warning', '/api/summary-jobs', 'summaryJobs', 'advisory_only'),
+    overviewCountButton(label('overview.summary_auth_advisory', 'Summary auth advisory'), (summaryJobs.auth_readiness_counts && summaryJobs.auth_readiness_counts.advisory_only) ?? 0, 'badge-warning', '/api/summary-jobs', 'summaryJobs', 'advisory_only'),
+    overviewCountButton(filterValueLabel('summaryJobs', 'package_context_available'), (summaryJobs.package_readiness_counts && summaryJobs.package_readiness_counts.package_context_available) ?? 0, 'badge-ready', '/api/summary-jobs', 'summaryJobs', 'package_context_available'),
+    overviewCountButton(filterValueLabel('summaryJobs', 'boundary_aligned'), (summaryJobs.identity_assurance_counts && summaryJobs.identity_assurance_counts.boundary_aligned) ?? 0, 'badge-ready', '/api/summary-jobs', 'summaryJobs', 'boundary_aligned'),
+    overviewCountButton(filterValueLabel('summaryJobs', 'preview_only'), (summaryJobs.mutation_readiness_counts && summaryJobs.mutation_readiness_counts.preview_only) ?? 0, 'badge-warning', '/api/summary-jobs', 'summaryJobs', 'preview_only'),
+  ]);
 }}
 function renderOverviewSummaryJobsPanel(counts, summaryJobs) {{
   const metricsBody =
@@ -5336,15 +5350,7 @@ function renderOverviewSummaryJobsPanel(counts, summaryJobs) {{
       + summaryJsonLine('Runtime provider counts', summaryJobs.runtime_provider_counts);
   return renderPanel(
     sectionTitle(label('section.summary_jobs', 'Summary Jobs'))
-    + '<p>'
-    + overviewCountButton(label('section.summary_jobs', 'Summary Jobs'), counts.summary_jobs, 'badge-neutral', '/api/summary-jobs')
-    + overviewCountButton(filterValueLabel('summaryJobs', 'response_id'), summaryJobs.provider_response_present_count, 'badge-ready', '/api/summary-jobs', 'summaryJobs', 'response_id')
-    + overviewCountButton(filterValueLabel('summaryJobs', 'advisory_only'), (summaryJobs.review_capability_counts && summaryJobs.review_capability_counts.advisory_only) ?? 0, 'badge-warning', '/api/summary-jobs', 'summaryJobs', 'advisory_only')
-    + overviewCountButton(label('overview.summary_auth_advisory', 'Summary auth advisory'), (summaryJobs.auth_readiness_counts && summaryJobs.auth_readiness_counts.advisory_only) ?? 0, 'badge-warning', '/api/summary-jobs', 'summaryJobs', 'advisory_only')
-    + overviewCountButton(filterValueLabel('summaryJobs', 'package_context_available'), (summaryJobs.package_readiness_counts && summaryJobs.package_readiness_counts.package_context_available) ?? 0, 'badge-ready', '/api/summary-jobs', 'summaryJobs', 'package_context_available')
-    + overviewCountButton(filterValueLabel('summaryJobs', 'boundary_aligned'), (summaryJobs.identity_assurance_counts && summaryJobs.identity_assurance_counts.boundary_aligned) ?? 0, 'badge-ready', '/api/summary-jobs', 'summaryJobs', 'boundary_aligned')
-    + overviewCountButton(filterValueLabel('summaryJobs', 'preview_only'), (summaryJobs.mutation_readiness_counts && summaryJobs.mutation_readiness_counts.preview_only) ?? 0, 'badge-warning', '/api/summary-jobs', 'summaryJobs', 'preview_only')
-    + '</p>'
+    + overviewSummaryJobCountButtons(counts, summaryJobs)
     + metricsSection(metricsBody)
     + detailLine('Source refs total', summaryJobs.summary_source_total ?? 0)
     + sliceButtonRow(summaryJobsSliceButtons())
