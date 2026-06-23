@@ -406,6 +406,7 @@ def test_ui_overview_data(tmp_path):
     assert overview["auth_boundary_overview"]["missing_identity_count"] == 3
     assert overview["auth_boundary_overview"]["review_capability_counts"]["advisory_only"] == 3
     assert overview["auth_boundary_overview"]["provider_response_present_count"] == 0
+    assert overview["auth_boundary_overview"]["latest_provider_response_detail_path"] is None
     assert overview["identity_boundary_summary"]["status"] == "identity_unavailable"
     assert overview["identity_boundary_summary"]["missing_identity_count"] == 3
     assert overview["mutation_readiness"]["status"] == "preview_only"
@@ -664,12 +665,14 @@ def test_ui_data_service_exposes_provider_response_metadata_in_read_only_views(t
     assert overview["auth_boundary_overview"]["provider_response_present_count"] == 1
     assert overview["auth_boundary_overview"]["provider_response_finish_reason_counts"]["stop"] == 1
     assert overview["auth_boundary_overview"]["provider_response_status_counts"]["ok"] == 1
+    assert overview["auth_boundary_overview"]["latest_provider_response_detail_path"] == f"/api/review-queue/{result.event_id}"
     assert overview["summary_jobs_summary"]["provider_response_present_count"] == 1
     assert overview["summary_jobs_summary"]["provider_response_finish_reason_counts"]["stop"] == 1
     assert overview["summary_jobs_summary"]["provider_response_status_counts"]["ok"] == 1
     assert overview["summary_jobs_summary"]["mutation_readiness_counts"]["preview_only"] == 1
     assert overview["summary_jobs_summary"]["latest_provider_response_detail_path"] == f"/api/summary-jobs/{summary_job_row['summary_job_id']}"
     assert overview["triage"]["provider_response_present_reviews"] == 1
+    assert overview["triage"]["latest_provider_response_detail_path"] == f"/api/review-queue/{result.event_id}"
 
     runtime_detail = service.detail_payload(f"/api/runtime-records/{result.event_id}")
     assert runtime_detail is not None
@@ -1346,6 +1349,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "messageParagraph(parity.message)" in html
     assert "detailListLine('Expected actions', parity.expected_actions)" in html
     assert "label('button.open_review_queue', 'Open Review Queue')" in html
+    assert "label('button.open_latest_review_response', 'Open Latest Review Response')" in html
     assert "label('button.open_runtime_records', 'Open Runtime Records')" in html
     assert "label('button.open_summary_jobs', 'Open Summary Jobs')" in html
     assert "label('button.open_latest_runtime_response', 'Open Latest Runtime Response')" in html

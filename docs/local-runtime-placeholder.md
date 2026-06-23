@@ -125,6 +125,8 @@ runtime execution record では、navigation notice から生成済み summary j
 
 overview の Runtime Records / Summary Jobs panel でも、provider response がある場合は最新 detail へ直接 jump できます。
 
+同様に Auth Boundary / Triage panel でも、response-backed review detail があれば最新 review detail へ直接 jump できます。
+
 `chronicle runtime execute-plan --event evt_xxx --execute-configured-provider` は、その recorded invocation plan に含まれる execution request contract を使って explicit/manual 再実行します。ここでも hidden execution は起きず、configured provider への crossing は毎回明示 flag が必要です。
 
 summary job 由来の invocation dry-run では、runtime record detail から対応する `/api/summary-jobs/<summary_job_id>` へ辿れます。

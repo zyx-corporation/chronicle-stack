@@ -948,6 +948,7 @@ class ChronicleUIDataService:
         provider_finish_reason_counts: dict[str, int] = {}
         provider_status_counts: dict[str, int] = {}
         provider_response_present_count = 0
+        latest_provider_response_detail_path: str | None = None
 
         for row in queue:
             capability = row.get("review_capability", {})
@@ -971,6 +972,10 @@ class ChronicleUIDataService:
             response_summary = row.get("response_metadata_summary", {})
             if isinstance(response_summary, dict) and response_summary.get("present") is True:
                 provider_response_present_count += 1
+                if latest_provider_response_detail_path is None:
+                    target_event_id = str(row.get("target_event_id", ""))
+                    if target_event_id.startswith("evt_"):
+                        latest_provider_response_detail_path = f"/api/review-queue/{target_event_id}"
                 finish_reason = str(response_summary.get("finish_reason") or "unknown")
                 provider_status = str(response_summary.get("provider_status") or "unknown")
                 provider_finish_reason_counts[finish_reason] = (
@@ -992,6 +997,7 @@ class ChronicleUIDataService:
             "provider_response_absent_count": len(queue) - provider_response_present_count,
             "provider_response_finish_reason_counts": provider_finish_reason_counts,
             "provider_response_status_counts": provider_status_counts,
+            "latest_provider_response_detail_path": latest_provider_response_detail_path,
         }
 
     def summary_jobs_overview(self, summary_jobs: list[dict[str, Any]] | None = None) -> dict[str, Any]:
@@ -1133,6 +1139,7 @@ class ChronicleUIDataService:
         identity_assurance_counts: dict[str, int] = {}
         reviewer_kind_counts: dict[str, int] = {}
         provider_response_present_reviews = 0
+        latest_provider_response_detail_path: str | None = None
         ready_now = 0
         advisory_only = 0
         package_ready = 0
@@ -1179,6 +1186,10 @@ class ChronicleUIDataService:
             response_summary = row.get("response_metadata_summary", {})
             if isinstance(response_summary, dict) and response_summary.get("present") is True:
                 provider_response_present_reviews += 1
+                if latest_provider_response_detail_path is None:
+                    target_event_id = str(row.get("target_event_id", ""))
+                    if target_event_id.startswith("evt_"):
+                        latest_provider_response_detail_path = f"/api/review-queue/{target_event_id}"
 
         return {
             "runtime_record_kinds": runtime_by_kind,
@@ -1197,6 +1208,7 @@ class ChronicleUIDataService:
             "identity_boundary_aligned_reviews": identity_boundary_aligned,
             "identity_declared_only_reviews": identity_declared_only,
             "provider_response_present_reviews": provider_response_present_reviews,
+            "latest_provider_response_detail_path": latest_provider_response_detail_path,
             "needs_attention_reviews": len(review_queue),
         }
 
@@ -5137,6 +5149,7 @@ function renderOverviewAuthBoundaryPanel(authBoundary, authBoundaryOverview) {{
     + metricsSection
     + detailListLine('Auth blockers', authBoundary.blockers, ' | ')
     + detailListLine('Auth blocker summaries', blockerSummaries.map(item => (item.summary || item.code || 'blocker')), ' | ')
+    + (authBoundaryOverview.latest_provider_response_detail_path ? '<p>' + listJumpButton(label('button.open_latest_review_response', 'Open Latest Review Response'), authBoundaryOverview.latest_provider_response_detail_path) + '</p>' : '')
     + detailListLine('Auth next steps', authBoundary.next_steps, ' | ')
   );
 }}
@@ -5341,6 +5354,7 @@ function renderOverviewTriagePanel(triage, warningButtons, warningSummaries) {{
     + '<p>' + listJumpButton(label('button.open_review_queue', 'Open Review Queue'), '/api/review-queue')
     + listJumpButton(label('button.open_runtime_records', 'Open Runtime Records'), '/api/runtime-records')
     + listJumpButton(label('button.open_summary_jobs', 'Open Summary Jobs'), '/api/summary-jobs')
+    + (triage.latest_provider_response_detail_path ? listJumpButton(label('button.open_latest_review_response', 'Open Latest Review Response'), triage.latest_provider_response_detail_path) : '')
     + listJumpButton(label('button.open_runtime_config', 'Open Runtime Config'), '/api/runtime-config')
     + listJumpButton(label('button.open_package_review', 'Open Package Review'), '/api/package-review')
     + '<button data-reset-filters="all">' + esc(label('button.reset_filter', 'Reset Filter')) + '</button></p>'
