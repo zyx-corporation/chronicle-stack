@@ -1227,6 +1227,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "function overviewCountButton(text, count, cls, endpoint, filterTarget, filterValue)" in html
     assert "function detailNavButton(path, labelText)" in html
     assert "function reviewDetailButton(eventId)" in html
+    assert "function reviewQueueStatusButtons(status, prefix = '')" in html
     assert "function relatedDetailButton(record, prefix, fallbackLabel = '')" in html
     assert "function runtimeRelatedButtons(record)" in html
     assert "function reviewRelatedButtons(record)" in html
@@ -1431,9 +1432,9 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "function navigationCluster(buttons)" in html
     assert "function moreStatusButtons(status, endpoint, filterTarget, prefix = '')" in html
     assert "const previewButtons = [" in html
-    assert "const parityButtons = moreStatusButtons(parity.status, '/api/review-queue', 'reviewQueue');" in html
-    assert "const assuranceButtons = moreStatusButtons(assurance.status, '/api/review-queue', 'reviewQueue');" in html
-    assert "const readinessButtons = moreStatusButtons(readiness.status, '/api/review-queue', 'reviewQueue', 'package:');" in html
+    assert "const parityButtons = reviewQueueStatusButtons(parity.status);" in html
+    assert "const assuranceButtons = reviewQueueStatusButtons(assurance.status);" in html
+    assert "const readinessButtons = reviewQueueStatusButtons(readiness.status, 'package:');" in html
     assert "const timelineButtons = [" in html
     assert "Declared identity only" in html
     assert "listToolbar(endpoint, 'runtimeRecords', t('placeholder.runtime_filter')" in html

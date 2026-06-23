@@ -4562,6 +4562,9 @@ function moreStatusButtons(status, endpoint, filterTarget, prefix = '') {{
   if (!status) return [];
   return [listJumpButton(label('status.more', 'More') + ' ' + status, endpoint, filterTarget, prefix + status)];
 }}
+function reviewQueueStatusButtons(status, prefix = '') {{
+  return moreStatusButtons(status, '/api/review-queue', 'reviewQueue', prefix);
+}}
 function statusMessageBody(status, message, buttons = []) {{
   return detailLine('Status', status || '') + buttonRow(buttons) + messageParagraph(message);
 }}
@@ -4759,7 +4762,7 @@ function renderPackageReadinessNotice(record) {{
   const readiness = record.package_readiness;
   const packageReview = readiness.package_review || {{}};
   const manifest = readiness.package_manifest_preview || {{}};
-  const readinessButtons = moreStatusButtons(readiness.status, '/api/review-queue', 'reviewQueue', 'package:');
+  const readinessButtons = reviewQueueStatusButtons(readiness.status, 'package:');
   return renderNotice(
     label('notice.review_package_readiness', 'Review Package Readiness'),
     statusMessageBody(readiness.status, readiness.message, readinessButtons)
@@ -4783,7 +4786,7 @@ function renderAuthReadinessNotice(record) {{
   const notice = record.auth_boundary_notice;
   const blockerDetails = Array.isArray(notice.blocker_details) ? notice.blocker_details : [];
   const blockerSummaries = Array.isArray(notice.blocker_summaries) ? notice.blocker_summaries : [];
-  const noticeButtons = moreStatusButtons(notice.status, '/api/review-queue', 'reviewQueue');
+  const noticeButtons = reviewQueueStatusButtons(notice.status);
   return renderNotice(
     label('notice.auth_readiness', 'Auth Readiness'),
     statusMessageBody(notice.status, notice.message, noticeButtons)
@@ -4820,7 +4823,7 @@ function renderMutationEnablementNotice(record) {{
   const identityProofContract = writeRouteContract.identity_proof_contract || {{}};
   const authorizationContract = writeRouteContract.authorization_contract || {{}};
   const targetStateContract = writeRouteContract.target_state_contract || {{}};
-  const readinessButtons = moreStatusButtons(readiness.status, '/api/review-queue', 'reviewQueue');
+  const readinessButtons = reviewQueueStatusButtons(readiness.status);
   return renderNotice(
     label('notice.mutation_enablement', 'Mutation Enablement'),
     statusMessageBody(readiness.status, readiness.message, readinessButtons)
@@ -4896,8 +4899,8 @@ function renderDetailActionPreviewNotice(record) {{
   const parity = record.cli_parity || {{}};
   const mutationTargetEventId = record.target_event_id || record.review_target_event_id || record.event_id || '';
   const previewButtons = [
-    ...moreStatusButtons(capability.status, '/api/review-queue', 'reviewQueue'),
-    ...moreStatusButtons(parity.status, '/api/review-queue', 'reviewQueue'),
+    ...reviewQueueStatusButtons(capability.status),
+    ...reviewQueueStatusButtons(parity.status),
   ];
   const recoveryContractSection = noticeSection(
     label('section.recovery_contract', 'Recovery Contract'),
@@ -4938,7 +4941,7 @@ function renderDetailActionPreviewNotice(record) {{
 function renderCliParityNotice(record) {{
   if (!record.cli_parity) return '';
   const parity = record.cli_parity;
-  const parityButtons = moreStatusButtons(parity.status, '/api/review-queue', 'reviewQueue');
+  const parityButtons = reviewQueueStatusButtons(parity.status);
   return renderNotice(
     label('notice.cli_parity', 'CLI Parity'),
     statusMessageBody(parity.status, parity.message, parityButtons)
@@ -4950,7 +4953,7 @@ function renderCliParityNotice(record) {{
 function renderIdentityAssuranceNotice(record) {{
   if (!record.latest_identity_assurance) return '';
   const assurance = record.latest_identity_assurance;
-  const assuranceButtons = moreStatusButtons(assurance.status, '/api/review-queue', 'reviewQueue');
+  const assuranceButtons = reviewQueueStatusButtons(assurance.status);
   return renderNotice(
     label('notice.identity_assurance', 'Identity Assurance'),
     statusMessageBody(assurance.status, assurance.message, assuranceButtons)
@@ -4962,8 +4965,8 @@ function renderReviewTimelineNotice(record) {{
     label('notice.review_timeline', 'Review Timeline'),
     '<ul>' + record.history.map(item => {{
       const timelineButtons = [
-        ...moreStatusButtons(item.disposition, '/api/review-queue', 'reviewQueue'),
-        ...moreStatusButtons(item.identity_assurance && item.identity_assurance.status, '/api/review-queue', 'reviewQueue'),
+        ...reviewQueueStatusButtons(item.disposition),
+        ...reviewQueueStatusButtons(item.identity_assurance && item.identity_assurance.status),
       ];
       return '<li>'
         + esc(item.reviewed_at || '') + ' — '
