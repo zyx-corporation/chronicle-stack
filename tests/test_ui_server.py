@@ -1229,6 +1229,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "function firstRelatedLink(record, prefix)" in html
     assert "function openEndpointButton(endpoint)" in html
     assert "function latestResponseButton(path, labelKey, fallbackLabel)" in html
+    assert "function endpointLatestResponseCluster(endpoint, path, labelKey, fallbackLabel)" in html
     assert "function overviewCountButton(text, count, cls, endpoint, filterTarget, filterValue)" in html
     assert "function detailNavButton(path, labelText)" in html
     assert "function reviewDetailButton(eventId)" in html
@@ -1369,8 +1370,8 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "latestResponseButton(authBoundaryOverview.latest_provider_response_detail_path, 'button.open_latest_review_response', 'Open Latest Review Response')" in html
     assert "label('button.open_runtime_records', 'Open Runtime Records')" in html
     assert "label('button.open_summary_jobs', 'Open Summary Jobs')" in html
-    assert "latestResponseButton(runtimeRecords.latest_provider_response_detail_path, 'button.open_latest_runtime_response', 'Open Latest Runtime Response')" in html
-    assert "latestResponseButton(summaryJobs.latest_provider_response_detail_path, 'button.open_latest_summary_response', 'Open Latest Summary Response')" in html
+    assert "endpointLatestResponseCluster('/api/runtime-records', runtimeRecords.latest_provider_response_detail_path, 'button.open_latest_runtime_response', 'Open Latest Runtime Response')" in html
+    assert "endpointLatestResponseCluster('/api/summary-jobs', summaryJobs.latest_provider_response_detail_path, 'button.open_latest_summary_response', 'Open Latest Summary Response')" in html
     assert "label('button.open_runtime_config', 'Open Runtime Config')" in html
     assert "label('button.open_package_review', 'Open Package Review')" in html
     assert "buttons.push(openEndpointButton('/api/review-queue'));" in html

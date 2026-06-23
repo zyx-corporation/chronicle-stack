@@ -4517,6 +4517,12 @@ function openEndpointButton(endpoint) {{
 function latestResponseButton(path, labelKey, fallbackLabel) {{
   return path ? listJumpButton(label(labelKey, fallbackLabel), path) : '';
 }}
+function endpointLatestResponseCluster(endpoint, path, labelKey, fallbackLabel) {{
+  return navigationCluster([
+    openEndpointButton(endpoint),
+    latestResponseButton(path, labelKey, fallbackLabel),
+  ]);
+}}
 function moreSliceButton(filterValue, endpoint, filterTarget) {{
   const value = String(filterValue || '');
   if (!value) return '';
@@ -5312,10 +5318,7 @@ function renderOverviewRuntimeRecordsPanel(counts, runtimeRecords) {{
     + '</p>'
     + metricsSection(metricsBody)
     + sliceButtonRow(runtimeRecordsSliceButtons())
-    + navigationCluster([
-      openEndpointButton('/api/runtime-records'),
-      latestResponseButton(runtimeRecords.latest_provider_response_detail_path, 'button.open_latest_runtime_response', 'Open Latest Runtime Response'),
-    ])
+    + endpointLatestResponseCluster('/api/runtime-records', runtimeRecords.latest_provider_response_detail_path, 'button.open_latest_runtime_response', 'Open Latest Runtime Response')
   );
 }}
 function renderOverviewSummaryJobsPanel(counts, summaryJobs) {{
@@ -5345,10 +5348,7 @@ function renderOverviewSummaryJobsPanel(counts, summaryJobs) {{
     + metricsSection(metricsBody)
     + detailLine('Source refs total', summaryJobs.summary_source_total ?? 0)
     + sliceButtonRow(summaryJobsSliceButtons())
-    + navigationCluster([
-      openEndpointButton('/api/summary-jobs'),
-      latestResponseButton(summaryJobs.latest_provider_response_detail_path, 'button.open_latest_summary_response', 'Open Latest Summary Response'),
-    ])
+    + endpointLatestResponseCluster('/api/summary-jobs', summaryJobs.latest_provider_response_detail_path, 'button.open_latest_summary_response', 'Open Latest Summary Response')
   );
 }}
 function renderOverviewTriagePanel(triage, warningButtons, warningSummaries) {{
