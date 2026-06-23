@@ -18,6 +18,7 @@ Current `v1.10.0` repository progress includes:
 - direct overview-to-list slice/filter navigation for reviewer-boundary statuses
 - release-readiness, release-notes, and smoke-profile entry points for the lane
 - i18n-ready presentation routing for reviewer-boundary labels and metrics
+- version bump and changelog update for `1.10.0`
 
 ## Boundary notes
 

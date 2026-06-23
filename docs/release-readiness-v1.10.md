@@ -25,10 +25,10 @@ chronicle ui-smoke
 chronicle ui-smoke --json
 ```
 
-Expected current version baseline:
+Expected version:
 
 ```text
-chronicle 1.9.0
+chronicle 1.10.0
 ```
 
 ## Boundary confirmation
@@ -48,4 +48,4 @@ Transformed: reviewer-boundary observability now includes explicit i18n-ready UI
 
 Supplemented: release-lane framing for reviewer-boundary metrics, row badges, and translation-key coverage.
 
-Unresolved: final version bump, changelog entry, and publication timing for `v1.10.0`.
+Unresolved: external publication timing and any follow-on lane after `v1.10.0`.
