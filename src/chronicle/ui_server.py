@@ -4772,6 +4772,15 @@ function packageContextNoticeBody(status, message, packageReview, manifest, elig
       extraLines,
     );
 }}
+function statusScopeNoticeBody(status, message, buttons = [], scopeNote = '') {{
+  return statusMessageBody(status, message, buttons)
+    + detailLine('Scope note', scopeNote || '');
+}}
+function blockerSummaryDetailLines(blockerDetails, blockers, blockerSummaries = [], nextSteps = []) {{
+  return detailLine('Blockers', detailMessages(blockerDetails, blockers))
+    + detailListLine('Blocker summaries', blockerSummaries.map(item => (item.summary || item.code || 'blocker')), ' | ')
+    + detailListLine('Next steps', nextSteps, ' | ');
+}}
 function renderPackageHandoffPreviewNotice(record) {{
   if (!record.package_handoff_preview) return '';
   const preview = record.package_handoff_preview;
@@ -4864,13 +4873,10 @@ function renderAuthReadinessNotice(record) {{
   const noticeButtons = reviewQueueStatusButtons(notice.status);
   return renderNotice(
     label('notice.auth_readiness', 'Auth Readiness'),
-    statusMessageBody(notice.status, notice.message, noticeButtons)
-      + detailLine('Scope note', notice.scope_note || '')
+    statusScopeNoticeBody(notice.status, notice.message, noticeButtons, notice.scope_note)
       + detailLine('Review capability', notice.capability_status || '')
       + detailLine('Identity assurance', notice.identity_assurance_status || '')
-      + detailLine('Blockers', detailMessages(blockerDetails, notice.blockers))
-      + detailListLine('Blocker summaries', blockerSummaries.map(item => (item.summary || item.code || 'blocker')), ' | ')
-      + detailListLine('Next steps', notice.next_steps, ' | ')
+      + blockerSummaryDetailLines(blockerDetails, notice.blockers, blockerSummaries, notice.next_steps)
   );
 }}
 function renderReviewCapabilityNotice(record) {{
@@ -4901,8 +4907,7 @@ function renderMutationEnablementNotice(record) {{
   const readinessButtons = reviewQueueStatusButtons(readiness.status);
   return renderNotice(
     label('notice.mutation_enablement', 'Mutation Enablement'),
-    statusMessageBody(readiness.status, readiness.message, readinessButtons)
-      + detailLine('Scope note', readiness.scope_note || '')
+    statusScopeNoticeBody(readiness.status, readiness.message, readinessButtons, readiness.scope_note)
       + detailLine('Enablement ready', readiness.enablement_ready)
       + detailLine('Enablement checks', String(readiness.enablement_satisfied_count ?? 0) + '/' + String(readiness.enablement_required_count ?? 0))
       + detailLine('Blockers', detailMessages(blockerDetails, readiness.blockers))

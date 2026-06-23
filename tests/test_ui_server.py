@@ -1171,6 +1171,8 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "function renderRuntimePreviewNotice(record)" in html
     assert "function packageContextDetailLines(packageReview, manifest, eligibleContextIds = [], extraLines = '')" in html
     assert "function packageContextNoticeBody(status, message, packageReview, manifest, eligibleContextIds = [], extraLines = '', buttons = [])" in html
+    assert "function statusScopeNoticeBody(status, message, buttons = [], scopeNote = '')" in html
+    assert "function blockerSummaryDetailLines(blockerDetails, blockers, blockerSummaries = [], nextSteps = [])" in html
     assert "function writeRouteDetailLines(writeRouteContract, identityProofContract, authorizationContract, targetStateContract, includeRequestFields = false)" in html
     assert "function mutationOperationalDetailLines(operationalReadiness, blockerSummaries, enablementChecks, checksLabel = 'Enablement checks')" in html
     assert "function reviewerLabelDetailLines(reviewerContext)" in html
@@ -1369,8 +1371,8 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "filterValueLabel('runtimeRecords', 'retrieval_plan')" in html
     assert "filterValueLabel('reviewQueue', 'response_id')" in html
     assert "summaryJsonLine('Runtime kinds', triage.runtime_record_kinds)" in html
-    assert "statusMessageBody(readiness.status, readiness.message, readinessButtons)" in html
-    assert "statusMessageBody(notice.status, notice.message, noticeButtons)" in html
+    assert "statusScopeNoticeBody(readiness.status, readiness.message, readinessButtons, readiness.scope_note)" in html
+    assert "statusScopeNoticeBody(notice.status, notice.message, noticeButtons, notice.scope_note)" in html
     assert "statusMessageBody(assurance.status, assurance.message, assuranceButtons)" in html
     assert "statusMessageBody(parity.status, parity.message, parityButtons)" in html
     assert "statusMessageBody(capability.status, capability.message)" in html
@@ -1481,8 +1483,8 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "Active view:" in html
     assert "jumpBadge(" in html
     assert "label('notice.auth_readiness', 'Auth Readiness')" in html
-    assert "detailLine('Scope note', notice.scope_note || '')" in html
-    assert "detailListLine('Blocker summaries', blockerSummaries.map(item => (item.summary || item.code || 'blocker')), ' | ')" in html
+    assert "statusScopeNoticeBody(notice.status, notice.message, noticeButtons, notice.scope_note)" in html
+    assert "blockerSummaryDetailLines(blockerDetails, notice.blockers, blockerSummaries, notice.next_steps)" in html
     assert "label('notice.review_capability', 'Review Capability')" in html
     assert "label('notice.action_preview', 'Action Preview')" in html
     assert "summaryJsonLine('Execution request', executionRequest)" in html
