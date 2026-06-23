@@ -4763,6 +4763,15 @@ function renderRetrievalHandoffNotice(record) {{
       + detailListLine('Notes', handoff.notes, ' | ')
   );
 }}
+function packageContextNoticeBody(status, message, packageReview, manifest, eligibleContextIds = [], extraLines = '', buttons = []) {{
+  return statusMessageBody(status, message, buttons)
+    + packageContextDetailLines(
+      packageReview,
+      manifest,
+      eligibleContextIds,
+      extraLines,
+    );
+}}
 function renderPackageHandoffPreviewNotice(record) {{
   if (!record.package_handoff_preview) return '';
   const preview = record.package_handoff_preview;
@@ -4770,13 +4779,14 @@ function renderPackageHandoffPreviewNotice(record) {{
   const manifest = preview.package_manifest_preview || {{}};
   return renderNotice(
     label('notice.package_handoff_preview', 'Package Handoff Preview'),
-    statusMessageBody(preview.status, preview.message)
-      + packageContextDetailLines(
-        packageReview,
-        manifest,
-        preview.eligible_context_ids,
-        detailListLine('Skipped records', preview.skipped_record_ids),
-      )
+    packageContextNoticeBody(
+      preview.status,
+      preview.message,
+      packageReview,
+      manifest,
+      preview.eligible_context_ids,
+      detailListLine('Skipped records', preview.skipped_record_ids),
+    )
   );
 }}
 function renderInvocationPlanNotice(record) {{
@@ -4828,13 +4838,15 @@ function renderPackageReadinessNotice(record) {{
   const readinessButtons = reviewQueueStatusButtons(readiness.status, 'package:');
   return renderNotice(
     label('notice.review_package_readiness', 'Review Package Readiness'),
-    statusMessageBody(readiness.status, readiness.message, readinessButtons)
-      + packageContextDetailLines(
-        packageReview,
-        manifest,
-        readiness.eligible_context_ids,
-        detailListLine('Suggested commands', readiness.suggested_commands, ' | '),
-      )
+    packageContextNoticeBody(
+      readiness.status,
+      readiness.message,
+      packageReview,
+      manifest,
+      readiness.eligible_context_ids,
+      detailListLine('Suggested commands', readiness.suggested_commands, ' | '),
+      readinessButtons,
+    )
   );
 }}
 function renderRelatedLinksNotice(record) {{

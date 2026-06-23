@@ -1170,6 +1170,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "function renderNavigationNotice(endpoint, record, options = {})" in html
     assert "function renderRuntimePreviewNotice(record)" in html
     assert "function packageContextDetailLines(packageReview, manifest, eligibleContextIds = [], extraLines = '')" in html
+    assert "function packageContextNoticeBody(status, message, packageReview, manifest, eligibleContextIds = [], extraLines = '', buttons = [])" in html
     assert "function writeRouteDetailLines(writeRouteContract, identityProofContract, authorizationContract, targetStateContract, includeRequestFields = false)" in html
     assert "function mutationOperationalDetailLines(operationalReadiness, blockerSummaries, enablementChecks, checksLabel = 'Enablement checks')" in html
     assert "function reviewerLabelDetailLines(reviewerContext)" in html
@@ -1329,6 +1330,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "detailLine('Response ID', summary.response_id || '')" in html
     assert "detailLine('Usage total tokens', summary.usage_total_tokens ?? '')" in html
     assert "responseMetadataDetailLines(summary)" in html
+    assert "packageContextNoticeBody(" in html
     assert '"Action": "操作"' in html
     assert '"Rollback status": "ロールバック状態"' in html
     assert '"Response ID": "応答ID"' in html
