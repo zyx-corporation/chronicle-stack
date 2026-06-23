@@ -35,14 +35,21 @@ def test_ui_i18n_catalog_contains_core_shell_and_navigation_keys():
         "label.record_json",
         "label.response_json",
         "section.metrics",
+        "section.reviewer_boundary",
         "overview.warning_priority",
+        "overview.reviewer_runtime_enforcement_counts",
+        "overview.reviewer_runtime_gate_counts",
         "ui.label.status_prefix",
         "ui.label.route_prefix",
+        "ui.label.enforcement_status",
+        "ui.label.validation_gate_status",
         "ui.label.reviewer",
         "ui.label.detail_heading",
         "ui.label.empty_runtime_records",
         "ui.label.empty_review_rows",
         "ui.label.empty_summary_jobs",
+        "badge.reviewer_enforcement",
+        "badge.reviewer_gate",
     }
     for locale, catalog in UI_I18N_CATALOG.items():
         missing = required_keys.difference(catalog)

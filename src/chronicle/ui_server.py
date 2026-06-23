@@ -3923,10 +3923,10 @@ function renderRuntimeRecordRow(row, endpoint) {{
       : badge(label('badge.auth_na', 'Auth n/a'), 'badge-neutral');
   const mutationBadge = mutationEnablementBadge(mutationEnablement);
   const reviewerEnforcementBadge = row.reviewer_enforcement_status
-    ? badge('Reviewer enforcement: ' + row.reviewer_enforcement_status, 'badge-neutral')
+    ? badge(label('badge.reviewer_enforcement', 'Reviewer enforcement') + ': ' + row.reviewer_enforcement_status, 'badge-neutral')
     : '';
   const reviewerGateBadge = row.reviewer_validation_gate_status
-    ? badge('Reviewer gate: ' + row.reviewer_validation_gate_status, 'badge-neutral')
+    ? badge(label('badge.reviewer_gate', 'Reviewer gate') + ': ' + row.reviewer_validation_gate_status, 'badge-neutral')
     : '';
   const kindBadge = jumpBadge(
     row.runtime_record_kind || 'unknown',
@@ -3992,10 +3992,10 @@ function renderReviewQueueRow(row, endpoint) {{
   const parityBadge = reviewParityBadge(parity);
   const authBadge = authReadinessBadge(authReadiness.status || '');
   const reviewerEnforcementBadge = row.reviewer_enforcement_status
-    ? badge('Reviewer enforcement: ' + row.reviewer_enforcement_status, 'badge-neutral')
+    ? badge(label('badge.reviewer_enforcement', 'Reviewer enforcement') + ': ' + row.reviewer_enforcement_status, 'badge-neutral')
     : '';
   const reviewerGateBadge = row.reviewer_validation_gate_status
-    ? badge('Reviewer gate: ' + row.reviewer_validation_gate_status, 'badge-neutral')
+    ? badge(label('badge.reviewer_gate', 'Reviewer gate') + ': ' + row.reviewer_validation_gate_status, 'badge-neutral')
     : '';
   const reviewRowShortcutButtons = [
     relatedDetailButton(row, '/api/runtime-records/', 'Open matching runtime record'),
@@ -4057,10 +4057,10 @@ function renderSummaryJobRow(row, endpoint) {{
   const packageBadge = packageStatusBadge(packageStatus);
   const responseMetadata = row.response_metadata_summary || {{}};
   const reviewerEnforcementBadge = row.reviewer_enforcement_status
-    ? badge('Reviewer enforcement: ' + row.reviewer_enforcement_status, 'badge-neutral')
+    ? badge(label('badge.reviewer_enforcement', 'Reviewer enforcement') + ': ' + row.reviewer_enforcement_status, 'badge-neutral')
     : '';
   const reviewerGateBadge = row.reviewer_validation_gate_status
-    ? badge('Reviewer gate: ' + row.reviewer_validation_gate_status, 'badge-neutral')
+    ? badge(label('badge.reviewer_gate', 'Reviewer gate') + ': ' + row.reviewer_validation_gate_status, 'badge-neutral')
     : '';
   const targetButton = reviewDetailButton(row.review_target_event_id || '');
   const summaryRowShortcutButtons = [
@@ -5554,18 +5554,18 @@ function renderOverviewIdentityBoundaryPanel(identityBoundary) {{
 }}
 function renderOverviewReviewerBoundaryPanel(reviewerBoundary) {{
   const metricsBody =
-    summaryJsonLine('Runtime enforcement counts', reviewerBoundary.runtime_record_enforcement_counts)
-      + summaryJsonLine('Runtime gate counts', reviewerBoundary.runtime_record_validation_gate_counts)
-      + summaryJsonLine('Review enforcement counts', reviewerBoundary.review_queue_enforcement_counts)
-      + summaryJsonLine('Review gate counts', reviewerBoundary.review_queue_validation_gate_counts)
-      + summaryJsonLine('Summary enforcement counts', reviewerBoundary.summary_job_enforcement_counts)
-      + summaryJsonLine('Summary gate counts', reviewerBoundary.summary_job_validation_gate_counts);
+    summaryJsonLine(label('overview.reviewer_runtime_enforcement_counts', 'Runtime enforcement counts'), reviewerBoundary.runtime_record_enforcement_counts)
+      + summaryJsonLine(label('overview.reviewer_runtime_gate_counts', 'Runtime gate counts'), reviewerBoundary.runtime_record_validation_gate_counts)
+      + summaryJsonLine(label('overview.reviewer_review_enforcement_counts', 'Review enforcement counts'), reviewerBoundary.review_queue_enforcement_counts)
+      + summaryJsonLine(label('overview.reviewer_review_gate_counts', 'Review gate counts'), reviewerBoundary.review_queue_validation_gate_counts)
+      + summaryJsonLine(label('overview.reviewer_summary_enforcement_counts', 'Summary enforcement counts'), reviewerBoundary.summary_job_enforcement_counts)
+      + summaryJsonLine(label('overview.reviewer_summary_gate_counts', 'Summary gate counts'), reviewerBoundary.summary_job_validation_gate_counts);
   return renderPanel(
     sectionTitle(label('section.reviewer_boundary', 'Reviewer Boundary'))
-    + detailLine('Enforcement status', reviewerBoundary.enforcement_status || '')
-    + detailLine('Validation gate status', reviewerBoundary.validation_gate_status || '')
-    + detailLine('Session gated', reviewerBoundary.session_gated)
-    + detailLine('Fail closed route checks', reviewerBoundary.route_enforced)
+    + detailLine(label('ui.label.enforcement_status', 'Enforcement status'), reviewerBoundary.enforcement_status || '')
+    + detailLine(label('ui.label.validation_gate_status', 'Validation gate status'), reviewerBoundary.validation_gate_status || '')
+    + detailLine(label('ui.label.session_gated', 'Session gated'), reviewerBoundary.session_gated)
+    + detailLine(label('ui.label.fail_closed_route_checks', 'Fail closed route checks'), reviewerBoundary.route_enforced)
     + metricsSection(metricsBody)
   );
 }}

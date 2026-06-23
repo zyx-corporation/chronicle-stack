@@ -1311,8 +1311,8 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "function overviewTriageNavigationCluster(triage)" in html
     assert "function overviewTriageJumpButtons()" in html
     assert "const overviewPanelRenderers = [" in html
-    assert "summaryJsonLine('Runtime enforcement counts', reviewerBoundary.runtime_record_enforcement_counts)" in html
-    assert "detailLine('Validation gate status', reviewerBoundary.validation_gate_status || '')" in html
+    assert "label('overview.reviewer_runtime_enforcement_counts', 'Runtime enforcement counts')" in html
+    assert "label('ui.label.validation_gate_status', 'Validation gate status')" in html
     assert "function renderOverviewPanels(data)" in html
     assert "const detailPathResolvers =" in html
     assert "function endpointBody(endpoint, payload)" in html
