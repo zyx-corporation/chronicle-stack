@@ -363,11 +363,17 @@ def test_ui_overview_data(tmp_path):
     assert overview["ui_boundary"]["mutation_capability_flag"] is False
     assert overview["ui_boundary"]["auth_mode"] == "not_enabled"
     assert overview["auth_boundary_summary"]["status"] == "auth_not_enabled"
+    assert overview["auth_boundary_summary"]["scope_note"].startswith(
+        "UI review remains advisory-only until an explicit local auth boundary"
+    )
     assert "Define explicit local auth boundary." in overview["auth_boundary_summary"]["next_steps"]
     assert overview["auth_boundary_summary"]["blocker_details"][0] == {
         "code": "auth_not_enabled",
         "message": "Define explicit local auth boundary.",
     }
+    assert overview["auth_boundary_summary"]["blocker_summaries"][0]["summary"].startswith(
+        "Auth boundary: "
+    )
     assert overview["auth_boundary_overview"]["auth_warning_count"] == 3
     assert overview["auth_boundary_overview"]["authorization_warning_count"] == 3
     assert overview["auth_boundary_overview"]["missing_identity_count"] == 3
@@ -1328,6 +1334,8 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "Active view:" in html
     assert "jumpBadge(" in html
     assert "label('notice.auth_readiness', 'Auth Readiness')" in html
+    assert "detailLine('Scope note', notice.scope_note || '')" in html
+    assert "detailListLine('Blocker summaries', blockerSummaries.map(item => (item.summary || item.code || 'blocker')), ' | ')" in html
     assert "label('notice.review_capability', 'Review Capability')" in html
     assert "label('notice.action_preview', 'Action Preview')" in html
     assert "uiLabel('Approve')" in html
@@ -1794,10 +1802,19 @@ def test_review_queue_auth_boundary_notice_exposes_human_blocker_details(tmp_pat
 
     assert notice["status"] == "advisory_only"
     assert notice["blockers"] == ["reviewer_identity_missing"]
+    assert notice["scope_note"].startswith(
+        "Loopback-local reviewer metadata is session-gated"
+    )
     assert notice["blocker_details"] == [
         {
             "code": "reviewer_identity_missing",
             "message": "Record reviewer identity metadata before relying on GUI review signals.",
+        }
+    ]
+    assert notice["blocker_summaries"] == [
+        {
+            "code": "reviewer_identity_missing",
+            "summary": "Auth boundary: Record reviewer identity metadata before relying on GUI review signals.",
         }
     ]
 

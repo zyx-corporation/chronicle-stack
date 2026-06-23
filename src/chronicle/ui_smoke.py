@@ -181,10 +181,16 @@ def run_ui_smoke(root: Path | None = None) -> UISmokeReport:
                 checks.append(
                     UISmokeCheck(
                         f"{endpoint}/{record_id}#auth-readiness",
-                        isinstance(auth_notice, dict) and bool(auth_notice.get("status")),
+                        isinstance(auth_notice, dict)
+                        and bool(auth_notice.get("status"))
+                        and bool(auth_notice.get("scope_note"))
+                        and isinstance(auth_notice.get("blocker_summaries"), list),
                         (
                             "ok"
-                            if isinstance(auth_notice, dict) and bool(auth_notice.get("status"))
+                            if isinstance(auth_notice, dict)
+                            and bool(auth_notice.get("status"))
+                            and bool(auth_notice.get("scope_note"))
+                            and isinstance(auth_notice.get("blocker_summaries"), list)
                             else "review detail missing auth readiness notice"
                         ),
                     )
@@ -345,10 +351,16 @@ def run_ui_smoke(root: Path | None = None) -> UISmokeReport:
                 checks.append(
                     UISmokeCheck(
                         f"{endpoint}/{record_id}#auth-readiness",
-                        isinstance(auth_notice, dict) and bool(auth_notice.get("status")),
+                        isinstance(auth_notice, dict)
+                        and bool(auth_notice.get("status"))
+                        and bool(auth_notice.get("scope_note"))
+                        and isinstance(auth_notice.get("blocker_summaries"), list),
                         (
                             "ok"
-                            if isinstance(auth_notice, dict) and bool(auth_notice.get("status"))
+                            if isinstance(auth_notice, dict)
+                            and bool(auth_notice.get("status"))
+                            and bool(auth_notice.get("scope_note"))
+                            and isinstance(auth_notice.get("blocker_summaries"), list)
                             else "runtime detail missing auth readiness notice"
                         ),
                     )
@@ -395,10 +407,16 @@ def run_ui_smoke(root: Path | None = None) -> UISmokeReport:
                 checks.append(
                     UISmokeCheck(
                         f"{endpoint}/{record_id}#auth-readiness",
-                        isinstance(auth_notice, dict) and bool(auth_notice.get("status")),
+                        isinstance(auth_notice, dict)
+                        and bool(auth_notice.get("status"))
+                        and bool(auth_notice.get("scope_note"))
+                        and isinstance(auth_notice.get("blocker_summaries"), list),
                         (
                             "ok"
-                            if isinstance(auth_notice, dict) and bool(auth_notice.get("status"))
+                            if isinstance(auth_notice, dict)
+                            and bool(auth_notice.get("status"))
+                            and bool(auth_notice.get("scope_note"))
+                            and isinstance(auth_notice.get("blocker_summaries"), list)
                             else "summary detail missing auth readiness notice"
                         ),
                     )

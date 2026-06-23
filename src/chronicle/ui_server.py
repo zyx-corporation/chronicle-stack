@@ -123,8 +123,14 @@ def _auth_boundary_summary(metadata: UIBoundaryMetadata) -> dict[str, Any]:
     return {
         "status": status,
         "message": message,
+        "scope_note": _auth_readiness_scope_note(
+            auth_mode=metadata.auth_mode,
+            authorization_mode=metadata.authorization_mode,
+            session_gating=metadata.session_gating,
+        ),
         "blockers": blockers,
         "blocker_details": _serialize_auth_boundary_blocker_details(blockers),
+        "blocker_summaries": _auth_blocker_summaries(blockers),
         "next_steps": next_steps,
         "shared_machine_safe": metadata.shared_machine_safe,
         "session_gating": metadata.session_gating,
@@ -148,6 +154,31 @@ def _serialize_auth_boundary_blocker_details(blockers: list[str]) -> list[dict[s
         }
         for blocker in blockers
     ]
+
+
+def _auth_blocker_summaries(blockers: list[str]) -> list[dict[str, str]]:
+    return [
+        {
+            "code": blocker,
+            "summary": f"Auth boundary: {AUTH_BOUNDARY_BLOCKER_TEXT.get(blocker, blocker.replace('_', ' '))}",
+        }
+        for blocker in blockers
+    ]
+
+
+def _auth_readiness_scope_note(
+    *,
+    auth_mode: str,
+    authorization_mode: str,
+    session_gating: bool,
+) -> str:
+    if auth_mode == UIAuthMode.NOT_ENABLED:
+        return "UI review remains advisory-only until an explicit local auth boundary is configured."
+    if authorization_mode == UIAuthorizationMode.NOT_ENABLED:
+        return "Loopback-local auth metadata is present, but reviewer authorization still remains advisory-only."
+    if session_gating:
+        return "Loopback-local reviewer metadata is session-gated, but this surface still reports preview readiness rather than granting write authority."
+    return "Auth readiness remains a descriptive preview surface; it does not grant write authority on its own."
 
 
 def _serialize_review_warning_details(warnings: list[str]) -> list[dict[str, str]]:
@@ -1633,8 +1664,16 @@ class ChronicleUIDataService:
         return {
             "status": status,
             "message": message,
+            "scope_note": _auth_readiness_scope_note(
+                auth_mode=str(boundary.get("auth_mode", UIAuthMode.NOT_ENABLED)),
+                authorization_mode=str(
+                    boundary.get("authorization_mode", UIAuthorizationMode.NOT_ENABLED)
+                ),
+                session_gating=bool(boundary.get("session_gating", False)),
+            ),
             "blockers": blockers,
             "blocker_details": _serialize_auth_boundary_blocker_details(blockers),
+            "blocker_summaries": _auth_blocker_summaries(blockers),
             "next_steps": next_steps,
             "capability_status": capability_status,
             "identity_assurance_status": assurance_status,
@@ -4391,13 +4430,16 @@ function renderAuthReadinessNotice(record) {{
   if (!record.auth_boundary_notice) return '';
   const notice = record.auth_boundary_notice;
   const blockerDetails = Array.isArray(notice.blocker_details) ? notice.blocker_details : [];
+  const blockerSummaries = Array.isArray(notice.blocker_summaries) ? notice.blocker_summaries : [];
   const noticeButtons = moreStatusButtons(notice.status, '/api/review-queue', 'reviewQueue');
   return renderNotice(
     label('notice.auth_readiness', 'Auth Readiness'),
     statusMessageBody(notice.status, notice.message, noticeButtons)
+      + detailLine('Scope note', notice.scope_note || '')
       + detailLine('Review capability', notice.capability_status || '')
       + detailLine('Identity assurance', notice.identity_assurance_status || '')
       + detailLine('Blockers', detailMessages(blockerDetails, notice.blockers))
+      + detailListLine('Blocker summaries', blockerSummaries.map(item => (item.summary || item.code || 'blocker')), ' | ')
       + detailListLine('Next steps', notice.next_steps, ' | ')
   );
 }}
@@ -4774,6 +4816,7 @@ function renderOverviewUiBoundaryPanel(uiBoundary) {{
   );
 }}
 function renderOverviewAuthBoundaryPanel(authBoundary, authBoundaryOverview) {{
+  const blockerSummaries = Array.isArray(authBoundary.blocker_summaries) ? authBoundary.blocker_summaries : [];
   const metricsSection = collapsibleSection(
     label('section.metrics', 'Metrics'),
     summaryJsonLine('Auth review capability counts', authBoundaryOverview.review_capability_counts)
@@ -4791,10 +4834,12 @@ function renderOverviewAuthBoundaryPanel(authBoundary, authBoundaryOverview) {{
     + '</p>'
     + detailLine('Status', authBoundary.status || '')
     + '<p>' + esc(authBoundary.message || '') + '</p>'
+    + detailLine('Scope note', authBoundary.scope_note || '')
     + detailLine('Session gating', authBoundary.session_gating)
     + detailLine('Shared machine safe', authBoundary.shared_machine_safe)
     + metricsSection
     + detailListLine('Auth blockers', authBoundary.blockers, ' | ')
+    + detailListLine('Auth blocker summaries', blockerSummaries.map(item => (item.summary || item.code || 'blocker')), ' | ')
     + detailListLine('Auth next steps', authBoundary.next_steps, ' | ')
   );
 }}
