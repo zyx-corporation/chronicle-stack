@@ -95,6 +95,7 @@ class UIBoundaryMetadata:
     )
     mutation_blocker_details: list[dict[str, str]] | None = None
     reviewer_context_requirements: dict[str, Any] | None = None
+    reviewer_enforcement_summary: dict[str, Any] | None = None
     auth_boundary_summary: dict[str, Any] | None = None
     write_route_contract: dict[str, Any] | None = None
 
@@ -432,6 +433,45 @@ def _reviewer_context_requirements(metadata: UIBoundaryMetadata) -> dict[str, An
             else "Session label is optional while session-gated review is disabled."
         ),
         "ui_intent_note": "ui_intent must match the requested action so preview and apply paths stay fail-closed.",
+    }
+
+
+def _reviewer_enforcement_summary(metadata: UIBoundaryMetadata) -> dict[str, Any]:
+    reviewer_context = _reviewer_context_requirements(metadata)
+    if metadata.mutation_enabled:
+        status = "enforced_local_session"
+        message = (
+            "Local reviewer/session enforcement is active only for the explicit loopback-local mutation route."
+        )
+    elif (
+        metadata.auth_mode == UIAuthMode.LOOPBACK_LOCAL
+        and metadata.authorization_mode == UIAuthorizationMode.REVIEWER_DECLARED
+    ):
+        status = "preview_contract_only"
+        message = (
+            "Reviewer/session enforcement requirements are defined for the local route contract, but read-only surfaces remain descriptive until GUI mutation is explicitly enabled."
+        )
+    else:
+        status = "descriptive_only"
+        message = (
+            "Reviewer/session fields remain descriptive local metadata until explicit route enforcement is enabled."
+        )
+    return {
+        "status": status,
+        "message": message,
+        "enforced_request_fields": reviewer_context.get("effective_required_fields", []),
+        "enforced_reviewer_kinds_for_mutation": reviewer_context.get(
+            "required_reviewer_kinds_for_mutation", []
+        ),
+        "descriptive_only_reviewer_kinds": reviewer_context.get("advisory_only_reviewer_kinds", []),
+        "session_gated": bool(metadata.session_gating),
+        "route_enforcement_scope": "browser-triggered review write route only",
+        "read_only_scope_note": (
+            "Read-only UI surfaces expose current local enforcement expectations, but they do not grant or prove authority on their own."
+        ),
+        "descriptive_note": (
+            "Recorded reviewer/session metadata supports local auditability and boundary inspection, but it does not imply hosted authentication, multi-user-safe authority, or default-on GUI mutation."
+        ),
     }
 
 
@@ -794,6 +834,7 @@ def build_ui_boundary_metadata(
             **asdict(metadata),
             "mutation_blocker_details": _serialize_mutation_blocker_details(list(metadata.mutation_blockers)),
             "reviewer_context_requirements": _reviewer_context_requirements(metadata),
+            "reviewer_enforcement_summary": _reviewer_enforcement_summary(metadata),
             "auth_boundary_summary": _auth_boundary_summary(metadata),
             "write_route_contract": _ui_write_route_contract(metadata),
         }
@@ -1506,6 +1547,7 @@ class ChronicleUIDataService:
             "enablement_required_count": len(enablement_checks),
             "operational_readiness": operational_readiness,
             "reviewer_context_requirements": boundary.get("reviewer_context_requirements", {}),
+            "reviewer_enforcement_summary": boundary.get("reviewer_enforcement_summary", {}),
             "write_route_contract": boundary.get("write_route_contract", {}),
             "identity_proof_contract": boundary.get("write_route_contract", {}).get(
                 "identity_proof_contract", {}
@@ -1884,6 +1926,7 @@ class ChronicleUIDataService:
             "next_steps": next_steps,
             "capability_status": capability_status,
             "identity_assurance_status": assurance_status,
+            "reviewer_enforcement_summary": boundary.get("reviewer_enforcement_summary", {}),
         }
 
     def _review_queue_row(self, target_event_id: str) -> dict[str, Any] | None:
@@ -2585,6 +2628,7 @@ class ChronicleUIDataService:
                 "mutation_enabled": False,
                 "cli_equivalent": cli_equivalent,
                 "reviewer_context_requirements": boundary.get("reviewer_context_requirements", {}),
+                "reviewer_enforcement_summary": boundary.get("reviewer_enforcement_summary", {}),
                 "write_route_contract": boundary.get("write_route_contract", {}),
                 "success_contract": self._review_action_success_contract(
                     cli_equivalent=cli_equivalent,
@@ -2620,6 +2664,7 @@ class ChronicleUIDataService:
 
         boundary = self.ui_boundary()["ui_boundary"]
         reviewer_context_requirements = boundary.get("reviewer_context_requirements", {})
+        reviewer_enforcement_summary = boundary.get("reviewer_enforcement_summary", {})
         write_route_contract = boundary.get("write_route_contract", {})
         cli_equivalent = f"chronicle review {action} --event {event_id}"
         success_contract = self._review_action_success_contract(
@@ -2649,6 +2694,7 @@ class ChronicleUIDataService:
                     "message": self._review_action_failure_message("reviewer_label_required"),
                     "mutation_enabled": True,
                     "reviewer_context_requirements": reviewer_context_requirements,
+                    "reviewer_enforcement_summary": reviewer_enforcement_summary,
                     "write_route_contract": write_route_contract,
                     "success_contract": success_contract,
                     "failure_contract": self._review_action_failure_contract(
@@ -2672,6 +2718,7 @@ class ChronicleUIDataService:
                     "message": self._review_action_failure_message("invalid_reviewer_label"),
                     "mutation_enabled": True,
                     "reviewer_context_requirements": reviewer_context_requirements,
+                    "reviewer_enforcement_summary": reviewer_enforcement_summary,
                     "write_route_contract": write_route_contract,
                     "success_contract": success_contract,
                     "failure_contract": self._review_action_failure_contract(
@@ -2695,6 +2742,7 @@ class ChronicleUIDataService:
                     "message": self._review_action_failure_message("session_label_required"),
                     "mutation_enabled": True,
                     "reviewer_context_requirements": reviewer_context_requirements,
+                    "reviewer_enforcement_summary": reviewer_enforcement_summary,
                     "write_route_contract": write_route_contract,
                     "success_contract": success_contract,
                     "failure_contract": self._review_action_failure_contract(
@@ -2718,6 +2766,7 @@ class ChronicleUIDataService:
                     "message": self._review_action_failure_message("invalid_session_label"),
                     "mutation_enabled": True,
                     "reviewer_context_requirements": reviewer_context_requirements,
+                    "reviewer_enforcement_summary": reviewer_enforcement_summary,
                     "write_route_contract": write_route_contract,
                     "success_contract": success_contract,
                     "failure_contract": self._review_action_failure_contract(
@@ -2741,6 +2790,7 @@ class ChronicleUIDataService:
                     "message": self._review_action_failure_message("ui_intent_mismatch"),
                     "mutation_enabled": True,
                     "reviewer_context_requirements": reviewer_context_requirements,
+                    "reviewer_enforcement_summary": reviewer_enforcement_summary,
                     "write_route_contract": write_route_contract,
                     "success_contract": success_contract,
                     "failure_contract": self._review_action_failure_contract(
@@ -2766,6 +2816,7 @@ class ChronicleUIDataService:
                     "message": self._review_action_failure_message("invalid_reviewer_kind"),
                     "mutation_enabled": True,
                     "reviewer_context_requirements": reviewer_context_requirements,
+                    "reviewer_enforcement_summary": reviewer_enforcement_summary,
                     "write_route_contract": write_route_contract,
                     "success_contract": success_contract,
                     "failure_contract": self._review_action_failure_contract(
@@ -2806,6 +2857,7 @@ class ChronicleUIDataService:
                     "identity_assurance_status": assurance.get("status"),
                     "identity_assurance_message": assurance.get("message"),
                     "reviewer_context_requirements": reviewer_context_requirements,
+                    "reviewer_enforcement_summary": reviewer_enforcement_summary,
                     "write_route_contract": write_route_contract,
                     "failure_summary": self._review_action_failure_summary(
                         error_code="authorization_failed",
@@ -2837,6 +2889,7 @@ class ChronicleUIDataService:
                     "message": self._review_action_failure_message("review_target_not_found"),
                     "mutation_enabled": True,
                     "reviewer_context_requirements": reviewer_context_requirements,
+                    "reviewer_enforcement_summary": reviewer_enforcement_summary,
                     "write_route_contract": write_route_contract,
                     "success_contract": success_contract,
                     "failure_contract": self._review_action_failure_contract(
@@ -2864,6 +2917,7 @@ class ChronicleUIDataService:
                     ),
                     "cli_equivalent": cli_equivalent,
                     "reviewer_context_requirements": reviewer_context_requirements,
+                    "reviewer_enforcement_summary": reviewer_enforcement_summary,
                     "write_route_contract": write_route_contract,
                     "success_contract": success_contract,
                     "failure_contract": self._review_action_failure_contract(
@@ -2901,6 +2955,7 @@ class ChronicleUIDataService:
                     ),
                     "cli_equivalent": cli_equivalent,
                     "reviewer_context_requirements": reviewer_context_requirements,
+                    "reviewer_enforcement_summary": reviewer_enforcement_summary,
                     "write_route_contract": write_route_contract,
                     "success_contract": success_contract,
                     "failure_contract": self._review_action_failure_contract(
@@ -2930,6 +2985,7 @@ class ChronicleUIDataService:
                     ),
                     "cli_equivalent": cli_equivalent,
                     "reviewer_context_requirements": reviewer_context_requirements,
+                    "reviewer_enforcement_summary": reviewer_enforcement_summary,
                     "write_route_contract": write_route_contract,
                     "success_contract": success_contract,
                     "failure_contract": self._review_action_failure_contract(
@@ -2955,6 +3011,7 @@ class ChronicleUIDataService:
                 "mutation_enabled": True,
                 "reviewer_identity": result.reviewer_identity.model_dump(mode="json"),
                 "reviewer_context_requirements": reviewer_context_requirements,
+                "reviewer_enforcement_summary": reviewer_enforcement_summary,
                 "write_route_contract": write_route_contract,
                 "success_contract": self._review_action_success_contract(
                     cli_equivalent=cli_equivalent,

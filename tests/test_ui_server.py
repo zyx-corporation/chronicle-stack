@@ -221,6 +221,15 @@ def test_startup_metadata(tmp_path):
     assert payload["ui_boundary"]["reviewer_context_requirements"]["expectation_summary"].startswith(
         "Preview/read-only review context currently expects local_operator reviewer metadata"
     )
+    assert payload["ui_boundary"]["reviewer_enforcement_summary"]["status"] == "descriptive_only"
+    assert payload["ui_boundary"]["reviewer_enforcement_summary"]["enforced_request_fields"] == [
+        "reviewer_label",
+        "reviewer_kind",
+        "ui_intent",
+    ]
+    assert payload["ui_boundary"]["reviewer_enforcement_summary"]["route_enforcement_scope"] == (
+        "browser-triggered review write route only"
+    )
     assert payload["ui_boundary"]["write_route_contract"]["route_template"] == "/api/review-actions/<event_id>/<action>"
     assert payload["ui_boundary"]["write_route_contract"]["actions"] == [
         "approve",
@@ -341,6 +350,8 @@ def test_startup_metadata_with_configured_auth_mode(tmp_path):
     assert payload["ui_boundary"]["reviewer_context_requirements"]["expectation_summary"].startswith(
         "Explicit local GUI mutation currently expects local_operator reviewer metadata"
     )
+    assert payload["ui_boundary"]["reviewer_enforcement_summary"]["status"] == "preview_contract_only"
+    assert payload["ui_boundary"]["reviewer_enforcement_summary"]["session_gated"] is True
     assert payload["ui_boundary"]["write_route_contract"]["identity_proof_contract"]["proof_status"] == "session_gated_local_operator"
     assert payload["ui_boundary"]["write_route_contract"]["authorization_contract"]["authorization_status"] == "explicit_local_reviewer_declared"
     assert payload["ui_boundary"]["auth_boundary_summary"]["status"] == "reviewer_declared_preview"
@@ -376,6 +387,7 @@ def test_startup_metadata_with_enabled_ui_mutation(tmp_path):
     assert payload["ui_boundary"]["mutation_enabled"] is True
     assert payload["ui_boundary"]["read_only"] is False
     assert payload["ui_boundary"]["mutation_readiness_status"] == "enabled"
+    assert payload["ui_boundary"]["reviewer_enforcement_summary"]["status"] == "enforced_local_session"
     assert payload["ui_boundary"]["mutation_blockers"] == []
 
 
@@ -483,6 +495,10 @@ def test_ui_overview_data(tmp_path):
     assert overview["mutation_readiness"]["reviewer_context_requirements"]["expectation_summary"].startswith(
         "Preview/read-only review context currently expects local_operator reviewer metadata"
     )
+    assert overview["mutation_readiness"]["reviewer_enforcement_summary"]["status"] == "descriptive_only"
+    assert overview["mutation_readiness"]["reviewer_enforcement_summary"]["descriptive_only_reviewer_kinds"] == [
+        "user_declared"
+    ]
     assert overview["mutation_readiness"]["identity_proof_contract"]["required_reviewer_kinds_for_mutation"] == [
         "local_operator"
     ]
@@ -1859,6 +1875,10 @@ def test_review_action_failure_summary_uses_human_warning_text(tmp_path):
     assert payload["reviewer_context_requirements"]["required_reviewer_kinds_for_mutation"] == [
         "local_operator"
     ]
+    assert payload["reviewer_enforcement_summary"]["status"] == "enforced_local_session"
+    assert payload["reviewer_enforcement_summary"]["enforced_reviewer_kinds_for_mutation"] == [
+        "local_operator"
+    ]
     assert payload["reviewer_context_requirements"]["expectation_summary"].startswith(
         "Explicit local GUI mutation currently expects local_operator reviewer metadata"
     )
@@ -1902,6 +1922,7 @@ def test_review_action_applies_when_session_gated_inputs_are_complete(tmp_path):
     assert payload["reviewer_identity"]["session_label"] == "ui-test-session"
     assert payload["write_route_contract"]["route_template"] == "/api/review-actions/<event_id>/<action>"
     assert payload["reviewer_context_requirements"]["session_boundary_status"] == "required"
+    assert payload["reviewer_enforcement_summary"]["status"] == "enforced_local_session"
     assert payload["reviewer_context_requirements"]["session_note"] == (
         "Session label is required because the current local mutation boundary is session-gated."
     )
@@ -1929,6 +1950,7 @@ def test_review_action_requires_session_label_before_authorization_check(tmp_pat
     assert status == 400
     assert payload["error_code"] == "session_label_required"
     assert payload["write_route_contract"]["blocked_status_code"] == 403
+    assert payload["reviewer_enforcement_summary"]["session_gated"] is True
     assert payload["reviewer_context_requirements"]["ui_intent_note"] == (
         "ui_intent must match the requested action so preview and apply paths stay fail-closed."
     )

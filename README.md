@@ -180,9 +180,9 @@ chronicle show
 
 v1.2 以降では、`/api/events/<id>`, `/api/contexts/<id>`, `/api/artifacts/<id>`, `/api/decisions/<id>`, `/api/rde/<id>`, `/api/boundary/<id>`, `/api/audit/<id>`, `/api/lifecycle/<id>`, `/api/runtime-records/<id>`, `/api/review-queue/<id>` のような read-only detail endpoint を提供します。これらも記録を変更しない閲覧用の派生ビューです。
 
-`/api/review-queue` は `review_status=needs_review` の記録を preview-only で表示します。UI mutation は有効化されず、CLI family の目安表示だけを返します。detail では reviewer event と linked audit event の履歴 timeline に加え、current UI boundary と照合した identity assurance、および review capability/warning surface を notice 表示で確認できます。warning code は説明文へ展開されます。
+`/api/review-queue` は `review_status=needs_review` の記録を preview-only で表示します。UI mutation は有効化されず、CLI family の目安表示だけを返します。detail では reviewer event と linked audit event の履歴 timeline に加え、current UI boundary と照合した identity assurance、および review capability/warning surface を notice 表示で確認できます。`reviewer_enforcement_summary` では、現在の reviewer/session 条件のうち「write route で強制されるもの」と「read-only surface 上で説明的に見せているだけのもの」を分けて確認できます。warning code は説明文へ展開されます。
 
-`/api/ui-boundary` は現在の GUI mutation capability flag, bind scope, auth/authz 未実装状態を read-only に可視化します。
+`/api/ui-boundary` は現在の GUI mutation capability flag, bind scope, auth/authz 未実装状態を read-only に可視化します。`reviewer_enforcement_summary` は reviewer/session 境界の enforcement scope を構造化して返し、read-only UI surface 自体は authority を付与しないことを明示します。
 
 `chronicle review` は append-only reviewer event を追加する CLI parity skeleton です。approve / reject / request-changes は target event を直接書き換えず、reviewer event を追記し、同時に `review_decision` audit event も残します。reviewer identity は `label`, `kind`, `session` の構造で保持され、将来の auth/authz 接続点になります。
 

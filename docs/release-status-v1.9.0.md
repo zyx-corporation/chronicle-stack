@@ -21,6 +21,8 @@ Current `v1.9.0` repository progress now includes:
 
 - ADR-0028 defining the local reviewer/session enforcement boundary
 - a release-lane handoff from the completed `v1.8.0` contract-hardening release
+- structured `reviewer_enforcement_summary` exposure on UI boundary, mutation-readiness, and review-action surfaces
+- wording alignment that distinguishes route-enforced reviewer/session conditions from descriptive read-only metadata
 
 ## Current release documents
 
@@ -54,3 +56,4 @@ Current repository-side review for `v1.9.0` preserves the following:
 - `v1.8.0` is the latest published release
 - the next release lane remains local-first and contract-driven
 - unresolved work starts with reviewer/session enforcement-boundary wording and validation alignment
+- current repository work now exposes explicit route-enforcement vs descriptive-metadata boundaries without widening into hosted auth claims
