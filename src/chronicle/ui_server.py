@@ -5203,8 +5203,7 @@ function renderOverviewAuthBoundaryPanel(authBoundary, authBoundaryOverview) {{
     + overviewCountButton(reviewWarningLabel('no_reviewer_identity_recorded'), authBoundaryOverview.missing_identity_count, 'badge-warning', '/api/review-queue', 'reviewQueue', 'no_reviewer_identity_recorded')
     + overviewCountButton(label('overview.provider_response', 'Provider response'), authBoundaryOverview.provider_response_present_count, 'badge-ready', '/api/review-queue', 'reviewQueue', 'response_id')
     + '</p>'
-    + detailLine('Status', authBoundary.status || '')
-    + '<p>' + esc(authBoundary.message || '') + '</p>'
+    + statusMessageBody(authBoundary.status, authBoundary.message)
     + detailLine('Scope note', authBoundary.scope_note || '')
     + detailLine('Session gating', authBoundary.session_gating)
     + detailLine('Shared machine safe', authBoundary.shared_machine_safe)
@@ -5228,8 +5227,7 @@ function renderOverviewIdentityBoundaryPanel(identityBoundary) {{
     + overviewCountButton(reviewWarningLabel('reviewer_session_label_missing'), identityBoundary.session_label_missing_count, 'badge-warning', '/api/review-queue', 'reviewQueue', 'reviewer_session_label_missing')
     + overviewCountButton(uiLabel('Identity aligned'), (identityBoundary.assurance_counts && identityBoundary.assurance_counts.boundary_aligned) ?? 0, 'badge-ready', '/api/review-queue', 'reviewQueue', 'boundary_aligned')
     + '</p>'
-    + detailLine('Status', identityBoundary.status || '')
-    + '<p>' + esc(identityBoundary.message || '') + '</p>'
+    + statusMessageBody(identityBoundary.status, identityBoundary.message)
     + metricsSection
     + detailLine('Missing identity rows', identityBoundary.missing_identity_count ?? 0)
     + detailLine('Declared-only rows', identityBoundary.declared_identity_count ?? 0)
@@ -5250,8 +5248,7 @@ function renderOverviewMutationReadinessPanel(mutationReadiness) {{
   const operationalReadiness = mutationReadiness.operational_readiness || {{}};
   return renderPanel(
     sectionTitle(label('section.mutation_readiness', 'Mutation Readiness'))
-    + detailLine('Status', mutationReadiness.status || '')
-    + '<p>' + esc(mutationReadiness.message || '') + '</p>'
+    + statusMessageBody(mutationReadiness.status, mutationReadiness.message)
     + detailLine('Scope note', mutationReadiness.scope_note || '')
     + detailLine('Ready rows', mutationReadiness.ready_row_count ?? 0)
     + detailLine('Advisory rows', mutationReadiness.advisory_row_count ?? 0)
