@@ -2,15 +2,16 @@
 
 Related: `docs/adr/0035-local-mutation-enablement-check-structured-i18n.md`, `docs/release-status-v1.15.0.md`
 
-`v1.16.0` is the repository-side local mutation-enablement-check structured-i18n release after the published `v1.15.0` baseline.
+`v1.16.0` is the published local mutation-enablement-check structured-i18n release after the published `v1.15.0` baseline.
 
-- Latest published release: `v1.15.0`
-- Current repository-side release target: `v1.16.0`
+- Latest published release: `v1.16.0`
+- Release URL: `https://github.com/zyx-corporation/chronicle-stack/releases/tag/v1.16.0`
+- Current repository-side release target: `TBD after v1.16.0 publication`
 - Lane scope: mutation enablement check structured i18n contracts only
 
 ## Current repository-side progress
 
-Current `v1.16.0` release progress includes:
+Published `v1.16.0` release progress includes:
 
 - accepted ADR scope for mutation enablement check structured i18n
 - stable `label_key` and `detail_key` fields for mutation enablement checks
@@ -18,20 +19,20 @@ Current `v1.16.0` release progress includes:
 - HTML renderer support for preferring structured check keys while retaining fallback summaries
 - smoke/test coverage for explicit mutation enablement check contracts
 - version bump and release-readiness documents for `1.16.0`
+- external tag and GitHub Release publication
 
 ## Boundary notes
 
-`v1.16.0` preserves:
+Published `v1.16.0` preserves:
 
 - local-first single-operator scope
 - read-only derived-surface discipline
 - i18n presentation-only boundary
 - JSON/CLI authority over mutation gating meaning and write semantics
 
-`v1.16.0` still must not imply:
+Published `v1.16.0` still must not imply:
 
 - hosted auth or multi-user safety
 - translated machine-readable check codes
 - broader mutation capability
 - correctness proof or security certification
-
