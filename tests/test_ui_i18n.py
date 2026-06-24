@@ -305,6 +305,16 @@ def test_ui_i18n_catalog_covers_review_action_target_state_recovery_structured_k
         assert not missing, f"{locale} missing keys: {sorted(missing)}"
 
 
+def test_ui_i18n_catalog_covers_review_action_preview_summary_structured_keys():
+    required_keys = {
+        "ui.template.review_action_preview.recovery_summary",
+        "ui.template.review_action_preview.follow_up_summary",
+    }
+    for locale in ("ja", "en", "zh-CN"):
+        missing = required_keys.difference(UI_I18N_CATALOG[locale])
+        assert not missing, f"{locale} missing keys: {sorted(missing)}"
+
+
 def test_ui_i18n_catalog_covers_package_preview_and_review_preview_messages():
     required_exact = {
         "No context records were selected by the retrieval dry-run, so package preview is advisory only.",

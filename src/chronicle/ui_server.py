@@ -429,6 +429,16 @@ def _cli_parity_message_key(aligned: bool) -> str:
     return "ui.cli_parity.message.aligned" if aligned else "ui.cli_parity.message.drift_detected"
 
 
+def _review_action_preview_summary_contract(kind: str, command: str) -> tuple[str, dict[str, Any], str]:
+    if not command:
+        return ("", {}, "")
+    if kind == "recovery":
+        return ("ui.template.review_action_preview.recovery_summary", {"command": command}, command)
+    if kind == "follow_up":
+        return ("ui.template.review_action_preview.follow_up_summary", {"command": command}, command)
+    return ("", {}, command)
+
+
 def _runtime_preview_title_contract(preview: dict[str, Any]) -> tuple[str | None, dict[str, Any]]:
     record_kind = str(preview.get("record_kind", ""))
     title = str(preview.get("title", ""))
@@ -3436,6 +3446,18 @@ class ChronicleUIDataService:
             event_id=target_event_id,
             audit_id=None,
         )
+        recovery_summary_key, recovery_summary_params, recovery_summary = (
+            _review_action_preview_summary_contract(
+                "recovery",
+                str(failure_contract.get("recovery_path", "")),
+            )
+        )
+        follow_up_summary_key, follow_up_summary_params, follow_up_summary = (
+            _review_action_preview_summary_contract(
+                "follow_up",
+                str((success_contract.get("follow_up_commands") or [""])[0]),
+            )
+        )
         return {
             "status": "enabled" if mutation_enabled else "preview_only",
             "ui_mutation_enabled": mutation_enabled,
@@ -3455,8 +3477,12 @@ class ChronicleUIDataService:
             ),
             "message_key": _review_action_preview_message_key(mutation_enabled, can_review_now),
             "cli_equivalent": cli_equivalent,
-            "recovery_summary": str(failure_contract.get("recovery_path", "")),
-            "follow_up_summary": str((success_contract.get("follow_up_commands") or [""])[0]),
+            "recovery_summary": recovery_summary,
+            "recovery_summary_key": recovery_summary_key,
+            "recovery_summary_params": recovery_summary_params,
+            "follow_up_summary": follow_up_summary,
+            "follow_up_summary_key": follow_up_summary_key,
+            "follow_up_summary_params": follow_up_summary_params,
             "failure_contract": failure_contract,
             "success_contract": success_contract,
             "write_route_contract": write_route_contract or {},
@@ -4715,6 +4741,12 @@ function renderReviewMutationForm(title, prefix) {{
     + '<label>' + esc(uiLabel('Note')) + ' <input id="' + esc(prefix) + '-reviewer-note" placeholder="' + esc(t('placeholder.review_note')) + '"></label></p></div>';
 }}
 function renderPreviewSummary(preview) {{
+  const localizedRecoverySummary = preview.recovery_summary_key
+    ? formatLabel(preview.recovery_summary_key, preview.recovery_summary_params || {{}}, preview.recovery_summary || '')
+    : (preview.recovery_summary || '');
+  const localizedFollowUpSummary = preview.follow_up_summary_key
+    ? formatLabel(preview.follow_up_summary_key, preview.follow_up_summary_params || {{}}, preview.follow_up_summary || '')
+    : (preview.follow_up_summary || '');
   const statusLine = preview.status
     ? '<strong>' + esc(preview.status) + '</strong><br>' + esc(localizeTextValue(preview.message || ''))
     : esc(localizeTextValue(preview.message || ''));
@@ -4722,11 +4754,11 @@ function renderPreviewSummary(preview) {{
     preview.cli_equivalent
       ? '<br><span class="id">cli=' + esc(preview.cli_equivalent) + '</span>'
       : '',
-    preview.recovery_summary
-      ? '<br><span class="id">recovery=' + esc(preview.recovery_summary) + '</span>'
+    localizedRecoverySummary
+      ? '<br><span class="id">recovery=' + esc(localizedRecoverySummary) + '</span>'
       : '',
-    preview.follow_up_summary
-      ? '<br><span class="id">follow-up=' + esc(preview.follow_up_summary) + '</span>'
+    localizedFollowUpSummary
+      ? '<br><span class="id">follow-up=' + esc(localizedFollowUpSummary) + '</span>'
       : '',
   ].join('');
   return statusLine + extras;

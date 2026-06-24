@@ -725,8 +725,16 @@ def test_ui_data_service_read_endpoints(tmp_path):
     assert service.summary_jobs_list()["summary_jobs"][0]["action_preview_summary"]["cli_equivalent"].startswith(
         "chronicle review approve --event evt_"
     )
+    assert (
+        service.summary_jobs_list()["summary_jobs"][0]["action_preview_summary"]["recovery_summary_key"]
+        == "ui.template.review_action_preview.recovery_summary"
+    )
     assert service.summary_jobs_list()["summary_jobs"][0]["action_preview_summary"]["recovery_summary"].startswith(
         "chronicle review approve --event evt_"
+    )
+    assert (
+        service.summary_jobs_list()["summary_jobs"][0]["action_preview_summary"]["follow_up_summary_key"]
+        == "ui.template.review_action_preview.follow_up_summary"
     )
     assert service.summary_jobs_list()["summary_jobs"][0]["action_preview_summary"]["success_contract"]["follow_up_commands"][0] == "chronicle review queue --include-resolved --json"
     assert service.summary_jobs_list()["summary_jobs"][0]["action_preview_summary"]["write_route_contract"]["route_template"] == "/api/review-actions/<event_id>/<action>"
@@ -777,8 +785,16 @@ def test_ui_data_service_read_endpoints(tmp_path):
         service.review_queue()["review_queue"][0]["action_preview_summary"]["message_key"]
         == "ui.action_preview.message.preview_only_blocked"
     )
+    assert (
+        service.review_queue()["review_queue"][0]["action_preview_summary"]["recovery_summary_key"]
+        == "ui.template.review_action_preview.recovery_summary"
+    )
     assert service.review_queue()["review_queue"][0]["action_preview_summary"]["follow_up_summary"] == (
         "chronicle review queue --include-resolved --json"
+    )
+    assert (
+        service.review_queue()["review_queue"][0]["action_preview_summary"]["follow_up_summary_key"]
+        == "ui.template.review_action_preview.follow_up_summary"
     )
     assert service.review_queue()["review_queue"][0]["action_preview_summary"]["success_contract"]["transaction_status"] == "decision_and_audit_persisted"
     assert service.review_queue()["review_queue"][0]["action_preview_summary"]["write_route_contract"]["transaction_order"] == [
@@ -1480,6 +1496,12 @@ def test_summary_jobs_list_exposes_enabled_mutation_state_when_enabled(tmp_path)
     assert rows[0]["ui_mutation_enabled"] is True
     assert rows[0]["review_preview_only"] is False
     assert rows[0]["action_preview_summary"]["status"] == "enabled"
+    assert rows[0]["action_preview_summary"]["recovery_summary_key"] == (
+        "ui.template.review_action_preview.recovery_summary"
+    )
+    assert rows[0]["action_preview_summary"]["follow_up_summary_key"] == (
+        "ui.template.review_action_preview.follow_up_summary"
+    )
 
 
 def test_ui_shell_contains_interactive_local_ui(tmp_path):
@@ -1815,6 +1837,8 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "detailLine('Target-state recovery summary', localizedTargetStateSummary)" in html
     assert "const localizedResolvedQueueReason = targetStateRecovery.resolved_queue_reason_key" in html
     assert "detailLine('Resolved queue reason', localizedResolvedQueueReason)" in html
+    assert "const localizedRecoverySummary = preview.recovery_summary_key" in html
+    assert "const localizedFollowUpSummary = preview.follow_up_summary_key" in html
     assert "detailLine('Resolved queue command', targetStateRecovery.resolved_queue_command || '')" in html
     assert "detailLine('Chronicle state command', targetStateRecovery.chronicle_state_command || '')" in html
     assert "function responseMetadataDetailLines(summary)" in html
