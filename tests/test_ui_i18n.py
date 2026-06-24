@@ -116,6 +116,8 @@ def test_ui_i18n_catalog_contains_core_shell_and_navigation_keys():
         "ui.package_handoff.message.package_context_available",
         "ui.package_handoff.message.no_context_records",
         "ui.package_handoff.message.unavailable",
+        "ui.template.package_handoff.counts",
+        "ui.package_handoff.note.read_only_derived",
         "ui.action_preview.message.enabled_ready",
         "ui.action_preview.message.enabled_blocked",
         "ui.action_preview.message.preview_only_ready",

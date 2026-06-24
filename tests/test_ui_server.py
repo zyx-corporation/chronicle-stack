@@ -1138,6 +1138,12 @@ def test_ui_data_service_detail_endpoints(tmp_path):
     assert retrieval_detail["retrieval_handoff"]["downstream_commands"][0].startswith("chronicle package review")
     assert retrieval_detail["package_handoff_preview"]["status"] == "package_context_available"
     assert ids["context_id"] in retrieval_detail["package_handoff_preview"]["eligible_context_ids"]
+    assert retrieval_detail["package_handoff_preview"]["counts_summary_key"] == (
+        "ui.template.package_handoff.counts"
+    )
+    assert retrieval_detail["package_handoff_preview"]["boundary_note_key"] == (
+        "ui.package_handoff.note.read_only_derived"
+    )
     assert retrieval_detail["package_handoff_preview"]["package_review"]["status"] in {"pass", "warning", "blocked"}
     assert retrieval_detail["package_handoff_preview"]["package_review"]["message_key"] in {
         "ui.package_review.message.pass",
@@ -1242,6 +1248,12 @@ def test_ui_data_service_detail_endpoints(tmp_path):
     )
     assert runtime_plan_detail["package_handoff_preview"]["message_key"] == (
         "ui.package_handoff.message.package_context_available"
+    )
+    assert runtime_plan_detail["package_handoff_preview"]["counts_summary_key"] == (
+        "ui.template.package_handoff.counts"
+    )
+    assert runtime_plan_detail["package_handoff_preview"]["boundary_note_key"] == (
+        "ui.package_handoff.note.read_only_derived"
     )
 
 
@@ -1417,6 +1429,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "label('notice.retrieval_handoff', 'Retrieval Handoff')" in html
     assert "label('notice.invocation_plan', 'Invocation Plan')" in html
     assert "label('notice.package_handoff_preview', 'Package Handoff Preview')" in html
+    assert "preview.counts_summary_key" in html
     assert "label('notice.review_package_readiness', 'Review Package Readiness')" in html
     assert "label('notice.related_links', 'Related Links')" in html
     assert "readiness.label_key" in html

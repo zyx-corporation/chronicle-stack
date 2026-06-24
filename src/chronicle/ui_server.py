@@ -332,6 +332,15 @@ def _package_handoff_message_key(status: str) -> str:
     return "ui.package_handoff.message.unavailable"
 
 
+def _package_handoff_counts_contract(
+    *, eligible_context_count: int, skipped_record_count: int
+) -> tuple[str, dict[str, Any]]:
+    return "ui.template.package_handoff.counts", {
+        "eligible_context_count": eligible_context_count,
+        "skipped_record_count": skipped_record_count,
+    }
+
+
 def _review_action_preview_message_key(mutation_enabled: bool, can_review_now: bool) -> str:
     if mutation_enabled and can_review_now:
         return "ui.action_preview.message.enabled_ready"
@@ -2412,6 +2421,16 @@ class ChronicleUIDataService:
             "target_environment": "local",
             "package_review_required": True,
         }
+        counts_key, counts_params = _package_handoff_counts_contract(
+            eligible_context_count=len(context_ids),
+            skipped_record_count=len(skipped_ids),
+        )
+        payload["counts_summary_key"] = counts_key
+        payload["counts_summary_params"] = counts_params
+        payload["boundary_note"] = (
+            "Package handoff preview remains derived, read-only, and non-authoritative over primary Chronicle records."
+        )
+        payload["boundary_note_key"] = "ui.package_handoff.note.read_only_derived"
         if not context_ids:
             payload["message"] = "No context records were selected by the retrieval dry-run, so package preview is advisory only."
             payload["message_key"] = _package_handoff_message_key(str(payload["status"]))
@@ -6173,6 +6192,12 @@ function renderPackageHandoffPreviewNotice(record) {{
   const preview = record.package_handoff_preview;
   const packageReview = preview.package_review || {{}};
   const manifest = preview.package_manifest_preview || {{}};
+  const localizedCounts = preview.counts_summary_key
+    ? formatLabel(preview.counts_summary_key, preview.counts_summary_params || {{}}, '')
+    : '';
+  const localizedBoundaryNote = preview.boundary_note_key
+    ? formatLabel(preview.boundary_note_key, {{}}, preview.boundary_note || '')
+    : (preview.boundary_note || '');
   return renderNotice(
     label('notice.package_handoff_preview', 'Package Handoff Preview'),
     packageContextNoticeBody(
@@ -6181,7 +6206,9 @@ function renderPackageHandoffPreviewNotice(record) {{
       packageReview,
       manifest,
       preview.eligible_context_ids,
-      detailListLine('Skipped records', preview.skipped_record_ids),
+      detailLine('Hit counts', localizedCounts)
+      + detailListLine('Skipped records', preview.skipped_record_ids)
+      + detailLine('Scope note', localizedBoundaryNote),
     )
   );
 }}

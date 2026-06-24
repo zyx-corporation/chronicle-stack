@@ -558,6 +558,25 @@ def run_ui_smoke(root: Path | None = None) -> UISmokeReport:
                             ),
                         )
                     )
+                handoff_preview = record.get("package_handoff_preview", {})
+                if isinstance(handoff_preview, dict) and handoff_preview:
+                    checks.append(
+                        UISmokeCheck(
+                            f"{endpoint}/<id>#package-handoff-structured-contract",
+                            bool(handoff_preview.get("status"))
+                            and bool(handoff_preview.get("message_key"))
+                            and bool(handoff_preview.get("counts_summary_key"))
+                            and bool(handoff_preview.get("boundary_note_key")),
+                            (
+                                "ok"
+                                if bool(handoff_preview.get("status"))
+                                and bool(handoff_preview.get("message_key"))
+                                and bool(handoff_preview.get("counts_summary_key"))
+                                and bool(handoff_preview.get("boundary_note_key"))
+                                else "runtime detail missing package handoff structured contract"
+                            ),
+                        )
+                    )
                 invocation_plan = record.get("invocation_plan")
                 if isinstance(invocation_plan, dict):
                     checks.append(
