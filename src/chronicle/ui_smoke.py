@@ -422,7 +422,9 @@ def run_ui_smoke(root: Path | None = None) -> UISmokeReport:
                         f"{endpoint}/{record_id}#auth-readiness",
                         isinstance(auth_notice, dict)
                         and bool(auth_notice.get("status"))
+                        and bool(auth_notice.get("message_key"))
                         and bool(auth_notice.get("scope_note"))
+                        and bool(auth_notice.get("scope_note_key"))
                         and isinstance(auth_notice.get("blocker_summaries"), list)
                         and all(
                             isinstance(item, dict)
@@ -434,7 +436,9 @@ def run_ui_smoke(root: Path | None = None) -> UISmokeReport:
                             "ok"
                             if isinstance(auth_notice, dict)
                             and bool(auth_notice.get("status"))
+                            and bool(auth_notice.get("message_key"))
                             and bool(auth_notice.get("scope_note"))
+                            and bool(auth_notice.get("scope_note_key"))
                             and isinstance(auth_notice.get("blocker_summaries"), list)
                             and all(
                                 isinstance(item, dict)
@@ -483,6 +487,11 @@ def run_ui_smoke(root: Path | None = None) -> UISmokeReport:
                                     "expectation_summary"
                                 )
                             )
+                            and bool(
+                                mutation_enablement.get("reviewer_context_requirements", {}).get(
+                                    "expectation_summary_key"
+                                )
+                            )
                             and isinstance(mutation_enablement.get("write_route_contract", {}).get("actions"), list)
                             and isinstance(mutation_enablement.get("identity_proof_contract"), dict)
                         ),
@@ -516,6 +525,11 @@ def run_ui_smoke(root: Path | None = None) -> UISmokeReport:
                             and bool(
                                 mutation_enablement.get("reviewer_context_requirements", {}).get(
                                     "expectation_summary"
+                                )
+                            )
+                            and bool(
+                                mutation_enablement.get("reviewer_context_requirements", {}).get(
+                                    "expectation_summary_key"
                                 )
                             )
                             and isinstance(mutation_enablement.get("write_route_contract", {}).get("actions"), list)
@@ -638,13 +652,17 @@ def run_ui_smoke(root: Path | None = None) -> UISmokeReport:
                         f"{endpoint}/{record_id}#auth-readiness",
                         isinstance(auth_notice, dict)
                         and bool(auth_notice.get("status"))
+                        and bool(auth_notice.get("message_key"))
                         and bool(auth_notice.get("scope_note"))
+                        and bool(auth_notice.get("scope_note_key"))
                         and isinstance(auth_notice.get("blocker_summaries"), list),
                         (
                             "ok"
                             if isinstance(auth_notice, dict)
                             and bool(auth_notice.get("status"))
+                            and bool(auth_notice.get("message_key"))
                             and bool(auth_notice.get("scope_note"))
+                            and bool(auth_notice.get("scope_note_key"))
                             and isinstance(auth_notice.get("blocker_summaries"), list)
                             else "runtime detail missing auth readiness notice"
                         ),
@@ -726,13 +744,17 @@ def run_ui_smoke(root: Path | None = None) -> UISmokeReport:
                         f"{endpoint}/{record_id}#auth-readiness",
                         isinstance(auth_notice, dict)
                         and bool(auth_notice.get("status"))
+                        and bool(auth_notice.get("message_key"))
                         and bool(auth_notice.get("scope_note"))
+                        and bool(auth_notice.get("scope_note_key"))
                         and isinstance(auth_notice.get("blocker_summaries"), list),
                         (
                             "ok"
                             if isinstance(auth_notice, dict)
                             and bool(auth_notice.get("status"))
+                            and bool(auth_notice.get("message_key"))
                             and bool(auth_notice.get("scope_note"))
+                            and bool(auth_notice.get("scope_note_key"))
                             and isinstance(auth_notice.get("blocker_summaries"), list)
                             else "summary detail missing auth readiness notice"
                         ),
@@ -955,6 +977,11 @@ def run_ui_smoke(root: Path | None = None) -> UISmokeReport:
                                 "expectation_summary"
                             )
                         )
+                        and bool(
+                            mutation_readiness.get("reviewer_context_requirements", {}).get(
+                                "expectation_summary_key"
+                            )
+                        )
                         and bool(mutation_readiness.get("write_route_contract", {}).get("route_template"))
                         and isinstance(
                             mutation_readiness.get("write_route_contract", {}).get("action_routes"), list
@@ -1007,6 +1034,11 @@ def run_ui_smoke(root: Path | None = None) -> UISmokeReport:
                     and bool(
                         mutation_readiness.get("reviewer_context_requirements", {}).get(
                             "expectation_summary"
+                        )
+                    )
+                    and bool(
+                        mutation_readiness.get("reviewer_context_requirements", {}).get(
+                            "expectation_summary_key"
                         )
                     )
                     and bool(mutation_readiness.get("write_route_contract", {}).get("route_template"))

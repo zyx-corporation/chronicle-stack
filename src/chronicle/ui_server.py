@@ -125,10 +125,24 @@ def _auth_boundary_summary(metadata: UIBoundaryMetadata) -> dict[str, Any]:
     return {
         "status": status,
         "message": message,
+        "message_key": f"ui.auth_boundary_summary.message.{status}",
         "scope_note": _auth_readiness_scope_note(
             auth_mode=metadata.auth_mode,
             authorization_mode=metadata.authorization_mode,
             session_gating=metadata.session_gating,
+        ),
+        "scope_note_key": (
+            "ui.auth_readiness.scope.auth_not_enabled"
+            if metadata.auth_mode == UIAuthMode.NOT_ENABLED
+            else (
+                "ui.auth_readiness.scope.authorization_not_enabled"
+                if metadata.authorization_mode == UIAuthorizationMode.NOT_ENABLED
+                else (
+                    "ui.auth_readiness.scope.session_gated"
+                    if metadata.session_gating
+                    else "ui.auth_readiness.scope.descriptive_preview"
+                )
+            )
         ),
         "blockers": blockers,
         "blocker_details": _serialize_auth_boundary_blocker_details(blockers),
@@ -208,6 +222,10 @@ def _identity_boundary_summary_message(status: str) -> str:
     return messages.get(status, status.replace("_", " "))
 
 
+def _identity_boundary_summary_message_key(status: str) -> str:
+    return f"ui.identity_boundary.message.{status}"
+
+
 def _auth_readiness_message(
     *,
     capability_status: str,
@@ -223,6 +241,21 @@ def _auth_readiness_message(
     return "Auth-boundary readiness is not yet available in the current derived detail view."
 
 
+def _auth_readiness_message_key(
+    *,
+    capability_status: str,
+    assurance_status: str,
+    has_blockers: bool,
+) -> str:
+    if capability_status == "ready" and assurance_status == "boundary_aligned" and not has_blockers:
+        return "ui.auth_readiness.message.boundary_aligned"
+    if has_blockers:
+        return "ui.auth_readiness.message.advisory_only"
+    if assurance_status != "unknown":
+        return "ui.auth_readiness.message.partially_aligned"
+    return "ui.auth_readiness.message.unavailable"
+
+
 def _identity_assurance_message(
     *,
     reviewer_auth_mode: str,
@@ -235,11 +268,31 @@ def _identity_assurance_message(
     return "Reviewer identity metadata is aligned with the current UI auth boundary."
 
 
+def _identity_assurance_message_key(
+    *,
+    reviewer_auth_mode: str,
+    boundary_auth_mode: str,
+) -> str:
+    if reviewer_auth_mode == "none":
+        return "ui.identity_assurance.message.declared_only"
+    if boundary_auth_mode == "not_enabled":
+        return "ui.identity_assurance.message.local_session_unverified"
+    return "ui.identity_assurance.message.boundary_aligned"
+
+
 def _review_capability_message(can_review_now: bool) -> str:
     return (
         "Boundary and reviewer identity conditions are aligned for future mutation-capable review."
         if can_review_now
         else "Review remains CLI-led and read-only in UI; see warnings for unmet boundary conditions."
+    )
+
+
+def _review_capability_message_key(can_review_now: bool) -> str:
+    return (
+        "ui.review_capability.message.ready"
+        if can_review_now
+        else "ui.review_capability.message.advisory_only"
     )
 
 
@@ -563,15 +616,29 @@ def _reviewer_context_requirements(metadata: UIBoundaryMetadata) -> dict[str, An
         "session_boundary_status": "required" if metadata.session_gating else "optional",
         "ui_intent_required": True,
         "expectation_summary": expectation_summary,
+        "expectation_summary_key": (
+            "ui.reviewer_context.expectation.required"
+            if metadata.session_gating
+            else "ui.reviewer_context.expectation.optional"
+        ),
         "authority_note": "Request reviewer metadata is required local context, but it is not sufficient proof of authority on its own.",
+        "authority_note_key": "ui.reviewer_context.note.authority",
         "reviewer_label_note": "Reviewer label must identify the local operator consistently enough for audit and review history drilldown.",
+        "reviewer_label_note_key": "ui.reviewer_context.note.reviewer_label",
         "reviewer_kind_note": "Only local_operator is currently eligible for explicit local GUI mutation; user_declared remains advisory-only metadata.",
+        "reviewer_kind_note_key": "ui.reviewer_context.note.reviewer_kind",
         "session_note": (
             "Session label is required because the current local mutation boundary is session-gated."
             if metadata.session_gating
             else "Session label is optional while session-gated review is disabled."
         ),
+        "session_note_key": (
+            "ui.reviewer_context.note.session_required"
+            if metadata.session_gating
+            else "ui.reviewer_context.note.session_optional"
+        ),
         "ui_intent_note": "ui_intent must match the requested action so preview and apply paths stay fail-closed.",
+        "ui_intent_note_key": "ui.reviewer_context.note.ui_intent",
     }
 
 
@@ -598,6 +665,7 @@ def _reviewer_enforcement_summary(metadata: UIBoundaryMetadata) -> dict[str, Any
     return {
         "status": status,
         "message": message,
+        "message_key": f"ui.reviewer_enforcement.message.{status}",
         "enforced_request_fields": reviewer_context.get("effective_required_fields", []),
         "enforced_reviewer_kinds_for_mutation": reviewer_context.get(
             "required_reviewer_kinds_for_mutation", []
@@ -608,9 +676,11 @@ def _reviewer_enforcement_summary(metadata: UIBoundaryMetadata) -> dict[str, Any
         "read_only_scope_note": (
             "Read-only UI surfaces expose current local enforcement expectations, but they do not grant or prove authority on their own."
         ),
+        "read_only_scope_note_key": "ui.reviewer_enforcement.note.read_only_scope",
         "descriptive_note": (
             "Recorded reviewer/session metadata supports local auditability and boundary inspection, but it does not imply hosted authentication, multi-user-safe authority, or default-on GUI mutation."
         ),
+        "descriptive_note_key": "ui.reviewer_enforcement.note.descriptive",
     }
 
 
@@ -642,6 +712,7 @@ def _reviewer_validation_gate_summary(metadata: UIBoundaryMetadata) -> dict[str,
     return {
         "status": status,
         "message": message,
+        "message_key": f"ui.reviewer_validation_gate.message.{status}",
         "required_request_fields": reviewer_context.get("effective_required_fields", []),
         "validation_error_codes": validation_error_codes,
         "authorization_error_codes": ["authorization_failed"],
@@ -655,6 +726,7 @@ def _reviewer_validation_gate_summary(metadata: UIBoundaryMetadata) -> dict[str,
         "scope_note": (
             "The same reviewer/session validation families should stay aligned across readiness, preview, apply, and recovery-facing surfaces."
         ),
+        "scope_note_key": "ui.reviewer_validation_gate.note.scope_alignment",
     }
 
 
@@ -1387,6 +1459,7 @@ class ChronicleUIDataService:
         return {
             "status": status,
             "message": message,
+            "message_key": _identity_boundary_summary_message_key(status),
             "assurance_counts": assurance_counts,
             "missing_identity_count": missing_identity_count,
             "declared_identity_count": declared_identity_count,
@@ -2293,12 +2366,31 @@ class ChronicleUIDataService:
         return {
             "status": status,
             "message": message,
+            "message_key": _auth_readiness_message_key(
+                capability_status=capability_status,
+                assurance_status=assurance_status,
+                has_blockers=bool(blockers),
+            ),
             "scope_note": _auth_readiness_scope_note(
                 auth_mode=str(boundary.get("auth_mode", UIAuthMode.NOT_ENABLED)),
                 authorization_mode=str(
                     boundary.get("authorization_mode", UIAuthorizationMode.NOT_ENABLED)
                 ),
                 session_gating=bool(boundary.get("session_gating", False)),
+            ),
+            "scope_note_key": (
+                "ui.auth_readiness.scope.auth_not_enabled"
+                if str(boundary.get("auth_mode", UIAuthMode.NOT_ENABLED)) == UIAuthMode.NOT_ENABLED
+                else (
+                    "ui.auth_readiness.scope.authorization_not_enabled"
+                    if str(boundary.get("authorization_mode", UIAuthorizationMode.NOT_ENABLED))
+                    == UIAuthorizationMode.NOT_ENABLED
+                    else (
+                        "ui.auth_readiness.scope.session_gated"
+                        if bool(boundary.get("session_gating", False))
+                        else "ui.auth_readiness.scope.descriptive_preview"
+                    )
+                )
             ),
             "blockers": blockers,
             "blocker_details": _serialize_auth_boundary_blocker_details(blockers),
@@ -2384,6 +2476,10 @@ class ChronicleUIDataService:
             "boundary_auth_mode": boundary_auth_mode,
             "session_gating": session_gating,
             "message": message,
+            "message_key": _identity_assurance_message_key(
+                reviewer_auth_mode=identity.auth_mode.value,
+                boundary_auth_mode=str(boundary_auth_mode),
+            ),
         }
 
     def _review_capability(
@@ -2399,6 +2495,7 @@ class ChronicleUIDataService:
                 "can_review_now": False,
                 "warnings": [],
                 "message": "Review target is already resolved in the current derived queue view.",
+                "message_key": "ui.review_capability.message.resolved",
             }
 
         warnings: list[str] = []
@@ -2425,6 +2522,7 @@ class ChronicleUIDataService:
             "warnings": warnings,
             "warning_details": _serialize_review_warning_details(warnings),
             "message": message,
+            "message_key": _review_capability_message_key(can_review_now),
         }
 
     def _history_row(self, item: Any, boundary: dict[str, Any]) -> dict[str, Any]:
@@ -3843,6 +3941,11 @@ function detailMessages(items, fallbackItems = []) {{
   if (detailMessages.length > 0) return detailMessages.join(' | ');
   return fallback.map(item => reviewWarningLabel(item)).join(' | ') || '';
 }}
+function localizedPayloadText(item, keyField = 'message_key', fallbackField = 'message', paramsField = 'message_params') {{
+  if (!item || typeof item !== 'object') return '';
+  if (item[keyField]) return formatLabel(item[keyField], item[paramsField] || {{}}, item[fallbackField] || '');
+  return localizeTextValue(item[fallbackField] || '');
+}}
 function reviewerContextDetailLines(reviewerContext, identityProofContract = {{}}) {{
   const effectiveFields = Array.isArray(reviewerContext.effective_required_fields)
     ? reviewerContext.effective_required_fields
@@ -3856,19 +3959,37 @@ function reviewerContextDetailLines(reviewerContext, identityProofContract = {{}
   const sessionExamples = Array.isArray(reviewerContext.session_label_examples)
     ? reviewerContext.session_label_examples
     : [];
+  const expectationSummary = reviewerContext.expectation_summary_key
+    ? formatLabel(reviewerContext.expectation_summary_key, reviewerContext.expectation_summary_params || {{}}, reviewerContext.expectation_summary || '')
+    : (reviewerContext.expectation_summary || '');
+  const authorityNote = reviewerContext.authority_note_key
+    ? formatLabel(reviewerContext.authority_note_key, reviewerContext.authority_note_params || {{}}, reviewerContext.authority_note || '')
+    : (reviewerContext.authority_note || '');
+  const reviewerLabelNote = reviewerContext.reviewer_label_note_key
+    ? formatLabel(reviewerContext.reviewer_label_note_key, reviewerContext.reviewer_label_note_params || {{}}, reviewerContext.reviewer_label_note || '')
+    : (reviewerContext.reviewer_label_note || '');
+  const reviewerKindNote = reviewerContext.reviewer_kind_note_key
+    ? formatLabel(reviewerContext.reviewer_kind_note_key, reviewerContext.reviewer_kind_note_params || {{}}, reviewerContext.reviewer_kind_note || '')
+    : (reviewerContext.reviewer_kind_note || '');
+  const sessionNote = reviewerContext.session_note_key
+    ? formatLabel(reviewerContext.session_note_key, reviewerContext.session_note_params || {{}}, reviewerContext.session_note || '')
+    : (reviewerContext.session_note || '');
+  const uiIntentNote = reviewerContext.ui_intent_note_key
+    ? formatLabel(reviewerContext.ui_intent_note_key, reviewerContext.ui_intent_note_params || {{}}, reviewerContext.ui_intent_note || '')
+    : (reviewerContext.ui_intent_note || '');
   return ''
-    + detailLine('Reviewer expectation summary', reviewerContext.expectation_summary || '')
+    + detailLine('Reviewer expectation summary', expectationSummary)
     + detailListLine('Reviewer fields', effectiveFields, ' | ')
     + detailListLine('Reviewer kinds', acceptedKinds, ' | ')
     + detailListLine('Advisory-only reviewer kinds', advisoryKinds, ' | ')
     + detailLine('Session boundary', reviewerContext.session_boundary_status || '')
     + detailLine('UI intent required', reviewerContext.ui_intent_required)
     + detailListLine('Session label examples', sessionExamples, ' | ')
-    + detailLine('Authority note', reviewerContext.authority_note || '')
-    + detailLine('Reviewer label note', reviewerContext.reviewer_label_note || '')
-    + detailLine('Reviewer kind note', reviewerContext.reviewer_kind_note || '')
-    + detailLine('Session note', reviewerContext.session_note || '')
-    + detailLine('UI intent note', reviewerContext.ui_intent_note || '')
+    + detailLine('Authority note', authorityNote)
+    + detailLine('Reviewer label note', reviewerLabelNote)
+    + detailLine('Reviewer kind note', reviewerKindNote)
+    + detailLine('Session note', sessionNote)
+    + detailLine('UI intent note', uiIntentNote)
     + detailLine('Identity proof note', identityProofContract.proof_note || '');
 }}
 function reviewActionCoreDetailLines(payload, action = '', recordId = '') {{
@@ -5654,9 +5775,13 @@ function renderAuthReadinessNotice(record) {{
   const blockerDetails = Array.isArray(notice.blocker_details) ? notice.blocker_details : [];
   const blockerSummaries = Array.isArray(notice.blocker_summaries) ? notice.blocker_summaries : [];
   const noticeButtons = reviewQueueStatusButtons(notice.status);
+  const localizedMessage = localizedPayloadText(notice);
+  const localizedScopeNote = notice.scope_note_key
+    ? formatLabel(notice.scope_note_key, notice.scope_note_params || {{}}, notice.scope_note || '')
+    : (notice.scope_note || '');
   return renderNotice(
     label('notice.auth_readiness', 'Auth Readiness'),
-    statusScopeNoticeBody(notice.status, notice.message, noticeButtons, notice.scope_note)
+    statusScopeNoticeBody(notice.status, localizedMessage, noticeButtons, localizedScopeNote)
       + detailLine('Review capability', notice.capability_status || '')
       + detailLine('Identity assurance', notice.identity_assurance_status || '')
       + blockerSummaryDetailLines(blockerDetails, notice.blockers, blockerSummaries, notice.next_steps)
@@ -5670,7 +5795,7 @@ function renderReviewCapabilityNotice(record) {{
   const warnBadges = reviewWarningBadges(warnList);
   return renderNotice(
     label('notice.review_capability', 'Review Capability'),
-    statusMessageBody(capability.status, capability.message)
+    statusMessageBody(capability.status, localizedPayloadText(capability))
       + (warnBadges ? '<p>' + warnBadges + '</p>' : '')
       + detailLine('Warnings', detailMessages(warnDetails, warnList) || '(none)')
   );
@@ -5789,7 +5914,7 @@ function renderIdentityAssuranceNotice(record) {{
   const assuranceButtons = reviewQueueStatusButtons(assurance.status);
   return renderNotice(
     label('notice.identity_assurance', 'Identity Assurance'),
-      statusMessageBody(assurance.status, assurance.message, assuranceButtons)
+      statusMessageBody(assurance.status, localizedPayloadText(assurance), assuranceButtons)
   );
 }}
 function renderReviewerBoundaryDrilldownNotice(record) {{
@@ -6029,8 +6154,8 @@ function renderOverviewAuthBoundaryPanel(authBoundary, authBoundaryOverview) {{
     + overviewCountButton(reviewWarningLabel('no_reviewer_identity_recorded'), authBoundaryOverview.missing_identity_count, 'badge-warning', '/api/review-queue', 'reviewQueue', 'no_reviewer_identity_recorded')
     + overviewCountButton(label('overview.provider_response', 'Provider response'), authBoundaryOverview.provider_response_present_count, 'badge-ready', '/api/review-queue', 'reviewQueue', 'response_id')
     + '</p>'
-    + statusMessageBody(authBoundary.status, authBoundary.message)
-    + detailLine('Scope note', authBoundary.scope_note || '')
+    + statusMessageBody(authBoundary.status, localizedPayloadText(authBoundary))
+    + detailLine('Scope note', authBoundary.scope_note_key ? formatLabel(authBoundary.scope_note_key, authBoundary.scope_note_params || {{}}, authBoundary.scope_note || '') : (authBoundary.scope_note || ''))
     + detailLine('Session gating', authBoundary.session_gating)
     + detailLine('Shared machine safe', authBoundary.shared_machine_safe)
     + metricsSection(metricsBody)
@@ -6049,7 +6174,7 @@ function renderOverviewIdentityBoundaryPanel(identityBoundary) {{
     + overviewCountButton(reviewWarningLabel('reviewer_session_label_missing'), identityBoundary.session_label_missing_count, 'badge-warning', '/api/review-queue', 'reviewQueue', 'reviewer_session_label_missing')
     + overviewCountButton(uiLabel('Identity aligned'), (identityBoundary.assurance_counts && identityBoundary.assurance_counts.boundary_aligned) ?? 0, 'badge-ready', '/api/review-queue', 'reviewQueue', 'boundary_aligned')
     + '</p>'
-    + statusMessageBody(identityBoundary.status, identityBoundary.message)
+    + statusMessageBody(identityBoundary.status, localizedPayloadText(identityBoundary))
     + metricsSection(metricsBody)
     + identityBoundaryDetailLines(identityBoundary)
   );

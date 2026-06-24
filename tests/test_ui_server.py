@@ -197,6 +197,8 @@ def test_startup_metadata(tmp_path):
         == "ui.mutation_blocker.write_routes_disabled"
     )
     auth_boundary_summary = payload["ui_boundary"]["auth_boundary_summary"]
+    assert auth_boundary_summary["message_key"] == "ui.auth_boundary_summary.message.auth_not_enabled"
+    assert auth_boundary_summary["scope_note_key"] == "ui.auth_readiness.scope.auth_not_enabled"
     assert auth_boundary_summary["blocker_details"][0]["message_key"] == "ui.auth_boundary_blocker.auth_not_enabled"
     assert auth_boundary_summary["blocker_summaries"][0]["summary_key"] == "ui.template.auth_boundary_blocker_summary"
     assert auth_boundary_summary["blocker_summaries"][0]["summary_params"]["message"]
@@ -498,6 +500,7 @@ def test_ui_overview_data(tmp_path):
     assert overview["auth_boundary_overview"]["provider_response_present_count"] == 0
     assert overview["auth_boundary_overview"]["latest_provider_response_detail_path"] is None
     assert overview["identity_boundary_summary"]["status"] == "identity_unavailable"
+    assert overview["identity_boundary_summary"]["message_key"] == "ui.identity_boundary.message.identity_unavailable"
     assert overview["identity_boundary_summary"]["missing_identity_count"] == 3
     assert overview["reviewer_boundary_overview"]["enforcement_status"] == "descriptive_only"
     assert overview["reviewer_boundary_overview"]["validation_gate_status"] == "read_only_preview"
@@ -547,11 +550,27 @@ def test_ui_overview_data(tmp_path):
     assert overview["mutation_readiness"]["reviewer_context_requirements"]["expectation_summary"].startswith(
         "Preview/read-only review context currently expects local_operator reviewer metadata"
     )
+    assert (
+        overview["mutation_readiness"]["reviewer_context_requirements"]["expectation_summary_key"]
+        == "ui.reviewer_context.expectation.optional"
+    )
+    assert (
+        overview["mutation_readiness"]["reviewer_context_requirements"]["authority_note_key"]
+        == "ui.reviewer_context.note.authority"
+    )
     assert overview["mutation_readiness"]["reviewer_enforcement_summary"]["status"] == "descriptive_only"
+    assert (
+        overview["mutation_readiness"]["reviewer_enforcement_summary"]["message_key"]
+        == "ui.reviewer_enforcement.message.descriptive_only"
+    )
     assert overview["mutation_readiness"]["reviewer_enforcement_summary"]["descriptive_only_reviewer_kinds"] == [
         "user_declared"
     ]
     assert overview["mutation_readiness"]["reviewer_validation_gate_summary"]["status"] == "read_only_preview"
+    assert (
+        overview["mutation_readiness"]["reviewer_validation_gate_summary"]["message_key"]
+        == "ui.reviewer_validation_gate.message.read_only_preview"
+    )
     assert overview["mutation_readiness"]["reviewer_validation_gate_summary"]["fail_closed"] is True
     assert overview["mutation_readiness"]["identity_proof_contract"]["required_reviewer_kinds_for_mutation"] == [
         "local_operator"
@@ -1302,6 +1321,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "function uiLabel(text)" in html
     assert "function reviewWarningLabel(code)" in html
     assert "function detailMessages(items, fallbackItems = [])" in html
+    assert "function localizedPayloadText(item, keyField = 'message_key', fallbackField = 'message', paramsField = 'message_params')" in html
     assert "item && item.message_key" in html
     assert "formatLabel(item.message_key, item.message_params || {}, item.message || '')" in html
     assert "return fallback.map(item => reviewWarningLabel(item)).join(' | ') || '';" in html
@@ -1387,6 +1407,9 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "function recoveryContractDetailLines(failureContract, targetId = 'action-preview-response')" in html
     assert "function identityBoundaryDetailLines(identityBoundary)" in html
     assert "function renderAuthReadinessNotice(record)" in html
+    assert "localizedPayloadText(notice)" in html
+    assert "localizedPayloadText(capability)" in html
+    assert "localizedPayloadText(assurance)" in html
     assert "function renderDetailActionPreviewControls(preview, actions, mutationTargetEventId)" in html
     assert "function renderDetailActionPreviewList(preview, actions)" in html
     assert "function renderDetailActionPreviewNotice(record)" in html
@@ -1406,6 +1429,8 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "function renderOverviewRuntimeBoundaryPanel(runtime)" in html
     assert "function renderOverviewAuthBoundaryPanel(authBoundary, authBoundaryOverview)" in html
     assert "function renderOverviewIdentityBoundaryPanel(identityBoundary)" in html
+    assert "localizedPayloadText(authBoundary)" in html
+    assert "localizedPayloadText(identityBoundary)" in html
     assert "function renderOverviewReviewerBoundaryPanel(reviewerBoundary)" in html
     assert "function renderReviewerBoundaryDrilldownSummary(summary)" in html
     assert "function reviewerBoundaryDominantButtons(drilldownSummaries)" in html
@@ -1547,11 +1572,13 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "summaryJsonLine('Runtime provider counts', summaryJobs.runtime_provider_counts)" in html
     assert "detailListLine('Reviewer fields', reviewerContextRequirements.required_fields, ' | ')" in html
     assert "function reviewerContextDetailLines(reviewerContext, identityProofContract = {})" in html
-    assert "detailLine('Reviewer expectation summary', reviewerContext.expectation_summary || '')" in html
+    assert "const expectationSummary = reviewerContext.expectation_summary_key" in html
+    assert "detailLine('Reviewer expectation summary', expectationSummary)" in html
     assert "detailListLine('Advisory-only reviewer kinds', advisoryKinds, ' | ')" in html
     assert "detailLine('Session boundary', reviewerContext.session_boundary_status || '')" in html
     assert "detailLine('UI intent required', reviewerContext.ui_intent_required)" in html
-    assert "detailLine('Authority note', reviewerContext.authority_note || '')" in html
+    assert "const authorityNote = reviewerContext.authority_note_key" in html
+    assert "detailLine('Authority note', authorityNote)" in html
     assert "detailLine('Session label required', reviewerContextRequirements.session_label_required)" in html
     assert "detailListLine('Durable success requirements', writeRouteContract.durable_success_requirements, ' | ')" in html
     assert "detailListLine('Transaction order', writeRouteContract.transaction_order, ' | ')" in html
@@ -1611,10 +1638,11 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "filterValueLabel('reviewQueue', 'response_id')" in html
     assert "summaryJsonLine('Runtime kinds', triage.runtime_record_kinds)" in html
     assert "statusScopeNoticeBody(readiness.status, readiness.message, readinessButtons, readiness.scope_note)" in html
-    assert "statusScopeNoticeBody(notice.status, notice.message, noticeButtons, notice.scope_note)" in html
-    assert "statusMessageBody(assurance.status, assurance.message, assuranceButtons)" in html
+    assert "const localizedScopeNote = notice.scope_note_key" in html
+    assert "statusScopeNoticeBody(notice.status, localizedMessage, noticeButtons, localizedScopeNote)" in html
+    assert "statusMessageBody(assurance.status, localizedPayloadText(assurance), assuranceButtons)" in html
     assert "statusMessageBody(parity.status, parity.message, parityButtons)" in html
-    assert "statusMessageBody(capability.status, capability.message)" in html
+    assert "statusMessageBody(capability.status, localizedPayloadText(capability))" in html
     assert "statusMessageBody(preview.status, preview.message, previewButtons)" in html
     assert "detailListLine('Expected actions', parity.expected_actions)" in html
     assert "label('button.open_review_queue', 'Open Review Queue')" in html
@@ -1722,7 +1750,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "Active view:" in html
     assert "jumpBadge(" in html
     assert "label('notice.auth_readiness', 'Auth Readiness')" in html
-    assert "statusScopeNoticeBody(notice.status, notice.message, noticeButtons, notice.scope_note)" in html
+    assert "statusScopeNoticeBody(notice.status, localizedMessage, noticeButtons, localizedScopeNote)" in html
     assert "blockerSummaryDetailLines(blockerDetails, notice.blockers, blockerSummaries, notice.next_steps)" in html
     assert "label('notice.review_capability', 'Review Capability')" in html
     assert "label('notice.action_preview', 'Action Preview')" in html
