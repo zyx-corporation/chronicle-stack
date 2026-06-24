@@ -361,7 +361,13 @@ def test_startup_metadata(tmp_path):
     ]
     assert payload["ui_boundary"]["write_route_contract"]["target_state_contract"]["required_current_review_status"] == "needs_review"
     assert payload["ui_boundary"]["write_route_contract"]["target_state_contract"]["resolved_status_code"] == 409
+    assert payload["ui_boundary"]["write_route_contract"]["target_state_contract"]["scope_note_key"] == (
+        "ui.review_target_state_contract.note.scope"
+    )
     assert payload["ui_boundary"]["write_route_contract"]["target_state_contract"]["action_target_matrix"][2]["resulting_queue_state"] == "remains_pending"
+    assert payload["ui_boundary"]["write_route_contract"]["target_state_contract"]["resolved_behavior_note_key"] == (
+        "ui.review_target_state_contract.note.resolved_behavior"
+    )
     assert payload["ui_boundary"]["write_route_contract"]["identity_proof_contract"]["proof_status"] == "local_operator_advisory"
     assert payload["ui_boundary"]["write_route_contract"]["identity_proof_contract"]["required_reviewer_kinds_for_mutation"] == [
         "local_operator"
@@ -1850,7 +1856,11 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "detailListLine('Action authorization matrix', (authorizationContract.action_authorization_matrix || []).map(item => ((item.action || 'action') + ': intent=' + (item.ui_intent || '') + '; pending=' + String(item.pending_required) + '; note=' + (item.note_status || ''))), ' | ')" in html
     assert "detailLine('Required review status', targetStateContract.required_current_review_status || '')" in html
     assert "detailListLine('Target-state checks', targetStateContract.target_state_checks, ' | ')" in html
+    assert "const localizedTargetStateScopeNote = targetStateContract.scope_note_key" in html
+    assert "detailLine('Target-state scope note', localizedTargetStateScopeNote)" in html
     assert "detailListLine('Action target matrix', (targetStateContract.action_target_matrix || []).map(item => ((item.action || 'action') + ': pending=' + String(item.requires_pending) + '; queue=' + (item.resulting_queue_state || '') + '; disposition=' + (item.resulting_disposition || ''))), ' | ')" in html
+    assert "const localizedResolvedBehaviorNote = targetStateContract.resolved_behavior_note_key" in html
+    assert "detailLine('Resolved behavior note', localizedResolvedBehaviorNote)" in html
     assert "detailListLine('Failure families', localizedFailureFamilies, ' | ')" in html
     assert "detailLine('Target-state recovery status', targetStateRecovery.status || '')" in html
     assert "const localizedTargetStateSummary = targetStateRecovery.summary_key" in html

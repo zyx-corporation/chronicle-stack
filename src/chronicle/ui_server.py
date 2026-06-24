@@ -498,6 +498,20 @@ def _review_status_code_when_contract(
     return key, {}, text
 
 
+def _review_target_state_note_contract(kind: str) -> tuple[str, dict[str, Any], str]:
+    if kind == "scope":
+        note = (
+            "Current browser-triggered review routes operate only on Chronicle targets that are still pending within the local single-operator review boundary."
+        )
+        return ("ui.review_target_state_contract.note.scope", {}, note)
+    if kind == "resolved_behavior":
+        note = (
+            "Approve/reject targets are hidden from the default pending queue after success, while request-changes remains pending until a later resolving review decision."
+        )
+        return ("ui.review_target_state_contract.note.resolved_behavior", {}, note)
+    return ("", {}, "")
+
+
 def _runtime_preview_title_contract(preview: dict[str, Any]) -> tuple[str | None, dict[str, Any]]:
     record_kind = str(preview.get("record_kind", ""))
     title = str(preview.get("title", ""))
@@ -1204,6 +1218,10 @@ def _ui_authorization_contract(metadata: UIBoundaryMetadata) -> dict[str, Any]:
 
 
 def _ui_target_state_contract() -> dict[str, Any]:
+    scope_note_key, scope_note_params, scope_note = _review_target_state_note_contract("scope")
+    resolved_behavior_note_key, resolved_behavior_note_params, resolved_behavior_note = (
+        _review_target_state_note_contract("resolved_behavior")
+    )
     return {
         "required_current_review_status": "needs_review",
         "pending_target_required": True,
@@ -1214,9 +1232,9 @@ def _ui_target_state_contract() -> dict[str, Any]:
             "target_review_status_needs_review",
             "target_pending_for_requested_action",
         ],
-        "scope_note": (
-            "Current browser-triggered review routes operate only on Chronicle targets that are still pending within the local single-operator review boundary."
-        ),
+        "scope_note": scope_note,
+        "scope_note_key": scope_note_key,
+        "scope_note_params": scope_note_params,
         "action_target_matrix": [
             {
                 "action": "approve",
@@ -1237,9 +1255,9 @@ def _ui_target_state_contract() -> dict[str, Any]:
                 "resulting_disposition": "request_changes",
             },
         ],
-        "resolved_behavior_note": (
-            "Approve/reject targets are hidden from the default pending queue after success, while request-changes remains pending until a later resolving review decision."
-        ),
+        "resolved_behavior_note": resolved_behavior_note,
+        "resolved_behavior_note_key": resolved_behavior_note_key,
+        "resolved_behavior_note_params": resolved_behavior_note_params,
     }
 
 
@@ -6374,6 +6392,12 @@ function writeRouteDetailLines(writeRouteContract, identityProofContract, author
       : (item.summary || '');
     return ((item.family || 'family') + ': ' + summary + '; ' + ((item.possible_error_codes || []).join(', ')));
   }});
+  const localizedTargetStateScopeNote = targetStateContract.scope_note_key
+    ? formatLabel(targetStateContract.scope_note_key, targetStateContract.scope_note_params || {{}}, targetStateContract.scope_note || '')
+    : (targetStateContract.scope_note || '');
+  const localizedResolvedBehaviorNote = targetStateContract.resolved_behavior_note_key
+    ? formatLabel(targetStateContract.resolved_behavior_note_key, targetStateContract.resolved_behavior_params || {{}}, targetStateContract.resolved_behavior_note || '')
+    : (targetStateContract.resolved_behavior_note || '');
   return detailLine('Write route', writeRouteContract.route_template || '')
     + detailListLine('Write actions', writeRouteContract.actions, ' | ')
     + detailListLine('Action routes', (writeRouteContract.action_routes || []).map(item => ((item.action || 'action') + ': ' + (item.path_template || ''))), ' | ')
@@ -6397,7 +6421,9 @@ function writeRouteDetailLines(writeRouteContract, identityProofContract, author
     + detailLine('Required review status', targetStateContract.required_current_review_status || '')
     + detailLine('Resolved status code', targetStateContract.resolved_status_code ?? '')
     + detailListLine('Target-state checks', targetStateContract.target_state_checks, ' | ')
+    + detailLine('Target-state scope note', localizedTargetStateScopeNote)
     + detailListLine('Action target matrix', (targetStateContract.action_target_matrix || []).map(item => ((item.action || 'action') + ': pending=' + String(item.requires_pending) + '; queue=' + (item.resulting_queue_state || '') + '; disposition=' + (item.resulting_disposition || ''))), ' | ')
+    + detailLine('Resolved behavior note', localizedResolvedBehaviorNote)
     + detailListLine('Failure families', localizedFailureFamilies, ' | ')
     + detailLine('Identity proof status', identityProofContract.proof_status || '')
     + detailListLine('Identity proof fields', identityProofContract.required_identity_fields, ' | ');
