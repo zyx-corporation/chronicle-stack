@@ -465,6 +465,39 @@ def _review_failure_family_summary_contract(family: str) -> tuple[str, dict[str,
     return ("", {}, family.replace("_", " "))
 
 
+def _review_status_code_when_contract(
+    status_code: int, family: str
+) -> tuple[str, dict[str, Any], str]:
+    mapping = {
+        (200, "success"): (
+            "ui.review_write_route_status_code.when.success",
+            "review decision persistence and audit insertion both succeed",
+        ),
+        (400, "pre_mutation_or_gate"): (
+            "ui.review_write_route_status_code.when.validation_failed",
+            "reviewer-context or ui_intent validation fails before authorization",
+        ),
+        (403, "pre_mutation_or_gate"): (
+            "ui.review_write_route_status_code.when.authorization_blocked",
+            "mutation gate or authorization boundary blocks the write route",
+        ),
+        (404, "pre_mutation_or_gate"): (
+            "ui.review_write_route_status_code.when.target_missing",
+            "the requested review target cannot be found in current Chronicle state",
+        ),
+        (409, "pre_mutation_or_gate"): (
+            "ui.review_write_route_status_code.when.target_not_pending",
+            "the target is no longer pending for the requested action",
+        ),
+        (500, "durable_write_path"): (
+            "ui.review_write_route_status_code.when.durable_write_failed",
+            "a durable write-path side effect fails and the route stays fail-closed",
+        ),
+    }
+    key, text = mapping.get((status_code, family), ("", family.replace("_", " ")))
+    return key, {}, text
+
+
 def _runtime_preview_title_contract(preview: dict[str, Any]) -> tuple[str | None, dict[str, Any]]:
     record_kind = str(preview.get("record_kind", ""))
     title = str(preview.get("title", ""))
@@ -1242,38 +1275,25 @@ def _ui_write_route_contract(metadata: UIBoundaryMetadata) -> dict[str, Any]:
         }
         for action in actions
     ]
-    status_code_contract = [
-        {
-            "status_code": HTTPStatus.OK.value,
-            "family": "success",
-            "when": "review decision persistence and audit insertion both succeed",
-        },
-        {
-            "status_code": HTTPStatus.BAD_REQUEST.value,
-            "family": "pre_mutation_or_gate",
-            "when": "reviewer-context or ui_intent validation fails before authorization",
-        },
-        {
-            "status_code": HTTPStatus.FORBIDDEN.value,
-            "family": "pre_mutation_or_gate",
-            "when": "mutation gate or authorization boundary blocks the write route",
-        },
-        {
-            "status_code": HTTPStatus.NOT_FOUND.value,
-            "family": "pre_mutation_or_gate",
-            "when": "the requested review target cannot be found in current Chronicle state",
-        },
-        {
-            "status_code": HTTPStatus.CONFLICT.value,
-            "family": "pre_mutation_or_gate",
-            "when": "the target is no longer pending for the requested action",
-        },
-        {
-            "status_code": HTTPStatus.INTERNAL_SERVER_ERROR.value,
-            "family": "durable_write_path",
-            "when": "a durable write-path side effect fails and the route stays fail-closed",
-        },
-    ]
+    status_code_contract = []
+    for status_code, family in [
+        (HTTPStatus.OK.value, "success"),
+        (HTTPStatus.BAD_REQUEST.value, "pre_mutation_or_gate"),
+        (HTTPStatus.FORBIDDEN.value, "pre_mutation_or_gate"),
+        (HTTPStatus.NOT_FOUND.value, "pre_mutation_or_gate"),
+        (HTTPStatus.CONFLICT.value, "pre_mutation_or_gate"),
+        (HTTPStatus.INTERNAL_SERVER_ERROR.value, "durable_write_path"),
+    ]:
+        when_key, when_params, when = _review_status_code_when_contract(status_code, family)
+        status_code_contract.append(
+            {
+                "status_code": status_code,
+                "family": family,
+                "when": when,
+                "when_key": when_key,
+                "when_params": when_params,
+            }
+        )
     pre_gate_summary_key, pre_gate_summary_params, pre_gate_summary = (
         _review_failure_family_summary_contract("pre_mutation_or_gate")
     )
@@ -6358,7 +6378,12 @@ function writeRouteDetailLines(writeRouteContract, identityProofContract, author
     + detailListLine('Write actions', writeRouteContract.actions, ' | ')
     + detailListLine('Action routes', (writeRouteContract.action_routes || []).map(item => ((item.action || 'action') + ': ' + (item.path_template || ''))), ' | ')
     + detailListLine('CLI route equivalents', (writeRouteContract.action_routes || []).map(item => ((item.action || 'action') + ': ' + (item.cli_equivalent_template || ''))), ' | ')
-    + detailListLine('Status-code contract', (writeRouteContract.status_code_contract || []).map(item => (String(item.status_code ?? '') + ': ' + (item.family || 'family') + '; ' + (item.when || ''))), ' | ')
+    + detailListLine('Status-code contract', (writeRouteContract.status_code_contract || []).map(item => {{
+      const localizedWhen = item && item.when_key
+        ? formatLabel(item.when_key, item.when_params || {{}}, item.when || '')
+        : (item.when || '');
+      return (String(item.status_code ?? '') + ': ' + (item.family || 'family') + '; ' + localizedWhen);
+    }}), ' | ')
     + (includeRequestFields ? detailListLine('Write request fields', writeRouteContract.expected_request_fields, ' | ') : '')
     + detailLine('Write success status', writeRouteContract.success_status_code ?? '')
     + detailLine('Write blocked status', writeRouteContract.blocked_status_code ?? '')
