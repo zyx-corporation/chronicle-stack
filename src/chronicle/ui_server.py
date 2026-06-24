@@ -403,6 +403,27 @@ def _graph_summary_counts_contract(node_count: int, edge_count: int) -> tuple[st
     }
 
 
+def _ai_index_status_message_key(status: str) -> str:
+    return (
+        "ui.ai_index_status.message.available"
+        if status == "available"
+        else "ui.ai_index_status.message.unavailable"
+    )
+
+
+def _ai_index_vector_counts_contract(entry_count: int) -> tuple[str, dict[str, Any]]:
+    return "ui.template.ai_index_status.vector_counts", {
+        "entry_count": entry_count,
+    }
+
+
+def _ai_index_graph_counts_contract(node_count: int, edge_count: int) -> tuple[str, dict[str, Any]]:
+    return "ui.template.ai_index_status.graph_counts", {
+        "node_count": node_count,
+        "edge_count": edge_count,
+    }
+
+
 def _append_mutation_blocker(
     blockers: list[str],
     next_steps: list[str],
@@ -2178,14 +2199,32 @@ class ChronicleUIDataService:
     def ai_index_status(self) -> dict[str, Any]:
         vector_status = self.vector_index.status()
         graph_snapshot = self.graph_index.snapshot()
+        vector_counts_key, vector_counts_params = _ai_index_vector_counts_contract(
+            int(vector_status.entry_count)
+        )
+        graph_counts_key, graph_counts_params = _ai_index_graph_counts_contract(
+            len(graph_snapshot.nodes),
+            len(graph_snapshot.edges),
+        )
         return {
             "ai_index_status": {
-                "vector": vector_status.model_dump(mode="json"),
+                "status": "available",
+                "message": "AI index status is available as a local derived read model.",
+                "message_key": _ai_index_status_message_key("available"),
+                "boundary_note": "AI index status remains derived, read-only, and non-authoritative over primary Chronicle records.",
+                "boundary_note_key": "ui.ai_index_status.note.read_only_derived",
+                "vector": {
+                    **vector_status.model_dump(mode="json"),
+                    "counts_summary_key": vector_counts_key,
+                    "counts_summary_params": vector_counts_params,
+                },
                 "graph": {
                     "path": str(self.graph_index.paths.graph_index_file),
                     "node_count": len(graph_snapshot.nodes),
                     "edge_count": len(graph_snapshot.edges),
                     "external_call_made": False,
+                    "counts_summary_key": graph_counts_key,
+                    "counts_summary_params": graph_counts_params,
                 },
                 "derived_surface": True,
                 "primary_record_authoritative": True,

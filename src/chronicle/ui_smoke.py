@@ -344,6 +344,33 @@ def run_ui_smoke(root: Path | None = None) -> UISmokeReport:
                 ),
             )
         )
+        ai_index_status_payload = collection_payloads.get("/api/ai-index-status", {})
+        ai_index_status = (
+            ai_index_status_payload.get("ai_index_status", {})
+            if isinstance(ai_index_status_payload, dict)
+            else {}
+        )
+        checks.append(
+            UISmokeCheck(
+                "/api/ai-index-status#structured-contract",
+                isinstance(ai_index_status, dict)
+                and bool(ai_index_status.get("status"))
+                and bool(ai_index_status.get("message_key"))
+                and bool(ai_index_status.get("boundary_note_key"))
+                and bool(ai_index_status.get("vector", {}).get("counts_summary_key"))
+                and bool(ai_index_status.get("graph", {}).get("counts_summary_key")),
+                (
+                    "ok"
+                    if isinstance(ai_index_status, dict)
+                    and bool(ai_index_status.get("status"))
+                    and bool(ai_index_status.get("message_key"))
+                    and bool(ai_index_status.get("boundary_note_key"))
+                    and bool(ai_index_status.get("vector", {}).get("counts_summary_key"))
+                    and bool(ai_index_status.get("graph", {}).get("counts_summary_key"))
+                    else "ai index status missing structured contract fields"
+                ),
+            )
+        )
 
         for endpoint, id_field in _DETAIL_ID_FIELDS.items():
             payload = collection_payloads.get(endpoint)

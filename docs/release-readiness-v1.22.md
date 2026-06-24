@@ -1,0 +1,43 @@
+# Chronicle Stack v1.22.0 Release Readiness
+
+Related: `docs/adr/0025-local-ui-i18n-presentation-boundary.md`, `docs/adr/0041-local-ai-index-status-structured-i18n.md`, `docs/release-status-v1.22.0.md`, `docs/smoke-test-v1.22.md`
+
+## Decision
+
+Chronicle Stack `v1.22.0` is ready for repository-side release preparation after the local AI-index-status structured-i18n slice, release notes, smoke profile, release status, version bump, and passing verification are merged.
+
+## Scope
+
+`v1.22.0` is currently framed as:
+
+- structured `message_key` fields for AI-index-status availability wording
+- structured `counts_summary_key` fields for vector entry counts
+- structured `counts_summary_key` fields for graph node/edge counts inside AI-index-status
+- structured `boundary_note_key` fields for derived/read-only/non-authoritative AI-index wording
+- smoke/test coverage for explicit AI-index-status presentation contracts
+
+## Required verification
+
+```bash
+python -m pip install -e ".[dev]"
+chronicle --version
+ruff check src/ tests/
+pytest
+chronicle ui-smoke
+chronicle ui-smoke --json
+```
+
+Expected current version baseline:
+
+```text
+chronicle 1.22.0
+```
+
+## Boundary confirmation
+
+`v1.22.0` does not imply:
+
+- hosted authentication or multi-user authority
+- translated machine-readable status codes or ids
+- new durable storage for AI-index-status presentation wording
+- default-on GUI mutation
