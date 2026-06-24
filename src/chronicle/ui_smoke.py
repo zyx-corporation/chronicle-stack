@@ -485,6 +485,29 @@ def run_ui_smoke(root: Path | None = None) -> UISmokeReport:
                             ),
                         )
                     )
+                mutation_summary = row_for_detail.get("mutation_enablement_summary", {})
+                if isinstance(mutation_summary, dict) and mutation_summary.get("status"):
+                    checks.append(
+                        UISmokeCheck(
+                            f"{endpoint}#mutation-summary-structured-contract",
+                            bool(mutation_summary.get("message_key"))
+                            and bool(mutation_summary.get("scope_note_key"))
+                            and (
+                                not mutation_summary.get("remaining_summary")
+                                or bool(mutation_summary.get("remaining_summary_key"))
+                            ),
+                            (
+                                "ok"
+                                if bool(mutation_summary.get("message_key"))
+                                and bool(mutation_summary.get("scope_note_key"))
+                                and (
+                                    not mutation_summary.get("remaining_summary")
+                                    or bool(mutation_summary.get("remaining_summary_key"))
+                                )
+                                else "list row missing mutation summary structured contract"
+                            ),
+                        )
+                    )
             if endpoint == "/api/review-queue":
                 readiness_summary = row_for_detail.get("package_readiness_summary", {})
                 checks.append(

@@ -649,13 +649,22 @@ def test_ui_data_service_read_endpoints(tmp_path):
     assert runtime_summary_row["runtime_record_preview"]["title_key"] == "ui.runtime_preview.title.summary"
     assert runtime_summary_row["mutation_enablement_summary"]["status"] == "preview_only"
     assert "explicit local write enablement still requires" in runtime_summary_row["mutation_enablement_summary"]["message"]
+    assert runtime_summary_row["mutation_enablement_summary"]["message_key"] == (
+        "ui.mutation_readiness.message.preview_requirements_pending"
+    )
     assert runtime_summary_row["mutation_enablement_summary"]["scope_note"].startswith(
         "The UI remains preview-only"
+    )
+    assert runtime_summary_row["mutation_enablement_summary"]["scope_note_key"] == (
+        "ui.mutation_readiness.note.preview_only_requirements_pending"
     )
     assert runtime_summary_row["mutation_enablement_summary"]["blocked_status_code"] == 403
     assert runtime_summary_row["mutation_enablement_summary"]["identity_proof_status"] == "local_operator_advisory"
     assert runtime_summary_row["mutation_enablement_summary"]["remaining_summary"].startswith(
         "Capability flag enabled: "
+    )
+    assert runtime_summary_row["mutation_enablement_summary"]["remaining_summary_key"] == (
+        "ui.template.mutation_enablement_check_summary"
     )
     assert runtime_summary_row["reviewer_enforcement_status"] == "descriptive_only"
     assert runtime_summary_row["reviewer_validation_gate_status"] == "read_only_preview"
@@ -707,8 +716,14 @@ def test_ui_data_service_read_endpoints(tmp_path):
     assert service.summary_jobs_list()["summary_jobs"][0]["action_preview_summary"]["write_route_contract"]["route_template"] == "/api/review-actions/<event_id>/<action>"
     assert service.summary_jobs_list()["summary_jobs"][0]["identity_assurance_status"] == "unknown"
     assert service.summary_jobs_list()["summary_jobs"][0]["mutation_enablement_summary"]["status"] == "preview_only"
+    assert service.summary_jobs_list()["summary_jobs"][0]["mutation_enablement_summary"]["message_key"] == (
+        "ui.mutation_readiness.message.preview_requirements_pending"
+    )
     assert service.summary_jobs_list()["summary_jobs"][0]["mutation_enablement_summary"]["scope_note"].startswith(
         "The UI remains preview-only"
+    )
+    assert service.summary_jobs_list()["summary_jobs"][0]["mutation_enablement_summary"]["scope_note_key"] == (
+        "ui.mutation_readiness.note.preview_only_requirements_pending"
     )
     assert service.summary_jobs_list()["summary_jobs"][0]["mutation_enablement_summary"]["remaining_count"] >= 1
     assert service.summary_jobs_list()["summary_jobs"][0]["reviewer_enforcement_status"] == "descriptive_only"
@@ -768,6 +783,18 @@ def test_ui_data_service_read_endpoints(tmp_path):
     )
     assert service.review_queue()["review_queue"][0]["mutation_enablement_summary"]["operational_status"] == "blocked"
     assert service.review_queue()["review_queue"][0]["mutation_enablement_summary"]["remaining_summary"]
+    assert service.review_queue()["review_queue"][0]["mutation_enablement_summary"]["message_key"] == (
+        "ui.mutation_readiness.message.preview_requirements_pending"
+    )
+    assert service.review_queue()["review_queue"][0]["mutation_enablement_summary"]["scope_note_key"] == (
+        "ui.mutation_readiness.note.preview_only_requirements_pending"
+    )
+    assert service.review_queue()["review_queue"][0]["mutation_enablement_summary"]["remaining_summary_key"] == (
+        "ui.template.mutation_enablement_check_summary"
+    )
+    assert service.review_queue()["review_queue"][0]["mutation_enablement_summary"][
+        "operational_message_key"
+    ] == "ui.mutation_operational_readiness.message.blocked"
     assert service.review_queue()["review_queue"][0]["cli_parity_summary"]["status"] == "aligned"
     assert (
         service.review_queue()["review_queue"][0]["cli_parity_summary"]["message_key"]
@@ -1055,10 +1082,11 @@ def test_ui_html_filtering_includes_provider_response_metadata_fields(tmp_path, 
     assert "errors=" in html
     assert "follow-up=" in html
     assert "detailLine('Enablement ready', mutationReadiness.enablement_ready)" in html
-    assert "detailLine('Scope note', mutationReadiness.scope_note || '')" in html
+    assert "detailLine('Scope note', mutationReadiness.scope_note_key ? formatLabel(mutationReadiness.scope_note_key, mutationReadiness.scope_note_params || {}, mutationReadiness.scope_note || '') : (mutationReadiness.scope_note || ''))" in html
     assert "detailLine('Operational readiness', operationalReadiness.status || '')" in html
     assert "const localizedRemainingChecks = (Array.isArray(operationalReadiness.unsatisfied_checks) ? operationalReadiness.unsatisfied_checks : []).map(item => (" in html
     assert "detailListLine('Remaining checks', localizedRemainingChecks.length > 0 ? localizedRemainingChecks : (operationalReadiness.blocking_summaries || []), ' | ')" in html
+    assert "const localizedOperationalMessage = operationalReadiness.message_key" in html
     assert "mutationOperationalDetailLines(operationalReadiness, blockerSummaries, enablementChecks)" in html
     assert "function renderMutationEnablementNotice(record)" in html
     assert "label('notice.mutation_enablement', 'Mutation Enablement')" in html
@@ -1765,6 +1793,9 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "detailLine('Usage total tokens', summary.usage_total_tokens ?? '')" in html
     assert "responseMetadataDetailLines(summary)" in html
     assert "messageParagraph(localizedPayloadText(summary))" in html
+    assert "const localizedMessage = summary.message_key" in html
+    assert "const localizedScopeNote = summary.scope_note_key" in html
+    assert "const localizedRemainingSummary = summary.remaining_summary_key" in html
     assert "packageContextNoticeBody(" in html
     assert '"Action": "操作"' in html
     assert '"Rollback status": "ロールバック状態"' in html

@@ -237,6 +237,22 @@ def test_ui_i18n_catalog_covers_mutation_readiness_and_related_link_labels():
         assert not missing, f"{locale} missing exact keys: {sorted(missing)}"
 
 
+def test_ui_i18n_catalog_covers_mutation_summary_structured_keys():
+    required_keys = {
+        "ui.mutation_readiness.message.enabled",
+        "ui.mutation_readiness.message.preview_capability_intent",
+        "ui.mutation_readiness.message.preview_requirements_pending",
+        "ui.mutation_readiness.note.loopback_local_boundary",
+        "ui.mutation_readiness.note.capability_intent_recorded",
+        "ui.mutation_readiness.note.preview_only_requirements_pending",
+        "ui.mutation_operational_readiness.message.ready",
+        "ui.mutation_operational_readiness.message.blocked",
+    }
+    for locale in ("ja", "en", "zh-CN"):
+        missing = required_keys.difference(UI_I18N_CATALOG[locale])
+        assert not missing, f"{locale} missing keys: {sorted(missing)}"
+
+
 def test_ui_i18n_catalog_covers_package_preview_and_review_preview_messages():
     required_exact = {
         "No context records were selected by the retrieval dry-run, so package preview is advisory only.",

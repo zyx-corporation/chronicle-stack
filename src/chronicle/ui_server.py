@@ -679,6 +679,28 @@ def _mutation_scope_note(boundary: dict[str, Any]) -> str:
     return "The UI remains preview-only until explicit local write capability, session enablement, auth, authorization, reviewer identity, and session proof are configured."
 
 
+def _mutation_scope_note_key(boundary: dict[str, Any]) -> str:
+    if boundary.get("mutation_enabled", False):
+        return "ui.mutation_readiness.note.loopback_local_boundary"
+    if boundary.get("mutation_capability_flag", False):
+        return "ui.mutation_readiness.note.capability_intent_recorded"
+    return "ui.mutation_readiness.note.preview_only_requirements_pending"
+
+
+def _mutation_readiness_message_key(boundary: dict[str, Any]) -> str:
+    if boundary.get("mutation_enabled", False):
+        return "ui.mutation_readiness.message.enabled"
+    if boundary.get("mutation_capability_flag", False):
+        return "ui.mutation_readiness.message.preview_capability_intent"
+    return "ui.mutation_readiness.message.preview_requirements_pending"
+
+
+def _mutation_operational_message_key(has_unsatisfied_checks: bool) -> str:
+    if has_unsatisfied_checks:
+        return "ui.mutation_operational_readiness.message.blocked"
+    return "ui.mutation_operational_readiness.message.ready"
+
+
 def _mutation_blocker_summaries(
     *,
     boundary_blockers: list[str],
@@ -842,6 +864,7 @@ def _mutation_operational_readiness(
             if not unsatisfied
             else "Explicit local mutation prerequisites remain unsatisfied."
         ),
+        "message_key": _mutation_operational_message_key(bool(unsatisfied)),
     }
 
 
@@ -2271,7 +2294,9 @@ class ChronicleUIDataService:
         return {
             "status": boundary.get("mutation_readiness_status", "preview_only"),
             "message": boundary.get("mutation_readiness_message", "GUI mutation remains disabled."),
+            "message_key": _mutation_readiness_message_key(boundary),
             "scope_note": _mutation_scope_note(boundary),
+            "scope_note_key": _mutation_scope_note_key(boundary),
             "ready_row_count": ready_rows,
             "advisory_row_count": advisory_rows,
             "blockers": blockers,
@@ -2298,19 +2323,33 @@ class ChronicleUIDataService:
         operational_readiness = mutation_readiness.get("operational_readiness", {})
         write_route_contract = mutation_readiness.get("write_route_contract", {})
         identity_proof_contract = write_route_contract.get("identity_proof_contract", {})
+        unsatisfied_checks = [
+            item
+            for item in operational_readiness.get("unsatisfied_checks", [])
+            if isinstance(item, dict)
+        ]
         blocking_summaries = [
             str(item)
             for item in operational_readiness.get("blocking_summaries", [])
             if str(item)
         ]
+        first_unsatisfied = unsatisfied_checks[0] if unsatisfied_checks else {}
         return {
             "status": str(mutation_readiness.get("status", "")),
             "message": str(mutation_readiness.get("message", "")),
+            "message_key": str(mutation_readiness.get("message_key", "")),
             "scope_note": str(mutation_readiness.get("scope_note", "")),
+            "scope_note_key": str(mutation_readiness.get("scope_note_key", "")),
             "enablement_ready": bool(mutation_readiness.get("enablement_ready", False)),
             "operational_status": str(operational_readiness.get("status", "")),
+            "operational_message": str(operational_readiness.get("message", "")),
+            "operational_message_key": str(operational_readiness.get("message_key", "")),
             "remaining_count": int(operational_readiness.get("remaining_count", 0) or 0),
             "remaining_summary": blocking_summaries[0] if blocking_summaries else "",
+            "remaining_summary_key": str(first_unsatisfied.get("summary_key", "")),
+            "remaining_summary_params": dict(first_unsatisfied.get("summary_params", {}))
+            if isinstance(first_unsatisfied.get("summary_params", {}), dict)
+            else {},
             "blocked_status_code": write_route_contract.get("blocked_status_code"),
             "success_status_code": write_route_contract.get("success_status_code"),
             "identity_proof_status": str(identity_proof_contract.get("proof_status", "")),
@@ -4739,13 +4778,22 @@ function mutationEnablementBadge(summary) {{
 function renderMutationEnablementSummary(summary) {{
   if (!summary || !summary.status) return '';
   const proofFields = Array.isArray(summary.identity_proof_fields) ? summary.identity_proof_fields : [];
+  const localizedMessage = summary.message_key
+    ? formatLabel(summary.message_key, summary.message_params || {{}}, summary.message || '')
+    : localizeTextValue(summary.message || '');
+  const localizedScopeNote = summary.scope_note_key
+    ? formatLabel(summary.scope_note_key, summary.scope_note_params || {{}}, summary.scope_note || '')
+    : localizeTextValue(summary.scope_note || '');
+  const localizedRemainingSummary = summary.remaining_summary_key
+    ? formatLabel(summary.remaining_summary_key, summary.remaining_summary_params || {{}}, summary.remaining_summary || '')
+    : localizeTextValue(summary.remaining_summary || '');
   return [
     '<span class="id">mutation=' + esc(summary.status || '') + '</span>',
-    summary.message
-      ? '<span class="id">message=' + esc(summary.message) + '</span>'
+    localizedMessage
+      ? '<span class="id">message=' + esc(localizedMessage) + '</span>'
       : '',
-    summary.scope_note
-      ? '<span class="id">scope=' + esc(summary.scope_note) + '</span>'
+    localizedScopeNote
+      ? '<span class="id">scope=' + esc(localizedScopeNote) + '</span>'
       : '',
     summary.operational_status
       ? '<span class="id">operational=' + esc(summary.operational_status) + '</span>'
@@ -4753,8 +4801,8 @@ function renderMutationEnablementSummary(summary) {{
     typeof summary.remaining_count === 'number'
       ? '<span class="id">remaining=' + esc(summary.remaining_count) + '</span>'
       : '',
-    summary.remaining_summary
-      ? '<span class="id">remaining-summary=' + esc(summary.remaining_summary) + '</span>'
+    localizedRemainingSummary
+      ? '<span class="id">remaining-summary=' + esc(localizedRemainingSummary) + '</span>'
       : '',
     summary.blocked_status_code
       ? '<span class="id">blocked-status=' + esc(summary.blocked_status_code) + '</span>'
@@ -6155,8 +6203,11 @@ function mutationOperationalDetailLines(operationalReadiness, blockerSummaries, 
       ? formatLabel(item.summary_key, item.summary_params || {{}}, ((item.label || item.code || 'check') + ': ' + (item.detail || '')))
       : ((item.label || item.code || 'check') + ': ' + (item.detail || ''))
   ));
+  const localizedOperationalMessage = operationalReadiness.message_key
+    ? formatLabel(operationalReadiness.message_key, operationalReadiness.message_params || {{}}, operationalReadiness.message || '')
+    : localizeTextValue(operationalReadiness.message || '');
   return detailLine('Operational readiness', operationalReadiness.status || '')
-    + detailLine('Operational summary', operationalReadiness.message || '')
+    + detailLine('Operational summary', localizedOperationalMessage)
     + detailLine('Remaining prerequisites', operationalReadiness.remaining_count ?? 0)
     + detailListLine('Blocker sources', blockerSummaries.map(item => (
       item && item.summary_key
@@ -6804,8 +6855,8 @@ function renderOverviewMutationReadinessPanel(mutationReadiness) {{
   const operationalReadiness = mutationReadiness.operational_readiness || {{}};
   return renderPanel(
     sectionTitle(label('section.mutation_readiness', 'Mutation Readiness'))
-    + statusMessageBody(mutationReadiness.status, mutationReadiness.message)
-    + detailLine('Scope note', mutationReadiness.scope_note || '')
+    + statusMessageBody(mutationReadiness.status, localizedPayloadText(mutationReadiness))
+    + detailLine('Scope note', mutationReadiness.scope_note_key ? formatLabel(mutationReadiness.scope_note_key, mutationReadiness.scope_note_params || {{}}, mutationReadiness.scope_note || '') : (mutationReadiness.scope_note || ''))
     + detailLine('Ready rows', mutationReadiness.ready_row_count ?? 0)
     + detailLine('Advisory rows', mutationReadiness.advisory_row_count ?? 0)
     + detailLine('Enablement ready', mutationReadiness.enablement_ready)
