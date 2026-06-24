@@ -11,6 +11,7 @@ Chronicle Stack `v1.11.0` is the active repository-side release lane for local r
 `v1.11.0` is currently framed as:
 
 - reviewer-boundary overview smoke coverage
+- reviewer-boundary count-consistency smoke coverage
 - reviewer-boundary list-row smoke coverage
 - reviewer-boundary detail-summary smoke coverage
 - reviewer-boundary HTML-shell continuity coverage

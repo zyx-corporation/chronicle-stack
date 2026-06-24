@@ -101,6 +101,7 @@ def test_run_ui_smoke_success(tmp_path):
     )
     assert "/api/overview#runtime-auth-readiness" in check_names
     assert "/api/overview#reviewer-boundary-overview" in check_names
+    assert "/api/overview#reviewer-boundary-count-consistency" in check_names
     assert "/api/overview#mutation-readiness" in check_names
     assert "/api/overview#summary-auth-readiness" in check_names
     assert "/api/overview#summary-identity-readiness" in check_names

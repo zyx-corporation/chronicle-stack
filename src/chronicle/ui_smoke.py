@@ -101,6 +101,16 @@ def _first_array(payload: dict[str, Any]) -> list[dict[str, Any]] | None:
     return None
 
 
+def _count_statuses(rows: list[dict[str, Any]], key: str) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for row in rows:
+        status = str(row.get(key, "") or "")
+        if not status:
+            continue
+        counts[status] = counts.get(status, 0) + 1
+    return counts
+
+
 def run_ui_smoke(root: Path | None = None) -> UISmokeReport:
     """Run read-only UI smoke checks against a Chronicle root."""
     root_path = root or Path.cwd()
@@ -217,6 +227,51 @@ def run_ui_smoke(root: Path | None = None) -> UISmokeReport:
                         ),
                     )
                 )
+
+        overview_payload = collection_payloads.get("/api/overview")
+        reviewer_boundary_overview = (
+            overview_payload.get("reviewer_boundary_overview", {})
+            if isinstance(overview_payload, dict)
+            else {}
+        )
+        runtime_rows = _first_array(collection_payloads.get("/api/runtime-records", {})) or []
+        review_rows = _first_array(collection_payloads.get("/api/review-queue", {})) or []
+        summary_rows = _first_array(collection_payloads.get("/api/summary-jobs", {})) or []
+        checks.append(
+            UISmokeCheck(
+                "/api/overview#reviewer-boundary-count-consistency",
+                isinstance(reviewer_boundary_overview, dict)
+                and reviewer_boundary_overview.get("runtime_record_enforcement_counts", {})
+                == _count_statuses(runtime_rows, "reviewer_enforcement_status")
+                and reviewer_boundary_overview.get("runtime_record_validation_gate_counts", {})
+                == _count_statuses(runtime_rows, "reviewer_validation_gate_status")
+                and reviewer_boundary_overview.get("review_queue_enforcement_counts", {})
+                == _count_statuses(review_rows, "reviewer_enforcement_status")
+                and reviewer_boundary_overview.get("review_queue_validation_gate_counts", {})
+                == _count_statuses(review_rows, "reviewer_validation_gate_status")
+                and reviewer_boundary_overview.get("summary_job_enforcement_counts", {})
+                == _count_statuses(summary_rows, "reviewer_enforcement_status")
+                and reviewer_boundary_overview.get("summary_job_validation_gate_counts", {})
+                == _count_statuses(summary_rows, "reviewer_validation_gate_status"),
+                (
+                    "ok"
+                    if isinstance(reviewer_boundary_overview, dict)
+                    and reviewer_boundary_overview.get("runtime_record_enforcement_counts", {})
+                    == _count_statuses(runtime_rows, "reviewer_enforcement_status")
+                    and reviewer_boundary_overview.get("runtime_record_validation_gate_counts", {})
+                    == _count_statuses(runtime_rows, "reviewer_validation_gate_status")
+                    and reviewer_boundary_overview.get("review_queue_enforcement_counts", {})
+                    == _count_statuses(review_rows, "reviewer_enforcement_status")
+                    and reviewer_boundary_overview.get("review_queue_validation_gate_counts", {})
+                    == _count_statuses(review_rows, "reviewer_validation_gate_status")
+                    and reviewer_boundary_overview.get("summary_job_enforcement_counts", {})
+                    == _count_statuses(summary_rows, "reviewer_enforcement_status")
+                    and reviewer_boundary_overview.get("summary_job_validation_gate_counts", {})
+                    == _count_statuses(summary_rows, "reviewer_validation_gate_status")
+                    else "reviewer-boundary overview counts drift from list-row statuses"
+                ),
+            )
+        )
 
         for endpoint, id_field in _DETAIL_ID_FIELDS.items():
             payload = collection_payloads.get(endpoint)

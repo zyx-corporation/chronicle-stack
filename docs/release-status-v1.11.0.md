@@ -18,6 +18,7 @@ Current `v1.11.0` repository progress includes:
 - read-only smoke checks for reviewer-boundary detail summaries
 - HTML-shell continuity checks for reviewer-boundary panel/navigation helpers
 - release-readiness, release-notes, and smoke-profile entry points for the lane
+- reviewer-boundary count-consistency checks between overview aggregates and list-row statuses
 
 ## Boundary notes
 

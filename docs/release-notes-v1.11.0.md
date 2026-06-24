@@ -13,6 +13,7 @@ Chronicle Stack `v1.11.0` is currently framed as a local reviewer-boundary smoke
 `v1.11.0` currently includes:
 
 - explicit smoke checks for reviewer-boundary overview summaries
+- explicit smoke checks that reviewer-boundary overview counts match list-row statuses
 - explicit smoke checks for reviewer-boundary list-row statuses
 - explicit smoke checks for reviewer-boundary detail summaries
 

@@ -9,6 +9,7 @@ This smoke profile validates the current `v1.11.0` release track as a local revi
 It checks that:
 
 - overview payloads expose reviewer-boundary summary aggregates
+- overview aggregates stay consistent with runtime/review/summary list-row statuses
 - runtime/review/summary list payloads expose reviewer-boundary statuses
 - derived detail payloads expose reviewer-boundary summaries
 - HTML shell still exposes reviewer-boundary panel and navigation helpers
