@@ -122,6 +122,12 @@ def _auth_boundary_summary(metadata: UIBoundaryMetadata) -> dict[str, Any]:
         status = "reviewer_declared_preview"
         message = "UI auth/authz metadata is configured for preview, but GUI mutation remains disabled."
 
+    pre_gate_summary_key, pre_gate_summary_params, pre_gate_summary = (
+        _review_failure_family_summary_contract("pre_mutation_or_gate")
+    )
+    durable_summary_key, durable_summary_params, durable_summary = (
+        _review_failure_family_summary_contract("durable_write_path")
+    )
     return {
         "status": status,
         "message": message,
@@ -362,6 +368,12 @@ def _package_readiness_message_key(status: str) -> str:
 
 def _package_readiness_summary_label_key(*, status: str, review_status: str) -> str:
     if status == "package_context_available":
+        pre_gate_summary_key, pre_gate_summary_params, pre_gate_summary = (
+            _review_failure_family_summary_contract("pre_mutation_or_gate")
+        )
+        durable_summary_key, durable_summary_params, durable_summary = (
+            _review_failure_family_summary_contract("durable_write_path")
+        )
         return {
             "pass": "ui.package_readiness.summary.label.pass",
             "warning": "ui.package_readiness.summary.label.warning",
@@ -437,6 +449,20 @@ def _review_action_preview_summary_contract(kind: str, command: str) -> tuple[st
     if kind == "follow_up":
         return ("ui.template.review_action_preview.follow_up_summary", {"command": command}, command)
     return ("", {}, command)
+
+
+def _review_failure_family_summary_contract(family: str) -> tuple[str, dict[str, Any], str]:
+    if family == "pre_mutation_or_gate":
+        summary = (
+            "Gate, validation, authorization, or target-state checks failed before durable success could be reported."
+        )
+        return ("ui.review_write_route_failure_family.pre_mutation_or_gate", {}, summary)
+    if family == "durable_write_path":
+        summary = (
+            "A durable write-path side effect failed, so the route stays fail-closed and must not report applied success."
+        )
+        return ("ui.review_write_route_failure_family.durable_write_path", {}, summary)
+    return ("", {}, family.replace("_", " "))
 
 
 def _runtime_preview_title_contract(preview: dict[str, Any]) -> tuple[str | None, dict[str, Any]]:
@@ -1248,6 +1274,12 @@ def _ui_write_route_contract(metadata: UIBoundaryMetadata) -> dict[str, Any]:
             "when": "a durable write-path side effect fails and the route stays fail-closed",
         },
     ]
+    pre_gate_summary_key, pre_gate_summary_params, pre_gate_summary = (
+        _review_failure_family_summary_contract("pre_mutation_or_gate")
+    )
+    durable_summary_key, durable_summary_params, durable_summary = (
+        _review_failure_family_summary_contract("durable_write_path")
+    )
     return {
         "route_template": "/api/review-actions/<event_id>/<action>",
         "actions": actions,
@@ -1283,12 +1315,16 @@ def _ui_write_route_contract(metadata: UIBoundaryMetadata) -> dict[str, Any]:
         "failure_families": [
             {
                 "family": "pre_mutation_or_gate",
-                "summary": "Gate, validation, authorization, or target-state checks failed before durable success could be reported.",
+                "summary": pre_gate_summary,
+                "summary_key": pre_gate_summary_key,
+                "summary_params": pre_gate_summary_params,
                 "possible_error_codes": pre_mutation_or_gate_errors,
             },
             {
                 "family": "durable_write_path",
-                "summary": "A durable write-path side effect failed, so the route stays fail-closed and must not report applied success.",
+                "summary": durable_summary,
+                "summary_key": durable_summary_key,
+                "summary_params": durable_summary_params,
                 "possible_error_codes": durable_write_path_errors,
             },
         ],
@@ -1313,10 +1349,16 @@ def _ui_write_route_contract(metadata: UIBoundaryMetadata) -> dict[str, Any]:
             "failure_families": [
                 {
                     "family": "pre_mutation_or_gate",
+                    "summary": pre_gate_summary,
+                    "summary_key": pre_gate_summary_key,
+                    "summary_params": pre_gate_summary_params,
                     "possible_error_codes": pre_mutation_or_gate_errors,
                 },
                 {
                     "family": "durable_write_path",
+                    "summary": durable_summary,
+                    "summary_key": durable_summary_key,
+                    "summary_params": durable_summary_params,
                     "possible_error_codes": durable_write_path_errors,
                 },
             ],
@@ -3244,6 +3286,12 @@ class ChronicleUIDataService:
             audit_id=audit_id,
         )
         target_state_recovery = ChronicleUIDataService._review_action_target_state_recovery(error_code)
+        pre_gate_summary_key, pre_gate_summary_params, pre_gate_summary = (
+            _review_failure_family_summary_contract("pre_mutation_or_gate")
+        )
+        durable_summary_key, durable_summary_params, durable_summary = (
+            _review_failure_family_summary_contract("durable_write_path")
+        )
         return {
             "transaction_rule": (
                 "No durable GUI review result is reported as applied unless both review decision persistence and audit insertion succeed."
@@ -3255,10 +3303,16 @@ class ChronicleUIDataService:
             "failure_families": [
                 {
                     "family": "pre_mutation_or_gate",
+                    "summary": pre_gate_summary,
+                    "summary_key": pre_gate_summary_key,
+                    "summary_params": pre_gate_summary_params,
                     "possible_error_codes": pre_mutation_or_gate_errors,
                 },
                 {
                     "family": "durable_write_path",
+                    "summary": durable_summary,
+                    "summary_key": durable_summary_key,
+                    "summary_params": durable_summary_params,
                     "possible_error_codes": durable_write_path_errors,
                 },
             ],
@@ -4690,6 +4744,12 @@ function contractDetailLines(successContract, failureContract, targetId) {{
     ? failureContract.failure_families
     : [];
   const targetStateRecovery = (failureContract || {{}}).target_state_recovery || {{}};
+  const localizedFailureFamilies = failureFamilies.map(item => {{
+    const summary = item && item.summary_key
+      ? formatLabel(item.summary_key, item.summary_params || {{}}, item.summary || '')
+      : (item.summary || '');
+    return ((item.family || 'family') + ': ' + summary + '; ' + ((item.possible_error_codes || []).join(', ')));
+  }});
   const localizedTargetStateSummary = targetStateRecovery.summary_key
     ? formatLabel(targetStateRecovery.summary_key, targetStateRecovery.summary_params || {{}}, targetStateRecovery.summary || '')
     : (targetStateRecovery.summary || '');
@@ -4709,7 +4769,7 @@ function contractDetailLines(successContract, failureContract, targetId) {{
     + detailLine('Resolved queue command', targetStateRecovery.resolved_queue_command || '')
     + detailLine('Chronicle state command', targetStateRecovery.chronicle_state_command || '')
     + detailListLine('Possible errors', (failureContract || {{}}).possible_error_codes, ' | ')
-    + detailListLine('Failure families', failureFamilies.map(item => ((item.family || 'family') + ': ' + ((item.possible_error_codes || []).join(', ')))), ' | ')
+    + detailListLine('Failure families', localizedFailureFamilies, ' | ')
     + detailListLine('Recovery commands', (failureContract || {{}}).recovery_commands, ' | ')
     + detailListLine('Follow-up commands', (successContract || {{}}).follow_up_commands, ' | ');
   return lines + (resolvedContract.recovery_path ? '<p>' + copyCommandButton(resolvedContract.recovery_path, targetId, t('button.copy_recovery_cli')) + '</p>' : '');
@@ -6288,6 +6348,12 @@ function packageContextDetailLines(packageReview, manifest, eligibleContextIds =
     + detailListLine('Manifest refs', manifest && manifest.referenced_records);
 }}
 function writeRouteDetailLines(writeRouteContract, identityProofContract, authorizationContract, targetStateContract, includeRequestFields = false) {{
+  const localizedFailureFamilies = (writeRouteContract.failure_families || []).map(item => {{
+    const summary = item && item.summary_key
+      ? formatLabel(item.summary_key, item.summary_params || {{}}, item.summary || '')
+      : (item.summary || '');
+    return ((item.family || 'family') + ': ' + summary + '; ' + ((item.possible_error_codes || []).join(', ')));
+  }});
   return detailLine('Write route', writeRouteContract.route_template || '')
     + detailListLine('Write actions', writeRouteContract.actions, ' | ')
     + detailListLine('Action routes', (writeRouteContract.action_routes || []).map(item => ((item.action || 'action') + ': ' + (item.path_template || ''))), ' | ')
@@ -6307,7 +6373,7 @@ function writeRouteDetailLines(writeRouteContract, identityProofContract, author
     + detailLine('Resolved status code', targetStateContract.resolved_status_code ?? '')
     + detailListLine('Target-state checks', targetStateContract.target_state_checks, ' | ')
     + detailListLine('Action target matrix', (targetStateContract.action_target_matrix || []).map(item => ((item.action || 'action') + ': pending=' + String(item.requires_pending) + '; queue=' + (item.resulting_queue_state || '') + '; disposition=' + (item.resulting_disposition || ''))), ' | ')
-    + detailListLine('Failure families', (writeRouteContract.failure_families || []).map(item => ((item.family || 'family') + ': ' + ((item.possible_error_codes || []).join(', ')))), ' | ')
+    + detailListLine('Failure families', localizedFailureFamilies, ' | ')
     + detailLine('Identity proof status', identityProofContract.proof_status || '')
     + detailListLine('Identity proof fields', identityProofContract.required_identity_fields, ' | ');
 }}

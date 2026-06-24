@@ -331,7 +331,13 @@ def test_startup_metadata(tmp_path):
         "report success only if both durable side effects succeeded",
     ]
     assert payload["ui_boundary"]["write_route_contract"]["failure_families"][0]["family"] == "pre_mutation_or_gate"
+    assert payload["ui_boundary"]["write_route_contract"]["failure_families"][0]["summary_key"] == (
+        "ui.review_write_route_failure_family.pre_mutation_or_gate"
+    )
     assert payload["ui_boundary"]["write_route_contract"]["failure_families"][1]["family"] == "durable_write_path"
+    assert payload["ui_boundary"]["write_route_contract"]["failure_families"][1]["summary_key"] == (
+        "ui.review_write_route_failure_family.durable_write_path"
+    )
     assert payload["ui_boundary"]["write_route_contract"]["authorization_contract"]["authorization_status"] == "advisory_only"
     assert payload["ui_boundary"]["write_route_contract"]["authorization_contract"]["required_identity_assurance_status"] == "boundary_aligned"
     assert payload["ui_boundary"]["write_route_contract"]["authorization_contract"]["target_pending_required"] is True
@@ -1825,18 +1831,20 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "detailLine('Session label required', reviewerContextRequirements.session_label_required)" in html
     assert "detailListLine('Durable success requirements', writeRouteContract.durable_success_requirements, ' | ')" in html
     assert "detailListLine('Transaction order', writeRouteContract.transaction_order, ' | ')" in html
+    assert "const localizedFailureFamilies = (writeRouteContract.failure_families || []).map(item => {" in html
     assert "detailLine('Authorization status', authorizationContract.authorization_status || '')" in html
     assert "detailListLine('Authorization checks', authorizationContract.server_side_checks, ' | ')" in html
     assert "detailListLine('Action authorization matrix', (authorizationContract.action_authorization_matrix || []).map(item => ((item.action || 'action') + ': intent=' + (item.ui_intent || '') + '; pending=' + String(item.pending_required) + '; note=' + (item.note_status || ''))), ' | ')" in html
     assert "detailLine('Required review status', targetStateContract.required_current_review_status || '')" in html
     assert "detailListLine('Target-state checks', targetStateContract.target_state_checks, ' | ')" in html
     assert "detailListLine('Action target matrix', (targetStateContract.action_target_matrix || []).map(item => ((item.action || 'action') + ': pending=' + String(item.requires_pending) + '; queue=' + (item.resulting_queue_state || '') + '; disposition=' + (item.resulting_disposition || ''))), ' | ')" in html
-    assert "detailListLine('Failure families', (writeRouteContract.failure_families || []).map(item => ((item.family || 'family') + ': ' + ((item.possible_error_codes || []).join(', ')))), ' | ')" in html
+    assert "detailListLine('Failure families', localizedFailureFamilies, ' | ')" in html
     assert "detailLine('Target-state recovery status', targetStateRecovery.status || '')" in html
     assert "const localizedTargetStateSummary = targetStateRecovery.summary_key" in html
     assert "detailLine('Target-state recovery summary', localizedTargetStateSummary)" in html
     assert "const localizedResolvedQueueReason = targetStateRecovery.resolved_queue_reason_key" in html
     assert "detailLine('Resolved queue reason', localizedResolvedQueueReason)" in html
+    assert "const localizedFailureFamilies = failureFamilies.map(item => {" in html
     assert "const localizedRecoverySummary = preview.recovery_summary_key" in html
     assert "const localizedFollowUpSummary = preview.follow_up_summary_key" in html
     assert "detailLine('Resolved queue command', targetStateRecovery.resolved_queue_command || '')" in html
@@ -2296,6 +2304,9 @@ def test_http_review_action_enabled_route_handles_audit_failure(tmp_path, monkey
         assert payload["failure_contract"]["rollback_status"] == "fail_closed"
         assert payload["failure_contract"]["durable_mutation_reported_on_failure"] is False
         assert payload["failure_contract"]["failure_families"][1]["family"] == "durable_write_path"
+        assert payload["failure_contract"]["failure_families"][1]["summary_key"] == (
+            "ui.review_write_route_failure_family.durable_write_path"
+        )
         assert payload["failure_contract"]["recovery_commands"] == [
             f"chronicle review approve --event {ids['runtime_summary_event_id']}",
             "chronicle audit list --json",
@@ -2715,6 +2726,9 @@ def test_http_review_action_enabled_route_handles_decision_persistence_failure(t
         assert payload["failure_summary_key"] == "ui.review_action_failure.summary.decision_persistence_failed"
         assert payload["audit_id"].startswith("aud_")
         assert payload["failure_contract"]["rollback_status"] == "fail_closed"
+        assert payload["failure_contract"]["failure_families"][0]["summary_key"] == (
+            "ui.review_write_route_failure_family.pre_mutation_or_gate"
+        )
         assert payload["failure_contract"]["recovery_commands"][0] == "chronicle review queue --include-resolved --json"
         assert payload["failure_contract"]["recovery_commands"][1] == f"chronicle audit show --id {payload['audit_id']} --json"
         assert len(AuditService(tmp_path).list_events()) == 2
