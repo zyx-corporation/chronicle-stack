@@ -420,6 +420,21 @@ def run_ui_smoke(root: Path | None = None) -> UISmokeReport:
                         ),
                     )
                 )
+                runtime_preview = record.get("runtime_record_preview")
+                if isinstance(runtime_preview, dict):
+                    checks.append(
+                        UISmokeCheck(
+                            f"{endpoint}/{record_id}#runtime-preview-contract",
+                            bool(runtime_preview.get("title"))
+                            and bool(runtime_preview.get("title_key")),
+                            (
+                                "ok"
+                                if bool(runtime_preview.get("title"))
+                                and bool(runtime_preview.get("title_key"))
+                                else "runtime detail missing structured preview title contract"
+                            ),
+                        )
+                    )
                 auth_notice = record.get("auth_boundary_notice")
                 checks.append(
                     UISmokeCheck(
@@ -588,6 +603,19 @@ def run_ui_smoke(root: Path | None = None) -> UISmokeReport:
                         ),
                     )
                 )
+                response_summary = record.get("response_metadata_summary")
+                if isinstance(response_summary, dict):
+                    checks.append(
+                        UISmokeCheck(
+                            f"{endpoint}/{record_id}#provider-response-contract",
+                            bool(response_summary.get("message_key")),
+                            (
+                                "ok"
+                                if bool(response_summary.get("message_key"))
+                                else "review detail missing provider response message key"
+                            ),
+                        )
+                    )
                 blocked = service.review_action_blocked_response(
                     f"/api/review-actions/{record_id}/approve"
                 )

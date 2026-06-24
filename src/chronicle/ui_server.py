@@ -326,6 +326,37 @@ def _cli_parity_message_key(aligned: bool) -> str:
     return "ui.cli_parity.message.aligned" if aligned else "ui.cli_parity.message.drift_detected"
 
 
+def _runtime_preview_title_contract(preview: dict[str, Any]) -> tuple[str | None, dict[str, Any]]:
+    record_kind = str(preview.get("record_kind", ""))
+    title = str(preview.get("title", ""))
+    if record_kind == "summary":
+        return "ui.runtime_preview.title.summary", {}
+    if record_kind == "execution":
+        return "ui.template.runtime_preview.title.execution", {
+            "operation": title.split(": ", 1)[1] if ": " in title else "",
+        }
+    if record_kind == "retrieval_plan":
+        return "ui.template.runtime_preview.title.retrieval_plan", {
+            "query": title.split(": ", 1)[1] if ": " in title else "",
+        }
+    if record_kind == "invocation_plan":
+        suffix = title.split(": ", 1)[1] if ": " in title else ""
+        return "ui.template.runtime_preview.title.invocation_plan", {
+            "descriptor": suffix,
+        }
+    if record_kind == "unknown":
+        return "ui.runtime_preview.title.unknown", {}
+    return None, {}
+
+
+def _provider_response_message_key(summary: dict[str, Any]) -> str:
+    return (
+        "ui.provider_response.message.present"
+        if bool(summary.get("present"))
+        else "ui.provider_response.message.unavailable"
+    )
+
+
 def _append_mutation_blocker(
     blockers: list[str],
     next_steps: list[str],
@@ -1148,8 +1179,19 @@ def _unique_list(plan: RuntimeRetrievalPlan) -> list[str]:
     return values
 
 
-def _related_link(path: str, label: str) -> dict[str, str]:
-    return {"path": path, "label": label}
+def _related_link(
+    path: str,
+    label: str,
+    *,
+    label_key: str | None = None,
+    label_params: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    payload: dict[str, Any] = {"path": path, "label": label}
+    if label_key:
+        payload["label_key"] = label_key
+    if label_params:
+        payload["label_params"] = label_params
+    return payload
 
 
 def _open_detail_label(resource: str, record_id: str) -> str:
@@ -1161,12 +1203,28 @@ def _open_detail_label(resource: str, record_id: str) -> str:
     return f"{prefix} {record_id}".strip()
 
 
+def _open_detail_label_key(resource: str) -> str:
+    labels = {
+        "contexts": "ui.template.related_link.open_context",
+        "events": "ui.template.related_link.open_event",
+    }
+    return labels.get(resource, "ui.template.related_link.open_detail")
+
+
 def _open_matching_detail_label(resource: str) -> str:
     labels = {
         "review-queue": "Open matching review detail",
         "runtime-records": "Open matching runtime record",
     }
     return labels.get(resource, f"Open matching {resource.rstrip('s')} detail")
+
+
+def _open_matching_detail_label_key(resource: str) -> str:
+    labels = {
+        "review-queue": "ui.related_link.open_matching_review_detail",
+        "runtime-records": "ui.related_link.open_matching_runtime_record",
+    }
+    return labels.get(resource, "ui.template.related_link.open_matching_detail")
 
 
 class ChronicleUIDataService:
@@ -1811,8 +1869,14 @@ class ChronicleUIDataService:
         for event in reversed(events[-limit:]):
             data = _dump_model(event)
             preview = self.runtime.record_preview(event)
+            preview_payload = preview.model_dump(mode="json")
+            title_key, title_params = _runtime_preview_title_contract(preview_payload)
+            if title_key:
+                preview_payload["title_key"] = title_key
+            if title_params:
+                preview_payload["title_params"] = title_params
             data["runtime_record_kind"] = preview.record_kind
-            data["runtime_record_preview"] = preview.model_dump(mode="json")
+            data["runtime_record_preview"] = preview_payload
             review_row = self._review_queue_row(event.event_id)
             if review_row is not None:
                 mutation_enablement = self.mutation_readiness_summary()
@@ -2141,11 +2205,12 @@ class ChronicleUIDataService:
         payload["message_key"] = _package_handoff_message_key(str(payload["status"]))
         return payload
 
-    def runtime_related_links(self, event_id: str, payload: dict[str, Any]) -> list[dict[str, str]]:
+    def runtime_related_links(self, event_id: str, payload: dict[str, Any]) -> list[dict[str, Any]]:
         links = [
             _related_link(
                 f"/api/review-queue/{event_id}",
                 _open_matching_detail_label("review-queue"),
+                label_key=_open_matching_detail_label_key("review-queue"),
             )
         ]
         if "runtime_invocation_plan" in payload:
@@ -2156,6 +2221,8 @@ class ChronicleUIDataService:
                     _related_link(
                         f"/api/summary-jobs/{summary_job_id}",
                         f"Open summary job {summary_job_id}",
+                        label_key="ui.template.related_link.open_summary_job",
+                        label_params={"summary_job_id": summary_job_id},
                     )
                 )
         if "runtime_execution" in payload:
@@ -2165,6 +2232,8 @@ class ChronicleUIDataService:
                     _related_link(
                         f"/api/summary-jobs/{execution.draft_summary_job_id}",
                         f"Open summary job {execution.draft_summary_job_id}",
+                        label_key="ui.template.related_link.open_summary_job",
+                        label_params={"summary_job_id": execution.draft_summary_job_id},
                     )
                 )
             if execution.artifact_id:
@@ -2172,6 +2241,8 @@ class ChronicleUIDataService:
                     _related_link(
                         f"/api/artifacts/{execution.artifact_id}",
                         f"Open artifact {execution.artifact_id}",
+                        label_key="ui.template.related_link.open_artifact",
+                        label_params={"artifact_id": execution.artifact_id},
                     )
                 )
         if "runtime_retrieval_plan" in payload:
@@ -2182,6 +2253,8 @@ class ChronicleUIDataService:
                         _related_link(
                             f"/api/contexts/{record_id}",
                             _open_detail_label("contexts", record_id),
+                            label_key=_open_detail_label_key("contexts"),
+                            label_params={"record_id": record_id},
                         )
                     )
                 elif record_id.startswith("evt_"):
@@ -2189,6 +2262,8 @@ class ChronicleUIDataService:
                         _related_link(
                             f"/api/events/{record_id}",
                             _open_detail_label("events", record_id),
+                            label_key=_open_detail_label_key("events"),
+                            label_params={"record_id": record_id},
                         )
                     )
         return links
@@ -2265,11 +2340,12 @@ class ChronicleUIDataService:
             "package_review": review.model_dump(mode="json"),
         }
 
-    def review_related_links(self, target_event_id: str) -> list[dict[str, str]]:
+    def review_related_links(self, target_event_id: str) -> list[dict[str, Any]]:
         links = [
             _related_link(
                 f"/api/runtime-records/{target_event_id}",
                 _open_matching_detail_label("runtime-records"),
+                label_key=_open_matching_detail_label_key("runtime-records"),
             )
         ]
         readiness = self.review_package_readiness(target_event_id)
@@ -2279,30 +2355,55 @@ class ChronicleUIDataService:
                     _related_link(
                         f"/api/contexts/{context_id}",
                         _open_detail_label("contexts", context_id),
+                        label_key=_open_detail_label_key("contexts"),
+                        label_params={"record_id": context_id},
                     )
                 )
         return links
 
-    def summary_job_related_links(self, summary_job_id: str, job: dict[str, Any]) -> list[dict[str, str]]:
-        links: list[dict[str, str]] = []
+    def summary_job_related_links(self, summary_job_id: str, job: dict[str, Any]) -> list[dict[str, Any]]:
+        links: list[dict[str, Any]] = []
         event_id = str(job.get("event_id", ""))
         if event_id.startswith("evt_"):
             links.append(
                 _related_link(
                     f"/api/review-queue/{event_id}",
                     f"Open review target {event_id}",
+                    label_key="ui.template.related_link.open_review_target",
+                    label_params={"event_id": event_id},
                 )
             )
         for ref in job.get("source_refs", []):
             record_type = str(ref.get("record_type", "event"))
             record_id = str(ref.get("record_id", ""))
             if record_type == "event" and record_id.startswith("evt_"):
-                links.append(_related_link(f"/api/events/{record_id}", f"Open event {record_id}"))
+                links.append(
+                    _related_link(
+                        f"/api/events/{record_id}",
+                        f"Open event {record_id}",
+                        label_key=_open_detail_label_key("events"),
+                        label_params={"record_id": record_id},
+                    )
+                )
             elif record_id.startswith("ctx_"):
-                links.append(_related_link(f"/api/contexts/{record_id}", f"Open context {record_id}"))
+                links.append(
+                    _related_link(
+                        f"/api/contexts/{record_id}",
+                        f"Open context {record_id}",
+                        label_key=_open_detail_label_key("contexts"),
+                        label_params={"record_id": record_id},
+                    )
+                )
         artifact_id = str(job.get("artifact_id", ""))
         if artifact_id.startswith("art_"):
-            links.append(_related_link(f"/api/artifacts/{artifact_id}", f"Open artifact {artifact_id}"))
+            links.append(
+                _related_link(
+                    f"/api/artifacts/{artifact_id}",
+                    f"Open artifact {artifact_id}",
+                    label_key="ui.template.related_link.open_artifact",
+                    label_params={"artifact_id": artifact_id},
+                )
+            )
         return links
 
     def runtime_boundary(self) -> dict[str, Any]:
@@ -2328,6 +2429,16 @@ class ChronicleUIDataService:
         keys = [str(item) for item in (response_keys or [])]
         return {
             "present": bool(metadata or keys),
+            "message": (
+                "Provider response metadata is available for this local derived record."
+                if (metadata or keys)
+                else "Provider response metadata is not available for this local derived record."
+            ),
+            "message_key": (
+                "ui.provider_response.message.present"
+                if (metadata or keys)
+                else "ui.provider_response.message.unavailable"
+            ),
             "response_id": metadata.get("response_id"),
             "finish_reason": metadata.get("finish_reason"),
             "provider_status": metadata.get("provider_status"),
@@ -2977,8 +3088,14 @@ class ChronicleUIDataService:
             ):
                 return None
             preview = self.runtime.record_preview(event)
+            preview_payload = preview.model_dump(mode="json")
+            title_key, title_params = _runtime_preview_title_contract(preview_payload)
+            if title_key:
+                preview_payload["title_key"] = title_key
+            if title_params:
+                preview_payload["title_params"] = title_params
             record["runtime_record_kind"] = preview.record_kind
-            record["runtime_record_preview"] = preview.model_dump(mode="json")
+            record["runtime_record_preview"] = preview_payload
             record["suggested_cli_family"] = preview.suggested_cli_family
             record["related_links"] = self.runtime_related_links(parts[2], payload)
             record["response_metadata_summary"] = self._runtime_response_metadata_summary(payload=payload)
@@ -4001,6 +4118,11 @@ function localizedPayloadText(item, keyField = 'message_key', fallbackField = 'm
   if (!item || typeof item !== 'object') return '';
   if (item[keyField]) return formatLabel(item[keyField], item[paramsField] || {{}}, item[fallbackField] || '');
   return localizeTextValue(item[fallbackField] || '');
+}}
+function localizedLinkLabel(item) {{
+  if (!item || typeof item !== 'object') return '';
+  if (item.label_key) return formatLabel(item.label_key, item.label_params || {{}}, item.label || '');
+  return localizeTextValue(item.label || '');
 }}
 function reviewerContextDetailLines(reviewerContext, identityProofContract = {{}}) {{
   const effectiveFields = Array.isArray(reviewerContext.effective_required_fields)
@@ -5619,9 +5741,12 @@ function renderNavigationNotice(endpoint, record, options = {{}}) {{
 function renderRuntimePreviewNotice(record) {{
   if (!record.runtime_record_preview) return '';
   const preview = record.runtime_record_preview;
+  const localizedTitle = preview.title_key
+    ? formatLabel(preview.title_key, preview.title_params || {{}}, preview.title || '')
+    : (preview.title || '');
   return renderNotice(
     label('notice.runtime_preview', 'Runtime Preview'),
-    '<p><strong>' + esc(preview.title || '') + '</strong></p>'
+    '<p><strong>' + esc(localizedTitle) + '</strong></p>'
       + '<p>' + esc(preview.preview_text || '') + '</p>'
       + detailLine('Kind', preview.record_kind || record.runtime_record_kind || '')
       + summaryJsonLine('Source counts', preview.source_counts)
@@ -5796,7 +5921,8 @@ function renderResponseMetadataNotice(record) {{
   const summary = record.response_metadata_summary;
   return renderNotice(
     label('notice.provider_response', 'Provider Response'),
-    responseMetadataDetailLines(summary)
+    messageParagraph(localizedPayloadText(summary))
+      + responseMetadataDetailLines(summary)
   );
 }}
 function renderPackageReadinessNotice(record) {{
@@ -5822,7 +5948,7 @@ function renderRelatedLinksNotice(record) {{
   if (!Array.isArray(record.related_links) || record.related_links.length === 0) return '';
   return renderNotice(
     label('notice.related_links', 'Related Links'),
-    '<p>' + record.related_links.map(item => detailNavButton(item.path || '', item.label || '')).join('') + '</p>'
+    '<p>' + record.related_links.map(item => detailNavButton(item.path || '', localizedLinkLabel(item))).join('') + '</p>'
   );
 }}
 function renderAuthReadinessNotice(record) {{

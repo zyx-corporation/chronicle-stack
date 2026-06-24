@@ -634,6 +634,7 @@ def test_ui_data_service_read_endpoints(tmp_path):
     assert service.lifecycle_markers()["lifecycle_markers"][0]["reason"] == "UI lifecycle marker"
     assert len(service.runtime_records()["runtime_records"]) == 2
     assert service.runtime_records()["runtime_records"][0]["runtime_record_preview"]["title"]
+    assert service.runtime_records()["runtime_records"][0]["runtime_record_preview"]["title_key"]
     assert service.runtime_records()["runtime_records"][0]["runtime_record_preview"]["suggested_cli_family"].startswith(
         "chronicle runtime"
     )
@@ -645,6 +646,7 @@ def test_ui_data_service_read_endpoints(tmp_path):
     )
     assert runtime_summary_row["review_target_event_id"] == ids["runtime_summary_event_id"]
     assert runtime_summary_row["action_preview_summary"]["status"] == "preview_only"
+    assert runtime_summary_row["runtime_record_preview"]["title_key"] == "ui.runtime_preview.title.summary"
     assert runtime_summary_row["mutation_enablement_summary"]["status"] == "preview_only"
     assert "explicit local write enablement still requires" in runtime_summary_row["mutation_enablement_summary"]["message"]
     assert runtime_summary_row["mutation_enablement_summary"]["scope_note"].startswith(
@@ -724,11 +726,14 @@ def test_ui_data_service_read_endpoints(tmp_path):
     assert service.review_queue()["review_queue"][0]["reviewer_boundary_drilldown_summary"]["dataset_key"] == (
         "review_queue"
     )
+    assert service.review_queue()["review_queue"][0]["response_metadata_summary"]["message_key"] == (
+        "ui.provider_response.message.unavailable"
+    )
     assert service.review_queue()["review_queue"][0]["package_readiness_summary"]["label"].startswith("package:")
     assert service.review_queue()["review_queue"][0]["package_readiness_summary"]["message"]
     assert (
         service.review_queue()["review_queue"][0]["package_readiness_summary"]["message_key"]
-        == "ui.package_readiness.message.package_context_available"
+        == "ui.package_readiness.message.no_context_records"
     )
     assert service.review_queue()["review_queue"][0]["action_preview_summary"]["status"] == "preview_only"
     assert (
@@ -800,6 +805,13 @@ def test_ui_data_service_read_endpoints(tmp_path):
     assert "ui_auth_not_enabled" in service.review_queue()["review_queue"][0]["review_capability"]["warnings"]
     assert service.review_queue()["review_queue"][0]["review_capability"]["warning_details"][0]["message"]
     assert "latest_identity_assurance" not in service.review_queue()["review_queue"][0]
+    review_detail = service.detail_payload(
+        f"/api/review-queue/{service.review_queue()['review_queue'][0]['target_event_id']}"
+    )
+    assert review_detail is not None
+    assert review_detail["record"]["related_links"][0]["label_key"] == (
+        "ui.related_link.open_matching_runtime_record"
+    )
     assert service.ui_boundary()["ui_boundary"]["loopback_only"] is True
     assert "events" in service.events()
     assert "rde_records" in service.rde_records()
@@ -848,6 +860,8 @@ def test_ui_data_service_exposes_provider_response_metadata_in_read_only_views(t
     )
     assert runtime_row["response_metadata_summary"] == {
         "present": True,
+        "message": "Provider response metadata is available for this local derived record.",
+        "message_key": "ui.provider_response.message.present",
         "response_id": "resp_ui_metadata",
         "finish_reason": "stop",
         "provider_status": "ok",
@@ -1317,6 +1331,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "label('notice.package_handoff_preview', 'Package Handoff Preview')" in html
     assert "label('notice.review_package_readiness', 'Review Package Readiness')" in html
     assert "label('notice.related_links', 'Related Links')" in html
+    assert "detailNavButton(item.path || '', localizedLinkLabel(item))" in html
     assert "label('button.back_current_list', 'Back to current list')" in html
     assert "label('button.back_previous_detail', 'Back to previous detail')" in html
     assert "currentFilterLabel" in html
@@ -1407,6 +1422,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "function renderNotice(title, body)" in html
     assert "function renderNavigationNotice(endpoint, record, options = {})" in html
     assert "function renderRuntimePreviewNotice(record)" in html
+    assert "const localizedTitle = preview.title_key" in html
     assert "function packageContextDetailLines(packageReview, manifest, eligibleContextIds = [], extraLines = '')" in html
     assert "function packageContextNoticeBody(status, message, packageReview, manifest, eligibleContextIds = [], extraLines = '', buttons = [])" in html
     assert "function statusScopeNoticeBody(status, message, buttons = [], scopeNote = '')" in html
@@ -1611,9 +1627,11 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "detailLine('Chronicle state command', targetStateRecovery.chronicle_state_command || '')" in html
     assert "function responseMetadataDetailLines(summary)" in html
     assert "function renderResponseMetadataNotice(record)" in html
+    assert "function localizedLinkLabel(item)" in html
     assert "detailLine('Response ID', summary.response_id || '')" in html
     assert "detailLine('Usage total tokens', summary.usage_total_tokens ?? '')" in html
     assert "responseMetadataDetailLines(summary)" in html
+    assert "messageParagraph(localizedPayloadText(summary))" in html
     assert "packageContextNoticeBody(" in html
     assert '"Action": "操作"' in html
     assert '"Rollback status": "ロールバック状態"' in html
