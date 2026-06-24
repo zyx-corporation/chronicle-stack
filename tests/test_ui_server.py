@@ -1811,7 +1811,10 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "detailListLine('Action target matrix', (targetStateContract.action_target_matrix || []).map(item => ((item.action || 'action') + ': pending=' + String(item.requires_pending) + '; queue=' + (item.resulting_queue_state || '') + '; disposition=' + (item.resulting_disposition || ''))), ' | ')" in html
     assert "detailListLine('Failure families', (writeRouteContract.failure_families || []).map(item => ((item.family || 'family') + ': ' + ((item.possible_error_codes || []).join(', ')))), ' | ')" in html
     assert "detailLine('Target-state recovery status', targetStateRecovery.status || '')" in html
-    assert "detailLine('Resolved queue reason', targetStateRecovery.resolved_queue_reason || '')" in html
+    assert "const localizedTargetStateSummary = targetStateRecovery.summary_key" in html
+    assert "detailLine('Target-state recovery summary', localizedTargetStateSummary)" in html
+    assert "const localizedResolvedQueueReason = targetStateRecovery.resolved_queue_reason_key" in html
+    assert "detailLine('Resolved queue reason', localizedResolvedQueueReason)" in html
     assert "detailLine('Resolved queue command', targetStateRecovery.resolved_queue_command || '')" in html
     assert "detailLine('Chronicle state command', targetStateRecovery.chronicle_state_command || '')" in html
     assert "function responseMetadataDetailLines(summary)" in html
@@ -2487,7 +2490,13 @@ def test_review_action_reports_resolved_queue_recovery_when_target_not_pending(t
     assert payload["message_key"] == "ui.review_action_failure.message.review_not_pending"
     assert payload["failure_summary_key"] == "ui.review_action_failure.summary.review_not_pending"
     assert payload["failure_contract"]["target_state_recovery"]["status"] == "resolved_queue_check_required"
+    assert payload["failure_contract"]["target_state_recovery"]["summary_key"] == (
+        "ui.review_action_target_state_recovery.summary.review_not_pending"
+    )
     assert payload["failure_contract"]["target_state_recovery"]["pending_queue_sufficient"] is False
+    assert payload["failure_contract"]["target_state_recovery"]["resolved_queue_reason_key"] == (
+        "ui.review_action_target_state_recovery.reason.review_not_pending"
+    )
     assert "later review decision" in payload["failure_contract"]["target_state_recovery"]["resolved_queue_reason"]
     assert payload["failure_contract"]["target_state_recovery"]["resolved_queue_command"] == (
         "chronicle review queue --include-resolved --json"
@@ -2521,7 +2530,13 @@ def test_review_action_reports_chronicle_state_recheck_when_target_missing(tmp_p
     assert status == 404
     assert payload["error_code"] == "review_target_not_found"
     assert payload["failure_contract"]["target_state_recovery"]["status"] == "chronicle_state_recheck_required"
+    assert payload["failure_contract"]["target_state_recovery"]["summary_key"] == (
+        "ui.review_action_target_state_recovery.summary.review_target_not_found"
+    )
     assert payload["failure_contract"]["target_state_recovery"]["pending_queue_sufficient"] is False
+    assert payload["failure_contract"]["target_state_recovery"]["resolved_queue_reason_key"] == (
+        "ui.review_action_target_state_recovery.reason.review_target_not_found"
+    )
     assert payload["failure_contract"]["target_state_recovery"]["resolved_queue_command"] == (
         "chronicle review queue --include-resolved --json"
     )

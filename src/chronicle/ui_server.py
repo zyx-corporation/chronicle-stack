@@ -3171,16 +3171,20 @@ class ChronicleUIDataService:
         if error_code == "review_not_pending":
             return {
                 "status": "resolved_queue_check_required",
+                "summary_key": "ui.review_action_target_state_recovery.summary.review_not_pending",
                 "summary": "The target is no longer pending in the default queue view; inspect the resolved queue before retrying any follow-up action.",
                 "pending_queue_sufficient": False,
+                "resolved_queue_reason_key": "ui.review_action_target_state_recovery.reason.review_not_pending",
                 "resolved_queue_reason": "A later review decision already resolved the pending target in the current derived queue view.",
                 "resolved_queue_command": "chronicle review queue --include-resolved --json",
             }
         if error_code == "review_target_not_found":
             return {
                 "status": "chronicle_state_recheck_required",
+                "summary_key": "ui.review_action_target_state_recovery.summary.review_target_not_found",
                 "summary": "The target is missing from the current Chronicle state; inspect the resolved queue and current derived state before retrying.",
                 "pending_queue_sufficient": False,
+                "resolved_queue_reason_key": "ui.review_action_target_state_recovery.reason.review_target_not_found",
                 "resolved_queue_reason": "The review queue alone may be stale relative to the operator's expectation for this target.",
                 "resolved_queue_command": "chronicle review queue --include-resolved --json",
                 "chronicle_state_command": "chronicle show --json",
@@ -4660,6 +4664,12 @@ function contractDetailLines(successContract, failureContract, targetId) {{
     ? failureContract.failure_families
     : [];
   const targetStateRecovery = (failureContract || {{}}).target_state_recovery || {{}};
+  const localizedTargetStateSummary = targetStateRecovery.summary_key
+    ? formatLabel(targetStateRecovery.summary_key, targetStateRecovery.summary_params || {{}}, targetStateRecovery.summary || '')
+    : (targetStateRecovery.summary || '');
+  const localizedResolvedQueueReason = targetStateRecovery.resolved_queue_reason_key
+    ? formatLabel(targetStateRecovery.resolved_queue_reason_key, targetStateRecovery.resolved_queue_reason_params || {{}}, targetStateRecovery.resolved_queue_reason || '')
+    : (targetStateRecovery.resolved_queue_reason || '');
   const lines = []
     + detailLine('Recovery path', resolvedContract.recovery_path || '')
     + detailLine('Rollback status', resolvedContract.rollback_status || '')
@@ -4667,9 +4677,9 @@ function contractDetailLines(successContract, failureContract, targetId) {{
     + detailListLine('Durable success requirements', (successContract || {{}}).durable_success_requirements, ' | ')
     + detailLine('Durable mutation on failure', (failureContract || {{}}).durable_mutation_reported_on_failure)
     + detailLine('Target-state recovery status', targetStateRecovery.status || '')
-    + detailLine('Target-state recovery summary', targetStateRecovery.summary || '')
+    + detailLine('Target-state recovery summary', localizedTargetStateSummary)
     + detailLine('Pending queue sufficient', targetStateRecovery.pending_queue_sufficient)
-    + detailLine('Resolved queue reason', targetStateRecovery.resolved_queue_reason || '')
+    + detailLine('Resolved queue reason', localizedResolvedQueueReason)
     + detailLine('Resolved queue command', targetStateRecovery.resolved_queue_command || '')
     + detailLine('Chronicle state command', targetStateRecovery.chronicle_state_command || '')
     + detailListLine('Possible errors', (failureContract || {{}}).possible_error_codes, ' | ')
