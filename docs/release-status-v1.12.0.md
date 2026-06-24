@@ -2,15 +2,16 @@
 
 Related: `docs/adr/0031-local-reviewer-boundary-presentation-drilldown.md`, `docs/release-status-v1.11.0.md`
 
-`v1.12.0` is the active repository-side reviewer-boundary presentation-drilldown release lane after the published `v1.11.0` baseline.
+`v1.12.0` is the published reviewer-boundary presentation-drilldown release after the published `v1.11.0` baseline.
 
-- Latest published release: `v1.11.0`
-- Current repository-side release target: `v1.12.0`
+- Latest published release: `v1.12.0`
+- Release URL: `https://github.com/zyx-corporation/chronicle-stack/releases/tag/v1.12.0`
+- Current repository-side release target: `TBD after v1.12.0 publication`
 - Lane scope: local reviewer-boundary presentation/read-model drilldown only
 
 ## Current repository-side progress
 
-Current `v1.12.0` repository progress includes:
+Published `v1.12.0` release progress includes:
 
 - accepted ADR scope for reviewer-boundary presentation drilldown
 - version bump and changelog update for `1.12.0`
@@ -22,17 +23,18 @@ Current `v1.12.0` repository progress includes:
 - i18n-ready drilldown rendering that formats localized dataset and status labels from structured summary fields
 - smoke coverage for reviewer-boundary drilldown summaries across overview, list, and detail surfaces
 - editable install, `chronicle --version`, `ruff`, `pytest`, and `ui-smoke` verification
+- external tag and GitHub Release publication
 
 ## Boundary notes
 
-Current `v1.12.0` planning must preserve:
+Published `v1.12.0` preserves:
 
 - local-first single-operator scope
 - read-only derived-surface discipline
 - i18n presentation-only wording boundary
 - JSON/CLI contract authority over reviewer-boundary meaning
 
-Current `v1.12.0` planning must not claim:
+Published `v1.12.0` still must not imply:
 
 - hosted auth or multi-user safety
 - new reviewer-boundary persistence
