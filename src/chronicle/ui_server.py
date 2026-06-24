@@ -357,6 +357,37 @@ def _provider_response_message_key(summary: dict[str, Any]) -> str:
     )
 
 
+def _retrieval_handoff_message_key(handoff: dict[str, Any]) -> str:
+    return (
+        "ui.retrieval_handoff.message.records_available"
+        if bool(handoff.get("referenced_record_ids"))
+        else "ui.retrieval_handoff.message.no_records"
+    )
+
+
+def _retrieval_handoff_counts_contract(handoff: dict[str, Any]) -> tuple[str, dict[str, Any]]:
+    return "ui.template.retrieval_handoff.hit_counts", {
+        "vector_hit_count": int(handoff.get("vector_hit_count", 0) or 0),
+        "graph_hit_count": int(handoff.get("graph_hit_count", 0) or 0),
+        "chronicle_hit_count": int(handoff.get("chronicle_hit_count", 0) or 0),
+    }
+
+
+def _invocation_plan_message_key(plan: dict[str, Any]) -> str:
+    return (
+        "ui.invocation_plan.message.ready"
+        if bool(plan.get("invocation_ready"))
+        else "ui.invocation_plan.message.blocked"
+    )
+
+
+def _invocation_plan_provider_summary_contract(plan: dict[str, Any]) -> tuple[str, dict[str, Any]]:
+    return "ui.template.invocation_plan.provider_summary", {
+        "provider_kind": str(plan.get("provider_kind", "")),
+        "provider_name": str(plan.get("provider_name", "")),
+    }
+
+
 def _append_mutation_blocker(
     blockers: list[str],
     next_steps: list[str],
@@ -3124,11 +3155,33 @@ class ChronicleUIDataService:
                 )
             if "runtime_retrieval_plan" in payload:
                 plan = RuntimeRetrievalPlan.model_validate(payload["runtime_retrieval_plan"])
-                record["retrieval_handoff"] = self.runtime.retrieval_handoff(plan).model_dump(mode="json")
+                handoff_payload = self.runtime.retrieval_handoff(plan).model_dump(mode="json")
+                handoff_payload["message"] = (
+                    "Retrieval handoff summarizes dry-run record hits for downstream local package review."
+                    if handoff_payload.get("referenced_record_ids")
+                    else "Retrieval handoff has no referenced records; downstream package review remains advisory."
+                )
+                handoff_payload["message_key"] = _retrieval_handoff_message_key(handoff_payload)
+                counts_key, counts_params = _retrieval_handoff_counts_contract(handoff_payload)
+                handoff_payload["hit_counts_summary_key"] = counts_key
+                handoff_payload["hit_counts_summary_params"] = counts_params
+                record["retrieval_handoff"] = handoff_payload
                 record["package_handoff_preview"] = self.runtime_package_handoff(plan)
             if "runtime_invocation_plan" in payload:
                 plan = RuntimeInvocationPlan.model_validate(payload["runtime_invocation_plan"])
-                record["invocation_plan"] = plan.model_dump(mode="json")
+                plan_payload = plan.model_dump(mode="json")
+                plan_payload["message"] = (
+                    "Invocation plan is ready for explicit local execution."
+                    if plan_payload.get("invocation_ready")
+                    else "Invocation plan remains blocked until local runtime boundary requirements align."
+                )
+                plan_payload["message_key"] = _invocation_plan_message_key(plan_payload)
+                provider_summary_key, provider_summary_params = (
+                    _invocation_plan_provider_summary_contract(plan_payload)
+                )
+                plan_payload["provider_summary_key"] = provider_summary_key
+                plan_payload["provider_summary_params"] = provider_summary_params
+                record["invocation_plan"] = plan_payload
             return {"record": record}
 
         if len(parts) == 3 and parts[0] == "api" and parts[1] == "review-queue":
@@ -5833,12 +5886,23 @@ function identityBoundaryDetailLines(identityBoundary) {{
 function renderRetrievalHandoffNotice(record) {{
   if (!record.retrieval_handoff) return '';
   const handoff = record.retrieval_handoff;
+  const localizedMessage = localizedPayloadText(handoff);
+  const localizedHitCounts = handoff.hit_counts_summary_key
+    ? formatLabel(
+        handoff.hit_counts_summary_key,
+        handoff.hit_counts_summary_params || {{}},
+        'Hit counts: vector=' + String(handoff.vector_hit_count || 0)
+          + ', graph=' + String(handoff.graph_hit_count || 0)
+          + ', chronicle=' + String(handoff.chronicle_hit_count || 0)
+      )
+    : ('Hit counts: vector=' + String(handoff.vector_hit_count || 0)
+        + ', graph=' + String(handoff.graph_hit_count || 0)
+        + ', chronicle=' + String(handoff.chronicle_hit_count || 0));
   return renderNotice(
     label('notice.retrieval_handoff', 'Retrieval Handoff'),
-    detailLine('Query', handoff.query || '')
-      + '<p>Hit counts: vector=' + esc(handoff.vector_hit_count || 0)
-      + ', graph=' + esc(handoff.graph_hit_count || 0)
-      + ', chronicle=' + esc(handoff.chronicle_hit_count || 0) + '</p>'
+    messageParagraph(localizedMessage)
+      + detailLine('Query', handoff.query || '')
+      + '<p>' + esc(localizedHitCounts) + '</p>'
       + detailListLine('Referenced IDs', handoff.referenced_record_ids)
       + detailListLine('Downstream commands', handoff.downstream_commands, ' | ')
       + detailListLine('Notes', handoff.notes, ' | ')
@@ -5889,9 +5953,18 @@ function renderInvocationPlanNotice(record) {{
   const requestPreview = plan.request_preview || {{}};
   const executionRequest = plan.execution_request || {{}};
   const downstreamCommands = Array.isArray(plan.downstream_commands) ? plan.downstream_commands : [];
+  const localizedMessage = localizedPayloadText(plan);
+  const localizedProviderSummary = plan.provider_summary_key
+    ? formatLabel(
+        plan.provider_summary_key,
+        plan.provider_summary_params || {{}},
+        (plan.provider_kind || '') + ' / ' + (plan.provider_name || '')
+      )
+    : ((plan.provider_kind || '') + ' / ' + (plan.provider_name || ''));
   return renderNotice(
     label('notice.invocation_plan', 'Invocation Plan'),
-    detailLine('Provider', (plan.provider_kind || '') + ' / ' + (plan.provider_name || ''))
+    messageParagraph(localizedMessage)
+      + detailLine('Provider', localizedProviderSummary)
       + detailLine('Model', plan.model_name || '')
       + detailLine('Operation', plan.operation || '')
       + detailLine('Invocation ready', plan.invocation_ready)

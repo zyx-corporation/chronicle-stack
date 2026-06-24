@@ -370,6 +370,38 @@ def run_ui_smoke(root: Path | None = None) -> UISmokeReport:
                     "ok" if detail is not None and "record" in detail else "missing detail record",
                 )
             )
+            if endpoint == "/api/runtime-records" and detail is not None and "record" in detail:
+                record = detail["record"]
+                retrieval_handoff = record.get("retrieval_handoff")
+                if isinstance(retrieval_handoff, dict):
+                    checks.append(
+                        UISmokeCheck(
+                            f"{endpoint}/{record_id}#retrieval-handoff-contract",
+                            bool(retrieval_handoff.get("message_key"))
+                            and bool(retrieval_handoff.get("hit_counts_summary_key")),
+                            (
+                                "ok"
+                                if bool(retrieval_handoff.get("message_key"))
+                                and bool(retrieval_handoff.get("hit_counts_summary_key"))
+                                else "runtime detail missing structured retrieval handoff contract"
+                            ),
+                        )
+                    )
+                invocation_plan = record.get("invocation_plan")
+                if isinstance(invocation_plan, dict):
+                    checks.append(
+                        UISmokeCheck(
+                            f"{endpoint}/{record_id}#invocation-plan-contract",
+                            bool(invocation_plan.get("message_key"))
+                            and bool(invocation_plan.get("provider_summary_key")),
+                            (
+                                "ok"
+                                if bool(invocation_plan.get("message_key"))
+                                and bool(invocation_plan.get("provider_summary_key"))
+                                else "runtime detail missing structured invocation plan contract"
+                            ),
+                        )
+                    )
             if endpoint == "/api/review-queue" and detail is not None and "record" in detail:
                 record = detail["record"]
                 checks.append(

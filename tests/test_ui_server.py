@@ -1159,6 +1159,16 @@ def test_ui_data_service_detail_endpoints(tmp_path):
     assert graph_detail["node_id"] == ids["event_id"]
     assert graph_detail["neighbors"]["outgoing"][0]["relation"] == "references"
     assert service.detail_payload("/api/contexts/missing") is None
+    runtime_plan_detail = service.detail_payload(f"/api/runtime-records/{ids['runtime_plan_event_id']}")["record"]
+    assert runtime_plan_detail["retrieval_handoff"]["message_key"] == (
+        "ui.retrieval_handoff.message.records_available"
+    )
+    assert runtime_plan_detail["retrieval_handoff"]["hit_counts_summary_key"] == (
+        "ui.template.retrieval_handoff.hit_counts"
+    )
+    assert runtime_plan_detail["package_handoff_preview"]["message_key"] == (
+        "ui.package_handoff.message.package_context_available"
+    )
 
 
 def test_ui_runtime_detail_supports_invocation_plan(tmp_path):
@@ -1189,6 +1199,10 @@ def test_ui_runtime_detail_supports_invocation_plan(tmp_path):
     assert detail["suggested_cli_family"] == "chronicle runtime invoke-plan --record"
     assert detail["invocation_plan"]["provider_kind"] == "http"
     assert detail["invocation_plan"]["invocation_ready"] is False
+    assert detail["invocation_plan"]["message_key"] == "ui.invocation_plan.message.blocked"
+    assert detail["invocation_plan"]["provider_summary_key"] == (
+        "ui.template.invocation_plan.provider_summary"
+    )
     assert "network_not_allowed_by_contract" in detail["invocation_plan"]["blocking_reasons"]
     assert detail["invocation_plan"]["execution_request"]["prompt"] == "Invocation summary prompt."
     assert any(link["path"].startswith("/api/summary-jobs/") for link in detail["related_links"])
@@ -1331,6 +1345,9 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "label('notice.package_handoff_preview', 'Package Handoff Preview')" in html
     assert "label('notice.review_package_readiness', 'Review Package Readiness')" in html
     assert "label('notice.related_links', 'Related Links')" in html
+    assert "const localizedMessage = localizedPayloadText(handoff);" in html
+    assert "handoff.hit_counts_summary_key" in html
+    assert "plan.provider_summary_key" in html
     assert "detailNavButton(item.path || '', localizedLinkLabel(item))" in html
     assert "label('button.back_current_list', 'Back to current list')" in html
     assert "label('button.back_previous_detail', 'Back to previous detail')" in html
