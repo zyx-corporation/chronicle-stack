@@ -3956,6 +3956,19 @@ function responseSummaryLine(responseMetadata) {{
     + (responseMetadata.finish_reason ? ' / ' + String(responseMetadata.finish_reason) : '')
   );
 }}
+function renderReviewerBoundaryDrilldownSummary(summary) {{
+  if (!summary || !summary.dataset_key) return '';
+  return cellStack([
+    cellMeta(summary.message || ''),
+    cellCode('dataset=' + String(summary.dataset_key || '')),
+    cellCode('enforcement=' + String(summary.enforcement_status || summary.dominant_enforcement_status || '')),
+    cellCode('gate=' + String(summary.validation_gate_status || summary.dominant_validation_gate_status || '')),
+    navigationCluster([
+      listJumpButton(label('button.open_list', 'Open List'), summary.list_path || ''),
+      detailJumpButton(summary.detail_path || '', label('button.open_detail', 'Open Detail')),
+    ]),
+  ]);
+}}
 function previewCell(preview, previewActions, options) {{
   const previewSummary = renderPreviewSummary(preview || {{}});
   const previewContractSummary = renderPreviewContractSummary(
@@ -4066,6 +4079,7 @@ function renderRuntimeRecordRow(row, endpoint) {{
       reviewerGateBadge,
       cellDetails(label('button.more_details', 'More details'), [
         cellMeta(renderMutationEnablementSummary(mutationEnablement)),
+        renderReviewerBoundaryDrilldownSummary(row.reviewer_boundary_drilldown_summary || {{}}),
       ]),
     ]) + '</td>'
     + '<td>' + cellStack([
@@ -4133,6 +4147,7 @@ function renderReviewQueueRow(row, endpoint) {{
         readinessBadge,
         parityBadge,
         authBadge,
+        renderReviewerBoundaryDrilldownSummary(row.reviewer_boundary_drilldown_summary || {{}}),
       ]),
     ]) + '</td>'
     + '<td>' + cellStack([
@@ -4195,6 +4210,7 @@ function renderSummaryJobRow(row, endpoint) {{
         packageBadge,
         mutationEnablementBadge(mutationEnablement),
         cellMeta(renderMutationEnablementSummary(mutationEnablement)),
+        renderReviewerBoundaryDrilldownSummary(row.reviewer_boundary_drilldown_summary || {{}}),
       ]),
     ]) + '</td>'
     + '<td>' + summaryIdentityCell(identityBadge, row.latest_reviewer_identity) + '</td>'
@@ -5507,7 +5523,14 @@ function renderIdentityAssuranceNotice(record) {{
   const assuranceButtons = reviewQueueStatusButtons(assurance.status);
   return renderNotice(
     label('notice.identity_assurance', 'Identity Assurance'),
-    statusMessageBody(assurance.status, assurance.message, assuranceButtons)
+      statusMessageBody(assurance.status, assurance.message, assuranceButtons)
+  );
+}}
+function renderReviewerBoundaryDrilldownNotice(record) {{
+  if (!record.reviewer_boundary_drilldown_summary) return '';
+  return renderNotice(
+    label('notice.reviewer_boundary_drilldown', 'Reviewer Boundary Drilldown'),
+    renderReviewerBoundaryDrilldownSummary(record.reviewer_boundary_drilldown_summary)
   );
 }}
 function renderReviewTimelineNotice(record) {{
@@ -5773,6 +5796,7 @@ function renderOverviewReviewerBoundaryPanel(reviewerBoundary) {{
       + summaryJsonLine(label('overview.reviewer_review_gate_counts', 'Review gate counts'), reviewerBoundary.review_queue_validation_gate_counts)
       + summaryJsonLine(label('overview.reviewer_summary_enforcement_counts', 'Summary enforcement counts'), reviewerBoundary.summary_job_enforcement_counts)
       + summaryJsonLine(label('overview.reviewer_summary_gate_counts', 'Summary gate counts'), reviewerBoundary.summary_job_validation_gate_counts);
+  const drilldownSummaries = Array.isArray(reviewerBoundary.drilldown_summaries) ? reviewerBoundary.drilldown_summaries : [];
   return renderPanel(
     sectionTitle(label('section.reviewer_boundary', 'Reviewer Boundary'))
     + detailLine(label('ui.label.enforcement_status', 'Enforcement status'), reviewerBoundary.enforcement_status || '')
@@ -5782,6 +5806,12 @@ function renderOverviewReviewerBoundaryPanel(reviewerBoundary) {{
     + '<p>' + reviewerBoundaryCountButtons('runtimeRecords', '/api/runtime-records', reviewerBoundary.runtime_record_enforcement_counts, reviewerBoundary.runtime_record_validation_gate_counts) + '</p>'
     + '<p>' + reviewerBoundaryCountButtons('reviewQueue', '/api/review-queue', reviewerBoundary.review_queue_enforcement_counts, reviewerBoundary.review_queue_validation_gate_counts) + '</p>'
     + '<p>' + reviewerBoundaryCountButtons('summaryJobs', '/api/summary-jobs', reviewerBoundary.summary_job_enforcement_counts, reviewerBoundary.summary_job_validation_gate_counts) + '</p>'
+    + detailListLine(label('ui.label.drilldown_datasets', 'Drilldown datasets'), drilldownSummaries.map(item => item.dataset_key || ''), ' | ')
+    + drilldownSummaries.map(item =>
+      cellDetails(label('ui.label.drilldown_summary', 'Drilldown summary'), [
+        renderReviewerBoundaryDrilldownSummary(item),
+      ])
+    ).join('')
     + metricsSection(metricsBody)
   );
 }}
@@ -6093,6 +6123,7 @@ const detailNoticeRenderers = [
   renderDetailActionPreviewNotice,
   renderCliParityNotice,
   renderIdentityAssuranceNotice,
+  renderReviewerBoundaryDrilldownNotice,
   renderReviewTimelineNotice,
 ];
 function renderDetailNotices(record) {{
