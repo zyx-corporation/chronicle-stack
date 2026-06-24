@@ -605,6 +605,20 @@ def test_ui_data_service_read_endpoints(tmp_path):
     assert runtime_summary_row["reviewer_boundary_drilldown_summary"]["detail_path"] == (
         f"/api/runtime-records/{ids['runtime_summary_event_id']}"
     )
+    assert runtime_summary_row["reviewer_boundary_drilldown_summary"]["message_key"] == (
+        "ui.message.reviewer_boundary_drilldown"
+    )
+    assert runtime_summary_row["reviewer_boundary_drilldown_summary"]["fact_line_template_key"] == (
+        "ui.template.reviewer_boundary_fact_line"
+    )
+    assert runtime_summary_row["reviewer_boundary_drilldown_summary"]["fact_line_params"] == {
+        "dataset_key": "runtime_records",
+        "enforcement_status": "descriptive_only",
+        "validation_gate_status": "read_only_preview",
+    }
+    assert "This read-only drilldown row is here because reviewer enforcement is descriptive_only" in (
+        runtime_summary_row["reviewer_boundary_drilldown_summary"]["fact_line"]
+    )
     assert len(service.review_queue()["review_queue"]) == 3
     assert len(service.summary_jobs_list()["summary_jobs"]) == 1
     assert service.summary_jobs_list()["summary_jobs"][0]["summary_job_id"].startswith("sum_")
@@ -684,6 +698,17 @@ def test_ui_data_service_read_endpoints(tmp_path):
     assert overview["triage"]["warning_counts"]["ui_authorization_not_enabled"] == 3
     assert overview["triage"]["warning_summaries"][0]["code"] == "ui_auth_not_enabled"
     assert overview["triage"]["warning_summaries"][1]["code"] == "ui_authorization_not_enabled"
+    assert overview["reviewer_boundary_overview"]["drilldown_summaries"][0]["message_key"] == (
+        "ui.message.reviewer_boundary_drilldown"
+    )
+    assert overview["reviewer_boundary_overview"]["drilldown_summaries"][0]["fact_line_template_key"] == (
+        "ui.template.reviewer_boundary_fact_line"
+    )
+    assert overview["reviewer_boundary_overview"]["drilldown_summaries"][0]["fact_line_params"] == {
+        "dataset_key": "runtime_records",
+        "enforcement_status": "descriptive_only",
+        "validation_gate_status": "read_only_preview",
+    }
     assert "ui_auth_not_enabled" in service.review_queue()["review_queue"][0]["review_capability"]["warnings"]
     assert service.review_queue()["review_queue"][0]["review_capability"]["warning_details"][0]["message"]
     assert "latest_identity_assurance" not in service.review_queue()["review_queue"][0]
@@ -785,6 +810,9 @@ def test_ui_data_service_exposes_provider_response_metadata_in_read_only_views(t
     assert runtime_detail["record"]["response_metadata_summary"]["finish_reason"] == "stop"
     assert runtime_detail["record"]["runtime_record_preview"]["record_kind"] == "execution"
     assert runtime_detail["record"]["reviewer_boundary_drilldown_summary"]["dataset_key"] == "runtime_records"
+    assert runtime_detail["record"]["reviewer_boundary_drilldown_summary"]["enforcement_filter_value"] == (
+        "reviewer_enforcement:descriptive_only"
+    )
     assert any(
         link["path"] == f"/api/summary-jobs/{summary_job_row['summary_job_id']}"
         for link in runtime_detail["record"]["related_links"]
@@ -1318,8 +1346,15 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "function renderOverviewIdentityBoundaryPanel(identityBoundary)" in html
     assert "function renderOverviewReviewerBoundaryPanel(reviewerBoundary)" in html
     assert "function renderReviewerBoundaryDrilldownSummary(summary)" in html
+    assert "function reviewerBoundaryDominantButtons(drilldownSummaries)" in html
+    assert "function formatLabel(key, replacements = {}, fallback = '')" in html
+    assert "function reviewerBoundaryDatasetLabel(datasetKey)" in html
+    assert "function reviewerBoundaryStatusText(status)" in html
     assert "label('button.open_list', 'Open List')" in html
     assert "label('button.open_detail', 'Open Detail')" in html
+    assert "label('ui.label.dataset', 'Dataset')" in html
+    assert "label(summary.message_key, summary.message || '')" in html
+    assert "formatLabel(summary.fact_line_template_key" in html
     assert "function reviewerBoundaryFilterValue(kind, status)" in html
     assert "function reviewerBoundaryCountButtons(target, endpoint, enforcementCounts, gateCounts)" in html
     assert "function overviewRuntimeRecordCountButtons(counts, runtimeRecords)" in html
@@ -1339,6 +1374,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "label('ui.label.drilldown_summary', 'Drilldown summary')" in html
     assert "label('ui.label.dominant_enforcement_status', 'Dominant enforcement status')" in html
     assert "label('ui.label.dominant_validation_gate_status', 'Dominant gate status')" in html
+    assert "reviewerBoundaryDominantButtons(drilldownSummaries)" in html
     assert "reviewerBoundaryFilterValue('reviewer_enforcement', status)" in html
     assert "sliceButtonRow(reviewerBoundaryListButtons('runtimeRecords', '/api/runtime-records', sorted))" in html
     assert "sliceButtonRow(reviewerBoundaryListButtons('reviewQueue', '/api/review-queue', sorted))" in html

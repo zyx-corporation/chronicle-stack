@@ -285,12 +285,25 @@ def _reviewer_boundary_drilldown_summary(
         "overview_path": "/api/overview",
         "list_path": list_path,
         "detail_path": detail_path,
+        "message_key": "ui.message.reviewer_boundary_drilldown",
         "enforcement_status": enforcement_status,
         "validation_gate_status": gate_status,
+        "enforcement_filter_value": f"reviewer_enforcement:{enforcement_status}",
+        "validation_gate_filter_value": f"reviewer_gate:{gate_status}",
+        "fact_line_template_key": "ui.template.reviewer_boundary_fact_line",
+        "fact_line_params": {
+            "dataset_key": dataset_key,
+            "enforcement_status": enforcement_status,
+            "validation_gate_status": gate_status,
+        },
         "summary_level": "read_only_reviewer_boundary_drilldown",
         "message": (
             "Use overview reviewer-boundary counts for slice selection, "
             "list rows for row status, and detail payloads for explanation."
+        ),
+        "fact_line": (
+            f"This read-only drilldown row is here because reviewer enforcement is {enforcement_status} "
+            f"and reviewer gate status is {gate_status} for the current local boundary."
         ),
     }
 
@@ -1351,8 +1364,19 @@ class ChronicleUIDataService:
                     "detail_path_template": "/api/runtime-records/<event_id>",
                     "dominant_enforcement_status": _dominant_status(runtime_enforcement_counts),
                     "dominant_validation_gate_status": _dominant_status(runtime_gate_counts),
+                    "message_key": "ui.message.reviewer_boundary_drilldown",
                     "message": (
                         "Overview runtime counts summarize row statuses; open runtime records to inspect each event and detail payload."
+                    ),
+                    "fact_line_template_key": "ui.template.reviewer_boundary_fact_line",
+                    "fact_line_params": {
+                        "dataset_key": "runtime_records",
+                        "enforcement_status": _dominant_status(runtime_enforcement_counts),
+                        "validation_gate_status": _dominant_status(runtime_gate_counts),
+                    },
+                    "fact_line": (
+                        "This read-only drilldown summary highlights runtime_records because dominant reviewer enforcement is "
+                        f"{_dominant_status(runtime_enforcement_counts)} and dominant reviewer gate status is {_dominant_status(runtime_gate_counts)} for the current local boundary."
                     ),
                 },
                 {
@@ -1361,8 +1385,19 @@ class ChronicleUIDataService:
                     "detail_path_template": "/api/review-queue/<target_event_id>",
                     "dominant_enforcement_status": _dominant_status(review_enforcement_counts),
                     "dominant_validation_gate_status": _dominant_status(review_gate_counts),
+                    "message_key": "ui.message.reviewer_boundary_drilldown",
                     "message": (
                         "Overview review counts summarize pending review rows; open review queue detail to inspect reviewer-boundary explanations."
+                    ),
+                    "fact_line_template_key": "ui.template.reviewer_boundary_fact_line",
+                    "fact_line_params": {
+                        "dataset_key": "review_queue",
+                        "enforcement_status": _dominant_status(review_enforcement_counts),
+                        "validation_gate_status": _dominant_status(review_gate_counts),
+                    },
+                    "fact_line": (
+                        "This read-only drilldown summary highlights review_queue because dominant reviewer enforcement is "
+                        f"{_dominant_status(review_enforcement_counts)} and dominant reviewer gate status is {_dominant_status(review_gate_counts)} for the current local boundary."
                     ),
                 },
                 {
@@ -1371,8 +1406,19 @@ class ChronicleUIDataService:
                     "detail_path_template": "/api/summary-jobs/<summary_job_id>",
                     "dominant_enforcement_status": _dominant_status(summary_enforcement_counts),
                     "dominant_validation_gate_status": _dominant_status(summary_gate_counts),
+                    "message_key": "ui.message.reviewer_boundary_drilldown",
                     "message": (
                         "Overview summary counts summarize row statuses; open summary-job detail to inspect reviewer-boundary explanations."
+                    ),
+                    "fact_line_template_key": "ui.template.reviewer_boundary_fact_line",
+                    "fact_line_params": {
+                        "dataset_key": "summary_jobs",
+                        "enforcement_status": _dominant_status(summary_enforcement_counts),
+                        "validation_gate_status": _dominant_status(summary_gate_counts),
+                    },
+                    "fact_line": (
+                        "This read-only drilldown summary highlights summary_jobs because dominant reviewer enforcement is "
+                        f"{_dominant_status(summary_enforcement_counts)} and dominant reviewer gate status is {_dominant_status(summary_gate_counts)} for the current local boundary."
                     ),
                 },
             ],
@@ -3525,6 +3571,13 @@ function t(key, fallback = '') {{
   const englishCatalog = uiI18nCatalog.en || {{}};
   return localeCatalog[key] || englishCatalog[key] || fallback || key;
 }}
+function formatLabel(key, replacements = {{}}, fallback = '') {{
+  let text = t(key, fallback);
+  for (const [name, value] of Object.entries(replacements || {{}})) {{
+    text = text.replaceAll('{' + name + '}', String(value ?? ''));
+  }}
+  return text;
+}}
 function exactTranslations() {{ return (uiI18nCatalog[currentLocale()] || {{}}).exact || {{}}; }}
 function prefixTranslations() {{ return (uiI18nCatalog[currentLocale()] || {{}}).prefix || {{}}; }}
 function localizeTextValue(value) {{
@@ -3544,6 +3597,19 @@ function localizeTextValue(value) {{
 }}
 function label(key, fallback = '') {{
   return t(key, fallback || key);
+}}
+function reviewerBoundaryDatasetLabel(datasetKey) {{
+  const normalizedDatasetKey = String(datasetKey || '');
+  if (!normalizedDatasetKey) return '';
+  if (normalizedDatasetKey === 'runtime_records') return label('ui.dataset.runtime_records', 'Runtime records');
+  if (normalizedDatasetKey === 'review_queue') return label('ui.dataset.review_queue', 'Review queue');
+  if (normalizedDatasetKey === 'summary_jobs') return label('ui.dataset.summary_jobs', 'Summary jobs');
+  return normalizedDatasetKey;
+}}
+function reviewerBoundaryStatusText(status) {{
+  const normalizedStatus = String(status || '');
+  if (!normalizedStatus) return '';
+  return label('ui.reviewer_boundary_status.' + normalizedStatus, normalizedStatus);
 }}
 function localizeRenderedRegion(element) {{
   if (!element) return;
@@ -3960,9 +4026,21 @@ function renderReviewerBoundaryDrilldownSummary(summary) {{
   if (!summary || !summary.dataset_key) return '';
   const enforcementStatus = summary.enforcement_status || summary.dominant_enforcement_status || '';
   const gateStatus = summary.validation_gate_status || summary.dominant_validation_gate_status || '';
+  const datasetLabel = reviewerBoundaryDatasetLabel(summary.dataset_key || '');
+  const message = summary.message_key
+    ? label(summary.message_key, summary.message || '')
+    : (summary.message || '');
+  const factLine = summary.fact_line_template_key
+    ? formatLabel(summary.fact_line_template_key, {{
+        dataset: datasetLabel,
+        enforcement_status: reviewerBoundaryStatusText(enforcementStatus),
+        validation_gate_status: reviewerBoundaryStatusText(gateStatus),
+      }}, summary.fact_line || '')
+    : (summary.fact_line || '');
   return cellStack([
-    cellMeta(summary.message || ''),
-    cellCode('dataset=' + String(summary.dataset_key || '')),
+    cellMeta(message),
+    cellMeta(factLine),
+    cellCode(label('ui.label.dataset', 'Dataset') + '=' + datasetLabel),
     cellCode(label('ui.label.dominant_enforcement_status', 'Dominant enforcement status') + '=' + reviewerBoundaryStatusLabel('reviewer_enforcement', enforcementStatus)),
     cellCode(label('ui.label.dominant_validation_gate_status', 'Dominant gate status') + '=' + reviewerBoundaryStatusLabel('reviewer_gate', gateStatus)),
     navigationCluster([
@@ -3970,6 +4048,43 @@ function renderReviewerBoundaryDrilldownSummary(summary) {{
       detailJumpButton(summary.detail_path || '', label('button.open_detail', 'Open Detail')),
     ]),
   ]);
+}}
+function reviewerBoundaryDominantButtons(drilldownSummaries) {{
+  const rows = Array.isArray(drilldownSummaries) ? drilldownSummaries : [];
+  return rows.map(item => {{
+    const datasetKey = String(item.dataset_key || '');
+    const datasetLabel = reviewerBoundaryDatasetLabel(datasetKey);
+    const filterTarget = datasetKey === 'runtime_records'
+      ? 'runtimeRecords'
+      : datasetKey === 'review_queue'
+        ? 'reviewQueue'
+        : datasetKey === 'summary_jobs'
+          ? 'summaryJobs'
+          : '';
+    if (!filterTarget) return '';
+    const enforcementStatus = String(item.dominant_enforcement_status || '');
+    const gateStatus = String(item.dominant_validation_gate_status || '');
+    return [
+      enforcementStatus
+        ? jumpBadge(
+            datasetLabel + ' · ' + reviewerBoundaryStatusLabel('reviewer_enforcement', enforcementStatus),
+            'badge-neutral',
+            item.list_path || '',
+            filterTarget,
+            'reviewer_enforcement:' + enforcementStatus,
+          )
+        : '',
+      gateStatus
+        ? jumpBadge(
+            datasetLabel + ' · ' + reviewerBoundaryStatusLabel('reviewer_gate', gateStatus),
+            'badge-neutral',
+            item.list_path || '',
+            filterTarget,
+            'reviewer_gate:' + gateStatus,
+          )
+        : '',
+    ].filter(Boolean).join('');
+  }}).join('');
 }}
 function previewCell(preview, previewActions, options) {{
   const previewSummary = renderPreviewSummary(preview || {{}});
@@ -4053,10 +4168,10 @@ function renderRuntimeRecordRow(row, endpoint) {{
       : badge(label('badge.auth_na', 'Auth n/a'), 'badge-neutral');
   const mutationBadge = mutationEnablementBadge(mutationEnablement);
   const reviewerEnforcementBadge = row.reviewer_enforcement_status
-    ? badge(label('badge.reviewer_enforcement', 'Reviewer enforcement') + ': ' + row.reviewer_enforcement_status, 'badge-neutral')
+    ? badge(reviewerBoundaryStatusLabel('reviewer_enforcement', row.reviewer_enforcement_status), 'badge-neutral')
     : '';
   const reviewerGateBadge = row.reviewer_validation_gate_status
-    ? badge(label('badge.reviewer_gate', 'Reviewer gate') + ': ' + row.reviewer_validation_gate_status, 'badge-neutral')
+    ? badge(reviewerBoundaryStatusLabel('reviewer_gate', row.reviewer_validation_gate_status), 'badge-neutral')
     : '';
   const kindBadge = jumpBadge(
     row.runtime_record_kind || 'unknown',
@@ -4123,10 +4238,10 @@ function renderReviewQueueRow(row, endpoint) {{
   const parityBadge = reviewParityBadge(parity);
   const authBadge = authReadinessBadge(authReadiness.status || '');
   const reviewerEnforcementBadge = row.reviewer_enforcement_status
-    ? badge(label('badge.reviewer_enforcement', 'Reviewer enforcement') + ': ' + row.reviewer_enforcement_status, 'badge-neutral')
+    ? badge(reviewerBoundaryStatusLabel('reviewer_enforcement', row.reviewer_enforcement_status), 'badge-neutral')
     : '';
   const reviewerGateBadge = row.reviewer_validation_gate_status
-    ? badge(label('badge.reviewer_gate', 'Reviewer gate') + ': ' + row.reviewer_validation_gate_status, 'badge-neutral')
+    ? badge(reviewerBoundaryStatusLabel('reviewer_gate', row.reviewer_validation_gate_status), 'badge-neutral')
     : '';
   const reviewRowShortcutButtons = [
     relatedDetailButton(row, '/api/runtime-records/', 'Open matching runtime record'),
@@ -4189,10 +4304,10 @@ function renderSummaryJobRow(row, endpoint) {{
   const packageBadge = packageStatusBadge(packageStatus);
   const responseMetadata = row.response_metadata_summary || {{}};
   const reviewerEnforcementBadge = row.reviewer_enforcement_status
-    ? badge(label('badge.reviewer_enforcement', 'Reviewer enforcement') + ': ' + row.reviewer_enforcement_status, 'badge-neutral')
+    ? badge(reviewerBoundaryStatusLabel('reviewer_enforcement', row.reviewer_enforcement_status), 'badge-neutral')
     : '';
   const reviewerGateBadge = row.reviewer_validation_gate_status
-    ? badge(label('badge.reviewer_gate', 'Reviewer gate') + ': ' + row.reviewer_validation_gate_status, 'badge-neutral')
+    ? badge(reviewerBoundaryStatusLabel('reviewer_gate', row.reviewer_validation_gate_status), 'badge-neutral')
     : '';
   const targetButton = reviewDetailButton(row.review_target_event_id || '');
   const summaryRowShortcutButtons = [
@@ -4499,12 +4614,12 @@ function reviewerBoundaryStatusLabel(kind, status) {{
   const normalizedStatus = String(status || '');
   if (!normalizedStatus) return '';
   if (normalizedKind === 'reviewer_enforcement') {{
-    return label('badge.reviewer_enforcement', 'Reviewer enforcement') + ': ' + normalizedStatus;
+    return label('badge.reviewer_enforcement', 'Reviewer enforcement') + ': ' + reviewerBoundaryStatusText(normalizedStatus);
   }}
   if (normalizedKind === 'reviewer_gate') {{
-    return label('badge.reviewer_gate', 'Reviewer gate') + ': ' + normalizedStatus;
+    return label('badge.reviewer_gate', 'Reviewer gate') + ': ' + reviewerBoundaryStatusText(normalizedStatus);
   }}
-  return normalizedStatus;
+  return reviewerBoundaryStatusText(normalizedStatus);
 }}
 function matchesReviewerBoundaryFilter(filterValue, enforcementStatus, gateStatus) {{
   const normalizedFilter = String(filterValue || '');
@@ -5801,10 +5916,11 @@ function renderOverviewReviewerBoundaryPanel(reviewerBoundary) {{
   const drilldownSummaries = Array.isArray(reviewerBoundary.drilldown_summaries) ? reviewerBoundary.drilldown_summaries : [];
   return renderPanel(
     sectionTitle(label('section.reviewer_boundary', 'Reviewer Boundary'))
-    + detailLine(label('ui.label.enforcement_status', 'Enforcement status'), reviewerBoundary.enforcement_status || '')
-    + detailLine(label('ui.label.validation_gate_status', 'Validation gate status'), reviewerBoundary.validation_gate_status || '')
+    + detailLine(label('ui.label.enforcement_status', 'Enforcement status'), reviewerBoundaryStatusText(reviewerBoundary.enforcement_status || ''))
+    + detailLine(label('ui.label.validation_gate_status', 'Validation gate status'), reviewerBoundaryStatusText(reviewerBoundary.validation_gate_status || ''))
     + detailLine(label('ui.label.session_gated', 'Session gated'), reviewerBoundary.session_gated)
     + detailLine(label('ui.label.fail_closed_route_checks', 'Fail closed route checks'), reviewerBoundary.route_enforced)
+    + '<p>' + reviewerBoundaryDominantButtons(drilldownSummaries) + '</p>'
     + '<p>' + reviewerBoundaryCountButtons('runtimeRecords', '/api/runtime-records', reviewerBoundary.runtime_record_enforcement_counts, reviewerBoundary.runtime_record_validation_gate_counts) + '</p>'
     + '<p>' + reviewerBoundaryCountButtons('reviewQueue', '/api/review-queue', reviewerBoundary.review_queue_enforcement_counts, reviewerBoundary.review_queue_validation_gate_counts) + '</p>'
     + '<p>' + reviewerBoundaryCountButtons('summaryJobs', '/api/summary-jobs', reviewerBoundary.summary_job_enforcement_counts, reviewerBoundary.summary_job_validation_gate_counts) + '</p>'

@@ -111,6 +111,30 @@ def _count_statuses(rows: list[dict[str, Any]], key: str) -> dict[str, int]:
     return counts
 
 
+def _has_reviewer_boundary_drilldown_contract(
+    summary: dict[str, Any] | None, *, allow_detail_path_template: bool = False
+) -> bool:
+    if not isinstance(summary, dict):
+        return False
+    fact_line_params = summary.get("fact_line_params")
+    detail_path_present = bool(summary.get("detail_path")) or (
+        allow_detail_path_template and bool(summary.get("detail_path_template"))
+    )
+    return (
+        bool(summary.get("dataset_key"))
+        and bool(summary.get("list_path"))
+        and detail_path_present
+        and bool(summary.get("message"))
+        and bool(summary.get("message_key"))
+        and bool(summary.get("fact_line"))
+        and bool(summary.get("fact_line_template_key"))
+        and isinstance(fact_line_params, dict)
+        and bool(fact_line_params.get("dataset_key"))
+        and bool(fact_line_params.get("enforcement_status"))
+        and bool(fact_line_params.get("validation_gate_status"))
+    )
+
+
 def run_ui_smoke(root: Path | None = None) -> UISmokeReport:
     """Run read-only UI smoke checks against a Chronicle root."""
     root_path = root or Path.cwd()
@@ -233,11 +257,9 @@ def run_ui_smoke(root: Path | None = None) -> UISmokeReport:
                         isinstance(reviewer_boundary_overview.get("drilldown_summaries"), list)
                         and len(reviewer_boundary_overview.get("drilldown_summaries", [])) == 3
                         and all(
-                            isinstance(item, dict)
-                            and bool(item.get("dataset_key"))
-                            and bool(item.get("list_path"))
-                            and bool(item.get("detail_path_template"))
-                            and bool(item.get("message"))
+                            _has_reviewer_boundary_drilldown_contract(
+                                item, allow_detail_path_template=True
+                            )
                             for item in reviewer_boundary_overview.get("drilldown_summaries", [])
                         ),
                         (
@@ -324,20 +346,13 @@ def run_ui_smoke(root: Path | None = None) -> UISmokeReport:
                 checks.append(
                     UISmokeCheck(
                         f"{endpoint}#reviewer-boundary-drilldown",
-                        isinstance(first_row.get("reviewer_boundary_drilldown_summary"), dict)
-                        and bool(
-                            first_row.get("reviewer_boundary_drilldown_summary", {}).get("dataset_key")
-                        )
-                        and bool(
-                            first_row.get("reviewer_boundary_drilldown_summary", {}).get("detail_path")
+                        _has_reviewer_boundary_drilldown_contract(
+                            first_row.get("reviewer_boundary_drilldown_summary")
                         ),
                         (
                             "ok"
-                            if isinstance(first_row.get("reviewer_boundary_drilldown_summary"), dict)
-                            and bool(
-                                first_row.get("reviewer_boundary_drilldown_summary", {}).get(
-                                    "detail_path"
-                                )
+                            if _has_reviewer_boundary_drilldown_contract(
+                                first_row.get("reviewer_boundary_drilldown_summary")
                             )
                             else "list row missing reviewer-boundary drilldown summary"
                         ),
@@ -373,14 +388,13 @@ def run_ui_smoke(root: Path | None = None) -> UISmokeReport:
                 checks.append(
                     UISmokeCheck(
                         f"{endpoint}/{record_id}#reviewer-boundary-drilldown",
-                        isinstance(record.get("reviewer_boundary_drilldown_summary"), dict)
-                        and bool(record.get("reviewer_boundary_drilldown_summary", {}).get("list_path"))
-                        and bool(record.get("reviewer_boundary_drilldown_summary", {}).get("detail_path")),
+                        _has_reviewer_boundary_drilldown_contract(
+                            record.get("reviewer_boundary_drilldown_summary")
+                        ),
                         (
                             "ok"
-                            if isinstance(record.get("reviewer_boundary_drilldown_summary"), dict)
-                            and bool(
-                                record.get("reviewer_boundary_drilldown_summary", {}).get("detail_path")
+                            if _has_reviewer_boundary_drilldown_contract(
+                                record.get("reviewer_boundary_drilldown_summary")
                             )
                             else "review detail missing reviewer-boundary drilldown summary"
                         ),
@@ -588,14 +602,13 @@ def run_ui_smoke(root: Path | None = None) -> UISmokeReport:
                 checks.append(
                     UISmokeCheck(
                         f"{endpoint}/{record_id}#reviewer-boundary-drilldown",
-                        isinstance(record.get("reviewer_boundary_drilldown_summary"), dict)
-                        and bool(record.get("reviewer_boundary_drilldown_summary", {}).get("list_path"))
-                        and bool(record.get("reviewer_boundary_drilldown_summary", {}).get("detail_path")),
+                        _has_reviewer_boundary_drilldown_contract(
+                            record.get("reviewer_boundary_drilldown_summary")
+                        ),
                         (
                             "ok"
-                            if isinstance(record.get("reviewer_boundary_drilldown_summary"), dict)
-                            and bool(
-                                record.get("reviewer_boundary_drilldown_summary", {}).get("detail_path")
+                            if _has_reviewer_boundary_drilldown_contract(
+                                record.get("reviewer_boundary_drilldown_summary")
                             )
                             else "runtime detail missing reviewer-boundary drilldown summary"
                         ),
@@ -677,14 +690,13 @@ def run_ui_smoke(root: Path | None = None) -> UISmokeReport:
                 checks.append(
                     UISmokeCheck(
                         f"{endpoint}/{record_id}#reviewer-boundary-drilldown",
-                        isinstance(record.get("reviewer_boundary_drilldown_summary"), dict)
-                        and bool(record.get("reviewer_boundary_drilldown_summary", {}).get("list_path"))
-                        and bool(record.get("reviewer_boundary_drilldown_summary", {}).get("detail_path")),
+                        _has_reviewer_boundary_drilldown_contract(
+                            record.get("reviewer_boundary_drilldown_summary")
+                        ),
                         (
                             "ok"
-                            if isinstance(record.get("reviewer_boundary_drilldown_summary"), dict)
-                            and bool(
-                                record.get("reviewer_boundary_drilldown_summary", {}).get("detail_path")
+                            if _has_reviewer_boundary_drilldown_contract(
+                                record.get("reviewer_boundary_drilldown_summary")
                             )
                             else "summary detail missing reviewer-boundary drilldown summary"
                         ),

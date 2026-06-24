@@ -13,6 +13,8 @@ It is expected to confirm that:
 - detail surfaces still expose reviewer-boundary summaries
 - overview, list, and detail surfaces expose reviewer-boundary drilldown summaries where implemented
 - HTML shell still renders reviewer-boundary drilldown summaries as read-only navigation aids
+- overview drilldown navigation still exposes dominant reviewer-boundary state jumps
+- localized drilldown dataset/status wording still derives from structured summary fields rather than mutating authoritative payload contracts
 - any added read-only drilldown summaries remain derived from existing reviewer-boundary state
 - no new write capability is implied by the presentation-drilldown additions
 
@@ -30,7 +32,7 @@ chronicle ui-smoke --json
 Expected current version baseline:
 
 ```text
-chronicle 1.11.0
+chronicle 1.12.0
 ```
 
 ## Manual spot checks

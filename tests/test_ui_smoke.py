@@ -112,6 +112,18 @@ def test_run_ui_smoke_success(tmp_path):
     assert "/api/review-queue#reviewer-boundary-drilldown" in check_names
     assert "/api/summary-jobs#reviewer-boundary-statuses" in check_names
     assert "/api/summary-jobs#reviewer-boundary-drilldown" in check_names
+    assert any(
+        check["name"] == "/api/runtime-records#reviewer-boundary-drilldown" and check["passed"]
+        for check in payload["checks"]
+    )
+    assert any(
+        check["name"] == "/api/review-queue#reviewer-boundary-drilldown" and check["passed"]
+        for check in payload["checks"]
+    )
+    assert any(
+        check["name"] == "/api/summary-jobs#reviewer-boundary-drilldown" and check["passed"]
+        for check in payload["checks"]
+    )
     assert any(name.endswith("#reviewer-boundary") for name in check_names)
     assert any(name.endswith("#reviewer-boundary-drilldown") for name in check_names)
     assert any(name.startswith("/api/contexts/") for name in check_names)

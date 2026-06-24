@@ -13,11 +13,15 @@ Related: `docs/adr/0031-local-reviewer-boundary-presentation-drilldown.md`, `doc
 Current `v1.12.0` repository progress includes:
 
 - accepted ADR scope for reviewer-boundary presentation drilldown
+- version bump and changelog update for `1.12.0`
 - release-readiness, release-notes, and smoke-profile entry points for the lane
 - explicit framing that the next slice returns to presentation/read-model improvements after smoke-contract preservation
 - read-only reviewer-boundary drilldown summaries across overview, runtime, review, and summary payloads
 - HTML-shell visibility for reviewer-boundary drilldown summaries across overview, list, and detail surfaces
+- dominant reviewer-boundary state visibility across overview drilldown navigation
+- i18n-ready drilldown rendering that formats localized dataset and status labels from structured summary fields
 - smoke coverage for reviewer-boundary drilldown summaries across overview, list, and detail surfaces
+- editable install, `chronicle --version`, `ruff`, `pytest`, and `ui-smoke` verification
 
 ## Boundary notes
 

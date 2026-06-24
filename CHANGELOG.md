@@ -2,7 +2,34 @@
 
 ## Unreleased
 
-- Started `v1.12.0` release-lane framing for local reviewer-boundary presentation/read-model drilldown.
+- No unreleased changes recorded.
+
+## v1.12.0 - 2026-06-24
+
+### Added
+- `v1.12.0` release-track documents:
+  - `docs/release-status-v1.12.0.md`
+  - `docs/release-readiness-v1.12.md`
+  - `docs/release-notes-v1.12.0.md`
+  - `docs/smoke-test-v1.12.md`
+  - `docs/v1.12-release-remaining-issues.md`
+- Dedicated `v1.12.0` release-lane framing for local reviewer-boundary presentation/read-model drilldown.
+- Read-only reviewer-boundary drilldown summaries across overview, runtime, review, and summary payloads.
+- HTML-shell visibility for reviewer-boundary drilldown summaries across overview, list, and detail surfaces.
+- Dominant reviewer-boundary state navigation from overview into matching list slices.
+- Structured reviewer-boundary drilldown message and fact-line template fields for presentation-layer i18n.
+- `ui-smoke` contract coverage for reviewer-boundary drilldown summaries and their structured presentation fields.
+
+### Changed
+- Project version finalized as `1.12.0`.
+- `v1.12.0` release-lane documents now treat `v1.11.0` as the historical published baseline rather than the active repository-side lane.
+- Reviewer-boundary overview, list, and detail rendering now formats localized dataset and status copy from structured read-only summary fields.
+
+### Notes
+- `v1.12.0` is a local reviewer-boundary presentation-drilldown release over the published `v1.11.0` baseline.
+- Repository-side release preparation is complete once editable reinstall, version verification, lint, tests, and local `ui-smoke` pass for this checkout.
+- The release remains local-first, read-only, presentation-only for i18n wording, and derived from existing UI payload contracts.
+- `v1.12.0` still does not imply hosted auth, default-on mutation, multi-user-safe authority, localized machine-readable payload values, correctness proof, or security certification.
 
 ## v1.11.0 - 2026-06-24
 

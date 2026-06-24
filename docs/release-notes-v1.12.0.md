@@ -17,6 +17,8 @@ Chronicle Stack `v1.12.0` is currently framed as a local reviewer-boundary prese
 - preserved machine-readable reviewer-boundary values in API payloads
 - read-only drilldown summary payloads for runtime records, review queue rows, and summary jobs
 - HTML-shell rendering for those drilldown summaries in overview, list, and detail views
+- dominant reviewer-boundary state badges that jump from overview into matching list slices
+- structured drilldown message/template fields that keep localized dataset and status copy in the presentation layer
 
 ### i18n-ready presentation alignment
 
@@ -58,5 +60,5 @@ chronicle ui-smoke --json
 Expected current version baseline:
 
 ```text
-chronicle 1.11.0
+chronicle 1.12.0
 ```
