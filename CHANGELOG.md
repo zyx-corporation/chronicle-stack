@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Started `v1.12.0` release-lane framing for local reviewer-boundary presentation/read-model drilldown.
+
 ## v1.11.0 - 2026-06-24
 
 ### Added

@@ -302,33 +302,38 @@ ruff check src/ tests/
 ## リリース
 
 - Latest published release: **v1.11.0**
-- Current repository-side release target: **TBD after v1.11.0 publication**
+- Current repository-side release target: **v1.12.0**
 - v1.7.0 release status: [docs/release-status-v1.7.0.md](docs/release-status-v1.7.0.md)
 - v1.8.0 release status: [docs/release-status-v1.8.0.md](docs/release-status-v1.8.0.md)
 - v1.9.0 release status: [docs/release-status-v1.9.0.md](docs/release-status-v1.9.0.md)
 - v1.10.0 release status: [docs/release-status-v1.10.0.md](docs/release-status-v1.10.0.md)
 - v1.11.0 release status: [docs/release-status-v1.11.0.md](docs/release-status-v1.11.0.md)
+- v1.12.0 release status: [docs/release-status-v1.12.0.md](docs/release-status-v1.12.0.md)
 - v1.7.0 release readiness: [docs/release-readiness-v1.7.md](docs/release-readiness-v1.7.md)
 - v1.11.0 release readiness: [docs/release-readiness-v1.11.md](docs/release-readiness-v1.11.md)
+- v1.12.0 release readiness: [docs/release-readiness-v1.12.md](docs/release-readiness-v1.12.md)
 - v1.10.0 release readiness: [docs/release-readiness-v1.10.md](docs/release-readiness-v1.10.md)
 - v1.9.0 release readiness: [docs/release-readiness-v1.9.md](docs/release-readiness-v1.9.md)
 - v1.8.0 release readiness: [docs/release-readiness-v1.8.md](docs/release-readiness-v1.8.md)
 - v1.11.0 release notes: [docs/release-notes-v1.11.0.md](docs/release-notes-v1.11.0.md)
+- v1.12.0 release notes: [docs/release-notes-v1.12.0.md](docs/release-notes-v1.12.0.md)
 - v1.10.0 release notes: [docs/release-notes-v1.10.0.md](docs/release-notes-v1.10.0.md)
 - v1.9.0 release notes: [docs/release-notes-v1.9.0.md](docs/release-notes-v1.9.0.md)
 - v1.8.0 release notes: [docs/release-notes-v1.8.0.md](docs/release-notes-v1.8.0.md)
 - v1.9.0 remaining issues: [docs/v1.9-release-remaining-issues.md](docs/v1.9-release-remaining-issues.md)
 - v1.10.0 remaining issues: [docs/v1.10-release-remaining-issues.md](docs/v1.10-release-remaining-issues.md)
 - v1.11.0 remaining issues: [docs/v1.11-release-remaining-issues.md](docs/v1.11-release-remaining-issues.md)
+- v1.12.0 remaining issues: [docs/v1.12-release-remaining-issues.md](docs/v1.12-release-remaining-issues.md)
 - v1.8.0 remaining issues: [docs/v1.8-release-remaining-issues.md](docs/v1.8-release-remaining-issues.md)
 - v1.11.0 smoke profile: [docs/smoke-test-v1.11.md](docs/smoke-test-v1.11.md)
+- v1.12.0 smoke profile: [docs/smoke-test-v1.12.md](docs/smoke-test-v1.12.md)
 - v1.10.0 smoke profile: [docs/smoke-test-v1.10.md](docs/smoke-test-v1.10.md)
 - v1.7.0 smoke profile: [docs/smoke-test-v1.7.md](docs/smoke-test-v1.7.md)
 - v1.9.0 smoke profile: [docs/smoke-test-v1.9.md](docs/smoke-test-v1.9.md)
 - v1.8.0 smoke profile: [docs/smoke-test-v1.8.md](docs/smoke-test-v1.8.md)
 - v1.7.0 release notes: [docs/release-notes-v1.7.0.md](docs/release-notes-v1.7.0.md)
 - v1.11.0 publication is complete and now serves as the immediate historical baseline.
-- The next repository-side release lane is `TBD after v1.11.0 publication`.
+- `v1.12.0` is the active repository-side reviewer-boundary presentation-drilldown release lane.
 
 ## ライセンス
 
