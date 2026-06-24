@@ -319,6 +319,31 @@ def run_ui_smoke(root: Path | None = None) -> UISmokeReport:
                 ),
             )
         )
+        package_review_payload = collection_payloads.get("/api/package-review", {})
+        package_review = (
+            package_review_payload.get("package_review", {})
+            if isinstance(package_review_payload, dict)
+            else {}
+        )
+        checks.append(
+            UISmokeCheck(
+                "/api/package-review#structured-contract",
+                isinstance(package_review, dict)
+                and bool(package_review.get("status"))
+                and bool(package_review.get("message_key"))
+                and bool(package_review.get("counts_summary_key"))
+                and bool(package_review.get("boundary_note_key")),
+                (
+                    "ok"
+                    if isinstance(package_review, dict)
+                    and bool(package_review.get("status"))
+                    and bool(package_review.get("message_key"))
+                    and bool(package_review.get("counts_summary_key"))
+                    and bool(package_review.get("boundary_note_key"))
+                    else "package review missing structured contract fields"
+                ),
+            )
+        )
         graph_summary_payload = collection_payloads.get("/api/graph-summary", {})
         graph_summary = (
             graph_summary_payload.get("graph_summary", {})

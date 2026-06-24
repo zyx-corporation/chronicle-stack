@@ -815,7 +815,17 @@ def test_ui_data_service_read_endpoints(tmp_path):
     assert service.ui_boundary()["ui_boundary"]["loopback_only"] is True
     assert "events" in service.events()
     assert "rde_records" in service.rde_records()
-    assert "status" in service.package_review_snapshot()
+    package_review = service.package_review_snapshot()
+    assert package_review["status"] in {"pass", "warning", "blocked", "unavailable"}
+    assert package_review["message_key"] in {
+        "ui.package_review.message.pass",
+        "ui.package_review.message.warning",
+        "ui.package_review.message.blocked",
+        "ui.package_review.message.unavailable",
+    }
+    assert package_review["counts_summary_key"] == "ui.template.package_review.counts"
+    assert package_review["boundary_note_key"] == "ui.package_review.note.read_only_derived"
+    assert package_review["counts_summary_params"]["record_count"] >= 0
     assert service.graph_summary()["status"] == "available"
     assert service.graph_summary()["message_key"] == "ui.graph_summary.message.available"
     assert service.graph_summary()["counts_summary_key"] == "ui.template.graph_summary.counts"
