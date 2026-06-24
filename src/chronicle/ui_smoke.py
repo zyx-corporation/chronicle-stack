@@ -121,7 +121,8 @@ def _has_reviewer_boundary_drilldown_contract(
         allow_detail_path_template and bool(summary.get("detail_path_template"))
     )
     return (
-        bool(summary.get("dataset_key"))
+        bool(summary.get("summary_variant"))
+        and bool(summary.get("dataset_key"))
         and bool(summary.get("list_path"))
         and detail_path_present
         and bool(summary.get("message"))

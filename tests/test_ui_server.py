@@ -602,6 +602,7 @@ def test_ui_data_service_read_endpoints(tmp_path):
     assert runtime_summary_row["reviewer_enforcement_status"] == "descriptive_only"
     assert runtime_summary_row["reviewer_validation_gate_status"] == "read_only_preview"
     assert runtime_summary_row["reviewer_boundary_drilldown_summary"]["dataset_key"] == "runtime_records"
+    assert runtime_summary_row["reviewer_boundary_drilldown_summary"]["summary_variant"] == "row_detail"
     assert runtime_summary_row["reviewer_boundary_drilldown_summary"]["detail_path"] == (
         f"/api/runtime-records/{ids['runtime_summary_event_id']}"
     )
@@ -622,7 +623,7 @@ def test_ui_data_service_read_endpoints(tmp_path):
         "enforcement_status": "descriptive_only",
         "validation_gate_status": "read_only_preview",
     }
-    assert "This read-only drilldown row is here because reviewer enforcement is descriptive_only" in (
+    assert "This read-only drilldown row appears in runtime records because reviewer enforcement is descriptive only" in (
         runtime_summary_row["reviewer_boundary_drilldown_summary"]["fact_line"]
     )
     assert len(service.review_queue()["review_queue"]) == 3
@@ -707,14 +708,17 @@ def test_ui_data_service_read_endpoints(tmp_path):
     assert overview["reviewer_boundary_overview"]["drilldown_summaries"][0]["message_key"] == (
         "ui.message.reviewer_boundary_drilldown"
     )
+    assert overview["reviewer_boundary_overview"]["drilldown_summaries"][0]["summary_variant"] == (
+        "overview_dominant"
+    )
     assert overview["reviewer_boundary_overview"]["drilldown_summaries"][0]["message_template_key"] == (
-        "ui.template.reviewer_boundary_drilldown_message"
+        "ui.template.reviewer_boundary_overview_message"
     )
     assert overview["reviewer_boundary_overview"]["drilldown_summaries"][0]["message_params"] == {
         "dataset_key": "runtime_records",
     }
     assert overview["reviewer_boundary_overview"]["drilldown_summaries"][0]["fact_line_template_key"] == (
-        "ui.template.reviewer_boundary_fact_line"
+        "ui.template.reviewer_boundary_dominant_fact_line"
     )
     assert overview["reviewer_boundary_overview"]["drilldown_summaries"][0]["fact_line_params"] == {
         "dataset_key": "runtime_records",
@@ -1365,6 +1369,8 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "label('button.open_list', 'Open List')" in html
     assert "label('button.open_detail', 'Open Detail')" in html
     assert "label('ui.label.dataset', 'Dataset')" in html
+    assert "Object.assign({}, summary.message_params || {}" in html
+    assert "Object.assign({}, summary.fact_line_params || {}" in html
     assert "formatLabel(summary.message_template_key" in html
     assert "label(summary.message_key, summary.message || '')" in html
     assert "formatLabel(summary.fact_line_template_key" in html

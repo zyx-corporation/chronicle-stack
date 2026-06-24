@@ -4,6 +4,31 @@
 
 - No unreleased changes recorded.
 
+## v1.14.0 - 2026-06-24
+
+### Added
+- `v1.14.0` release-track documents:
+  - `docs/release-status-v1.14.0.md`
+  - `docs/release-readiness-v1.14.md`
+  - `docs/release-notes-v1.14.0.md`
+  - `docs/smoke-test-v1.14.md`
+  - `docs/v1.14-release-remaining-issues.md`
+- Dedicated `v1.14.0` release-lane framing for local reviewer-boundary derived fallback copy.
+- Explicit drilldown variants for row-detail versus overview-dominant reviewer-boundary summaries.
+- Deterministic fallback message and fact-line copy derived from structured reviewer-boundary contracts.
+- `ui-smoke` coverage for explicit reviewer-boundary drilldown variants and derived fallback-copy fields.
+
+### Changed
+- Project version finalized as `1.14.0`.
+- `v1.14.0` release-lane documents now treat `v1.13.0` as the historical published baseline rather than the active repository-side lane.
+- Reviewer-boundary drilldown rendering now consumes variant-aware template params before fallback literals.
+
+### Notes
+- `v1.14.0` is a local reviewer-boundary derived-fallback-copy release over the published `v1.13.0` baseline.
+- Repository-side release preparation is complete once editable reinstall, version verification, lint, tests, and local `ui-smoke` pass for this checkout.
+- The release remains local-first, read-only, presentation-only for i18n wording, and derived from existing UI payload contracts.
+- `v1.14.0` still does not imply hosted auth, default-on mutation, multi-user-safe authority, localized machine-readable payload values, correctness proof, or security certification.
+
 ## v1.13.0 - 2026-06-24
 
 ### Added

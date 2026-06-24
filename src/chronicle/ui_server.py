@@ -272,6 +272,53 @@ def _dominant_status(counts: dict[str, int]) -> str:
     return max(sorted(counts), key=lambda key: counts.get(key, 0))
 
 
+def _reviewer_boundary_dataset_fallback_label(dataset_key: str) -> str:
+    return {
+        "runtime_records": "runtime records",
+        "review_queue": "review queue",
+        "summary_jobs": "summary jobs",
+    }.get(dataset_key, dataset_key.replace("_", " "))
+
+
+def _reviewer_boundary_status_fallback_label(status: str) -> str:
+    return status.replace("_", " ")
+
+
+def _reviewer_boundary_fallback_message(*, dataset_key: str, overview: bool) -> str:
+    dataset_label = _reviewer_boundary_dataset_fallback_label(dataset_key)
+    if overview:
+        return (
+            f"{dataset_label.capitalize()} reviewer-boundary summary is a read-only drilldown for moving "
+            "from overview counts to list rows and detail explanation."
+        )
+    return (
+        f"{dataset_label.capitalize()} reviewer-boundary summary is a read-only drilldown for moving "
+        "from overview counts to list rows and detail explanation."
+    )
+
+
+def _reviewer_boundary_fallback_fact_line(
+    *,
+    dataset_key: str,
+    enforcement_status: str,
+    gate_status: str,
+    dominant: bool,
+) -> str:
+    dataset_label = _reviewer_boundary_dataset_fallback_label(dataset_key)
+    enforcement_label = _reviewer_boundary_status_fallback_label(enforcement_status)
+    gate_label = _reviewer_boundary_status_fallback_label(gate_status)
+    if dominant:
+        return (
+            f"This read-only drilldown summary highlights {dataset_label} because dominant reviewer "
+            f"enforcement is {enforcement_label} and dominant reviewer gate status is {gate_label} "
+            "for the current local boundary."
+        )
+    return (
+        f"This read-only drilldown row appears in {dataset_label} because reviewer enforcement is "
+        f"{enforcement_label} and reviewer gate status is {gate_label} for the current local boundary."
+    )
+
+
 def _reviewer_boundary_drilldown_summary(
     *,
     dataset_key: str,
@@ -281,6 +328,7 @@ def _reviewer_boundary_drilldown_summary(
     gate_status: str,
 ) -> dict[str, Any]:
     return {
+        "summary_variant": "row_detail",
         "dataset_key": dataset_key,
         "overview_path": "/api/overview",
         "list_path": list_path,
@@ -301,13 +349,12 @@ def _reviewer_boundary_drilldown_summary(
             "validation_gate_status": gate_status,
         },
         "summary_level": "read_only_reviewer_boundary_drilldown",
-        "message": (
-            "Use overview reviewer-boundary counts for slice selection, "
-            "list rows for row status, and detail payloads for explanation."
-        ),
-        "fact_line": (
-            f"This read-only drilldown row is here because reviewer enforcement is {enforcement_status} "
-            f"and reviewer gate status is {gate_status} for the current local boundary."
+        "message": _reviewer_boundary_fallback_message(dataset_key=dataset_key, overview=False),
+        "fact_line": _reviewer_boundary_fallback_fact_line(
+            dataset_key=dataset_key,
+            enforcement_status=enforcement_status,
+            gate_status=gate_status,
+            dominant=False,
         ),
     }
 
@@ -1363,78 +1410,90 @@ class ChronicleUIDataService:
             "summary_job_validation_gate_counts": summary_gate_counts,
             "drilldown_summaries": [
                 {
+                    "summary_variant": "overview_dominant",
                     "dataset_key": "runtime_records",
                     "list_path": "/api/runtime-records",
                     "detail_path_template": "/api/runtime-records/<event_id>",
                     "dominant_enforcement_status": _dominant_status(runtime_enforcement_counts),
                     "dominant_validation_gate_status": _dominant_status(runtime_gate_counts),
-                    "message_template_key": "ui.template.reviewer_boundary_drilldown_message",
+                    "message_template_key": "ui.template.reviewer_boundary_overview_message",
                     "message_params": {
                         "dataset_key": "runtime_records",
                     },
                     "message_key": "ui.message.reviewer_boundary_drilldown",
-                    "message": (
-                        "Overview runtime counts summarize row statuses; open runtime records to inspect each event and detail payload."
+                    "message": _reviewer_boundary_fallback_message(
+                        dataset_key="runtime_records",
+                        overview=True,
                     ),
-                    "fact_line_template_key": "ui.template.reviewer_boundary_fact_line",
+                    "fact_line_template_key": "ui.template.reviewer_boundary_dominant_fact_line",
                     "fact_line_params": {
                         "dataset_key": "runtime_records",
                         "enforcement_status": _dominant_status(runtime_enforcement_counts),
                         "validation_gate_status": _dominant_status(runtime_gate_counts),
                     },
-                    "fact_line": (
-                        "This read-only drilldown summary highlights runtime_records because dominant reviewer enforcement is "
-                        f"{_dominant_status(runtime_enforcement_counts)} and dominant reviewer gate status is {_dominant_status(runtime_gate_counts)} for the current local boundary."
+                    "fact_line": _reviewer_boundary_fallback_fact_line(
+                        dataset_key="runtime_records",
+                        enforcement_status=_dominant_status(runtime_enforcement_counts),
+                        gate_status=_dominant_status(runtime_gate_counts),
+                        dominant=True,
                     ),
                 },
                 {
+                    "summary_variant": "overview_dominant",
                     "dataset_key": "review_queue",
                     "list_path": "/api/review-queue",
                     "detail_path_template": "/api/review-queue/<target_event_id>",
                     "dominant_enforcement_status": _dominant_status(review_enforcement_counts),
                     "dominant_validation_gate_status": _dominant_status(review_gate_counts),
-                    "message_template_key": "ui.template.reviewer_boundary_drilldown_message",
+                    "message_template_key": "ui.template.reviewer_boundary_overview_message",
                     "message_params": {
                         "dataset_key": "review_queue",
                     },
                     "message_key": "ui.message.reviewer_boundary_drilldown",
-                    "message": (
-                        "Overview review counts summarize pending review rows; open review queue detail to inspect reviewer-boundary explanations."
+                    "message": _reviewer_boundary_fallback_message(
+                        dataset_key="review_queue",
+                        overview=True,
                     ),
-                    "fact_line_template_key": "ui.template.reviewer_boundary_fact_line",
+                    "fact_line_template_key": "ui.template.reviewer_boundary_dominant_fact_line",
                     "fact_line_params": {
                         "dataset_key": "review_queue",
                         "enforcement_status": _dominant_status(review_enforcement_counts),
                         "validation_gate_status": _dominant_status(review_gate_counts),
                     },
-                    "fact_line": (
-                        "This read-only drilldown summary highlights review_queue because dominant reviewer enforcement is "
-                        f"{_dominant_status(review_enforcement_counts)} and dominant reviewer gate status is {_dominant_status(review_gate_counts)} for the current local boundary."
+                    "fact_line": _reviewer_boundary_fallback_fact_line(
+                        dataset_key="review_queue",
+                        enforcement_status=_dominant_status(review_enforcement_counts),
+                        gate_status=_dominant_status(review_gate_counts),
+                        dominant=True,
                     ),
                 },
                 {
+                    "summary_variant": "overview_dominant",
                     "dataset_key": "summary_jobs",
                     "list_path": "/api/summary-jobs",
                     "detail_path_template": "/api/summary-jobs/<summary_job_id>",
                     "dominant_enforcement_status": _dominant_status(summary_enforcement_counts),
                     "dominant_validation_gate_status": _dominant_status(summary_gate_counts),
-                    "message_template_key": "ui.template.reviewer_boundary_drilldown_message",
+                    "message_template_key": "ui.template.reviewer_boundary_overview_message",
                     "message_params": {
                         "dataset_key": "summary_jobs",
                     },
                     "message_key": "ui.message.reviewer_boundary_drilldown",
-                    "message": (
-                        "Overview summary counts summarize row statuses; open summary-job detail to inspect reviewer-boundary explanations."
+                    "message": _reviewer_boundary_fallback_message(
+                        dataset_key="summary_jobs",
+                        overview=True,
                     ),
-                    "fact_line_template_key": "ui.template.reviewer_boundary_fact_line",
+                    "fact_line_template_key": "ui.template.reviewer_boundary_dominant_fact_line",
                     "fact_line_params": {
                         "dataset_key": "summary_jobs",
                         "enforcement_status": _dominant_status(summary_enforcement_counts),
                         "validation_gate_status": _dominant_status(summary_gate_counts),
                     },
-                    "fact_line": (
-                        "This read-only drilldown summary highlights summary_jobs because dominant reviewer enforcement is "
-                        f"{_dominant_status(summary_enforcement_counts)} and dominant reviewer gate status is {_dominant_status(summary_gate_counts)} for the current local boundary."
+                    "fact_line": _reviewer_boundary_fallback_fact_line(
+                        dataset_key="summary_jobs",
+                        enforcement_status=_dominant_status(summary_enforcement_counts),
+                        gate_status=_dominant_status(summary_gate_counts),
+                        dominant=True,
                     ),
                 },
             ],
@@ -4043,19 +4102,21 @@ function renderReviewerBoundaryDrilldownSummary(summary) {{
   const enforcementStatus = summary.enforcement_status || summary.dominant_enforcement_status || '';
   const gateStatus = summary.validation_gate_status || summary.dominant_validation_gate_status || '';
   const datasetLabel = reviewerBoundaryDatasetLabel(summary.dataset_key || '');
+  const messageParams = Object.assign({{}}, summary.message_params || {{}}, {{
+    dataset: datasetLabel,
+  }});
+  const factLineParams = Object.assign({{}}, summary.fact_line_params || {{}}, {{
+    dataset: datasetLabel,
+    enforcement_status: reviewerBoundaryStatusText(enforcementStatus),
+    validation_gate_status: reviewerBoundaryStatusText(gateStatus),
+  }});
   const message = summary.message_template_key
-    ? formatLabel(summary.message_template_key, {{
-        dataset: datasetLabel,
-      }}, summary.message || '')
+    ? formatLabel(summary.message_template_key, messageParams, summary.message || '')
     : summary.message_key
       ? label(summary.message_key, summary.message || '')
       : (summary.message || '');
   const factLine = summary.fact_line_template_key
-    ? formatLabel(summary.fact_line_template_key, {{
-        dataset: datasetLabel,
-        enforcement_status: reviewerBoundaryStatusText(enforcementStatus),
-        validation_gate_status: reviewerBoundaryStatusText(gateStatus),
-      }}, summary.fact_line || '')
+    ? formatLabel(summary.fact_line_template_key, factLineParams, summary.fact_line || '')
     : (summary.fact_line || '');
   return cellStack([
     cellMeta(message),
