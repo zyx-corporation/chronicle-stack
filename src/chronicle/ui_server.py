@@ -296,6 +296,36 @@ def _review_capability_message_key(can_review_now: bool) -> str:
     )
 
 
+def _package_readiness_message_key(status: str) -> str:
+    if status == "package_context_available":
+        return "ui.package_readiness.message.package_context_available"
+    if status == "no_context_records":
+        return "ui.package_readiness.message.no_context_records"
+    return "ui.package_readiness.message.unavailable"
+
+
+def _package_handoff_message_key(status: str) -> str:
+    if status == "package_context_available":
+        return "ui.package_handoff.message.package_context_available"
+    if status == "no_context_records":
+        return "ui.package_handoff.message.no_context_records"
+    return "ui.package_handoff.message.unavailable"
+
+
+def _review_action_preview_message_key(mutation_enabled: bool, can_review_now: bool) -> str:
+    if mutation_enabled and can_review_now:
+        return "ui.action_preview.message.enabled_ready"
+    if mutation_enabled and not can_review_now:
+        return "ui.action_preview.message.enabled_blocked"
+    if not mutation_enabled and can_review_now:
+        return "ui.action_preview.message.preview_only_ready"
+    return "ui.action_preview.message.preview_only_blocked"
+
+
+def _cli_parity_message_key(aligned: bool) -> str:
+    return "ui.cli_parity.message.aligned" if aligned else "ui.cli_parity.message.drift_detected"
+
+
 def _append_mutation_blocker(
     blockers: list[str],
     next_steps: list[str],
@@ -2098,6 +2128,7 @@ class ChronicleUIDataService:
         }
         if not context_ids:
             payload["message"] = "No context records were selected by the retrieval dry-run, so package preview is advisory only."
+            payload["message_key"] = _package_handoff_message_key(str(payload["status"]))
             return payload
         package = self.packages.build_context_package(
             purpose=payload["purpose"],
@@ -2107,6 +2138,7 @@ class ChronicleUIDataService:
         payload["package_manifest_preview"] = package.manifest.model_dump(mode="json")
         payload["package_review"] = review.model_dump(mode="json")
         payload["message"] = "Read-only package preview derived from retrieval-plan context hits."
+        payload["message_key"] = _package_handoff_message_key(str(payload["status"]))
         return payload
 
     def runtime_related_links(self, event_id: str, payload: dict[str, Any]) -> list[dict[str, str]]:
@@ -2171,6 +2203,11 @@ class ChronicleUIDataService:
             return {
                 "status": "missing_target",
                 "message": "Target event is not available for package readiness derivation.",
+                "message_key": "ui.package_readiness.message.unavailable",
+                "message_params": {
+                    "eligible_context_count": 0,
+                    "review_status": "not_available",
+                },
                 "suggested_commands": [],
             }
 
@@ -2195,6 +2232,11 @@ class ChronicleUIDataService:
                 "eligible_context_ids": [],
                 "skipped_record_ids": [],
                 "message": "No context-linked records are available for package/export preview from this review target.",
+                "message_key": "ui.package_readiness.message.no_context_records",
+                "message_params": {
+                    "eligible_context_count": 0,
+                    "review_status": "not_available",
+                },
                 "suggested_commands": ["chronicle show --json", "chronicle review queue --json"],
                 "package_review_required": True,
             }
@@ -2209,6 +2251,11 @@ class ChronicleUIDataService:
             "eligible_context_ids": context_ids,
             "skipped_record_ids": [],
             "message": "Read-only package readiness derived from context-linked review target records.",
+            "message_key": "ui.package_readiness.message.package_context_available",
+            "message_params": {
+                "eligible_context_count": len(context_ids),
+                "review_status": str(review.status.value),
+            },
             "suggested_commands": [
                 'chronicle package review --purpose "review target handoff"',
                 'chronicle package context --purpose "review target handoff" --persist',
@@ -2558,6 +2605,13 @@ class ChronicleUIDataService:
             "warning_count": len(warnings) if isinstance(warnings, list) else 0,
             "label": label,
             "message": message,
+            "message_key": _package_readiness_message_key(status),
+            "message_params": {
+                "eligible_context_count": len(eligible_context_ids)
+                if isinstance(eligible_context_ids, list)
+                else 0,
+                "review_status": review_status,
+            },
         }
 
     @staticmethod
@@ -2827,6 +2881,7 @@ class ChronicleUIDataService:
                     else "UI mutation is not enabled; boundary warnings still require CLI-led review."
                 )
             ),
+            "message_key": _review_action_preview_message_key(mutation_enabled, can_review_now),
             "cli_equivalent": cli_equivalent,
             "recovery_summary": str(failure_contract.get("recovery_path", "")),
             "follow_up_summary": str((success_contract.get("follow_up_commands") or [""])[0]),
@@ -2884,6 +2939,7 @@ class ChronicleUIDataService:
                 if aligned
                 else "UI preview commands drifted from the append-only review CLI contract."
             ),
+            "message_key": _cli_parity_message_key(aligned),
         }
 
     def detail_payload(self, path: str) -> dict[str, Any] | None:
@@ -5694,7 +5750,7 @@ function renderPackageHandoffPreviewNotice(record) {{
     label('notice.package_handoff_preview', 'Package Handoff Preview'),
     packageContextNoticeBody(
       preview.status,
-      preview.message,
+      localizedPayloadText(preview),
       packageReview,
       manifest,
       preview.eligible_context_ids,
@@ -5753,7 +5809,7 @@ function renderPackageReadinessNotice(record) {{
     label('notice.review_package_readiness', 'Review Package Readiness'),
     packageContextNoticeBody(
       readiness.status,
-      readiness.message,
+      localizedPayloadText(readiness),
       packageReview,
       manifest,
       readiness.eligible_context_ids,
@@ -5866,6 +5922,7 @@ function renderDetailActionPreviewNotice(record) {{
     ...reviewQueueStatusButtons(capability.status),
     ...reviewQueueStatusButtons(parity.status),
   ];
+  const localizedPreviewMessage = localizedPayloadText(preview);
   const recoveryContractSection = noticeSection(
     label('section.recovery_contract', 'Recovery Contract'),
     recoveryContractDetailLines(failureContract, 'action-preview-response')
@@ -5889,7 +5946,7 @@ function renderDetailActionPreviewNotice(record) {{
     label('notice.action_preview', 'Action Preview'),
     noticeSection(
       label('status.detail', 'Detail'),
-      statusMessageBody(preview.status, preview.message, previewButtons)
+      statusMessageBody(preview.status, localizedPreviewMessage, previewButtons)
     )
       + recoveryContractSection
       + reviewActionSection
@@ -5902,7 +5959,7 @@ function renderCliParityNotice(record) {{
   const parityButtons = reviewQueueStatusButtons(parity.status);
   return renderNotice(
     label('notice.cli_parity', 'CLI Parity'),
-    statusMessageBody(parity.status, parity.message, parityButtons)
+    statusMessageBody(parity.status, localizedPayloadText(parity), parityButtons)
       + detailListLine('Expected actions', parity.expected_actions)
       + detailListLine('Missing preview commands', parity.missing_preview_commands, ' | ')
       + detailListLine('Missing queue commands', parity.missing_queue_commands, ' | ')

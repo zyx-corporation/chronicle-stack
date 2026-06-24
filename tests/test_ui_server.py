@@ -691,6 +691,10 @@ def test_ui_data_service_read_endpoints(tmp_path):
     assert service.summary_jobs_list()["summary_jobs"][0]["package_readiness_status"] == "no_context_records"
     assert service.summary_jobs_list()["summary_jobs"][0]["cli_parity_status"] == "aligned"
     assert service.summary_jobs_list()["summary_jobs"][0]["action_preview_summary"]["status"] == "preview_only"
+    assert (
+        service.summary_jobs_list()["summary_jobs"][0]["action_preview_summary"]["message_key"]
+        == "ui.action_preview.message.preview_only_blocked"
+    )
     assert service.summary_jobs_list()["summary_jobs"][0]["action_preview_summary"]["cli_equivalent"].startswith(
         "chronicle review approve --event evt_"
     )
@@ -722,7 +726,15 @@ def test_ui_data_service_read_endpoints(tmp_path):
     )
     assert service.review_queue()["review_queue"][0]["package_readiness_summary"]["label"].startswith("package:")
     assert service.review_queue()["review_queue"][0]["package_readiness_summary"]["message"]
+    assert (
+        service.review_queue()["review_queue"][0]["package_readiness_summary"]["message_key"]
+        == "ui.package_readiness.message.package_context_available"
+    )
     assert service.review_queue()["review_queue"][0]["action_preview_summary"]["status"] == "preview_only"
+    assert (
+        service.review_queue()["review_queue"][0]["action_preview_summary"]["message_key"]
+        == "ui.action_preview.message.preview_only_blocked"
+    )
     assert service.review_queue()["review_queue"][0]["action_preview_summary"]["follow_up_summary"] == (
         "chronicle review queue --include-resolved --json"
     )
@@ -746,6 +758,10 @@ def test_ui_data_service_read_endpoints(tmp_path):
     assert service.review_queue()["review_queue"][0]["mutation_enablement_summary"]["operational_status"] == "blocked"
     assert service.review_queue()["review_queue"][0]["mutation_enablement_summary"]["remaining_summary"]
     assert service.review_queue()["review_queue"][0]["cli_parity_summary"]["status"] == "aligned"
+    assert (
+        service.review_queue()["review_queue"][0]["cli_parity_summary"]["message_key"]
+        == "ui.cli_parity.message.aligned"
+    )
     assert service.review_queue()["review_queue"][0]["cli_parity_summary"]["expected_actions"] == [
         "approve",
         "reject",
@@ -1641,9 +1657,9 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "const localizedScopeNote = notice.scope_note_key" in html
     assert "statusScopeNoticeBody(notice.status, localizedMessage, noticeButtons, localizedScopeNote)" in html
     assert "statusMessageBody(assurance.status, localizedPayloadText(assurance), assuranceButtons)" in html
-    assert "statusMessageBody(parity.status, parity.message, parityButtons)" in html
+    assert "statusMessageBody(parity.status, localizedPayloadText(parity), parityButtons)" in html
     assert "statusMessageBody(capability.status, localizedPayloadText(capability))" in html
-    assert "statusMessageBody(preview.status, preview.message, previewButtons)" in html
+    assert "statusMessageBody(preview.status, localizedPreviewMessage, previewButtons)" in html
     assert "detailListLine('Expected actions', parity.expected_actions)" in html
     assert "label('button.open_review_queue', 'Open Review Queue')" in html
     assert "latestResponseButton(authBoundaryOverview.latest_provider_response_detail_path, 'button.open_latest_review_response', 'Open Latest Review Response')" in html
@@ -1754,6 +1770,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "blockerSummaryDetailLines(blockerDetails, notice.blockers, blockerSummaries, notice.next_steps)" in html
     assert "label('notice.review_capability', 'Review Capability')" in html
     assert "label('notice.action_preview', 'Action Preview')" in html
+    assert "const localizedPreviewMessage = localizedPayloadText(preview)" in html
     assert "summaryJsonLine('Execution request', executionRequest)" in html
     assert "downstreamCommands.map(command => copyCommandButton(command, 'action-preview-response', t('button.copy_cli')))" in html
     assert "ui.label.execution_request" in html
@@ -1763,6 +1780,9 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "uiLabel('Preview blocked route')" in html
     assert "data-preview-post" in html
     assert "Blocked route preview stays read-only and returns the CLI fallback contract." in html
+    assert "localizedPayloadText(readiness)" in html
+    assert "localizedPayloadText(preview)" in html
+    assert "localizedPayloadText(parity)" in html
     assert "uiLabel('Status: ')" in html
     assert "uiLabel('Route: ')" in html
     assert "uiLabel('No matching runtime records for current filter.')" in html

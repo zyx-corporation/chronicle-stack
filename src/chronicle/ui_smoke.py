@@ -408,10 +408,14 @@ def run_ui_smoke(root: Path | None = None) -> UISmokeReport:
                 checks.append(
                     UISmokeCheck(
                         f"{endpoint}/{record_id}#cli-parity",
-                        isinstance(cli_parity, dict) and cli_parity.get("status") == "aligned",
+                        isinstance(cli_parity, dict)
+                        and cli_parity.get("status") == "aligned"
+                        and bool(cli_parity.get("message_key")),
                         (
                             "ok"
-                            if isinstance(cli_parity, dict) and cli_parity.get("status") == "aligned"
+                            if isinstance(cli_parity, dict)
+                            and cli_parity.get("status") == "aligned"
+                            and bool(cli_parity.get("message_key"))
                             else "review detail missing aligned cli parity summary"
                         ),
                     )
@@ -546,6 +550,7 @@ def run_ui_smoke(root: Path | None = None) -> UISmokeReport:
                         isinstance(first_action, dict)
                         and first_action.get("post_expected_status") == 403
                         and first_action.get("post_expected_error_code") == "mutation_disabled"
+                        and bool(action_preview.get("message_key"))
                         and isinstance(action_preview.get("failure_contract"), dict)
                         and action_preview.get("failure_contract", {}).get("rollback_status") == "fail_closed",
                         (
@@ -553,6 +558,7 @@ def run_ui_smoke(root: Path | None = None) -> UISmokeReport:
                             if isinstance(first_action, dict)
                             and first_action.get("post_expected_status") == 403
                             and first_action.get("post_expected_error_code") == "mutation_disabled"
+                            and bool(action_preview.get("message_key"))
                             and isinstance(action_preview.get("failure_contract"), dict)
                             and action_preview.get("failure_contract", {}).get("rollback_status") == "fail_closed"
                             else "review detail missing blocked route preview contract"
@@ -827,6 +833,7 @@ def run_ui_smoke(root: Path | None = None) -> UISmokeReport:
                         isinstance(first_action, dict)
                         and first_action.get("post_expected_status") == 403
                         and first_action.get("post_expected_error_code") == "mutation_disabled"
+                        and bool(preview.get("message_key"))
                         and isinstance(preview.get("failure_contract"), dict)
                         and preview.get("failure_contract", {}).get("rollback_status") == "fail_closed",
                         (
@@ -834,6 +841,7 @@ def run_ui_smoke(root: Path | None = None) -> UISmokeReport:
                             if isinstance(first_action, dict)
                             and first_action.get("post_expected_status") == 403
                             and first_action.get("post_expected_error_code") == "mutation_disabled"
+                            and bool(preview.get("message_key"))
                             and isinstance(preview.get("failure_contract"), dict)
                             and preview.get("failure_contract", {}).get("rollback_status") == "fail_closed"
                             else "summary detail missing blocked route preview contract"
