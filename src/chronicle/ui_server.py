@@ -350,6 +350,15 @@ def _package_readiness_counts_contract(
     }
 
 
+def _response_metadata_counts_contract(
+    *, metadata_count: int, response_key_count: int
+) -> tuple[str, dict[str, Any]]:
+    return "ui.template.provider_response.counts", {
+        "metadata_count": metadata_count,
+        "response_key_count": response_key_count,
+    }
+
+
 def _review_action_preview_message_key(mutation_enabled: bool, can_review_now: bool) -> str:
     if mutation_enabled and can_review_now:
         return "ui.action_preview.message.enabled_ready"
@@ -2699,6 +2708,10 @@ class ChronicleUIDataService:
     ) -> dict[str, Any]:
         metadata = response_metadata or {}
         keys = [str(item) for item in (response_keys or [])]
+        counts_key, counts_params = _response_metadata_counts_contract(
+            metadata_count=len(metadata),
+            response_key_count=len(keys),
+        )
         return {
             "present": bool(metadata or keys),
             "message": (
@@ -2720,6 +2733,10 @@ class ChronicleUIDataService:
             "metadata_count": len(metadata),
             "response_key_count": len(keys),
             "response_keys": keys,
+            "counts_summary_key": counts_key,
+            "counts_summary_params": counts_params,
+            "boundary_note": "Provider response metadata remains derived, read-only, and non-authoritative over primary Chronicle records.",
+            "boundary_note_key": "ui.provider_response.note.read_only_derived",
         }
 
     def _runtime_response_metadata_summary(self, *, payload: dict[str, Any]) -> dict[str, Any]:
@@ -6288,10 +6305,18 @@ function responseMetadataDetailLines(summary) {{
 function renderResponseMetadataNotice(record) {{
   if (!record.response_metadata_summary || !record.response_metadata_summary.present) return '';
   const summary = record.response_metadata_summary;
+  const localizedCounts = summary.counts_summary_key
+    ? formatLabel(summary.counts_summary_key, summary.counts_summary_params || {{}}, '')
+    : '';
+  const localizedBoundaryNote = summary.boundary_note_key
+    ? formatLabel(summary.boundary_note_key, {{}}, summary.boundary_note || '')
+    : (summary.boundary_note || '');
   return renderNotice(
     label('notice.provider_response', 'Provider Response'),
     messageParagraph(localizedPayloadText(summary))
       + responseMetadataDetailLines(summary)
+      + detailLine('Hit counts', localizedCounts)
+      + detailLine('Scope note', localizedBoundaryNote)
   );
 }}
 function renderPackageReadinessNotice(record) {{

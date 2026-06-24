@@ -128,6 +128,8 @@ def test_ui_i18n_catalog_contains_core_shell_and_navigation_keys():
         "ui.cli_parity.message.drift_detected",
         "ui.provider_response.message.present",
         "ui.provider_response.message.unavailable",
+        "ui.template.provider_response.counts",
+        "ui.provider_response.note.read_only_derived",
         "ui.retrieval_handoff.message.records_available",
         "ui.retrieval_handoff.message.no_records",
         "ui.template.retrieval_handoff.hit_counts",

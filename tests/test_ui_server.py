@@ -909,17 +909,30 @@ def test_ui_data_service_exposes_provider_response_metadata_in_read_only_views(t
             "response_id",
             "usage",
         ],
+        "counts_summary_key": "ui.template.provider_response.counts",
+        "counts_summary_params": {
+            "metadata_count": 6,
+            "response_key_count": 5,
+        },
+        "boundary_note": "Provider response metadata remains derived, read-only, and non-authoritative over primary Chronicle records.",
+        "boundary_note_key": "ui.provider_response.note.read_only_derived",
     }
 
     summary_job_row = service.summary_jobs_list()["summary_jobs"][0]
     assert summary_job_row["response_metadata_summary"]["response_id"] == "resp_ui_metadata"
     assert summary_job_row["response_metadata_summary"]["usage_output_tokens"] == 7
     assert summary_job_row["response_metadata_summary"]["response_key_count"] == 5
+    assert summary_job_row["response_metadata_summary"]["counts_summary_key"] == (
+        "ui.template.provider_response.counts"
+    )
 
     review_row = service.review_queue()["review_queue"][0]
     assert review_row["response_metadata_summary"]["response_id"] == "resp_ui_metadata"
     assert review_row["response_metadata_summary"]["finish_reason"] == "stop"
     assert review_row["response_metadata_summary"]["usage_total_tokens"] == 21
+    assert review_row["response_metadata_summary"]["boundary_note_key"] == (
+        "ui.provider_response.note.read_only_derived"
+    )
 
     overview = service.overview()
     assert overview["runtime_records_summary"]["provider_response_present_count"] == 1
@@ -1444,6 +1457,8 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "preview.counts_summary_key" in html
     assert "label('notice.review_package_readiness', 'Review Package Readiness')" in html
     assert "readiness.counts_summary_key" in html
+    assert "label('notice.provider_response', 'Provider Response')" in html
+    assert "summary.counts_summary_key" in html
     assert "label('notice.related_links', 'Related Links')" in html
     assert "readiness.label_key" in html
     assert "const localizedMessage = localizedPayloadText(handoff);" in html

@@ -22,7 +22,7 @@ from chronicle.services.summary_job_service import SummaryJobService
 from chronicle.ui_smoke import run_ui_smoke
 
 
-def _populate(root):
+def _populate(root, monkeypatch=None):
     ChronicleService(root).init("UI Smoke")
     context = ContextService(root).add_context(title="Smoke Context", visibility_hint=VisibilityHint.PUBLIC)
     artifact_file = root / "artifact.md"
@@ -56,15 +56,43 @@ def _populate(root):
         reason_class=LifecycleReasonClass.PRIVACY,
         reason="Smoke lifecycle",
     )
-    RuntimeService(root).summarize(
-        text="Smoke runtime summary. It stays local.",
-        record=True,
-    )
+    if monkeypatch is not None:
+        RuntimeConfigService(root).set_http(
+            base_url="https://runtime.example.invalid/v1",
+            model_name="smoke-http-model",
+            api_key_env="OPENAI_API_KEY",
+            allow_network=True,
+        )
+        monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+        monkeypatch.setattr(
+            RuntimeService,
+            "_invoke_http_operation",
+            staticmethod(
+                lambda **_kwargs: {
+                    "output_text": "Smoke runtime summary. It stays local.",
+                    "response_id": "resp_ui_smoke",
+                    "finish_reason": "stop",
+                    "provider_status": "ok",
+                    "usage": {"input_tokens": 11, "output_tokens": 5, "total_tokens": 16},
+                }
+            ),
+        )
+        RuntimeService(root).invoke(
+            text="Smoke runtime summary. It stays local.",
+            operation="summarize",
+            record=True,
+            execute_configured_provider=True,
+            draft_summary_title="Smoke Runtime Draft",
+        )
+    else:
+        RuntimeService(root).summarize(
+            text="Smoke runtime summary. It stays local.",
+            record=True,
+        )
     RuntimeService(root).retrieve_plan(
         query="Smoke Context",
         record=True,
     )
-    RuntimeConfigService(root).set_local(model_name="smoke-local-model", provider_name="smoke-local")
     SummaryJobService(root).create_manual_draft(
         title="Smoke Summary Draft",
         summary_text="Smoke summary draft body.",
@@ -72,8 +100,8 @@ def _populate(root):
     )
 
 
-def test_run_ui_smoke_success(tmp_path):
-    _populate(tmp_path)
+def test_run_ui_smoke_success(tmp_path, monkeypatch):
+    _populate(tmp_path, monkeypatch)
 
     report = run_ui_smoke(tmp_path)
 
@@ -113,6 +141,7 @@ def test_run_ui_smoke_success(tmp_path):
     assert "/api/overview#summary-identity-readiness" in check_names
     assert "/api/runtime-records#reviewer-boundary-statuses" in check_names
     assert "/api/runtime-records#reviewer-boundary-drilldown" in check_names
+    assert "/api/runtime-records#provider-response-structured-contract" in check_names
     assert "/api/review-queue#reviewer-boundary-statuses" in check_names
     assert "/api/review-queue#reviewer-boundary-drilldown" in check_names
     assert "/api/review-queue#package-readiness-summary-contract" in check_names

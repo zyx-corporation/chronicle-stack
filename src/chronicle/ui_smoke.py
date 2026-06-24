@@ -459,6 +459,32 @@ def run_ui_smoke(root: Path | None = None) -> UISmokeReport:
                         ),
                     )
                 )
+                response_metadata_row = next(
+                    (
+                        row
+                        for row in rows
+                        if isinstance(row.get("response_metadata_summary"), dict)
+                        and row.get("response_metadata_summary", {}).get("present")
+                    ),
+                    row_for_detail,
+                )
+                response_metadata = response_metadata_row.get("response_metadata_summary", {})
+                if isinstance(response_metadata, dict) and response_metadata.get("present"):
+                    checks.append(
+                        UISmokeCheck(
+                            f"{endpoint}#provider-response-structured-contract",
+                            bool(response_metadata.get("message_key"))
+                            and bool(response_metadata.get("counts_summary_key"))
+                            and bool(response_metadata.get("boundary_note_key")),
+                            (
+                                "ok"
+                                if bool(response_metadata.get("message_key"))
+                                and bool(response_metadata.get("counts_summary_key"))
+                                and bool(response_metadata.get("boundary_note_key"))
+                                else "list row missing provider response structured contract"
+                            ),
+                        )
+                    )
             if endpoint == "/api/review-queue":
                 readiness_summary = row_for_detail.get("package_readiness_summary", {})
                 checks.append(
