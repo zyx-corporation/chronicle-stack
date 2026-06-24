@@ -423,13 +423,25 @@ def run_ui_smoke(root: Path | None = None) -> UISmokeReport:
                         isinstance(auth_notice, dict)
                         and bool(auth_notice.get("status"))
                         and bool(auth_notice.get("scope_note"))
-                        and isinstance(auth_notice.get("blocker_summaries"), list),
+                        and isinstance(auth_notice.get("blocker_summaries"), list)
+                        and all(
+                            isinstance(item, dict)
+                            and bool(item.get("summary"))
+                            and bool(item.get("summary_key"))
+                            for item in auth_notice.get("blocker_summaries", [])
+                        ),
                         (
                             "ok"
                             if isinstance(auth_notice, dict)
                             and bool(auth_notice.get("status"))
                             and bool(auth_notice.get("scope_note"))
                             and isinstance(auth_notice.get("blocker_summaries"), list)
+                            and all(
+                                isinstance(item, dict)
+                                and bool(item.get("summary"))
+                                and bool(item.get("summary_key"))
+                                for item in auth_notice.get("blocker_summaries", [])
+                            )
                             else "review detail missing auth readiness notice"
                         ),
                     )
@@ -442,7 +454,9 @@ def run_ui_smoke(root: Path | None = None) -> UISmokeReport:
                             isinstance(mutation_enablement, dict)
                             and isinstance(mutation_enablement.get("blocker_summaries"), list)
                             and all(
-                                isinstance(item, dict) and bool(item.get("summary"))
+                                isinstance(item, dict)
+                                and bool(item.get("summary"))
+                                and bool(item.get("summary_key"))
                                 for item in mutation_enablement.get("blocker_summaries", [])
                             )
                             and isinstance(mutation_enablement.get("operational_readiness"), dict)
@@ -902,7 +916,9 @@ def run_ui_smoke(root: Path | None = None) -> UISmokeReport:
                     isinstance(mutation_readiness, dict)
                     and isinstance(mutation_readiness.get("blocker_summaries"), list)
                     and all(
-                        isinstance(item, dict) and bool(item.get("summary"))
+                        isinstance(item, dict)
+                        and bool(item.get("summary"))
+                        and bool(item.get("summary_key"))
                         for item in mutation_readiness.get("blocker_summaries", [])
                     )
                     and isinstance(mutation_readiness.get("operational_readiness"), dict)
@@ -942,7 +958,9 @@ def run_ui_smoke(root: Path | None = None) -> UISmokeReport:
                     if isinstance(mutation_readiness, dict)
                     and isinstance(mutation_readiness.get("blocker_summaries"), list)
                     and all(
-                        isinstance(item, dict) and bool(item.get("summary"))
+                        isinstance(item, dict)
+                        and bool(item.get("summary"))
+                        and bool(item.get("summary_key"))
                         for item in mutation_readiness.get("blocker_summaries", [])
                     )
                     and isinstance(mutation_readiness.get("operational_readiness"), dict)

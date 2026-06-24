@@ -192,6 +192,14 @@ def test_startup_metadata(tmp_path):
     assert payload["ui_boundary"]["mutation_readiness_status"] == "preview_only"
     assert "write_routes_disabled" in payload["ui_boundary"]["mutation_blockers"]
     assert payload["ui_boundary"]["mutation_blocker_details"][0]["code"] == "write_routes_disabled"
+    assert (
+        payload["ui_boundary"]["mutation_blocker_details"][0]["message_key"]
+        == "ui.mutation_blocker.write_routes_disabled"
+    )
+    auth_boundary_summary = payload["ui_boundary"]["auth_boundary_summary"]
+    assert auth_boundary_summary["blocker_details"][0]["message_key"] == "ui.auth_boundary_blocker.auth_not_enabled"
+    assert auth_boundary_summary["blocker_summaries"][0]["summary_key"] == "ui.template.auth_boundary_blocker_summary"
+    assert auth_boundary_summary["blocker_summaries"][0]["summary_params"]["message"]
     assert payload["ui_boundary"]["reviewer_context_requirements"]["required_fields"] == [
         "reviewer_label",
         "reviewer_kind",
@@ -325,8 +333,16 @@ def test_startup_metadata(tmp_path):
     assert payload["ui_boundary"]["auth_boundary_summary"]["status"] == "auth_not_enabled"
     assert "auth_not_enabled" in payload["ui_boundary"]["auth_boundary_summary"]["blockers"]
     assert payload["ui_boundary"]["auth_boundary_summary"]["blocker_details"] == [
-        {"code": "auth_not_enabled", "message": "Define explicit local auth boundary."},
-        {"code": "authorization_not_enabled", "message": "Define authorization semantics for reviewer actions."},
+        {
+            "code": "auth_not_enabled",
+            "message_key": "ui.auth_boundary_blocker.auth_not_enabled",
+            "message": "Define explicit local auth boundary.",
+        },
+        {
+            "code": "authorization_not_enabled",
+            "message_key": "ui.auth_boundary_blocker.authorization_not_enabled",
+            "message": "Define authorization semantics for reviewer actions.",
+        },
     ]
 
 
@@ -463,10 +479,15 @@ def test_ui_overview_data(tmp_path):
         "UI review remains advisory-only until an explicit local auth boundary"
     )
     assert "Define explicit local auth boundary." in overview["auth_boundary_summary"]["next_steps"]
-    assert overview["auth_boundary_summary"]["blocker_details"][0] == {
-        "code": "auth_not_enabled",
-        "message": "Define explicit local auth boundary.",
-    }
+    assert overview["auth_boundary_summary"]["blocker_details"][0]["code"] == "auth_not_enabled"
+    assert (
+        overview["auth_boundary_summary"]["blocker_details"][0]["message_key"]
+        == "ui.auth_boundary_blocker.auth_not_enabled"
+    )
+    assert (
+        overview["auth_boundary_summary"]["blocker_details"][0]["message"]
+        == "Define explicit local auth boundary."
+    )
     assert overview["auth_boundary_summary"]["blocker_summaries"][0]["summary"].startswith(
         "Auth boundary: "
     )
@@ -930,7 +951,8 @@ def test_ui_html_filtering_includes_provider_response_metadata_fields(tmp_path, 
     assert "mutationOperationalDetailLines(operationalReadiness, blockerSummaries, enablementChecks)" in html
     assert "function renderMutationEnablementNotice(record)" in html
     assert "label('notice.mutation_enablement', 'Mutation Enablement')" in html
-    assert "detailListLine('Blocker sources', blockerSummaries.map(item => (item.summary || ((item.source_label || item.source || 'unknown') + ': ' + (item.message || item.code || 'blocker')))), ' | ')" in html
+    assert "item && item.summary_key" in html
+    assert "formatLabel(item.summary_key, item.summary_params || {}, item.summary || item.code || 'blocker')" in html
     assert "detailLine('Reviewer label pattern', reviewerContext.reviewer_label_pattern || '')" in html
     assert "detailLine('Write route', writeRouteContract.route_template || '')" in html
     assert "detailListLine('Action routes', (writeRouteContract.action_routes || []).map(item => ((item.action || 'action') + ': ' + (item.path_template || ''))), ' | ')" in html
@@ -1263,7 +1285,8 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "function uiLabel(text)" in html
     assert "function reviewWarningLabel(code)" in html
     assert "function detailMessages(items, fallbackItems = [])" in html
-    assert "localizeTextValue(item.message || '')" in html
+    assert "item && item.message_key" in html
+    assert "formatLabel(item.message_key, item.message_params || {}, item.message || '')" in html
     assert "return fallback.map(item => reviewWarningLabel(item)).join(' | ') || '';" in html
     assert "function contractDetailLines(successContract, failureContract, targetId)" in html
     assert "function renderReviewActionResultPanel(title, responseStatus, path, payload, targetId, options = {})" in html
@@ -1374,6 +1397,8 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "formatLabel(summary.message_template_key" in html
     assert "label(summary.message_key, summary.message || '')" in html
     assert "formatLabel(summary.fact_line_template_key" in html
+    assert "item && item.summary_key" in html
+    assert "formatLabel(item.summary_key, item.summary_params || {}, item.summary || item.code || 'blocker')" in html
     assert "function reviewerBoundaryFilterValue(kind, status)" in html
     assert "function reviewerBoundaryCountButtons(target, endpoint, enforcementCounts, gateCounts)" in html
     assert "function overviewRuntimeRecordCountButtons(counts, runtimeRecords)" in html
@@ -2258,12 +2283,18 @@ def test_review_queue_auth_boundary_notice_exposes_human_blocker_details(tmp_pat
     assert notice["blocker_details"] == [
         {
             "code": "reviewer_identity_missing",
+            "message_key": "ui.auth_boundary_blocker.reviewer_identity_missing",
             "message": "Record reviewer identity metadata before relying on GUI review signals.",
         }
     ]
     assert notice["blocker_summaries"] == [
         {
             "code": "reviewer_identity_missing",
+            "message_key": "ui.auth_boundary_blocker.reviewer_identity_missing",
+            "summary_key": "ui.template.auth_boundary_blocker_summary",
+            "summary_params": {
+                "message": "Record reviewer identity metadata before relying on GUI review signals.",
+            },
             "summary": "Auth boundary: Record reviewer identity metadata before relying on GUI review signals.",
         }
     ]

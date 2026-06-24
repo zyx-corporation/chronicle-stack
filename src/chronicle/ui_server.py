@@ -152,16 +152,22 @@ def _serialize_auth_boundary_blocker_details(blockers: list[str]) -> list[dict[s
     return [
         {
             "code": blocker,
+            "message_key": f"ui.auth_boundary_blocker.{blocker}",
             "message": AUTH_BOUNDARY_BLOCKER_TEXT.get(blocker, blocker.replace("_", " ")),
         }
         for blocker in blockers
     ]
 
 
-def _auth_blocker_summaries(blockers: list[str]) -> list[dict[str, str]]:
+def _auth_blocker_summaries(blockers: list[str]) -> list[dict[str, Any]]:
     return [
         {
             "code": blocker,
+            "message_key": f"ui.auth_boundary_blocker.{blocker}",
+            "summary_key": "ui.template.auth_boundary_blocker_summary",
+            "summary_params": {
+                "message": AUTH_BOUNDARY_BLOCKER_TEXT.get(blocker, blocker.replace("_", " ")),
+            },
             "summary": f"Auth boundary: {AUTH_BOUNDARY_BLOCKER_TEXT.get(blocker, blocker.replace('_', ' '))}",
         }
         for blocker in blockers
@@ -253,6 +259,7 @@ def _serialize_mutation_blocker_details(blockers: list[str]) -> list[dict[str, s
     return [
         {
             "code": blocker,
+            "message_key": f"ui.mutation_blocker.{blocker}",
             "message": MUTATION_BLOCKER_TEXT.get(blocker, blocker.replace("_", " ")),
         }
         for blocker in blockers
@@ -382,10 +389,19 @@ def _mutation_blocker_summaries(
         rows.append(
             {
                 "code": blocker_code,
+                "message_key": f"ui.mutation_blocker.{blocker_code}",
                 "message": MUTATION_BLOCKER_TEXT.get(blocker_code, blocker_code.replace("_", " ")),
                 "source": "boundary",
+                "source_label_key": "ui.mutation_blocker_source.boundary",
                 "source_label": _mutation_blocker_source_label("boundary"),
                 "affected_count": 1,
+                "summary_key": "ui.template.mutation_blocker_summary_boundary",
+                "summary_params": {
+                    "source_label": _mutation_blocker_source_label("boundary"),
+                    "message": MUTATION_BLOCKER_TEXT.get(
+                        blocker_code, blocker_code.replace("_", " ")
+                    ),
+                },
                 "summary": (
                     "Boundary prerequisites: "
                     + MUTATION_BLOCKER_TEXT.get(blocker_code, blocker_code.replace("_", " "))
@@ -400,10 +416,20 @@ def _mutation_blocker_summaries(
         rows.append(
             {
                 "code": blocker_code,
+                "message_key": f"ui.mutation_blocker.{blocker_code}",
                 "message": MUTATION_BLOCKER_TEXT.get(blocker_code, blocker_code.replace("_", " ")),
                 "source": "review_queue",
+                "source_label_key": "ui.mutation_blocker_source.review_queue",
                 "source_label": _mutation_blocker_source_label("review_queue"),
                 "affected_count": count,
+                "summary_key": "ui.template.mutation_blocker_summary_review_queue",
+                "summary_params": {
+                    "source_label": _mutation_blocker_source_label("review_queue"),
+                    "affected_count": count,
+                    "message": MUTATION_BLOCKER_TEXT.get(
+                        blocker_code, blocker_code.replace("_", " ")
+                    ),
+                },
                 "summary": (
                     f"Pending review queue ({count}): "
                     + MUTATION_BLOCKER_TEXT.get(blocker_code, blocker_code.replace("_", " "))
@@ -3790,7 +3816,11 @@ function sourceCountBadges(sourceCounts) {{
 function detailMessages(items, fallbackItems = []) {{
   const details = Array.isArray(items) ? items : [];
   const fallback = Array.isArray(fallbackItems) ? fallbackItems : [];
-  const detailMessages = details.map(item => localizeTextValue(item.message || ''));
+  const detailMessages = details.map(item =>
+    item && item.message_key
+      ? formatLabel(item.message_key, item.message_params || {{}}, item.message || '')
+      : localizeTextValue(item.message || '')
+  );
   if (detailMessages.length > 0) return detailMessages.join(' | ');
   return fallback.map(item => reviewWarningLabel(item)).join(' | ') || '';
 }}
@@ -5438,7 +5468,11 @@ function mutationOperationalDetailLines(operationalReadiness, blockerSummaries, 
   return detailLine('Operational readiness', operationalReadiness.status || '')
     + detailLine('Operational summary', operationalReadiness.message || '')
     + detailLine('Remaining prerequisites', operationalReadiness.remaining_count ?? 0)
-    + detailListLine('Blocker sources', blockerSummaries.map(item => (item.summary || ((item.source_label || item.source || 'unknown') + ': ' + (item.message || item.code || 'blocker')))), ' | ')
+    + detailListLine('Blocker sources', blockerSummaries.map(item => (
+      item && item.summary_key
+        ? formatLabel(item.summary_key, item.summary_params || {{}}, item.summary || item.code || 'blocker')
+        : (item.summary || ((item.source_label || item.source || 'unknown') + ': ' + (item.message || item.code || 'blocker')))
+    )), ' | ')
     + detailListLine(checksLabel, enablementChecks.map(check => ((check.satisfied ? 'ok: ' : 'blocked: ') + (check.label || check.code || 'check'))), ' | ')
     + detailListLine('Remaining checks', operationalReadiness.blocking_summaries || [], ' | ');
 }}
@@ -5493,7 +5527,11 @@ function statusScopeNoticeBody(status, message, buttons = [], scopeNote = '') {{
 }}
 function blockerSummaryDetailLines(blockerDetails, blockers, blockerSummaries = [], nextSteps = []) {{
   return detailLine('Blockers', detailMessages(blockerDetails, blockers))
-    + detailListLine('Blocker summaries', blockerSummaries.map(item => (item.summary || item.code || 'blocker')), ' | ')
+    + detailListLine('Blocker summaries', blockerSummaries.map(item => (
+      item && item.summary_key
+        ? formatLabel(item.summary_key, item.summary_params || {{}}, item.summary || item.code || 'blocker')
+        : (item.summary || item.code || 'blocker')
+    )), ' | ')
     + detailListLine('Next steps', nextSteps, ' | ');
 }}
 function renderPackageHandoffPreviewNotice(record) {{
