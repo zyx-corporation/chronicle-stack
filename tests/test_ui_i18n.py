@@ -104,6 +104,8 @@ def test_ui_i18n_catalog_contains_core_shell_and_navigation_keys():
         "ui.package_readiness.message.package_context_available",
         "ui.package_readiness.message.no_context_records",
         "ui.package_readiness.message.unavailable",
+        "ui.template.package_readiness.counts",
+        "ui.package_readiness.note.read_only_derived",
         "ui.package_readiness.summary.label.pass",
         "ui.package_readiness.summary.label.warning",
         "ui.package_readiness.summary.label.blocked",

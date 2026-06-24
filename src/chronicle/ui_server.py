@@ -341,6 +341,15 @@ def _package_handoff_counts_contract(
     }
 
 
+def _package_readiness_counts_contract(
+    *, eligible_context_count: int, skipped_record_count: int
+) -> tuple[str, dict[str, Any]]:
+    return "ui.template.package_readiness.counts", {
+        "eligible_context_count": eligible_context_count,
+        "skipped_record_count": skipped_record_count,
+    }
+
+
 def _review_action_preview_message_key(mutation_enabled: bool, can_review_now: bool) -> str:
     if mutation_enabled and can_review_now:
         return "ui.action_preview.message.enabled_ready"
@@ -2520,6 +2529,13 @@ class ChronicleUIDataService:
                 "status": "missing_target",
                 "message": "Target event is not available for package readiness derivation.",
                 "message_key": "ui.package_readiness.message.unavailable",
+                "counts_summary_key": "ui.template.package_readiness.counts",
+                "counts_summary_params": {
+                    "eligible_context_count": 0,
+                    "skipped_record_count": 0,
+                },
+                "boundary_note": "Package readiness remains derived, read-only, and non-authoritative over primary Chronicle records.",
+                "boundary_note_key": "ui.package_readiness.note.read_only_derived",
                 "message_params": {
                     "eligible_context_count": 0,
                     "review_status": "not_available",
@@ -2549,6 +2565,13 @@ class ChronicleUIDataService:
                 "skipped_record_ids": [],
                 "message": "No context-linked records are available for package/export preview from this review target.",
                 "message_key": "ui.package_readiness.message.no_context_records",
+                "counts_summary_key": "ui.template.package_readiness.counts",
+                "counts_summary_params": {
+                    "eligible_context_count": 0,
+                    "skipped_record_count": 0,
+                },
+                "boundary_note": "Package readiness remains derived, read-only, and non-authoritative over primary Chronicle records.",
+                "boundary_note_key": "ui.package_readiness.note.read_only_derived",
                 "message_params": {
                     "eligible_context_count": 0,
                     "review_status": "not_available",
@@ -2562,12 +2585,20 @@ class ChronicleUIDataService:
             context_ids=context_ids,
         )
         review = self.package_review.review_package(package)
+        counts_key, counts_params = _package_readiness_counts_contract(
+            eligible_context_count=len(context_ids),
+            skipped_record_count=0,
+        )
         return {
             "status": "package_context_available",
             "eligible_context_ids": context_ids,
             "skipped_record_ids": [],
             "message": "Read-only package readiness derived from context-linked review target records.",
             "message_key": "ui.package_readiness.message.package_context_available",
+            "counts_summary_key": counts_key,
+            "counts_summary_params": counts_params,
+            "boundary_note": "Package readiness remains derived, read-only, and non-authoritative over primary Chronicle records.",
+            "boundary_note_key": "ui.package_readiness.note.read_only_derived",
             "message_params": {
                 "eligible_context_count": len(context_ids),
                 "review_status": str(review.status.value),
@@ -6269,6 +6300,12 @@ function renderPackageReadinessNotice(record) {{
   const packageReview = readiness.package_review || {{}};
   const manifest = readiness.package_manifest_preview || {{}};
   const readinessButtons = reviewQueueStatusButtons(readiness.status, 'package:');
+  const localizedCounts = readiness.counts_summary_key
+    ? formatLabel(readiness.counts_summary_key, readiness.counts_summary_params || {{}}, '')
+    : '';
+  const localizedBoundaryNote = readiness.boundary_note_key
+    ? formatLabel(readiness.boundary_note_key, {{}}, readiness.boundary_note || '')
+    : (readiness.boundary_note || '');
   return renderNotice(
     label('notice.review_package_readiness', 'Review Package Readiness'),
     packageContextNoticeBody(
@@ -6277,7 +6314,9 @@ function renderPackageReadinessNotice(record) {{
       packageReview,
       manifest,
       readiness.eligible_context_ids,
-      detailListLine('Suggested commands', readiness.suggested_commands, ' | '),
+      detailLine('Hit counts', localizedCounts)
+      + detailListLine('Suggested commands', readiness.suggested_commands, ' | ')
+      + detailLine('Scope note', localizedBoundaryNote),
       readinessButtons,
     )
   );

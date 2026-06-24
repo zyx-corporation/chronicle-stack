@@ -1,0 +1,5 @@
+# Chronicle Stack v1.28.0 Release Status
+
+Related: `docs/adr/0047-local-package-readiness-detail-structured-contracts.md`, `docs/release-status-v1.27.0.md`
+
+`v1.28.0` is the repository-side local package-readiness-detail structured-contract release after the published `v1.27.0` baseline.

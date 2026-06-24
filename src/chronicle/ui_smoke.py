@@ -630,6 +630,25 @@ def run_ui_smoke(root: Path | None = None) -> UISmokeReport:
                             ),
                         )
                     )
+                package_readiness = record.get("package_readiness", {})
+                if isinstance(package_readiness, dict) and package_readiness:
+                    checks.append(
+                        UISmokeCheck(
+                            f"{endpoint}/<id>#package-readiness-structured-contract",
+                            bool(package_readiness.get("status"))
+                            and bool(package_readiness.get("message_key"))
+                            and bool(package_readiness.get("counts_summary_key"))
+                            and bool(package_readiness.get("boundary_note_key")),
+                            (
+                                "ok"
+                                if bool(package_readiness.get("status"))
+                                and bool(package_readiness.get("message_key"))
+                                and bool(package_readiness.get("counts_summary_key"))
+                                and bool(package_readiness.get("boundary_note_key"))
+                                else "review detail missing package readiness structured contract"
+                            ),
+                        )
+                    )
                 checks.append(
                     UISmokeCheck(
                         f"{endpoint}/{record_id}#reviewer-boundary-drilldown",

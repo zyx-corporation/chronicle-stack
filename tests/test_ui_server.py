@@ -1184,6 +1184,12 @@ def test_ui_data_service_detail_endpoints(tmp_path):
     assert review_detail["reviewer_validation_gate_summary"]["status"] == "read_only_preview"
     assert review_detail["review_preview_only"] is True
     assert review_detail["package_readiness"]["status"] == "no_context_records"
+    assert review_detail["package_readiness"]["counts_summary_key"] == (
+        "ui.template.package_readiness.counts"
+    )
+    assert review_detail["package_readiness"]["boundary_note_key"] == (
+        "ui.package_readiness.note.read_only_derived"
+    )
     assert review_detail["package_readiness"]["suggested_commands"][0] == "chronicle show --json"
     assert review_detail["latest_audit_id"].startswith("aud_")
     assert review_detail["latest_reviewer_identity"]["kind"] == "local_operator"
@@ -1200,6 +1206,12 @@ def test_ui_data_service_detail_endpoints(tmp_path):
     assert review_detail["related_links"][0]["label"] == "Open matching runtime record"
     review_plan_detail = service.detail_payload(f"/api/review-queue/{ids['runtime_plan_event_id']}")["record"]
     assert review_plan_detail["package_readiness"]["status"] == "package_context_available"
+    assert review_plan_detail["package_readiness"]["counts_summary_key"] == (
+        "ui.template.package_handoff.counts"
+    )
+    assert review_plan_detail["package_readiness"]["boundary_note_key"] == (
+        "ui.package_handoff.note.read_only_derived"
+    )
     assert ids["context_id"] in review_plan_detail["package_readiness"]["eligible_context_ids"]
     assert review_plan_detail["package_readiness"]["package_review"]["status"] in {"pass", "warning", "blocked"}
     assert review_plan_detail["package_readiness"]["package_review"]["message_key"] in {
@@ -1431,6 +1443,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "label('notice.package_handoff_preview', 'Package Handoff Preview')" in html
     assert "preview.counts_summary_key" in html
     assert "label('notice.review_package_readiness', 'Review Package Readiness')" in html
+    assert "readiness.counts_summary_key" in html
     assert "label('notice.related_links', 'Related Links')" in html
     assert "readiness.label_key" in html
     assert "const localizedMessage = localizedPayloadText(handoff);" in html
