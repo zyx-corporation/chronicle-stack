@@ -319,6 +319,31 @@ def run_ui_smoke(root: Path | None = None) -> UISmokeReport:
                 ),
             )
         )
+        graph_summary_payload = collection_payloads.get("/api/graph-summary", {})
+        graph_summary = (
+            graph_summary_payload.get("graph_summary", {})
+            if isinstance(graph_summary_payload, dict)
+            else {}
+        )
+        checks.append(
+            UISmokeCheck(
+                "/api/graph-summary#structured-contract",
+                isinstance(graph_summary, dict)
+                and bool(graph_summary.get("status"))
+                and bool(graph_summary.get("message_key"))
+                and bool(graph_summary.get("counts_summary_key"))
+                and bool(graph_summary.get("boundary_note_key")),
+                (
+                    "ok"
+                    if isinstance(graph_summary, dict)
+                    and bool(graph_summary.get("status"))
+                    and bool(graph_summary.get("message_key"))
+                    and bool(graph_summary.get("counts_summary_key"))
+                    and bool(graph_summary.get("boundary_note_key"))
+                    else "graph summary missing structured contract fields"
+                ),
+            )
+        )
 
         for endpoint, id_field in _DETAIL_ID_FIELDS.items():
             payload = collection_payloads.get(endpoint)

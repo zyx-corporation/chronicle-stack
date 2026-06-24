@@ -388,6 +388,21 @@ def _invocation_plan_provider_summary_contract(plan: dict[str, Any]) -> tuple[st
     }
 
 
+def _graph_summary_message_key(status: str) -> str:
+    return (
+        "ui.graph_summary.message.available"
+        if status == "available"
+        else "ui.graph_summary.message.unavailable"
+    )
+
+
+def _graph_summary_counts_contract(node_count: int, edge_count: int) -> tuple[str, dict[str, Any]]:
+    return "ui.template.graph_summary.counts", {
+        "node_count": node_count,
+        "edge_count": edge_count,
+    }
+
+
 def _append_mutation_blocker(
     blockers: list[str],
     next_steps: list[str],
@@ -2206,9 +2221,44 @@ class ChronicleUIDataService:
     def graph_summary(self) -> dict[str, Any]:
         try:
             graph = GraphExportService(self.root).export_graph()
-            return {"nodes": len(graph.nodes), "edges": len(graph.edges)}
+            node_count = len(graph.nodes)
+            edge_count = len(graph.edges)
+            counts_key, counts_params = _graph_summary_counts_contract(node_count, edge_count)
+            return {
+                "status": "available",
+                "nodes": node_count,
+                "edges": edge_count,
+                "message": "Graph summary is available as a local derived read model.",
+                "message_key": _graph_summary_message_key("available"),
+                "counts_summary_key": counts_key,
+                "counts_summary_params": counts_params,
+                "boundary_note": "Graph summary remains derived, read-only, and non-authoritative over primary Chronicle records.",
+                "boundary_note_key": "ui.graph_summary.note.read_only_derived",
+                "derived_surface": True,
+                "primary_record_authoritative": True,
+                "external_services": False,
+                "graphrag_runtime": False,
+                "correctness_proof": False,
+            }
         except Exception as exc:  # pragma: no cover - defensive UI degradation
-            return {"nodes": 0, "edges": 0, "error": str(exc)}
+            counts_key, counts_params = _graph_summary_counts_contract(0, 0)
+            return {
+                "status": "unavailable",
+                "nodes": 0,
+                "edges": 0,
+                "error": str(exc),
+                "message": "Graph summary is unavailable; keep using primary Chronicle records for authority.",
+                "message_key": _graph_summary_message_key("unavailable"),
+                "counts_summary_key": counts_key,
+                "counts_summary_params": counts_params,
+                "boundary_note": "Graph summary remains derived, read-only, and non-authoritative over primary Chronicle records.",
+                "boundary_note_key": "ui.graph_summary.note.read_only_derived",
+                "derived_surface": True,
+                "primary_record_authoritative": True,
+                "external_services": False,
+                "graphrag_runtime": False,
+                "correctness_proof": False,
+            }
 
     def runtime_package_handoff(self, plan: RuntimeRetrievalPlan) -> dict[str, Any]:
         context_ids = [record_id for record_id in _unique_list(plan) if record_id.startswith("ctx_")]

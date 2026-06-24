@@ -816,7 +816,11 @@ def test_ui_data_service_read_endpoints(tmp_path):
     assert "events" in service.events()
     assert "rde_records" in service.rde_records()
     assert "status" in service.package_review_snapshot()
-    assert "nodes" in service.graph_summary()
+    assert service.graph_summary()["status"] == "available"
+    assert service.graph_summary()["message_key"] == "ui.graph_summary.message.available"
+    assert service.graph_summary()["counts_summary_key"] == "ui.template.graph_summary.counts"
+    assert service.graph_summary()["boundary_note_key"] == "ui.graph_summary.note.read_only_derived"
+    assert service.overview()["graph_summary"]["message_key"] == "ui.graph_summary.message.available"
     assert service.ai_index_status()["ai_index_status"]["vector"]["entry_count"] == 1
     assert service.ai_index_vector_entries()["vector_entries"][0]["record_id"] == service.events()["events"][-1]["event_id"]
     assert service.ai_index_graph_nodes()["graph_nodes"]
