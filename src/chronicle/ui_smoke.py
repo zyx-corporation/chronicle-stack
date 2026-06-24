@@ -459,6 +459,27 @@ def run_ui_smoke(root: Path | None = None) -> UISmokeReport:
                         ),
                     )
                 )
+            if endpoint == "/api/review-queue":
+                readiness_summary = row_for_detail.get("package_readiness_summary", {})
+                checks.append(
+                    UISmokeCheck(
+                        f"{endpoint}#package-readiness-summary-contract",
+                        isinstance(readiness_summary, dict)
+                        and bool(readiness_summary.get("status"))
+                        and bool(readiness_summary.get("label_key"))
+                        and bool(readiness_summary.get("message_key"))
+                        and bool(readiness_summary.get("message_template_key")),
+                        (
+                            "ok"
+                            if isinstance(readiness_summary, dict)
+                            and bool(readiness_summary.get("status"))
+                            and bool(readiness_summary.get("label_key"))
+                            and bool(readiness_summary.get("message_key"))
+                            and bool(readiness_summary.get("message_template_key"))
+                            else "review queue row missing package readiness summary structured contract"
+                        ),
+                    )
+                )
             detail = service.detail_payload(f"{endpoint}/{record_id}")
             checks.append(
                 UISmokeCheck(

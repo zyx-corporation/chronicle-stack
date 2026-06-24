@@ -730,10 +730,16 @@ def test_ui_data_service_read_endpoints(tmp_path):
         "ui.provider_response.message.unavailable"
     )
     assert service.review_queue()["review_queue"][0]["package_readiness_summary"]["label"].startswith("package:")
+    assert service.review_queue()["review_queue"][0]["package_readiness_summary"]["label_key"] == (
+        "ui.package_readiness.summary.label.advisory"
+    )
     assert service.review_queue()["review_queue"][0]["package_readiness_summary"]["message"]
     assert (
         service.review_queue()["review_queue"][0]["package_readiness_summary"]["message_key"]
         == "ui.package_readiness.message.no_context_records"
+    )
+    assert service.review_queue()["review_queue"][0]["package_readiness_summary"]["message_template_key"] == (
+        "ui.package_readiness.summary.message.advisory"
     )
     assert service.review_queue()["review_queue"][0]["action_preview_summary"]["status"] == "preview_only"
     assert (
@@ -1204,6 +1210,15 @@ def test_ui_data_service_detail_endpoints(tmp_path):
         == "ui.package_review.note.read_only_derived"
     )
     assert review_plan_detail["package_readiness_summary"]["status"] == "package_context_available"
+    assert review_plan_detail["package_readiness_summary"]["label_key"] in {
+        "ui.package_readiness.summary.label.pass",
+        "ui.package_readiness.summary.label.warning",
+        "ui.package_readiness.summary.label.blocked",
+        "ui.package_readiness.summary.label.available",
+    }
+    assert review_plan_detail["package_readiness_summary"]["message_template_key"] == (
+        "ui.template.package_readiness.summary.available"
+    )
     assert any(link["path"] == f"/api/contexts/{ids['context_id']}" for link in review_plan_detail["related_links"])
     assert any(link["label"] == f"Open context {ids['context_id']}" for link in review_plan_detail["related_links"])
     vector_detail = service.detail_payload(f"/api/ai-index/vector/{ids['event_id']}")["record"]
@@ -1404,6 +1419,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "label('notice.package_handoff_preview', 'Package Handoff Preview')" in html
     assert "label('notice.review_package_readiness', 'Review Package Readiness')" in html
     assert "label('notice.related_links', 'Related Links')" in html
+    assert "readiness.label_key" in html
     assert "const localizedMessage = localizedPayloadText(handoff);" in html
     assert "handoff.hit_counts_summary_key" in html
     assert "plan.provider_summary_key" in html

@@ -115,6 +115,7 @@ def test_run_ui_smoke_success(tmp_path):
     assert "/api/runtime-records#reviewer-boundary-drilldown" in check_names
     assert "/api/review-queue#reviewer-boundary-statuses" in check_names
     assert "/api/review-queue#reviewer-boundary-drilldown" in check_names
+    assert "/api/review-queue#package-readiness-summary-contract" in check_names
     assert "/api/summary-jobs#reviewer-boundary-statuses" in check_names
     assert "/api/summary-jobs#reviewer-boundary-drilldown" in check_names
     assert any(

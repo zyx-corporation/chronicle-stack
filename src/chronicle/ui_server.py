@@ -304,6 +304,26 @@ def _package_readiness_message_key(status: str) -> str:
     return "ui.package_readiness.message.unavailable"
 
 
+def _package_readiness_summary_label_key(*, status: str, review_status: str) -> str:
+    if status == "package_context_available":
+        return {
+            "pass": "ui.package_readiness.summary.label.pass",
+            "warning": "ui.package_readiness.summary.label.warning",
+            "blocked": "ui.package_readiness.summary.label.blocked",
+        }.get(review_status, "ui.package_readiness.summary.label.available")
+    if status == "no_context_records":
+        return "ui.package_readiness.summary.label.advisory"
+    return "ui.package_readiness.summary.label.unavailable"
+
+
+def _package_readiness_summary_message_template_key(status: str) -> str:
+    if status == "package_context_available":
+        return "ui.template.package_readiness.summary.available"
+    if status == "no_context_records":
+        return "ui.package_readiness.summary.message.advisory"
+    return "ui.package_readiness.summary.message.unavailable"
+
+
 def _package_handoff_message_key(status: str) -> str:
     if status == "package_context_available":
         return "ui.package_handoff.message.package_context_available"
@@ -2917,8 +2937,13 @@ class ChronicleUIDataService:
             "eligible_context_count": len(eligible_context_ids) if isinstance(eligible_context_ids, list) else 0,
             "warning_count": len(warnings) if isinstance(warnings, list) else 0,
             "label": label,
+            "label_key": _package_readiness_summary_label_key(
+                status=status,
+                review_status=review_status,
+            ),
             "message": message,
             "message_key": _package_readiness_message_key(status),
+            "message_template_key": _package_readiness_summary_message_template_key(status),
             "message_params": {
                 "eligible_context_count": len(eligible_context_ids)
                 if isinstance(eligible_context_ids, list)
@@ -5276,13 +5301,16 @@ function reviewCapabilityBadge(capability) {{
 function packageReadinessBadge(readiness) {{
   const status = String((readiness && readiness.status) || '');
   const label = String((readiness && readiness.label) || '');
+  const localizedLabel = readiness && readiness.label_key
+    ? formatLabel(readiness.label_key, readiness.message_params || {{}}, label)
+    : label;
   if (status === 'package_context_available') {{
-    return badge(label || 'Package Ready', 'badge-ready');
+    return badge(localizedLabel || 'Package Ready', 'badge-ready');
   }}
   if (status === 'no_context_records') {{
-    return badge(label || 'Package Advisory', 'badge-warning');
+    return badge(localizedLabel || 'Package Advisory', 'badge-warning');
   }}
-  return badge(label || 'Package Unknown', 'badge-neutral');
+  return badge(localizedLabel || 'Package Unknown', 'badge-neutral');
 }}
 function reviewParityBadge(parity) {{
   const status = String((parity && parity.status) || '');
