@@ -175,6 +175,49 @@ def run_ui_smoke(root: Path | None = None) -> UISmokeReport:
                     )
                 )
 
+            if endpoint == "/api/overview":
+                reviewer_boundary_overview = payload.get("reviewer_boundary_overview", {})
+                checks.append(
+                    UISmokeCheck(
+                        "/api/overview#reviewer-boundary-overview",
+                        isinstance(reviewer_boundary_overview, dict)
+                        and bool(reviewer_boundary_overview.get("enforcement_status"))
+                        and bool(reviewer_boundary_overview.get("validation_gate_status"))
+                        and isinstance(
+                            reviewer_boundary_overview.get("runtime_record_enforcement_counts"), dict
+                        )
+                        and isinstance(
+                            reviewer_boundary_overview.get("review_queue_validation_gate_counts"), dict
+                        )
+                        and isinstance(
+                            reviewer_boundary_overview.get("summary_job_enforcement_counts"), dict
+                        ),
+                        (
+                            "ok"
+                            if isinstance(reviewer_boundary_overview, dict)
+                            and bool(reviewer_boundary_overview.get("enforcement_status"))
+                            and bool(reviewer_boundary_overview.get("validation_gate_status"))
+                            and isinstance(
+                                reviewer_boundary_overview.get(
+                                    "runtime_record_enforcement_counts"
+                                ),
+                                dict,
+                            )
+                            and isinstance(
+                                reviewer_boundary_overview.get(
+                                    "review_queue_validation_gate_counts"
+                                ),
+                                dict,
+                            )
+                            and isinstance(
+                                reviewer_boundary_overview.get("summary_job_enforcement_counts"),
+                                dict,
+                            )
+                            else "overview missing reviewer-boundary overview summary"
+                        ),
+                    )
+                )
+
         for endpoint, id_field in _DETAIL_ID_FIELDS.items():
             payload = collection_payloads.get(endpoint)
             if payload is None:
@@ -187,6 +230,21 @@ def run_ui_smoke(root: Path | None = None) -> UISmokeReport:
             if not isinstance(record_id, str) or not record_id:
                 checks.append(UISmokeCheck(f"{endpoint}/<id>", False, f"missing id field: {id_field}"))
                 continue
+            if endpoint in {"/api/runtime-records", "/api/review-queue", "/api/summary-jobs"}:
+                first_row = rows[0]
+                checks.append(
+                    UISmokeCheck(
+                        f"{endpoint}#reviewer-boundary-statuses",
+                        bool(first_row.get("reviewer_enforcement_status"))
+                        and bool(first_row.get("reviewer_validation_gate_status")),
+                        (
+                            "ok"
+                            if bool(first_row.get("reviewer_enforcement_status"))
+                            and bool(first_row.get("reviewer_validation_gate_status"))
+                            else "list row missing reviewer-boundary statuses"
+                        ),
+                    )
+                )
             detail = service.detail_payload(f"{endpoint}/{record_id}")
             checks.append(
                 UISmokeCheck(
@@ -197,6 +255,23 @@ def run_ui_smoke(root: Path | None = None) -> UISmokeReport:
             )
             if endpoint == "/api/review-queue" and detail is not None and "record" in detail:
                 record = detail["record"]
+                checks.append(
+                    UISmokeCheck(
+                        f"{endpoint}/{record_id}#reviewer-boundary",
+                        isinstance(record.get("reviewer_enforcement_summary"), dict)
+                        and bool(record.get("reviewer_enforcement_summary", {}).get("status"))
+                        and isinstance(record.get("reviewer_validation_gate_summary"), dict)
+                        and bool(record.get("reviewer_validation_gate_summary", {}).get("status")),
+                        (
+                            "ok"
+                            if isinstance(record.get("reviewer_enforcement_summary"), dict)
+                            and bool(record.get("reviewer_enforcement_summary", {}).get("status"))
+                            and isinstance(record.get("reviewer_validation_gate_summary"), dict)
+                            and bool(record.get("reviewer_validation_gate_summary", {}).get("status"))
+                            else "review detail missing reviewer-boundary summaries"
+                        ),
+                    )
+                )
                 cli_parity = record.get("cli_parity")
                 checks.append(
                     UISmokeCheck(
@@ -379,6 +454,23 @@ def run_ui_smoke(root: Path | None = None) -> UISmokeReport:
                 )
             if endpoint == "/api/runtime-records" and detail is not None and "record" in detail:
                 record = detail["record"]
+                checks.append(
+                    UISmokeCheck(
+                        f"{endpoint}/{record_id}#reviewer-boundary",
+                        isinstance(record.get("reviewer_enforcement_summary"), dict)
+                        and bool(record.get("reviewer_enforcement_summary", {}).get("status"))
+                        and isinstance(record.get("reviewer_validation_gate_summary"), dict)
+                        and bool(record.get("reviewer_validation_gate_summary", {}).get("status")),
+                        (
+                            "ok"
+                            if isinstance(record.get("reviewer_enforcement_summary"), dict)
+                            and bool(record.get("reviewer_enforcement_summary", {}).get("status"))
+                            and isinstance(record.get("reviewer_validation_gate_summary"), dict)
+                            and bool(record.get("reviewer_validation_gate_summary", {}).get("status"))
+                            else "runtime detail missing reviewer-boundary summaries"
+                        ),
+                    )
+                )
                 auth_notice = record.get("auth_boundary_notice")
                 checks.append(
                     UISmokeCheck(
@@ -435,6 +527,23 @@ def run_ui_smoke(root: Path | None = None) -> UISmokeReport:
                 )
             if endpoint == "/api/summary-jobs" and detail is not None and "record" in detail:
                 record = detail["record"]
+                checks.append(
+                    UISmokeCheck(
+                        f"{endpoint}/{record_id}#reviewer-boundary",
+                        isinstance(record.get("reviewer_enforcement_summary"), dict)
+                        and bool(record.get("reviewer_enforcement_summary", {}).get("status"))
+                        and isinstance(record.get("reviewer_validation_gate_summary"), dict)
+                        and bool(record.get("reviewer_validation_gate_summary", {}).get("status")),
+                        (
+                            "ok"
+                            if isinstance(record.get("reviewer_enforcement_summary"), dict)
+                            and bool(record.get("reviewer_enforcement_summary", {}).get("status"))
+                            and isinstance(record.get("reviewer_validation_gate_summary"), dict)
+                            and bool(record.get("reviewer_validation_gate_summary", {}).get("status"))
+                            else "summary detail missing reviewer-boundary summaries"
+                        ),
+                    )
+                )
                 auth_notice = record.get("auth_boundary_notice")
                 checks.append(
                     UISmokeCheck(
@@ -573,9 +682,12 @@ def run_ui_smoke(root: Path | None = None) -> UISmokeReport:
                 "Active view:",
                 "Auth Readiness",
                 "CLI Parity",
+                "Reviewer Boundary",
                 "Related Links",
                 "Review Queue",
                 "Runtime Records",
+                "reviewerBoundaryFilterValue",
+                "reviewerBoundaryCountButtons",
                 "Summary jobs blocked-route preview stays read-only and returns the CLI fallback contract.",
                 "Review queue blocked-route preview stays read-only and returns the CLI fallback contract.",
             )

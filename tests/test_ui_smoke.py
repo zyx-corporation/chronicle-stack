@@ -100,9 +100,14 @@ def test_run_ui_smoke_success(tmp_path):
         for check in payload["checks"]
     )
     assert "/api/overview#runtime-auth-readiness" in check_names
+    assert "/api/overview#reviewer-boundary-overview" in check_names
     assert "/api/overview#mutation-readiness" in check_names
     assert "/api/overview#summary-auth-readiness" in check_names
     assert "/api/overview#summary-identity-readiness" in check_names
+    assert "/api/runtime-records#reviewer-boundary-statuses" in check_names
+    assert "/api/review-queue#reviewer-boundary-statuses" in check_names
+    assert "/api/summary-jobs#reviewer-boundary-statuses" in check_names
+    assert any(name.endswith("#reviewer-boundary") for name in check_names)
     assert any(name.startswith("/api/contexts/") for name in check_names)
     assert "/api/contexts/__chronicle_missing_context__" in check_names
 
