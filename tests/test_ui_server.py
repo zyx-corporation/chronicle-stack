@@ -815,6 +815,9 @@ def test_ui_data_service_read_endpoints(tmp_path):
     assert overview["triage"]["warning_counts"]["ui_authorization_not_enabled"] == 3
     assert overview["triage"]["warning_summaries"][0]["code"] == "ui_auth_not_enabled"
     assert overview["triage"]["warning_summaries"][1]["code"] == "ui_authorization_not_enabled"
+    assert overview["triage"]["warning_summaries"][0]["label_key"] == "filter.review.ui_auth_not_enabled"
+    assert overview["triage"]["warning_summaries"][0]["message_key"] == "ui.review_warning.ui_auth_not_enabled"
+    assert overview["triage"]["warning_summaries"][0]["summary_key"] == "ui.template.review_warning.summary"
     assert overview["reviewer_boundary_overview"]["drilldown_summaries"][0]["message_key"] == (
         "ui.message.reviewer_boundary_drilldown"
     )
@@ -837,6 +840,9 @@ def test_ui_data_service_read_endpoints(tmp_path):
     }
     assert "ui_auth_not_enabled" in service.review_queue()["review_queue"][0]["review_capability"]["warnings"]
     assert service.review_queue()["review_queue"][0]["review_capability"]["warning_details"][0]["message"]
+    assert service.review_queue()["review_queue"][0]["review_capability"]["warning_details"][0][
+        "message_key"
+    ] == "ui.review_warning.ui_auth_not_enabled"
     assert "latest_identity_assurance" not in service.review_queue()["review_queue"][0]
     review_detail = service.detail_payload(
         f"/api/review-queue/{service.review_queue()['review_queue'][0]['target_event_id']}"
@@ -1236,6 +1242,12 @@ def test_ui_data_service_detail_endpoints(tmp_path):
     assert review_detail["latest_reviewer_identity"]["kind"] == "local_operator"
     assert review_detail["review_capability"]["status"] == "advisory_only"
     assert review_detail["review_capability"]["warning_details"][0]["code"] == "ui_auth_not_enabled"
+    assert review_detail["review_capability"]["warning_details"][0]["label_key"] == (
+        "filter.review.ui_auth_not_enabled"
+    )
+    assert review_detail["review_capability"]["warning_details"][0]["message_key"] == (
+        "ui.review_warning.ui_auth_not_enabled"
+    )
     assert review_detail["auth_boundary_notice"]["status"] == "advisory_only"
     assert "authorization_not_enabled" in review_detail["auth_boundary_notice"]["blockers"]
     assert review_detail["latest_identity_assurance"]["status"] == "local_session_unverified"
@@ -2290,6 +2302,9 @@ def test_review_action_failure_summary_uses_human_warning_text(tmp_path):
     assert payload["warning_details"] == [
         {
             "code": "reviewer_identity_declared_only",
+            "label_key": "filter.review.reviewer_identity_declared_only",
+            "label": "Declared identity only",
+            "message_key": "ui.review_warning.reviewer_identity_declared_only",
             "message": "Reviewer identity is self-declared and has not been strengthened by a local auth boundary.",
         }
     ]

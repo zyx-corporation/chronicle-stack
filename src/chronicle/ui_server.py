@@ -207,6 +207,9 @@ def _serialize_review_warning_details(warnings: list[str]) -> list[dict[str, str
     return [
         {
             "code": warning,
+            "label_key": f"filter.review.{warning}",
+            "label": REVIEW_WARNING_LABELS.get(warning, warning.replace("_", " ")),
+            "message_key": f"ui.review_warning.{warning}",
             "message": REVIEW_WARNING_TEXT.get(warning, warning.replace("_", " ")),
         }
         for warning in warnings
@@ -2017,8 +2020,15 @@ class ChronicleUIDataService:
                     "code": code,
                     "count": count,
                     "priority": REVIEW_WARNING_PRIORITY.get(code, 99),
-                    "label": code.replace("_", " "),
+                    "label_key": f"filter.review.{code}",
+                    "label": REVIEW_WARNING_LABELS.get(code, code.replace("_", " ")),
+                    "message_key": f"ui.review_warning.{code}",
                     "message": self._warning_message(code),
+                    "summary_key": "ui.template.review_warning.summary",
+                    "summary_params": {
+                        "label": REVIEW_WARNING_LABELS.get(code, code.replace("_", " ")),
+                        "count": count,
+                    },
                 }
             )
         return sorted(rows, key=lambda item: (item["priority"], -item["count"], item["code"]))
@@ -7004,7 +7014,7 @@ function renderOverviewTriagePanel(triage, warningButtons, warningSummaries) {{
 function overviewWarningButtons(warningSummaries) {{
   return warningSummaries.map(item =>
     overviewJumpButton(
-      sliceBadge((item.label || item.code || 'warning'), item.count ?? 0, 'badge-warning'),
+      sliceBadge((item.label_key ? formatLabel(item.label_key, item.label_params || {{}}, item.label || item.code || 'warning') : (item.label || item.code || 'warning')), item.count ?? 0, 'badge-warning'),
       '/api/review-queue',
       'reviewQueue',
       item.code || ''
@@ -7014,7 +7024,7 @@ function overviewWarningButtons(warningSummaries) {{
 function overviewWarningPriorityBadges(warningSummaries) {{
   return warningSummaries.length > 0
     ? warningSummaries.map(item =>
-        sliceBadge((item.label || item.code || 'warning'), item.count ?? 0, 'badge-warning')
+        sliceBadge((item.label_key ? formatLabel(item.label_key, item.label_params || {{}}, item.label || item.code || 'warning') : (item.label || item.code || 'warning')), item.count ?? 0, 'badge-warning')
       ).join('')
     : '(none)';
 }}

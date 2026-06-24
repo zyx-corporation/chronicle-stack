@@ -529,6 +529,34 @@ def run_ui_smoke(root: Path | None = None) -> UISmokeReport:
                         ),
                     )
                 )
+                capability = row_for_detail.get("review_capability", {})
+                warning_details = capability.get("warning_details", [])
+                if isinstance(capability, dict):
+                    checks.append(
+                        UISmokeCheck(
+                            f"{endpoint}#review-warning-structured-contract",
+                            isinstance(warning_details, list)
+                            and all(
+                                isinstance(item, dict)
+                                and bool(item.get("code"))
+                                and bool(item.get("label_key"))
+                                and bool(item.get("message_key"))
+                                for item in warning_details
+                            ),
+                            (
+                                "ok"
+                                if isinstance(warning_details, list)
+                                and all(
+                                    isinstance(item, dict)
+                                    and bool(item.get("code"))
+                                    and bool(item.get("label_key"))
+                                    and bool(item.get("message_key"))
+                                    for item in warning_details
+                                )
+                                else "review queue row missing review warning structured contract"
+                            ),
+                        )
+                    )
             detail = service.detail_payload(f"{endpoint}/{record_id}")
             checks.append(
                 UISmokeCheck(
@@ -1396,6 +1424,33 @@ def run_ui_smoke(root: Path | None = None) -> UISmokeReport:
                     )
                     and isinstance(mutation_readiness.get("identity_proof_contract"), dict)
                     else "overview missing mutation readiness contract detail"
+                ),
+            )
+        )
+        checks.append(
+            UISmokeCheck(
+                "/api/overview#review-warning-structured-contract",
+                isinstance(overview.get("triage", {}).get("warning_summaries"), list)
+                and all(
+                    isinstance(item, dict)
+                    and bool(item.get("code"))
+                    and bool(item.get("label_key"))
+                    and bool(item.get("message_key"))
+                    and bool(item.get("summary_key"))
+                    for item in overview.get("triage", {}).get("warning_summaries", [])
+                ),
+                (
+                    "ok"
+                    if isinstance(overview.get("triage", {}).get("warning_summaries"), list)
+                    and all(
+                        isinstance(item, dict)
+                        and bool(item.get("code"))
+                        and bool(item.get("label_key"))
+                        and bool(item.get("message_key"))
+                        and bool(item.get("summary_key"))
+                        for item in overview.get("triage", {}).get("warning_summaries", [])
+                    )
+                    else "overview missing review warning structured contract"
                 ),
             )
         )

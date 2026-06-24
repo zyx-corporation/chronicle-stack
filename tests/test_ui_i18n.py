@@ -253,6 +253,20 @@ def test_ui_i18n_catalog_covers_mutation_summary_structured_keys():
         assert not missing, f"{locale} missing keys: {sorted(missing)}"
 
 
+def test_ui_i18n_catalog_covers_review_warning_structured_keys():
+    required_keys = {
+        "ui.review_warning.ui_auth_not_enabled",
+        "ui.review_warning.ui_authorization_not_enabled",
+        "ui.review_warning.no_reviewer_identity_recorded",
+        "ui.review_warning.reviewer_identity_declared_only",
+        "ui.review_warning.reviewer_session_label_missing",
+        "ui.template.review_warning.summary",
+    }
+    for locale in ("ja", "en", "zh-CN"):
+        missing = required_keys.difference(UI_I18N_CATALOG[locale])
+        assert not missing, f"{locale} missing keys: {sorted(missing)}"
+
+
 def test_ui_i18n_catalog_covers_package_preview_and_review_preview_messages():
     required_exact = {
         "No context records were selected by the retrieval dry-run, so package preview is advisory only.",
