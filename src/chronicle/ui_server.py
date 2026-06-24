@@ -424,6 +424,43 @@ def _ai_index_graph_counts_contract(node_count: int, edge_count: int) -> tuple[s
     }
 
 
+def _ai_index_vector_detail_message_key(entry: dict[str, Any]) -> str:
+    return (
+        "ui.ai_index_vector_detail.message.metadata_present"
+        if bool(entry.get("metadata"))
+        else "ui.ai_index_vector_detail.message.metadata_empty"
+    )
+
+
+def _ai_index_vector_detail_counts_contract(text_length: int, metadata_count: int) -> tuple[str, dict[str, Any]]:
+    return "ui.template.ai_index_vector_detail.counts", {
+        "text_length": text_length,
+        "metadata_count": metadata_count,
+    }
+
+
+def _ai_index_graph_node_detail_message_key(payload: dict[str, Any]) -> str:
+    neighbor_total = int(payload.get("outgoing_neighbor_count", 0) or 0) + int(
+        payload.get("incoming_neighbor_count", 0) or 0
+    )
+    return (
+        "ui.ai_index_graph_node_detail.message.neighbors_present"
+        if neighbor_total > 0
+        else "ui.ai_index_graph_node_detail.message.no_neighbors"
+    )
+
+
+def _ai_index_graph_node_detail_counts_contract(
+    *, label_count: int, property_count: int, outgoing_neighbor_count: int, incoming_neighbor_count: int
+) -> tuple[str, dict[str, Any]]:
+    return "ui.template.ai_index_graph_node_detail.counts", {
+        "label_count": label_count,
+        "property_count": property_count,
+        "outgoing_neighbor_count": outgoing_neighbor_count,
+        "incoming_neighbor_count": incoming_neighbor_count,
+    }
+
+
 def _append_mutation_blocker(
     blockers: list[str],
     next_steps: list[str],
@@ -3179,7 +3216,26 @@ class ChronicleUIDataService:
             resource, record_id = parts[2], parts[3]
             if resource == "vector":
                 entry = self.vector_index.get_entry(record_id)
-                return {"record": _dump_model(entry)} if entry is not None else None
+                if entry is None:
+                    return None
+                payload = _dump_model(entry)
+                payload["message"] = (
+                    "Vector entry retains indexed metadata for this local derived record."
+                    if payload.get("metadata")
+                    else "Vector entry has no indexed metadata; treat it as a local derived text-only index row."
+                )
+                payload["message_key"] = _ai_index_vector_detail_message_key(payload)
+                counts_key, counts_params = _ai_index_vector_detail_counts_contract(
+                    text_length=len(str(payload.get("text", ""))),
+                    metadata_count=len(payload.get("metadata", {})),
+                )
+                payload["counts_summary_key"] = counts_key
+                payload["counts_summary_params"] = counts_params
+                payload["boundary_note"] = (
+                    "Vector entry remains derived, read-only, and non-authoritative over primary Chronicle records."
+                )
+                payload["boundary_note_key"] = "ui.ai_index_vector_detail.note.read_only_derived"
+                return {"record": payload}
             if resource == "graph-nodes":
                 node = self.graph_index.get_node(record_id)
                 if node is None:
@@ -3187,6 +3243,26 @@ class ChronicleUIDataService:
                 payload = _dump_model(node)
                 neighbors = self.graph_index.neighbors(node_id=record_id)
                 payload["neighbors"] = neighbors.model_dump(mode="json")
+                payload["outgoing_neighbor_count"] = len(neighbors.outgoing)
+                payload["incoming_neighbor_count"] = len(neighbors.incoming)
+                payload["message"] = (
+                    "Graph node detail includes local derived neighbor relationships for inspection."
+                    if payload["outgoing_neighbor_count"] + payload["incoming_neighbor_count"] > 0
+                    else "Graph node detail has no derived neighbor relationships yet."
+                )
+                payload["message_key"] = _ai_index_graph_node_detail_message_key(payload)
+                counts_key, counts_params = _ai_index_graph_node_detail_counts_contract(
+                    label_count=len(payload.get("labels", [])),
+                    property_count=len(payload.get("properties", {})),
+                    outgoing_neighbor_count=payload["outgoing_neighbor_count"],
+                    incoming_neighbor_count=payload["incoming_neighbor_count"],
+                )
+                payload["counts_summary_key"] = counts_key
+                payload["counts_summary_params"] = counts_params
+                payload["boundary_note"] = (
+                    "Graph node detail remains derived, read-only, and non-authoritative over primary Chronicle records."
+                )
+                payload["boundary_note_key"] = "ui.ai_index_graph_node_detail.note.read_only_derived"
                 return {"record": payload}
             return None
 

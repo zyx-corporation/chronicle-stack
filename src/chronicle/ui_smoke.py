@@ -422,6 +422,40 @@ def run_ui_smoke(root: Path | None = None) -> UISmokeReport:
                     "ok" if detail is not None and "record" in detail else "missing detail record",
                 )
             )
+            if endpoint == "/api/ai-index-vector" and detail is not None and "record" in detail:
+                record = detail["record"]
+                checks.append(
+                    UISmokeCheck(
+                        f"{endpoint}/{record_id}#structured-contract",
+                        bool(record.get("message_key"))
+                        and bool(record.get("counts_summary_key"))
+                        and bool(record.get("boundary_note_key")),
+                        (
+                            "ok"
+                            if bool(record.get("message_key"))
+                            and bool(record.get("counts_summary_key"))
+                            and bool(record.get("boundary_note_key"))
+                            else "ai index vector detail missing structured contract fields"
+                        ),
+                    )
+                )
+            if endpoint == "/api/ai-index-graph-nodes" and detail is not None and "record" in detail:
+                record = detail["record"]
+                checks.append(
+                    UISmokeCheck(
+                        f"{endpoint}/{record_id}#structured-contract",
+                        bool(record.get("message_key"))
+                        and bool(record.get("counts_summary_key"))
+                        and bool(record.get("boundary_note_key")),
+                        (
+                            "ok"
+                            if bool(record.get("message_key"))
+                            and bool(record.get("counts_summary_key"))
+                            and bool(record.get("boundary_note_key"))
+                            else "ai index graph-node detail missing structured contract fields"
+                        ),
+                    )
+                )
             if endpoint == "/api/runtime-records" and detail is not None and "record" in detail:
                 record = detail["record"]
                 retrieval_handoff = record.get("retrieval_handoff")

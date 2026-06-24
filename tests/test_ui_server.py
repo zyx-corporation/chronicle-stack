@@ -1170,9 +1170,16 @@ def test_ui_data_service_detail_endpoints(tmp_path):
     assert review_plan_detail["package_readiness_summary"]["status"] == "package_context_available"
     assert any(link["path"] == f"/api/contexts/{ids['context_id']}" for link in review_plan_detail["related_links"])
     assert any(link["label"] == f"Open context {ids['context_id']}" for link in review_plan_detail["related_links"])
-    assert service.detail_payload(f"/api/ai-index/vector/{ids['event_id']}")["record"]["record_id"] == ids["event_id"]
+    vector_detail = service.detail_payload(f"/api/ai-index/vector/{ids['event_id']}")["record"]
+    assert vector_detail["record_id"] == ids["event_id"]
+    assert vector_detail["message_key"] == "ui.ai_index_vector_detail.message.metadata_present"
+    assert vector_detail["counts_summary_key"] == "ui.template.ai_index_vector_detail.counts"
+    assert vector_detail["boundary_note_key"] == "ui.ai_index_vector_detail.note.read_only_derived"
     graph_detail = service.detail_payload(f"/api/ai-index/graph-nodes/{ids['event_id']}")["record"]
     assert graph_detail["node_id"] == ids["event_id"]
+    assert graph_detail["message_key"] == "ui.ai_index_graph_node_detail.message.neighbors_present"
+    assert graph_detail["counts_summary_key"] == "ui.template.ai_index_graph_node_detail.counts"
+    assert graph_detail["boundary_note_key"] == "ui.ai_index_graph_node_detail.note.read_only_derived"
     assert graph_detail["neighbors"]["outgoing"][0]["relation"] == "references"
     assert service.detail_payload("/api/contexts/missing") is None
     runtime_plan_detail = service.detail_payload(f"/api/runtime-records/{ids['runtime_plan_event_id']}")["record"]
