@@ -405,7 +405,27 @@ def run_ui_smoke(root: Path | None = None) -> UISmokeReport:
             if not rows:
                 checks.append(UISmokeCheck(f"{endpoint}/<id>", True, "skipped: no records"))
                 continue
-            record_id = rows[0].get(id_field)
+            row_for_detail = rows[0]
+            if endpoint == "/api/runtime-records":
+                row_for_detail = next(
+                    (
+                        row
+                        for row in rows
+                        if str(row.get("runtime_record_preview", {}).get("record_kind", "")) == "retrieval_plan"
+                    ),
+                    rows[0],
+                )
+            elif endpoint == "/api/review-queue":
+                row_for_detail = next(
+                    (
+                        row
+                        for row in rows
+                        if str(row.get("package_readiness_summary", {}).get("status", ""))
+                        == "package_context_available"
+                    ),
+                    rows[0],
+                )
+            record_id = row_for_detail.get(id_field)
             if not isinstance(record_id, str) or not record_id:
                 checks.append(UISmokeCheck(f"{endpoint}/<id>", False, f"missing id field: {id_field}"))
                 continue
@@ -498,6 +518,25 @@ def run_ui_smoke(root: Path | None = None) -> UISmokeReport:
                             ),
                         )
                     )
+                embedded_package_review = record.get("package_handoff_preview", {}).get("package_review", {})
+                if isinstance(embedded_package_review, dict) and embedded_package_review:
+                    checks.append(
+                        UISmokeCheck(
+                            f"{endpoint}/<id>#embedded-package-review-structured-contract",
+                            bool(embedded_package_review.get("status"))
+                            and bool(embedded_package_review.get("message_key"))
+                            and bool(embedded_package_review.get("counts_summary_key"))
+                            and bool(embedded_package_review.get("boundary_note_key")),
+                            (
+                                "ok"
+                                if bool(embedded_package_review.get("status"))
+                                and bool(embedded_package_review.get("message_key"))
+                                and bool(embedded_package_review.get("counts_summary_key"))
+                                and bool(embedded_package_review.get("boundary_note_key"))
+                                else "runtime detail missing embedded package review structured contract"
+                            ),
+                        )
+                    )
                 invocation_plan = record.get("invocation_plan")
                 if isinstance(invocation_plan, dict):
                     checks.append(
@@ -532,6 +571,25 @@ def run_ui_smoke(root: Path | None = None) -> UISmokeReport:
                         ),
                     )
                 )
+                embedded_package_review = record.get("package_readiness", {}).get("package_review", {})
+                if isinstance(embedded_package_review, dict) and embedded_package_review:
+                    checks.append(
+                        UISmokeCheck(
+                            f"{endpoint}/<id>#embedded-package-review-structured-contract",
+                            bool(embedded_package_review.get("status"))
+                            and bool(embedded_package_review.get("message_key"))
+                            and bool(embedded_package_review.get("counts_summary_key"))
+                            and bool(embedded_package_review.get("boundary_note_key")),
+                            (
+                                "ok"
+                                if bool(embedded_package_review.get("status"))
+                                and bool(embedded_package_review.get("message_key"))
+                                and bool(embedded_package_review.get("counts_summary_key"))
+                                and bool(embedded_package_review.get("boundary_note_key"))
+                                else "review detail missing embedded package review structured contract"
+                            ),
+                        )
+                    )
                 checks.append(
                     UISmokeCheck(
                         f"{endpoint}/{record_id}#reviewer-boundary-drilldown",

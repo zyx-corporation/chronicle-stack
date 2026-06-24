@@ -1133,6 +1133,19 @@ def test_ui_data_service_detail_endpoints(tmp_path):
     assert retrieval_detail["package_handoff_preview"]["status"] == "package_context_available"
     assert ids["context_id"] in retrieval_detail["package_handoff_preview"]["eligible_context_ids"]
     assert retrieval_detail["package_handoff_preview"]["package_review"]["status"] in {"pass", "warning", "blocked"}
+    assert retrieval_detail["package_handoff_preview"]["package_review"]["message_key"] in {
+        "ui.package_review.message.pass",
+        "ui.package_review.message.warning",
+        "ui.package_review.message.blocked",
+    }
+    assert (
+        retrieval_detail["package_handoff_preview"]["package_review"]["counts_summary_key"]
+        == "ui.template.package_review.counts"
+    )
+    assert (
+        retrieval_detail["package_handoff_preview"]["package_review"]["boundary_note_key"]
+        == "ui.package_review.note.read_only_derived"
+    )
     assert ids["context_id"] in retrieval_detail["package_handoff_preview"]["package_manifest_preview"]["referenced_records"]
     assert any(link["path"] == f"/api/contexts/{ids['context_id']}" for link in retrieval_detail["related_links"])
     assert any(link["label"] == f"Open context {ids['context_id']}" for link in retrieval_detail["related_links"])
@@ -1177,6 +1190,19 @@ def test_ui_data_service_detail_endpoints(tmp_path):
     assert review_plan_detail["package_readiness"]["status"] == "package_context_available"
     assert ids["context_id"] in review_plan_detail["package_readiness"]["eligible_context_ids"]
     assert review_plan_detail["package_readiness"]["package_review"]["status"] in {"pass", "warning", "blocked"}
+    assert review_plan_detail["package_readiness"]["package_review"]["message_key"] in {
+        "ui.package_review.message.pass",
+        "ui.package_review.message.warning",
+        "ui.package_review.message.blocked",
+    }
+    assert (
+        review_plan_detail["package_readiness"]["package_review"]["counts_summary_key"]
+        == "ui.template.package_review.counts"
+    )
+    assert (
+        review_plan_detail["package_readiness"]["package_review"]["boundary_note_key"]
+        == "ui.package_review.note.read_only_derived"
+    )
     assert review_plan_detail["package_readiness_summary"]["status"] == "package_context_available"
     assert any(link["path"] == f"/api/contexts/{ids['context_id']}" for link in review_plan_detail["related_links"])
     assert any(link["label"] == f"Open context {ids['context_id']}" for link in review_plan_detail["related_links"])

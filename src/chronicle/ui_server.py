@@ -479,6 +479,28 @@ def _package_review_counts_contract(
     }
 
 
+def _decorate_package_review_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    status = str(payload.get("status", ""))
+    payload["message"] = {
+        "pass": "Package review passed for the current local context package snapshot.",
+        "warning": "Package review reported warnings for the current local context package snapshot.",
+        "blocked": "Package review reported blocked findings for the current local context package snapshot.",
+    }.get(status, "Package review snapshot is unavailable.")
+    payload["message_key"] = _package_review_message_key(status)
+    counts_key, counts_params = _package_review_counts_contract(
+        record_count=int(payload.get("record_count", 0) or 0),
+        warning_count=len(payload.get("package_warnings", [])),
+        finding_count=len(payload.get("findings", [])),
+    )
+    payload["counts_summary_key"] = counts_key
+    payload["counts_summary_params"] = counts_params
+    payload["boundary_note"] = (
+        "Package review snapshot remains derived, read-only, and non-authoritative over primary Chronicle records."
+    )
+    payload["boundary_note_key"] = "ui.package_review.note.read_only_derived"
+    return payload
+
+
 def _append_mutation_blocker(
     blockers: list[str],
     next_steps: list[str],
@@ -2308,41 +2330,14 @@ class ChronicleUIDataService:
     def package_review_snapshot(self) -> dict[str, Any]:
         try:
             report = self.package_review.review_context_package(purpose="chronicle ui overview")
-            payload = report.model_dump(mode="json")
-            payload["message"] = {
-                "pass": "Package review passed for the current local context package snapshot.",
-                "warning": "Package review reported warnings for the current local context package snapshot.",
-                "blocked": "Package review reported blocked findings for the current local context package snapshot.",
-            }.get(str(payload.get("status", "")), "Package review snapshot is unavailable.")
-            payload["message_key"] = _package_review_message_key(str(payload.get("status", "")))
-            counts_key, counts_params = _package_review_counts_contract(
-                record_count=int(payload.get("record_count", 0) or 0),
-                warning_count=len(payload.get("package_warnings", [])),
-                finding_count=len(payload.get("findings", [])),
-            )
-            payload["counts_summary_key"] = counts_key
-            payload["counts_summary_params"] = counts_params
-            payload["boundary_note"] = (
-                "Package review snapshot remains derived, read-only, and non-authoritative over primary Chronicle records."
-            )
-            payload["boundary_note_key"] = "ui.package_review.note.read_only_derived"
-            return payload
+            return _decorate_package_review_payload(report.model_dump(mode="json"))
         except Exception as exc:  # pragma: no cover - defensive UI degradation
-            counts_key, counts_params = _package_review_counts_contract(
-                record_count=0,
-                warning_count=0,
-                finding_count=0,
-            )
-            return {
+            return _decorate_package_review_payload(
+                {
                 "status": "unavailable",
                 "error": str(exc),
-                "message": "Package review snapshot is unavailable.",
-                "message_key": "ui.package_review.message.unavailable",
-                "counts_summary_key": counts_key,
-                "counts_summary_params": counts_params,
-                "boundary_note": "Package review snapshot remains derived, read-only, and non-authoritative over primary Chronicle records.",
-                "boundary_note_key": "ui.package_review.note.read_only_derived",
-            }
+                }
+            )
 
     def graph_summary(self) -> dict[str, Any]:
         try:
@@ -2407,7 +2402,7 @@ class ChronicleUIDataService:
         )
         review = self.package_review.review_package(package)
         payload["package_manifest_preview"] = package.manifest.model_dump(mode="json")
-        payload["package_review"] = review.model_dump(mode="json")
+        payload["package_review"] = _decorate_package_review_payload(review.model_dump(mode="json"))
         payload["message"] = "Read-only package preview derived from retrieval-plan context hits."
         payload["message_key"] = _package_handoff_message_key(str(payload["status"]))
         return payload
@@ -2544,7 +2539,7 @@ class ChronicleUIDataService:
             ],
             "package_review_required": True,
             "package_manifest_preview": package.manifest.model_dump(mode="json"),
-            "package_review": review.model_dump(mode="json"),
+            "package_review": _decorate_package_review_payload(review.model_dump(mode="json")),
         }
 
     def review_related_links(self, target_event_id: str) -> list[dict[str, Any]]:

@@ -60,6 +60,10 @@ def _populate(root):
         text="Smoke runtime summary. It stays local.",
         record=True,
     )
+    RuntimeService(root).retrieve_plan(
+        query="Smoke Context",
+        record=True,
+    )
     RuntimeConfigService(root).set_local(model_name="smoke-local-model", provider_name="smoke-local")
     SummaryJobService(root).create_manual_draft(
         title="Smoke Summary Draft",
@@ -128,6 +132,8 @@ def test_run_ui_smoke_success(tmp_path):
     assert any(name.endswith("#reviewer-boundary") for name in check_names)
     assert any(name.endswith("#reviewer-boundary-drilldown") for name in check_names)
     assert any(name.startswith("/api/contexts/") for name in check_names)
+    assert "/api/runtime-records/<id>#embedded-package-review-structured-contract" in check_names
+    assert "/api/review-queue/<id>#embedded-package-review-structured-contract" in check_names
     assert "/api/contexts/__chronicle_missing_context__" in check_names
 
 
