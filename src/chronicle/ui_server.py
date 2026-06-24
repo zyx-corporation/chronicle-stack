@@ -285,6 +285,10 @@ def _reviewer_boundary_drilldown_summary(
         "overview_path": "/api/overview",
         "list_path": list_path,
         "detail_path": detail_path,
+        "message_template_key": "ui.template.reviewer_boundary_drilldown_message",
+        "message_params": {
+            "dataset_key": dataset_key,
+        },
         "message_key": "ui.message.reviewer_boundary_drilldown",
         "enforcement_status": enforcement_status,
         "validation_gate_status": gate_status,
@@ -1364,6 +1368,10 @@ class ChronicleUIDataService:
                     "detail_path_template": "/api/runtime-records/<event_id>",
                     "dominant_enforcement_status": _dominant_status(runtime_enforcement_counts),
                     "dominant_validation_gate_status": _dominant_status(runtime_gate_counts),
+                    "message_template_key": "ui.template.reviewer_boundary_drilldown_message",
+                    "message_params": {
+                        "dataset_key": "runtime_records",
+                    },
                     "message_key": "ui.message.reviewer_boundary_drilldown",
                     "message": (
                         "Overview runtime counts summarize row statuses; open runtime records to inspect each event and detail payload."
@@ -1385,6 +1393,10 @@ class ChronicleUIDataService:
                     "detail_path_template": "/api/review-queue/<target_event_id>",
                     "dominant_enforcement_status": _dominant_status(review_enforcement_counts),
                     "dominant_validation_gate_status": _dominant_status(review_gate_counts),
+                    "message_template_key": "ui.template.reviewer_boundary_drilldown_message",
+                    "message_params": {
+                        "dataset_key": "review_queue",
+                    },
                     "message_key": "ui.message.reviewer_boundary_drilldown",
                     "message": (
                         "Overview review counts summarize pending review rows; open review queue detail to inspect reviewer-boundary explanations."
@@ -1406,6 +1418,10 @@ class ChronicleUIDataService:
                     "detail_path_template": "/api/summary-jobs/<summary_job_id>",
                     "dominant_enforcement_status": _dominant_status(summary_enforcement_counts),
                     "dominant_validation_gate_status": _dominant_status(summary_gate_counts),
+                    "message_template_key": "ui.template.reviewer_boundary_drilldown_message",
+                    "message_params": {
+                        "dataset_key": "summary_jobs",
+                    },
                     "message_key": "ui.message.reviewer_boundary_drilldown",
                     "message": (
                         "Overview summary counts summarize row statuses; open summary-job detail to inspect reviewer-boundary explanations."
@@ -4027,9 +4043,13 @@ function renderReviewerBoundaryDrilldownSummary(summary) {{
   const enforcementStatus = summary.enforcement_status || summary.dominant_enforcement_status || '';
   const gateStatus = summary.validation_gate_status || summary.dominant_validation_gate_status || '';
   const datasetLabel = reviewerBoundaryDatasetLabel(summary.dataset_key || '');
-  const message = summary.message_key
-    ? label(summary.message_key, summary.message || '')
-    : (summary.message || '');
+  const message = summary.message_template_key
+    ? formatLabel(summary.message_template_key, {{
+        dataset: datasetLabel,
+      }}, summary.message || '')
+    : summary.message_key
+      ? label(summary.message_key, summary.message || '')
+      : (summary.message || '');
   const factLine = summary.fact_line_template_key
     ? formatLabel(summary.fact_line_template_key, {{
         dataset: datasetLabel,

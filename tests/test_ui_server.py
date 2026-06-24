@@ -608,6 +608,12 @@ def test_ui_data_service_read_endpoints(tmp_path):
     assert runtime_summary_row["reviewer_boundary_drilldown_summary"]["message_key"] == (
         "ui.message.reviewer_boundary_drilldown"
     )
+    assert runtime_summary_row["reviewer_boundary_drilldown_summary"]["message_template_key"] == (
+        "ui.template.reviewer_boundary_drilldown_message"
+    )
+    assert runtime_summary_row["reviewer_boundary_drilldown_summary"]["message_params"] == {
+        "dataset_key": "runtime_records",
+    }
     assert runtime_summary_row["reviewer_boundary_drilldown_summary"]["fact_line_template_key"] == (
         "ui.template.reviewer_boundary_fact_line"
     )
@@ -701,6 +707,12 @@ def test_ui_data_service_read_endpoints(tmp_path):
     assert overview["reviewer_boundary_overview"]["drilldown_summaries"][0]["message_key"] == (
         "ui.message.reviewer_boundary_drilldown"
     )
+    assert overview["reviewer_boundary_overview"]["drilldown_summaries"][0]["message_template_key"] == (
+        "ui.template.reviewer_boundary_drilldown_message"
+    )
+    assert overview["reviewer_boundary_overview"]["drilldown_summaries"][0]["message_params"] == {
+        "dataset_key": "runtime_records",
+    }
     assert overview["reviewer_boundary_overview"]["drilldown_summaries"][0]["fact_line_template_key"] == (
         "ui.template.reviewer_boundary_fact_line"
     )
@@ -1353,6 +1365,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "label('button.open_list', 'Open List')" in html
     assert "label('button.open_detail', 'Open Detail')" in html
     assert "label('ui.label.dataset', 'Dataset')" in html
+    assert "formatLabel(summary.message_template_key" in html
     assert "label(summary.message_key, summary.message || '')" in html
     assert "formatLabel(summary.fact_line_template_key" in html
     assert "function reviewerBoundaryFilterValue(kind, status)" in html

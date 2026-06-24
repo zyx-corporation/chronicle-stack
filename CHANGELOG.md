@@ -4,6 +4,30 @@
 
 - No unreleased changes recorded.
 
+## v1.13.0 - 2026-06-24
+
+### Added
+- `v1.13.0` release-track documents:
+  - `docs/release-status-v1.13.0.md`
+  - `docs/release-readiness-v1.13.md`
+  - `docs/release-notes-v1.13.0.md`
+  - `docs/smoke-test-v1.13.md`
+  - `docs/v1.13-release-remaining-issues.md`
+- Dedicated `v1.13.0` release-lane framing for local reviewer-boundary structured presentation contracts.
+- Shared drilldown message-template keys and message params across overview, list, and detail reviewer-boundary summaries.
+- `ui-smoke` coverage for explicit reviewer-boundary drilldown message-template fields.
+
+### Changed
+- Project version finalized as `1.13.0`.
+- `v1.13.0` release-lane documents now treat `v1.12.0` as the historical published baseline rather than the active repository-side lane.
+- Reviewer-boundary drilldown rendering now prefers shared template-based presentation copy before fallback literals.
+
+### Notes
+- `v1.13.0` is a local reviewer-boundary structured-presentation-contract release over the published `v1.12.0` baseline.
+- Repository-side release preparation is complete once editable reinstall, version verification, lint, tests, and local `ui-smoke` pass for this checkout.
+- The release remains local-first, read-only, presentation-only for i18n wording, and derived from existing UI payload contracts.
+- `v1.13.0` still does not imply hosted auth, default-on mutation, multi-user-safe authority, localized machine-readable payload values, correctness proof, or security certification.
+
 ## v1.12.0 - 2026-06-24
 
 ### Added

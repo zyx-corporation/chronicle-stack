@@ -53,6 +53,7 @@ def test_ui_i18n_catalog_contains_core_shell_and_navigation_keys():
         "ui.dataset.review_queue",
         "ui.dataset.summary_jobs",
         "ui.message.reviewer_boundary_drilldown",
+        "ui.template.reviewer_boundary_drilldown_message",
         "ui.template.reviewer_boundary_fact_line",
         "ui.reviewer_boundary_status.descriptive_only",
         "ui.reviewer_boundary_status.local_route_enforced",

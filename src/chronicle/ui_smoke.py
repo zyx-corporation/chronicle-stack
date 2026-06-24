@@ -125,6 +125,9 @@ def _has_reviewer_boundary_drilldown_contract(
         and bool(summary.get("list_path"))
         and detail_path_present
         and bool(summary.get("message"))
+        and bool(summary.get("message_template_key"))
+        and isinstance(summary.get("message_params"), dict)
+        and bool(summary.get("message_params", {}).get("dataset_key"))
         and bool(summary.get("message_key"))
         and bool(summary.get("fact_line"))
         and bool(summary.get("fact_line_template_key"))
