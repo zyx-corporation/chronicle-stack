@@ -15,6 +15,8 @@ Current `v1.12.0` repository progress includes:
 - accepted ADR scope for reviewer-boundary presentation drilldown
 - release-readiness, release-notes, and smoke-profile entry points for the lane
 - explicit framing that the next slice returns to presentation/read-model improvements after smoke-contract preservation
+- read-only reviewer-boundary drilldown summaries across overview, runtime, review, and summary payloads
+- smoke coverage for reviewer-boundary drilldown summaries across overview, list, and detail surfaces
 
 ## Boundary notes
 

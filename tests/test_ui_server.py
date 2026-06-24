@@ -489,6 +489,10 @@ def test_ui_overview_data(tmp_path):
     assert overview["reviewer_boundary_overview"]["summary_job_enforcement_counts"] == {
         "descriptive_only": 1
     }
+    assert overview["reviewer_boundary_overview"]["drilldown_summaries"][0]["dataset_key"] == "runtime_records"
+    assert overview["reviewer_boundary_overview"]["drilldown_summaries"][0]["list_path"] == "/api/runtime-records"
+    assert overview["reviewer_boundary_overview"]["drilldown_summaries"][1]["dataset_key"] == "review_queue"
+    assert overview["reviewer_boundary_overview"]["drilldown_summaries"][2]["dataset_key"] == "summary_jobs"
     assert overview["mutation_readiness"]["status"] == "preview_only"
     assert overview["mutation_readiness"]["scope_note"].startswith("The UI remains preview-only")
     assert "Define explicit local auth boundary." in overview["mutation_readiness"]["next_steps"]
@@ -597,6 +601,10 @@ def test_ui_data_service_read_endpoints(tmp_path):
     )
     assert runtime_summary_row["reviewer_enforcement_status"] == "descriptive_only"
     assert runtime_summary_row["reviewer_validation_gate_status"] == "read_only_preview"
+    assert runtime_summary_row["reviewer_boundary_drilldown_summary"]["dataset_key"] == "runtime_records"
+    assert runtime_summary_row["reviewer_boundary_drilldown_summary"]["detail_path"] == (
+        f"/api/runtime-records/{ids['runtime_summary_event_id']}"
+    )
     assert len(service.review_queue()["review_queue"]) == 3
     assert len(service.summary_jobs_list()["summary_jobs"]) == 1
     assert service.summary_jobs_list()["summary_jobs"][0]["summary_job_id"].startswith("sum_")
@@ -622,6 +630,9 @@ def test_ui_data_service_read_endpoints(tmp_path):
     assert service.summary_jobs_list()["summary_jobs"][0]["mutation_enablement_summary"]["remaining_count"] >= 1
     assert service.summary_jobs_list()["summary_jobs"][0]["reviewer_enforcement_status"] == "descriptive_only"
     assert service.summary_jobs_list()["summary_jobs"][0]["reviewer_validation_gate_status"] == "read_only_preview"
+    assert service.summary_jobs_list()["summary_jobs"][0]["reviewer_boundary_drilldown_summary"]["dataset_key"] == (
+        "summary_jobs"
+    )
     assert service.runtime_config_state()["runtime_config"]["config"]["provider_name"] == "ui-local"
     assert service.review_queue()["review_queue"][0]["review_preview_only"] is True
     assert service.review_queue()["review_queue"][0]["target_event_id"].startswith("evt_")
@@ -629,6 +640,9 @@ def test_ui_data_service_read_endpoints(tmp_path):
     assert service.review_queue()["review_queue"][0]["auth_boundary_notice"]["status"] == "advisory_only"
     assert service.review_queue()["review_queue"][0]["reviewer_enforcement_status"] == "descriptive_only"
     assert service.review_queue()["review_queue"][0]["reviewer_validation_gate_status"] == "read_only_preview"
+    assert service.review_queue()["review_queue"][0]["reviewer_boundary_drilldown_summary"]["dataset_key"] == (
+        "review_queue"
+    )
     assert service.review_queue()["review_queue"][0]["package_readiness_summary"]["label"].startswith("package:")
     assert service.review_queue()["review_queue"][0]["package_readiness_summary"]["message"]
     assert service.review_queue()["review_queue"][0]["action_preview_summary"]["status"] == "preview_only"
@@ -770,6 +784,7 @@ def test_ui_data_service_exposes_provider_response_metadata_in_read_only_views(t
     assert runtime_detail is not None
     assert runtime_detail["record"]["response_metadata_summary"]["finish_reason"] == "stop"
     assert runtime_detail["record"]["runtime_record_preview"]["record_kind"] == "execution"
+    assert runtime_detail["record"]["reviewer_boundary_drilldown_summary"]["dataset_key"] == "runtime_records"
     assert any(
         link["path"] == f"/api/summary-jobs/{summary_job_row['summary_job_id']}"
         for link in runtime_detail["record"]["related_links"]
@@ -778,10 +793,12 @@ def test_ui_data_service_exposes_provider_response_metadata_in_read_only_views(t
     summary_detail = service.detail_payload(f"/api/summary-jobs/{summary_job_row['summary_job_id']}")
     assert summary_detail is not None
     assert summary_detail["record"]["response_metadata_summary"]["usage_total_tokens"] == 21
+    assert summary_detail["record"]["reviewer_boundary_drilldown_summary"]["dataset_key"] == "summary_jobs"
 
     review_detail = service.detail_payload(f"/api/review-queue/{result.event_id}")
     assert review_detail is not None
     assert review_detail["record"]["response_metadata_summary"]["provider_status"] == "ok"
+    assert review_detail["record"]["reviewer_boundary_drilldown_summary"]["dataset_key"] == "review_queue"
 
 
 def test_ui_html_filtering_includes_provider_response_metadata_fields(tmp_path, monkeypatch):

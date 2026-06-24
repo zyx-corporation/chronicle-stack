@@ -14,6 +14,8 @@ Chronicle Stack `v1.12.0` is the active repository-side release lane for local r
 - clearer reconstruction links between overview counts, filtered list slices, and detail facts
 - i18n-ready alignment for reviewer-boundary fact-line wording and read-only summary labels
 
+Current repository-side progress already includes reviewer-boundary drilldown summaries in read-only overview/list/detail payloads plus matching `ui-smoke` coverage for those summaries.
+
 ## Required verification
 
 ```bash

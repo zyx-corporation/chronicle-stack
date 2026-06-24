@@ -11,6 +11,7 @@ It is expected to confirm that:
 - overview surfaces still expose reviewer-boundary summary aggregates
 - list surfaces still expose reviewer-boundary row statuses
 - detail surfaces still expose reviewer-boundary summaries
+- overview, list, and detail surfaces expose reviewer-boundary drilldown summaries where implemented
 - any added read-only drilldown summaries remain derived from existing reviewer-boundary state
 - no new write capability is implied by the presentation-drilldown additions
 

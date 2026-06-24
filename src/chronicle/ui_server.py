@@ -266,6 +266,35 @@ def _mutation_blocker_source_label(source: str) -> str:
     }.get(source, source.replace("_", " "))
 
 
+def _dominant_status(counts: dict[str, int]) -> str:
+    if not counts:
+        return "unknown"
+    return max(sorted(counts), key=lambda key: counts.get(key, 0))
+
+
+def _reviewer_boundary_drilldown_summary(
+    *,
+    dataset_key: str,
+    list_path: str,
+    detail_path: str | None,
+    enforcement_status: str,
+    gate_status: str,
+) -> dict[str, Any]:
+    return {
+        "dataset_key": dataset_key,
+        "overview_path": "/api/overview",
+        "list_path": list_path,
+        "detail_path": detail_path,
+        "enforcement_status": enforcement_status,
+        "validation_gate_status": gate_status,
+        "summary_level": "read_only_reviewer_boundary_drilldown",
+        "message": (
+            "Use overview reviewer-boundary counts for slice selection, "
+            "list rows for row status, and detail payloads for explanation."
+        ),
+    }
+
+
 def _mutation_scope_note(boundary: dict[str, Any]) -> str:
     if boundary.get("mutation_enabled", False):
         return "Browser apply is available only inside the explicit loopback-local session boundary."
@@ -1315,6 +1344,38 @@ class ChronicleUIDataService:
             "review_queue_validation_gate_counts": review_gate_counts,
             "summary_job_enforcement_counts": summary_enforcement_counts,
             "summary_job_validation_gate_counts": summary_gate_counts,
+            "drilldown_summaries": [
+                {
+                    "dataset_key": "runtime_records",
+                    "list_path": "/api/runtime-records",
+                    "detail_path_template": "/api/runtime-records/<event_id>",
+                    "dominant_enforcement_status": _dominant_status(runtime_enforcement_counts),
+                    "dominant_validation_gate_status": _dominant_status(runtime_gate_counts),
+                    "message": (
+                        "Overview runtime counts summarize row statuses; open runtime records to inspect each event and detail payload."
+                    ),
+                },
+                {
+                    "dataset_key": "review_queue",
+                    "list_path": "/api/review-queue",
+                    "detail_path_template": "/api/review-queue/<target_event_id>",
+                    "dominant_enforcement_status": _dominant_status(review_enforcement_counts),
+                    "dominant_validation_gate_status": _dominant_status(review_gate_counts),
+                    "message": (
+                        "Overview review counts summarize pending review rows; open review queue detail to inspect reviewer-boundary explanations."
+                    ),
+                },
+                {
+                    "dataset_key": "summary_jobs",
+                    "list_path": "/api/summary-jobs",
+                    "detail_path_template": "/api/summary-jobs/<summary_job_id>",
+                    "dominant_enforcement_status": _dominant_status(summary_enforcement_counts),
+                    "dominant_validation_gate_status": _dominant_status(summary_gate_counts),
+                    "message": (
+                        "Overview summary counts summarize row statuses; open summary-job detail to inspect reviewer-boundary explanations."
+                    ),
+                },
+            ],
         }
 
     def overview_triage(
@@ -1507,6 +1568,13 @@ class ChronicleUIDataService:
                 data["reviewer_validation_gate_status"] = str(
                     boundary.get("reviewer_validation_gate_summary", {}).get("status", "")
                 )
+                data["reviewer_boundary_drilldown_summary"] = _reviewer_boundary_drilldown_summary(
+                    dataset_key="runtime_records",
+                    list_path="/api/runtime-records",
+                    detail_path=f"/api/runtime-records/{event.event_id}",
+                    enforcement_status=data["reviewer_enforcement_status"],
+                    gate_status=data["reviewer_validation_gate_status"],
+                )
                 data["ui_mutation_enabled"] = bool(mutation_enablement.get("enablement_ready")) and bool(
                     review_row.get("ui_mutation_enabled", False)
                 )
@@ -1563,6 +1631,13 @@ class ChronicleUIDataService:
             data["reviewer_validation_gate_status"] = str(
                 boundary.get("reviewer_validation_gate_summary", {}).get("status", "")
             )
+            data["reviewer_boundary_drilldown_summary"] = _reviewer_boundary_drilldown_summary(
+                dataset_key="review_queue",
+                list_path="/api/review-queue",
+                detail_path=f"/api/review-queue/{entry.target_event_id}",
+                enforcement_status=data["reviewer_enforcement_status"],
+                gate_status=data["reviewer_validation_gate_status"],
+            )
             data["ui_mutation_enabled"] = bool(boundary.get("mutation_enabled", False))
             data["review_preview_only"] = not bool(boundary.get("mutation_enabled", False))
             rows.append(data)
@@ -1612,6 +1687,13 @@ class ChronicleUIDataService:
                     )
                     data["reviewer_validation_gate_status"] = str(
                         boundary.get("reviewer_validation_gate_summary", {}).get("status", "")
+                    )
+                    data["reviewer_boundary_drilldown_summary"] = _reviewer_boundary_drilldown_summary(
+                        dataset_key="summary_jobs",
+                        list_path="/api/summary-jobs",
+                        detail_path=f"/api/summary-jobs/{job.summary_job_id}",
+                        enforcement_status=data["reviewer_enforcement_status"],
+                        gate_status=data["reviewer_validation_gate_status"],
                     )
                     data["ui_mutation_enabled"] = bool(boundary.get("mutation_enabled", False))
                     data["review_preview_only"] = not bool(boundary.get("mutation_enabled", False))
@@ -2592,6 +2674,17 @@ class ChronicleUIDataService:
                 record["auth_readiness_status"] = str(
                     review_row.get("auth_boundary_notice", {}).get("status", "")
                 )
+                record["reviewer_boundary_drilldown_summary"] = _reviewer_boundary_drilldown_summary(
+                    dataset_key="runtime_records",
+                    list_path="/api/runtime-records",
+                    detail_path=f"/api/runtime-records/{parts[2]}",
+                    enforcement_status=str(
+                        boundary.get("reviewer_enforcement_summary", {}).get("status", "")
+                    ),
+                    gate_status=str(
+                        boundary.get("reviewer_validation_gate_summary", {}).get("status", "")
+                    ),
+                )
             if "runtime_retrieval_plan" in payload:
                 plan = RuntimeRetrievalPlan.model_validate(payload["runtime_retrieval_plan"])
                 record["retrieval_handoff"] = self.runtime.retrieval_handoff(plan).model_dump(mode="json")
@@ -2631,6 +2724,17 @@ class ChronicleUIDataService:
                     row["reviewer_enforcement_summary"] = boundary.get("reviewer_enforcement_summary", {})
                     row["reviewer_validation_gate_summary"] = boundary.get(
                         "reviewer_validation_gate_summary", {}
+                    )
+                    row["reviewer_boundary_drilldown_summary"] = _reviewer_boundary_drilldown_summary(
+                        dataset_key="review_queue",
+                        list_path="/api/review-queue",
+                        detail_path=f"/api/review-queue/{parts[2]}",
+                        enforcement_status=str(
+                            boundary.get("reviewer_enforcement_summary", {}).get("status", "")
+                        ),
+                        gate_status=str(
+                            boundary.get("reviewer_validation_gate_summary", {}).get("status", "")
+                        ),
                     )
                     row["ui_mutation_enabled"] = bool(boundary.get("mutation_enabled", False))
                     row["review_preview_only"] = not bool(boundary.get("mutation_enabled", False))
@@ -2684,6 +2788,17 @@ class ChronicleUIDataService:
                     job["reviewer_enforcement_summary"] = boundary.get("reviewer_enforcement_summary", {})
                     job["reviewer_validation_gate_summary"] = boundary.get(
                         "reviewer_validation_gate_summary", {}
+                    )
+                    job["reviewer_boundary_drilldown_summary"] = _reviewer_boundary_drilldown_summary(
+                        dataset_key="summary_jobs",
+                        list_path="/api/summary-jobs",
+                        detail_path=f"/api/summary-jobs/{parts[2]}",
+                        enforcement_status=str(
+                            boundary.get("reviewer_enforcement_summary", {}).get("status", "")
+                        ),
+                        gate_status=str(
+                            boundary.get("reviewer_validation_gate_summary", {}).get("status", "")
+                        ),
                     )
                     job["history"] = [
                         self._history_row(item, boundary)
