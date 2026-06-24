@@ -30,7 +30,7 @@ chronicle ui-smoke --json
 Expected current version baseline:
 
 ```text
-chronicle 1.10.0
+chronicle 1.11.0
 ```
 
 ## Boundary confirmation
@@ -50,4 +50,4 @@ Transformed: reviewer-boundary observability now has explicit smoke-contract cov
 
 Supplemented: release-lane framing for reviewer-boundary smoke checkpoints and HTML continuity markers.
 
-Unresolved: dedicated `v1.11.0` version bump, changelog timing, and eventual publication timing.
+Unresolved: eventual publication timing and any follow-on lane after `v1.11.0`.

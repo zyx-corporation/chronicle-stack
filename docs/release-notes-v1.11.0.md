@@ -12,6 +12,7 @@ Chronicle Stack `v1.11.0` is currently framed as a local reviewer-boundary smoke
 
 `v1.11.0` currently includes:
 
+- version bump and changelog update for `1.11.0`
 - explicit smoke checks for reviewer-boundary overview summaries
 - explicit smoke checks that reviewer-boundary overview counts match list-row statuses
 - explicit smoke checks for reviewer-boundary list-row statuses
@@ -57,5 +58,5 @@ chronicle ui-smoke --json
 Expected current version baseline:
 
 ```text
-chronicle 1.10.0
+chronicle 1.11.0
 ```

@@ -2,6 +2,29 @@
 
 ## Unreleased
 
+## v1.11.0 - 2026-06-24
+
+### Added
+- `v1.11.0` release-track documents:
+  - `docs/release-status-v1.11.0.md`
+  - `docs/release-readiness-v1.11.md`
+  - `docs/release-notes-v1.11.0.md`
+  - `docs/smoke-test-v1.11.md`
+  - `docs/v1.11-release-remaining-issues.md`
+- Dedicated `v1.11.0` release-lane framing for local reviewer-boundary smoke-contract hardening.
+- Reviewer-boundary smoke checks for overview summaries, list-row statuses, detail summaries, and HTML continuity markers.
+- Reviewer-boundary count-consistency smoke checks between overview aggregates and runtime, review, and summary list-row statuses.
+
+### Changed
+- Project version finalized as `1.11.0`.
+- `v1.11.0` release-lane documents now treat `v1.10.0` as the historical published baseline rather than the active repository-side lane.
+
+### Notes
+- `v1.11.0` is a local reviewer-boundary smoke-contract release over the published `v1.10.0` baseline.
+- Repository-side release preparation is complete once editable reinstall, version verification, lint, tests, and local `ui-smoke` pass for this checkout.
+- The release remains local-first, read-only, preview-only for GUI mutation, and derived from existing UI payload contracts.
+- `v1.11.0` still does not imply hosted auth, default-on mutation, multi-user-safe authority, new reviewer-boundary persistence, correctness proof, or security certification.
+
 ## v1.10.0 - 2026-06-23
 
 ### Added

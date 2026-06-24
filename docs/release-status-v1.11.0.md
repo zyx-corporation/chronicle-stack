@@ -13,12 +13,14 @@ Related: `docs/adr/0030-local-reviewer-boundary-smoke-contract.md`, `docs/releas
 Current `v1.11.0` repository progress includes:
 
 - accepted ADR scope for reviewer-boundary smoke coverage
+- version bump and changelog update for `1.11.0`
 - read-only smoke checks for reviewer-boundary overview summaries
 - read-only smoke checks for reviewer-boundary list-row statuses
 - read-only smoke checks for reviewer-boundary detail summaries
 - HTML-shell continuity checks for reviewer-boundary panel/navigation helpers
 - release-readiness, release-notes, and smoke-profile entry points for the lane
 - reviewer-boundary count-consistency checks between overview aggregates and list-row statuses
+- repository-side verification target for editable reinstall, `chronicle --version`, `ruff`, `pytest`, and `ui-smoke`
 
 ## Boundary notes
 

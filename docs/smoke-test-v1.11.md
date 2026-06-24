@@ -30,7 +30,7 @@ chronicle ui-smoke --json
 Expected current version baseline:
 
 ```text
-chronicle 1.10.0
+chronicle 1.11.0
 ```
 
 ## Manual spot checks
