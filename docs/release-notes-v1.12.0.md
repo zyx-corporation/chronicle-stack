@@ -16,6 +16,7 @@ Chronicle Stack `v1.12.0` is currently framed as a local reviewer-boundary prese
 - clearer read-only summaries that connect row-level statuses to detail facts
 - preserved machine-readable reviewer-boundary values in API payloads
 - read-only drilldown summary payloads for runtime records, review queue rows, and summary jobs
+- HTML-shell rendering for those drilldown summaries in overview, list, and detail views
 
 ### i18n-ready presentation alignment
 

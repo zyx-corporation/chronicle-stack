@@ -3958,11 +3958,13 @@ function responseSummaryLine(responseMetadata) {{
 }}
 function renderReviewerBoundaryDrilldownSummary(summary) {{
   if (!summary || !summary.dataset_key) return '';
+  const enforcementStatus = summary.enforcement_status || summary.dominant_enforcement_status || '';
+  const gateStatus = summary.validation_gate_status || summary.dominant_validation_gate_status || '';
   return cellStack([
     cellMeta(summary.message || ''),
     cellCode('dataset=' + String(summary.dataset_key || '')),
-    cellCode('enforcement=' + String(summary.enforcement_status || summary.dominant_enforcement_status || '')),
-    cellCode('gate=' + String(summary.validation_gate_status || summary.dominant_validation_gate_status || '')),
+    cellCode(label('ui.label.dominant_enforcement_status', 'Dominant enforcement status') + '=' + reviewerBoundaryStatusLabel('reviewer_enforcement', enforcementStatus)),
+    cellCode(label('ui.label.dominant_validation_gate_status', 'Dominant gate status') + '=' + reviewerBoundaryStatusLabel('reviewer_gate', gateStatus)),
     navigationCluster([
       listJumpButton(label('button.open_list', 'Open List'), summary.list_path || ''),
       detailJumpButton(summary.detail_path || '', label('button.open_detail', 'Open Detail')),
