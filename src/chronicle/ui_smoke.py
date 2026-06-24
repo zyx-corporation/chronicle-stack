@@ -927,6 +927,18 @@ def run_ui_smoke(root: Path | None = None) -> UISmokeReport:
                         list,
                     )
                     and isinstance(
+                        mutation_readiness.get("operational_readiness", {}).get("unsatisfied_checks"),
+                        list,
+                    )
+                    and all(
+                        isinstance(item, dict)
+                        and bool(item.get("summary_key"))
+                        and bool(item.get("label_key"))
+                        for item in mutation_readiness.get("operational_readiness", {}).get(
+                            "unsatisfied_checks", []
+                        )
+                    )
+                    and isinstance(
                         mutation_readiness.get("reviewer_context_requirements", {}).get(
                             "effective_required_fields"
                         ),
@@ -967,6 +979,18 @@ def run_ui_smoke(root: Path | None = None) -> UISmokeReport:
                     and isinstance(
                         mutation_readiness.get("operational_readiness", {}).get("blocking_summaries"),
                         list,
+                    )
+                    and isinstance(
+                        mutation_readiness.get("operational_readiness", {}).get("unsatisfied_checks"),
+                        list,
+                    )
+                    and all(
+                        isinstance(item, dict)
+                        and bool(item.get("summary_key"))
+                        and bool(item.get("label_key"))
+                        for item in mutation_readiness.get("operational_readiness", {}).get(
+                            "unsatisfied_checks", []
+                        )
                     )
                     and isinstance(
                         mutation_readiness.get("reviewer_context_requirements", {}).get(

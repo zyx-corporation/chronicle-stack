@@ -527,6 +527,14 @@ def test_ui_overview_data(tmp_path):
     assert overview["mutation_readiness"]["operational_readiness"]["status"] == "blocked"
     assert overview["mutation_readiness"]["operational_readiness"]["remaining_count"] == 5
     assert overview["mutation_readiness"]["enablement_checks"][0]["code"] == "mutation_capability_flag"
+    assert (
+        overview["mutation_readiness"]["enablement_checks"][0]["label_key"]
+        == "ui.mutation_enablement_check.mutation_capability_flag.label"
+    )
+    assert (
+        overview["mutation_readiness"]["enablement_checks"][0]["detail_key"]
+        == "ui.mutation_enablement_check.mutation_capability_flag.detail"
+    )
     assert overview["mutation_readiness"]["enablement_checks"][0]["satisfied"] is False
     assert overview["mutation_readiness"]["reviewer_context_requirements"]["required_fields"] == [
         "reviewer_label",
@@ -557,6 +565,14 @@ def test_ui_overview_data(tmp_path):
     ]
     assert overview["mutation_readiness"]["operational_readiness"]["blocking_summaries"][0].startswith(
         "Capability flag enabled: "
+    )
+    assert (
+        overview["mutation_readiness"]["operational_readiness"]["unsatisfied_checks"][0]["summary_key"]
+        == "ui.template.mutation_enablement_check_summary"
+    )
+    assert (
+        overview["mutation_readiness"]["operational_readiness"]["unsatisfied_checks"][0]["label_key"]
+        == "ui.mutation_enablement_check.mutation_capability_flag.label"
     )
     assert overview["runtime_records_summary"]["kind_counts"]["summary"] == 1
     assert overview["runtime_records_summary"]["kind_counts"]["retrieval_plan"] == 1
@@ -947,7 +963,8 @@ def test_ui_html_filtering_includes_provider_response_metadata_fields(tmp_path, 
     assert "detailLine('Enablement ready', mutationReadiness.enablement_ready)" in html
     assert "detailLine('Scope note', mutationReadiness.scope_note || '')" in html
     assert "detailLine('Operational readiness', operationalReadiness.status || '')" in html
-    assert "detailListLine('Remaining checks', operationalReadiness.blocking_summaries || [], ' | ')" in html
+    assert "const localizedRemainingChecks = (Array.isArray(operationalReadiness.unsatisfied_checks) ? operationalReadiness.unsatisfied_checks : []).map(item => (" in html
+    assert "detailListLine('Remaining checks', localizedRemainingChecks.length > 0 ? localizedRemainingChecks : (operationalReadiness.blocking_summaries || []), ' | ')" in html
     assert "mutationOperationalDetailLines(operationalReadiness, blockerSummaries, enablementChecks)" in html
     assert "function renderMutationEnablementNotice(record)" in html
     assert "label('notice.mutation_enablement', 'Mutation Enablement')" in html
@@ -1360,6 +1377,12 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "function blockerSummaryDetailLines(blockerDetails, blockers, blockerSummaries = [], nextSteps = [])" in html
     assert "function writeRouteDetailLines(writeRouteContract, identityProofContract, authorizationContract, targetStateContract, includeRequestFields = false)" in html
     assert "function mutationOperationalDetailLines(operationalReadiness, blockerSummaries, enablementChecks, checksLabel = 'Enablement checks')" in html
+    assert "const localizedChecks = enablementChecks.map(check => {" in html
+    assert "check && check.label_key" in html
+    assert "formatLabel(check.label_key, check.label_params || {}, check.label || check.code || 'check')" in html
+    assert "operationalReadiness.unsatisfied_checks" in html
+    assert "item && item.summary_key" in html
+    assert "formatLabel(item.summary_key, item.summary_params || {}, ((item.label || item.code || 'check') + ': ' + (item.detail || '')))" in html
     assert "function reviewerLabelDetailLines(reviewerContext)" in html
     assert "function recoveryContractDetailLines(failureContract, targetId = 'action-preview-response')" in html
     assert "function identityBoundaryDetailLines(identityBoundary)" in html

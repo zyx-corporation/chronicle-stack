@@ -449,37 +449,49 @@ def _mutation_enablement_checks(
         {
             "code": "mutation_capability_flag",
             "label": "Capability flag enabled",
+            "label_key": "ui.mutation_enablement_check.mutation_capability_flag.label",
             "satisfied": "mutation_capability_flag_disabled" not in blocker_set,
+            "detail_key": "ui.mutation_enablement_check.mutation_capability_flag.detail",
             "detail": MUTATION_BLOCKER_TEXT["mutation_capability_flag_disabled"],
         },
         {
             "code": "ui_mutation_enable_flag",
             "label": "Session enable flag enabled",
+            "label_key": "ui.mutation_enablement_check.ui_mutation_enable_flag.label",
             "satisfied": "ui_mutation_enable_flag_disabled" not in blocker_set,
+            "detail_key": "ui.mutation_enablement_check.ui_mutation_enable_flag.detail",
             "detail": MUTATION_BLOCKER_TEXT["ui_mutation_enable_flag_disabled"],
         },
         {
             "code": "auth_boundary",
             "label": "Auth boundary configured",
+            "label_key": "ui.mutation_enablement_check.auth_boundary.label",
             "satisfied": "auth_not_enabled" not in blocker_set,
+            "detail_key": "ui.mutation_enablement_check.auth_boundary.detail",
             "detail": MUTATION_BLOCKER_TEXT["auth_not_enabled"],
         },
         {
             "code": "authorization_boundary",
             "label": "Authorization boundary configured",
+            "label_key": "ui.mutation_enablement_check.authorization_boundary.label",
             "satisfied": "authorization_not_enabled" not in blocker_set,
+            "detail_key": "ui.mutation_enablement_check.authorization_boundary.detail",
             "detail": MUTATION_BLOCKER_TEXT["authorization_not_enabled"],
         },
         {
             "code": "reviewer_identity",
             "label": "Reviewer identity recorded",
+            "label_key": "ui.mutation_enablement_check.reviewer_identity.label",
             "satisfied": pending_boundary_warning_counts.get("reviewer_identity_missing", 0) == 0,
+            "detail_key": "ui.mutation_enablement_check.reviewer_identity.detail",
             "detail": MUTATION_BLOCKER_TEXT["reviewer_identity_missing"],
         },
         {
             "code": "session_labels",
             "label": "Session labels recorded",
+            "label_key": "ui.mutation_enablement_check.session_labels.label",
             "satisfied": pending_boundary_warning_counts.get("reviewer_session_label_missing", 0) == 0,
+            "detail_key": "ui.mutation_enablement_check.session_labels.detail",
             "detail": MUTATION_BLOCKER_TEXT["reviewer_session_label_missing"],
         },
     ]
@@ -494,7 +506,14 @@ def _mutation_operational_readiness(
         {
             "code": str(check.get("code", "")),
             "label": str(check.get("label", check.get("code", ""))),
+            "label_key": str(check.get("label_key", "")),
+            "detail_key": str(check.get("detail_key", "")),
             "detail": str(check.get("detail", "")),
+            "summary_key": "ui.template.mutation_enablement_check_summary",
+            "summary_params": {
+                "label": str(check.get("label", check.get("code", ""))),
+                "detail": str(check.get("detail", "")),
+            },
         }
         for check in enablement_checks
         if check.get("satisfied") is not True
@@ -5465,6 +5484,17 @@ function writeRouteDetailLines(writeRouteContract, identityProofContract, author
     + detailListLine('Identity proof fields', identityProofContract.required_identity_fields, ' | ');
 }}
 function mutationOperationalDetailLines(operationalReadiness, blockerSummaries, enablementChecks, checksLabel = 'Enablement checks') {{
+  const localizedChecks = enablementChecks.map(check => {{
+    const label = check && check.label_key
+      ? formatLabel(check.label_key, check.label_params || {{}}, check.label || check.code || 'check')
+      : (check.label || check.code || 'check');
+    return (check.satisfied ? 'ok: ' : 'blocked: ') + label;
+  }});
+  const localizedRemainingChecks = (Array.isArray(operationalReadiness.unsatisfied_checks) ? operationalReadiness.unsatisfied_checks : []).map(item => (
+    item && item.summary_key
+      ? formatLabel(item.summary_key, item.summary_params || {{}}, ((item.label || item.code || 'check') + ': ' + (item.detail || '')))
+      : ((item.label || item.code || 'check') + ': ' + (item.detail || ''))
+  ));
   return detailLine('Operational readiness', operationalReadiness.status || '')
     + detailLine('Operational summary', operationalReadiness.message || '')
     + detailLine('Remaining prerequisites', operationalReadiness.remaining_count ?? 0)
@@ -5473,8 +5503,8 @@ function mutationOperationalDetailLines(operationalReadiness, blockerSummaries, 
         ? formatLabel(item.summary_key, item.summary_params || {{}}, item.summary || item.code || 'blocker')
         : (item.summary || ((item.source_label || item.source || 'unknown') + ': ' + (item.message || item.code || 'blocker')))
     )), ' | ')
-    + detailListLine(checksLabel, enablementChecks.map(check => ((check.satisfied ? 'ok: ' : 'blocked: ') + (check.label || check.code || 'check'))), ' | ')
-    + detailListLine('Remaining checks', operationalReadiness.blocking_summaries || [], ' | ');
+    + detailListLine(checksLabel, localizedChecks, ' | ')
+    + detailListLine('Remaining checks', localizedRemainingChecks.length > 0 ? localizedRemainingChecks : (operationalReadiness.blocking_summaries || []), ' | ');
 }}
 function reviewerLabelDetailLines(reviewerContext) {{
   return detailLine('Reviewer label pattern', reviewerContext.reviewer_label_pattern || '')
