@@ -267,6 +267,32 @@ def test_ui_i18n_catalog_covers_review_warning_structured_keys():
         assert not missing, f"{locale} missing keys: {sorted(missing)}"
 
 
+def test_ui_i18n_catalog_covers_review_action_failure_structured_keys():
+    required_keys = {
+        "ui.review_action_failure.message.mutation_disabled",
+        "ui.review_action_failure.message.reviewer_label_required",
+        "ui.review_action_failure.message.invalid_reviewer_label",
+        "ui.review_action_failure.message.session_label_required",
+        "ui.review_action_failure.message.invalid_session_label",
+        "ui.review_action_failure.message.ui_intent_mismatch",
+        "ui.review_action_failure.message.invalid_reviewer_kind",
+        "ui.review_action_failure.message.authorization_failed",
+        "ui.review_action_failure.message.review_target_not_found",
+        "ui.review_action_failure.message.review_not_pending",
+        "ui.review_action_failure.message.invalid_json",
+        "ui.review_action_failure.message.invalid_request_body",
+        "ui.review_action_failure.message.audit_insertion_failed",
+        "ui.review_action_failure.message.decision_persistence_failed",
+        "ui.review_action_failure.summary.authorization_failed",
+        "ui.review_action_failure.summary.review_not_pending",
+        "ui.review_action_failure.summary.audit_insertion_failed",
+        "ui.review_action_failure.summary.decision_persistence_failed",
+    }
+    for locale in ("ja", "en", "zh-CN"):
+        missing = required_keys.difference(UI_I18N_CATALOG[locale])
+        assert not missing, f"{locale} missing keys: {sorted(missing)}"
+
+
 def test_ui_i18n_catalog_covers_package_preview_and_review_preview_messages():
     required_exact = {
         "No context records were selected by the retrieval dry-run, so package preview is advisory only.",

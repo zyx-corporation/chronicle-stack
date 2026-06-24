@@ -216,6 +216,59 @@ def _serialize_review_warning_details(warnings: list[str]) -> list[dict[str, str
     ]
 
 
+def _review_action_failure_message_key(error_code: str) -> str:
+    return f"ui.review_action_failure.message.{error_code}"
+
+
+def _review_action_failure_summary_contract(
+    *,
+    error_code: str,
+    warning_codes: list[str] | None = None,
+    identity_assurance_status: str | None = None,
+) -> tuple[str, dict[str, Any], str]:
+    if error_code == "authorization_failed":
+        warning_text = " | ".join(
+            ChronicleUIDataService._warning_message(code)
+            for code in (warning_codes or [])
+            if code
+        )
+        if warning_text and identity_assurance_status:
+            summary = f"authorization_failed; identity={identity_assurance_status}; warnings={warning_text}"
+        elif identity_assurance_status:
+            summary = f"authorization_failed; identity={identity_assurance_status}"
+        elif warning_text:
+            summary = f"authorization_failed; warnings={warning_text}"
+        else:
+            summary = "authorization_failed"
+        return (
+            "ui.review_action_failure.summary.authorization_failed",
+            {
+                "identity_assurance_status": identity_assurance_status or "",
+                "warning_text": warning_text,
+            },
+            summary,
+        )
+    if error_code == "review_not_pending":
+        return (
+            "ui.review_action_failure.summary.review_not_pending",
+            {},
+            "review_not_pending; inspect resolved queue state before retry",
+        )
+    if error_code == "audit_insertion_failed":
+        return (
+            "ui.review_action_failure.summary.audit_insertion_failed",
+            {},
+            "audit_insertion_failed; inspect local audit surface before retry",
+        )
+    if error_code == "decision_persistence_failed":
+        return (
+            "ui.review_action_failure.summary.decision_persistence_failed",
+            {},
+            "decision_persistence_failed; inspect audit trail and primary record state",
+        )
+    return ("", {}, error_code)
+
+
 def _identity_boundary_summary_message(status: str) -> str:
     messages = {
         "boundary_aligned": "Recorded reviewer identity metadata is aligned with the current preview auth boundary.",
@@ -3218,6 +3271,7 @@ class ChronicleUIDataService:
             "review_target_not_found": "The target review event is no longer available from the current Chronicle state.",
             "review_not_pending": "The review target is no longer pending; inspect the resolved queue before retrying.",
             "invalid_json": "The request body could not be parsed as JSON, so no mutation path was attempted.",
+            "invalid_request_body": "Request body must be a JSON object.",
             "audit_insertion_failed": "Audit insertion failed before the review decision could be reported as applied.",
             "decision_persistence_failed": "Audit insertion succeeded, but the Chronicle primary-record append failed, so treat the route as fail-closed.",
         }
@@ -3230,25 +3284,85 @@ class ChronicleUIDataService:
         warning_codes: list[str] | None = None,
         identity_assurance_status: str | None = None,
     ) -> str:
-        if error_code == "authorization_failed":
-            warning_text = " | ".join(
-                ChronicleUIDataService._warning_message(code)
-                for code in (warning_codes or [])
-                if code
-            )
-            if warning_text and identity_assurance_status:
-                return f"authorization_failed; identity={identity_assurance_status}; warnings={warning_text}"
-            if identity_assurance_status:
-                return f"authorization_failed; identity={identity_assurance_status}"
-            if warning_text:
-                return f"authorization_failed; warnings={warning_text}"
-        if error_code == "review_not_pending":
-            return "review_not_pending; inspect resolved queue state before retry"
-        if error_code == "audit_insertion_failed":
-            return "audit_insertion_failed; inspect local audit surface before retry"
-        if error_code == "decision_persistence_failed":
-            return "decision_persistence_failed; inspect audit trail and primary record state"
-        return error_code
+        return _review_action_failure_summary_contract(
+            error_code=error_code,
+            warning_codes=warning_codes,
+            identity_assurance_status=identity_assurance_status,
+        )[2]
+
+    def _review_action_failure_payload(
+        self,
+        *,
+        error_code: str,
+        mutation_enabled: bool,
+        event_id: str | None = None,
+        action: str | None = None,
+        cli_equivalent: str | None = None,
+        reviewer_context_requirements: dict[str, Any] | None = None,
+        reviewer_enforcement_summary: dict[str, Any] | None = None,
+        reviewer_validation_gate_summary: dict[str, Any] | None = None,
+        write_route_contract: dict[str, Any] | None = None,
+        success_contract: dict[str, Any] | None = None,
+        failure_contract: dict[str, Any] | None = None,
+        warning_codes: list[str] | None = None,
+        warning_details: list[dict[str, Any]] | None = None,
+        identity_assurance_status: str | None = None,
+        identity_assurance_message: str | None = None,
+        detail: str | None = None,
+        audit_id: str | None = None,
+        extra: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        payload: dict[str, Any] = {
+            "ok": False,
+            "status": "blocked",
+            "error_code": error_code,
+            "message": self._review_action_failure_message(error_code),
+            "message_key": _review_action_failure_message_key(error_code),
+            "mutation_enabled": mutation_enabled,
+        }
+        if event_id is not None:
+            payload["event_id"] = event_id
+        if action is not None:
+            payload["action"] = action
+        if cli_equivalent is not None:
+            payload["cli_equivalent"] = cli_equivalent
+        if reviewer_context_requirements is not None:
+            payload["reviewer_context_requirements"] = reviewer_context_requirements
+        if reviewer_enforcement_summary is not None:
+            payload["reviewer_enforcement_summary"] = reviewer_enforcement_summary
+        if reviewer_validation_gate_summary is not None:
+            payload["reviewer_validation_gate_summary"] = reviewer_validation_gate_summary
+        if write_route_contract is not None:
+            payload["write_route_contract"] = write_route_contract
+        if success_contract is not None:
+            payload["success_contract"] = success_contract
+        if failure_contract is not None:
+            payload["failure_contract"] = failure_contract
+        if warning_codes is not None:
+            payload["warning_codes"] = warning_codes
+        if warning_details is not None:
+            payload["warning_details"] = warning_details
+        if identity_assurance_status is not None:
+            payload["identity_assurance_status"] = identity_assurance_status
+        if identity_assurance_message is not None:
+            payload["identity_assurance_message"] = identity_assurance_message
+        if detail is not None:
+            payload["detail"] = detail
+        if audit_id is not None:
+            payload["audit_id"] = audit_id
+
+        summary_key, summary_params, summary = _review_action_failure_summary_contract(
+            error_code=error_code,
+            warning_codes=warning_codes,
+            identity_assurance_status=identity_assurance_status,
+        )
+        if summary_key:
+            payload["failure_summary"] = summary
+            payload["failure_summary_key"] = summary_key
+            payload["failure_summary_params"] = summary_params
+        if extra:
+            payload.update(extra)
+        return payload
 
     @staticmethod
     def _review_action_success_contract(
@@ -3720,33 +3834,28 @@ class ChronicleUIDataService:
         cli_equivalent = f"chronicle review {action} --event {event_id}"
         return (
             HTTPStatus.FORBIDDEN,
-            {
-                "ok": False,
-                "status": "blocked",
-                "event_id": event_id,
-                "action": action,
-                "error_code": "mutation_disabled",
-                "message": self._review_action_failure_message("mutation_disabled"),
-                "mutation_enabled": False,
-                "cli_equivalent": cli_equivalent,
-                "reviewer_context_requirements": boundary.get("reviewer_context_requirements", {}),
-                "reviewer_enforcement_summary": boundary.get("reviewer_enforcement_summary", {}),
-                "reviewer_validation_gate_summary": boundary.get(
-                    "reviewer_validation_gate_summary", {}
-                ),
-                "write_route_contract": boundary.get("write_route_contract", {}),
-                "success_contract": self._review_action_success_contract(
+            self._review_action_failure_payload(
+                error_code="mutation_disabled",
+                mutation_enabled=False,
+                event_id=event_id,
+                action=action,
+                cli_equivalent=cli_equivalent,
+                reviewer_context_requirements=boundary.get("reviewer_context_requirements", {}),
+                reviewer_enforcement_summary=boundary.get("reviewer_enforcement_summary", {}),
+                reviewer_validation_gate_summary=boundary.get("reviewer_validation_gate_summary", {}),
+                write_route_contract=boundary.get("write_route_contract", {}),
+                success_contract=self._review_action_success_contract(
                     cli_equivalent=cli_equivalent,
                     event_id=event_id,
                 ),
-                "failure_contract": self._review_action_failure_contract(
+                failure_contract=self._review_action_failure_contract(
                     mutation_enabled=False,
                     cli_equivalent=cli_equivalent,
                     event_id=event_id,
                     action=action,
                     error_code="mutation_disabled",
                 ),
-            },
+            ),
         )
 
     def review_action_response(
@@ -3791,154 +3900,136 @@ class ChronicleUIDataService:
         if not reviewer_label:
             return (
                 HTTPStatus.BAD_REQUEST,
-                {
-                    "ok": False,
-                    "status": "blocked",
-                    "event_id": event_id,
-                    "action": action,
-                    "error_code": "reviewer_label_required",
-                    "message": self._review_action_failure_message("reviewer_label_required"),
-                    "mutation_enabled": True,
-                    "reviewer_context_requirements": reviewer_context_requirements,
-                    "reviewer_enforcement_summary": reviewer_enforcement_summary,
-                    "reviewer_validation_gate_summary": reviewer_validation_gate_summary,
-                    "write_route_contract": write_route_contract,
-                    "success_contract": success_contract,
-                    "failure_contract": self._review_action_failure_contract(
+                self._review_action_failure_payload(
+                    error_code="reviewer_label_required",
+                    mutation_enabled=True,
+                    event_id=event_id,
+                    action=action,
+                    reviewer_context_requirements=reviewer_context_requirements,
+                    reviewer_enforcement_summary=reviewer_enforcement_summary,
+                    reviewer_validation_gate_summary=reviewer_validation_gate_summary,
+                    write_route_contract=write_route_contract,
+                    success_contract=success_contract,
+                    failure_contract=self._review_action_failure_contract(
                         mutation_enabled=True,
                         cli_equivalent=cli_equivalent,
                         event_id=event_id,
                         action=action,
                         error_code="reviewer_label_required",
                     ),
-                },
+                ),
             )
         if not REVIEWER_LABEL_PATTERN.fullmatch(reviewer_label):
             return (
                 HTTPStatus.BAD_REQUEST,
-                {
-                    "ok": False,
-                    "status": "blocked",
-                    "event_id": event_id,
-                    "action": action,
-                    "error_code": "invalid_reviewer_label",
-                    "message": self._review_action_failure_message("invalid_reviewer_label"),
-                    "mutation_enabled": True,
-                    "reviewer_context_requirements": reviewer_context_requirements,
-                    "reviewer_enforcement_summary": reviewer_enforcement_summary,
-                    "reviewer_validation_gate_summary": reviewer_validation_gate_summary,
-                    "write_route_contract": write_route_contract,
-                    "success_contract": success_contract,
-                    "failure_contract": self._review_action_failure_contract(
+                self._review_action_failure_payload(
+                    error_code="invalid_reviewer_label",
+                    mutation_enabled=True,
+                    event_id=event_id,
+                    action=action,
+                    reviewer_context_requirements=reviewer_context_requirements,
+                    reviewer_enforcement_summary=reviewer_enforcement_summary,
+                    reviewer_validation_gate_summary=reviewer_validation_gate_summary,
+                    write_route_contract=write_route_contract,
+                    success_contract=success_contract,
+                    failure_contract=self._review_action_failure_contract(
                         mutation_enabled=True,
                         cli_equivalent=cli_equivalent,
                         event_id=event_id,
                         action=action,
                         error_code="invalid_reviewer_label",
                     ),
-                },
+                ),
             )
         if boundary.get("session_gating", False) and not session_label_value:
             return (
                 HTTPStatus.BAD_REQUEST,
-                {
-                    "ok": False,
-                    "status": "blocked",
-                    "event_id": event_id,
-                    "action": action,
-                    "error_code": "session_label_required",
-                    "message": self._review_action_failure_message("session_label_required"),
-                    "mutation_enabled": True,
-                    "reviewer_context_requirements": reviewer_context_requirements,
-                    "reviewer_enforcement_summary": reviewer_enforcement_summary,
-                    "reviewer_validation_gate_summary": reviewer_validation_gate_summary,
-                    "write_route_contract": write_route_contract,
-                    "success_contract": success_contract,
-                    "failure_contract": self._review_action_failure_contract(
+                self._review_action_failure_payload(
+                    error_code="session_label_required",
+                    mutation_enabled=True,
+                    event_id=event_id,
+                    action=action,
+                    reviewer_context_requirements=reviewer_context_requirements,
+                    reviewer_enforcement_summary=reviewer_enforcement_summary,
+                    reviewer_validation_gate_summary=reviewer_validation_gate_summary,
+                    write_route_contract=write_route_contract,
+                    success_contract=success_contract,
+                    failure_contract=self._review_action_failure_contract(
                         mutation_enabled=True,
                         cli_equivalent=cli_equivalent,
                         event_id=event_id,
                         action=action,
                         error_code="session_label_required",
                     ),
-                },
+                ),
             )
         if session_label_value and not SESSION_LABEL_PATTERN.fullmatch(session_label_value):
             return (
                 HTTPStatus.BAD_REQUEST,
-                {
-                    "ok": False,
-                    "status": "blocked",
-                    "event_id": event_id,
-                    "action": action,
-                    "error_code": "invalid_session_label",
-                    "message": self._review_action_failure_message("invalid_session_label"),
-                    "mutation_enabled": True,
-                    "reviewer_context_requirements": reviewer_context_requirements,
-                    "reviewer_enforcement_summary": reviewer_enforcement_summary,
-                    "reviewer_validation_gate_summary": reviewer_validation_gate_summary,
-                    "write_route_contract": write_route_contract,
-                    "success_contract": success_contract,
-                    "failure_contract": self._review_action_failure_contract(
+                self._review_action_failure_payload(
+                    error_code="invalid_session_label",
+                    mutation_enabled=True,
+                    event_id=event_id,
+                    action=action,
+                    reviewer_context_requirements=reviewer_context_requirements,
+                    reviewer_enforcement_summary=reviewer_enforcement_summary,
+                    reviewer_validation_gate_summary=reviewer_validation_gate_summary,
+                    write_route_contract=write_route_contract,
+                    success_contract=success_contract,
+                    failure_contract=self._review_action_failure_contract(
                         mutation_enabled=True,
                         cli_equivalent=cli_equivalent,
                         event_id=event_id,
                         action=action,
                         error_code="invalid_session_label",
                     ),
-                },
+                ),
             )
         if ui_intent != action:
             return (
                 HTTPStatus.BAD_REQUEST,
-                {
-                    "ok": False,
-                    "status": "blocked",
-                    "event_id": event_id,
-                    "action": action,
-                    "error_code": "ui_intent_mismatch",
-                    "message": self._review_action_failure_message("ui_intent_mismatch"),
-                    "mutation_enabled": True,
-                    "reviewer_context_requirements": reviewer_context_requirements,
-                    "reviewer_enforcement_summary": reviewer_enforcement_summary,
-                    "reviewer_validation_gate_summary": reviewer_validation_gate_summary,
-                    "write_route_contract": write_route_contract,
-                    "success_contract": success_contract,
-                    "failure_contract": self._review_action_failure_contract(
+                self._review_action_failure_payload(
+                    error_code="ui_intent_mismatch",
+                    mutation_enabled=True,
+                    event_id=event_id,
+                    action=action,
+                    reviewer_context_requirements=reviewer_context_requirements,
+                    reviewer_enforcement_summary=reviewer_enforcement_summary,
+                    reviewer_validation_gate_summary=reviewer_validation_gate_summary,
+                    write_route_contract=write_route_contract,
+                    success_contract=success_contract,
+                    failure_contract=self._review_action_failure_contract(
                         mutation_enabled=True,
                         cli_equivalent=cli_equivalent,
                         event_id=event_id,
                         action=action,
                         error_code="ui_intent_mismatch",
                     ),
-                },
+                ),
             )
         try:
             reviewer_kind = ReviewerIdentityKind(reviewer_kind_value)
         except ValueError:
             return (
                 HTTPStatus.BAD_REQUEST,
-                {
-                    "ok": False,
-                    "status": "blocked",
-                    "event_id": event_id,
-                    "action": action,
-                    "error_code": "invalid_reviewer_kind",
-                    "message": self._review_action_failure_message("invalid_reviewer_kind"),
-                    "mutation_enabled": True,
-                    "reviewer_context_requirements": reviewer_context_requirements,
-                    "reviewer_enforcement_summary": reviewer_enforcement_summary,
-                    "reviewer_validation_gate_summary": reviewer_validation_gate_summary,
-                    "write_route_contract": write_route_contract,
-                    "success_contract": success_contract,
-                    "failure_contract": self._review_action_failure_contract(
+                self._review_action_failure_payload(
+                    error_code="invalid_reviewer_kind",
+                    mutation_enabled=True,
+                    event_id=event_id,
+                    action=action,
+                    reviewer_context_requirements=reviewer_context_requirements,
+                    reviewer_enforcement_summary=reviewer_enforcement_summary,
+                    reviewer_validation_gate_summary=reviewer_validation_gate_summary,
+                    write_route_contract=write_route_contract,
+                    success_contract=success_contract,
+                    failure_contract=self._review_action_failure_contract(
                         mutation_enabled=True,
                         cli_equivalent=cli_equivalent,
                         event_id=event_id,
                         action=action,
                         error_code="invalid_reviewer_kind",
                     ),
-                },
+                ),
             )
 
         reviewer_identity = ReviewerIdentity(
@@ -3956,93 +4047,76 @@ class ChronicleUIDataService:
         if capability.get("can_review_now") is not True or assurance.get("status") != "boundary_aligned":
             return (
                 HTTPStatus.FORBIDDEN,
-                {
-                    "ok": False,
-                    "status": "blocked",
-                    "event_id": event_id,
-                    "action": action,
-                    "error_code": "authorization_failed",
-                    "message": self._review_action_failure_message("authorization_failed"),
-                    "mutation_enabled": True,
-                    "warning_codes": capability.get("warnings", []),
-                    "warning_details": capability.get("warning_details", []),
-                    "identity_assurance_status": assurance.get("status"),
-                    "identity_assurance_message": assurance.get("message"),
-                    "reviewer_context_requirements": reviewer_context_requirements,
-                    "reviewer_enforcement_summary": reviewer_enforcement_summary,
-                    "reviewer_validation_gate_summary": reviewer_validation_gate_summary,
-                    "write_route_contract": write_route_contract,
-                    "failure_summary": self._review_action_failure_summary(
-                        error_code="authorization_failed",
-                        warning_codes=capability.get("warnings", []),
-                        identity_assurance_status=str(assurance.get("status", "")),
-                    ),
-                    "cli_equivalent": cli_equivalent,
-                    "success_contract": success_contract,
-                    "failure_contract": self._review_action_failure_contract(
+                self._review_action_failure_payload(
+                    error_code="authorization_failed",
+                    mutation_enabled=True,
+                    event_id=event_id,
+                    action=action,
+                    cli_equivalent=cli_equivalent,
+                    reviewer_context_requirements=reviewer_context_requirements,
+                    reviewer_enforcement_summary=reviewer_enforcement_summary,
+                    reviewer_validation_gate_summary=reviewer_validation_gate_summary,
+                    write_route_contract=write_route_contract,
+                    success_contract=success_contract,
+                    failure_contract=self._review_action_failure_contract(
                         mutation_enabled=True,
                         cli_equivalent=cli_equivalent,
                         event_id=event_id,
                         action=action,
                         error_code="authorization_failed",
                     ),
-                },
+                    warning_codes=capability.get("warnings", []),
+                    warning_details=capability.get("warning_details", []),
+                    identity_assurance_status=assurance.get("status"),
+                    identity_assurance_message=assurance.get("message"),
+                ),
             )
 
         review_row = self._review_queue_row_including_resolved(event_id)
         if review_row is None:
             return (
                 HTTPStatus.NOT_FOUND,
-                {
-                    "ok": False,
-                    "status": "blocked",
-                    "event_id": event_id,
-                    "action": action,
-                    "error_code": "review_target_not_found",
-                    "message": self._review_action_failure_message("review_target_not_found"),
-                    "mutation_enabled": True,
-                    "reviewer_context_requirements": reviewer_context_requirements,
-                    "reviewer_enforcement_summary": reviewer_enforcement_summary,
-                    "reviewer_validation_gate_summary": reviewer_validation_gate_summary,
-                    "write_route_contract": write_route_contract,
-                    "success_contract": success_contract,
-                    "failure_contract": self._review_action_failure_contract(
+                self._review_action_failure_payload(
+                    error_code="review_target_not_found",
+                    mutation_enabled=True,
+                    event_id=event_id,
+                    action=action,
+                    reviewer_context_requirements=reviewer_context_requirements,
+                    reviewer_enforcement_summary=reviewer_enforcement_summary,
+                    reviewer_validation_gate_summary=reviewer_validation_gate_summary,
+                    write_route_contract=write_route_contract,
+                    success_contract=success_contract,
+                    failure_contract=self._review_action_failure_contract(
                         mutation_enabled=True,
                         cli_equivalent=cli_equivalent,
                         event_id=event_id,
                         action=action,
                         error_code="review_target_not_found",
                     ),
-                },
+                ),
             )
         if review_row.get("pending") is not True:
             return (
                 HTTPStatus.CONFLICT,
-                {
-                    "ok": False,
-                    "status": "blocked",
-                    "event_id": event_id,
-                    "action": action,
-                    "error_code": "review_not_pending",
-                    "message": self._review_action_failure_message("review_not_pending"),
-                    "mutation_enabled": True,
-                    "failure_summary": self._review_action_failure_summary(
-                        error_code="review_not_pending",
-                    ),
-                    "cli_equivalent": cli_equivalent,
-                    "reviewer_context_requirements": reviewer_context_requirements,
-                    "reviewer_enforcement_summary": reviewer_enforcement_summary,
-                    "reviewer_validation_gate_summary": reviewer_validation_gate_summary,
-                    "write_route_contract": write_route_contract,
-                    "success_contract": success_contract,
-                    "failure_contract": self._review_action_failure_contract(
+                self._review_action_failure_payload(
+                    error_code="review_not_pending",
+                    mutation_enabled=True,
+                    event_id=event_id,
+                    action=action,
+                    cli_equivalent=cli_equivalent,
+                    reviewer_context_requirements=reviewer_context_requirements,
+                    reviewer_enforcement_summary=reviewer_enforcement_summary,
+                    reviewer_validation_gate_summary=reviewer_validation_gate_summary,
+                    write_route_contract=write_route_contract,
+                    success_contract=success_contract,
+                    failure_contract=self._review_action_failure_contract(
                         mutation_enabled=True,
                         cli_equivalent=cli_equivalent,
                         event_id=event_id,
                         action=action,
                         error_code="review_not_pending",
                     ),
-                },
+                ),
             )
 
         try:
@@ -4056,56 +4130,42 @@ class ChronicleUIDataService:
         except ReviewAuditInsertionError as exc:
             return (
                 HTTPStatus.INTERNAL_SERVER_ERROR,
-                {
-                    "ok": False,
-                    "status": "blocked",
-                    "event_id": event_id,
-                    "action": action,
-                    "error_code": "audit_insertion_failed",
-                    "message": self._review_action_failure_message("audit_insertion_failed"),
-                    "mutation_enabled": True,
-                    "detail": exc.hint,
-                    "failure_summary": self._review_action_failure_summary(
-                        error_code="audit_insertion_failed",
-                    ),
-                    "cli_equivalent": cli_equivalent,
-                    "reviewer_context_requirements": reviewer_context_requirements,
-                    "reviewer_enforcement_summary": reviewer_enforcement_summary,
-                    "reviewer_validation_gate_summary": reviewer_validation_gate_summary,
-                    "write_route_contract": write_route_contract,
-                    "success_contract": success_contract,
-                    "failure_contract": self._review_action_failure_contract(
+                self._review_action_failure_payload(
+                    error_code="audit_insertion_failed",
+                    mutation_enabled=True,
+                    event_id=event_id,
+                    action=action,
+                    cli_equivalent=cli_equivalent,
+                    reviewer_context_requirements=reviewer_context_requirements,
+                    reviewer_enforcement_summary=reviewer_enforcement_summary,
+                    reviewer_validation_gate_summary=reviewer_validation_gate_summary,
+                    write_route_contract=write_route_contract,
+                    success_contract=success_contract,
+                    failure_contract=self._review_action_failure_contract(
                         mutation_enabled=True,
                         cli_equivalent=cli_equivalent,
                         event_id=event_id,
                         action=action,
                         error_code="audit_insertion_failed",
                     ),
-                },
+                    detail=exc.hint,
+                ),
             )
         except ReviewDecisionPersistenceError as exc:
             return (
                 HTTPStatus.INTERNAL_SERVER_ERROR,
-                {
-                    "ok": False,
-                    "status": "blocked",
-                    "event_id": event_id,
-                    "action": action,
-                    "error_code": "decision_persistence_failed",
-                    "message": self._review_action_failure_message("decision_persistence_failed"),
-                    "mutation_enabled": True,
-                    "detail": exc.hint,
-                    "audit_id": exc.audit_id,
-                    "failure_summary": self._review_action_failure_summary(
-                        error_code="decision_persistence_failed",
-                    ),
-                    "cli_equivalent": cli_equivalent,
-                    "reviewer_context_requirements": reviewer_context_requirements,
-                    "reviewer_enforcement_summary": reviewer_enforcement_summary,
-                    "reviewer_validation_gate_summary": reviewer_validation_gate_summary,
-                    "write_route_contract": write_route_contract,
-                    "success_contract": success_contract,
-                    "failure_contract": self._review_action_failure_contract(
+                self._review_action_failure_payload(
+                    error_code="decision_persistence_failed",
+                    mutation_enabled=True,
+                    event_id=event_id,
+                    action=action,
+                    cli_equivalent=cli_equivalent,
+                    reviewer_context_requirements=reviewer_context_requirements,
+                    reviewer_enforcement_summary=reviewer_enforcement_summary,
+                    reviewer_validation_gate_summary=reviewer_validation_gate_summary,
+                    write_route_contract=write_route_contract,
+                    success_contract=success_contract,
+                    failure_contract=self._review_action_failure_contract(
                         mutation_enabled=True,
                         cli_equivalent=cli_equivalent,
                         event_id=event_id,
@@ -4113,7 +4173,9 @@ class ChronicleUIDataService:
                         error_code="decision_persistence_failed",
                         audit_id=exc.audit_id,
                     ),
-                },
+                    detail=exc.hint,
+                    audit_id=exc.audit_id,
+                ),
             )
         return (
             HTTPStatus.OK,
@@ -4578,6 +4640,9 @@ function reviewActionCoreDetailLines(payload, action = '', recordId = '') {{
   const reviewerContext = payload.reviewer_context_requirements || {{}};
   const writeRouteContract = payload.write_route_contract || {{}};
   const identityProofContract = writeRouteContract.identity_proof_contract || {{}};
+  const localizedFailureSummary = payload.failure_summary_key
+    ? formatLabel(payload.failure_summary_key, payload.failure_summary_params || {{}}, payload.failure_summary || '')
+    : (payload.failure_summary || '');
   return ''
     + detailLine('Action', payload.action || action || '')
     + detailLine('Event', payload.event_id || recordId || '')
@@ -4585,7 +4650,7 @@ function reviewActionCoreDetailLines(payload, action = '', recordId = '') {{
     + detailLine('Identity assurance', payload.identity_assurance_status || '')
     + detailLine('Identity assurance message', payload.identity_assurance_message || '')
     + detailLine('CLI equivalent', payload.cli_equivalent || '')
-    + detailLine('Failure summary', payload.failure_summary || '')
+    + detailLine('Failure summary', localizedFailureSummary)
     + detailLine('Warnings', detailMessages(payload.warning_details, payload.warning_codes))
     + reviewerContextDetailLines(reviewerContext, identityProofContract);
 }}
@@ -4616,9 +4681,12 @@ function contractDetailLines(successContract, failureContract, targetId) {{
 function renderReviewActionResultPanel(title, responseStatus, path, payload, targetId, options = {{}}) {{
   const action = options.action || '';
   const recordId = options.recordId || '';
+  const localizedMessage = payload && payload.message_key
+    ? formatLabel(payload.message_key, payload.message_params || {{}}, payload.message || '')
+    : (payload.message || '');
   const message = options.useStatusFallback
-    ? (payload.message || payload.status || t('status.no_message'))
-    : (payload.message || t('status.no_message'));
+    ? (localizedMessage || payload.status || t('status.no_message'))
+    : (localizedMessage || t('status.no_message'));
   const extraLines = options.extraLines || '';
   return ''
     + '<p><strong>' + esc(title) + '</strong></p>'
@@ -7322,29 +7390,23 @@ def create_handler(
                 body = json.loads(raw_body.decode("utf-8"))
             except json.JSONDecodeError:
                 self._send_json(
-                    {
-                        "ok": False,
-                        "status": "blocked",
-                        "error_code": "invalid_json",
-                        "message": service._review_action_failure_message("invalid_json"),
-                        "mutation_enabled": service.ui_boundary()["ui_boundary"]["mutation_enabled"],
-                        "failure_contract": service._review_action_failure_contract(
+                    service._review_action_failure_payload(
+                        error_code="invalid_json",
+                        mutation_enabled=service.ui_boundary()["ui_boundary"]["mutation_enabled"],
+                        failure_contract=service._review_action_failure_contract(
                             mutation_enabled=service.ui_boundary()["ui_boundary"]["mutation_enabled"],
                             error_code="invalid_json",
                         ),
-                    },
+                    ),
                     status=HTTPStatus.BAD_REQUEST,
                 )
                 return
             if not isinstance(body, dict):
                 self._send_json(
-                    {
-                        "ok": False,
-                        "status": "blocked",
-                        "error_code": "invalid_request_body",
-                        "message": "Request body must be a JSON object.",
-                        "mutation_enabled": service.ui_boundary()["ui_boundary"]["mutation_enabled"],
-                    },
+                    service._review_action_failure_payload(
+                        error_code="invalid_request_body",
+                        mutation_enabled=service.ui_boundary()["ui_boundary"]["mutation_enabled"],
+                    ),
                     status=HTTPStatus.BAD_REQUEST,
                 )
                 return

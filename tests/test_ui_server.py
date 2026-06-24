@@ -84,6 +84,22 @@ def _http_post(host: str, port: int, path: str, body: dict | None = None) -> tup
         connection.close()
 
 
+def _http_post_raw(host: str, port: int, path: str, body: str) -> tuple[int, str]:
+    connection = http.client.HTTPConnection(host, port, timeout=5)
+    try:
+        payload = body.encode("utf-8")
+        connection.request(
+            "POST",
+            path,
+            body=payload,
+            headers={"Content-Type": "application/json", "Content-Length": str(len(payload))},
+        )
+        response = connection.getresponse()
+        return response.status, response.read().decode("utf-8")
+    finally:
+        connection.close()
+
+
 def _populate(root):
     ChronicleService(root).init("UI Test")
     context = ContextService(root).add_context(title="UI Context", visibility_hint=VisibilityHint.PUBLIC)
@@ -1815,6 +1831,8 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert '"Read-only": "読み取り専用"' in html
     assert '"Runtime records": "ランタイム記録"' in html
     assert '"Audit ID": "監査ID"' in html
+    assert "payload.failure_summary_key" in html
+    assert "payload && payload.message_key" in html
     assert '"GUI mutation remains disabled for this session; use the CLI review path instead.": "この session では GUI mutation は無効のままです。代わりに CLI review path を使ってください。"' in html
     assert '"Reviewer identity is self-declared only; UI auth is not enforcing reviewer identity.": "レビュアー本人性は自己申告のみで、UI 認証はレビュアー本人性を強制していません。"' in html
     assert "Runtime auth advisory" in html
@@ -2245,7 +2263,9 @@ def test_http_review_action_enabled_route_handles_audit_failure(tmp_path, monkey
         payload = json.loads(body)
         assert payload["error_code"] == "audit_insertion_failed"
         assert "Audit insertion failed before the review decision could be reported as applied." in payload["message"]
+        assert payload["message_key"] == "ui.review_action_failure.message.audit_insertion_failed"
         assert payload["failure_summary"] == "audit_insertion_failed; inspect local audit surface before retry"
+        assert payload["failure_summary_key"] == "ui.review_action_failure.summary.audit_insertion_failed"
         assert payload["failure_contract"]["rollback_status"] == "fail_closed"
         assert payload["failure_contract"]["durable_mutation_reported_on_failure"] is False
         assert payload["failure_contract"]["failure_families"][1]["family"] == "durable_write_path"
@@ -2254,6 +2274,45 @@ def test_http_review_action_enabled_route_handles_audit_failure(tmp_path, monkey
             "chronicle audit list --json",
         ]
         assert ReviewService(tmp_path).history(event_id=ids["runtime_summary_event_id"]) == []
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=5)
+
+
+def test_http_review_action_rejects_invalid_json_and_non_object_body(tmp_path):
+    ids = _populate(tmp_path)
+    try:
+        server = make_server(
+            host="127.0.0.1",
+            port=0,
+            root=tmp_path,
+            mutation_capability_flag=True,
+            enable_ui_mutation=True,
+            auth_mode=UIAuthMode.LOOPBACK_LOCAL,
+            authorization_mode=UIAuthorizationMode.REVIEWER_DECLARED,
+        )
+    except PermissionError as exc:
+        pytest.skip(f"local socket bind unavailable in this environment: {exc}")
+    host, port = server.server_address
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        status, body = _http_post_raw(
+            host, port, f"/api/review-actions/{ids['runtime_summary_event_id']}/approve", "{"
+        )
+        assert status == 400
+        payload = json.loads(body)
+        assert payload["error_code"] == "invalid_json"
+        assert payload["message_key"] == "ui.review_action_failure.message.invalid_json"
+
+        status, body = _http_post_raw(
+            host, port, f"/api/review-actions/{ids['runtime_summary_event_id']}/approve", "[]"
+        )
+        assert status == 400
+        payload = json.loads(body)
+        assert payload["error_code"] == "invalid_request_body"
+        assert payload["message_key"] == "ui.review_action_failure.message.invalid_request_body"
     finally:
         server.shutdown()
         server.server_close()
@@ -2296,6 +2355,7 @@ def test_review_action_failure_summary_uses_human_warning_text(tmp_path):
     assert payload["reviewer_validation_gate_summary"]["authorization_error_codes"] == [
         "authorization_failed"
     ]
+    assert payload["message_key"] == "ui.review_action_failure.message.authorization_failed"
     assert payload["reviewer_context_requirements"]["expectation_summary"].startswith(
         "Explicit local GUI mutation currently expects local_operator reviewer metadata"
     )
@@ -2313,6 +2373,7 @@ def test_review_action_failure_summary_uses_human_warning_text(tmp_path):
         f"chronicle review approve --event {ids['runtime_summary_event_id']}",
     ]
     assert "Reviewer identity is self-declared" in payload["failure_summary"]
+    assert payload["failure_summary_key"] == "ui.review_action_failure.summary.authorization_failed"
     assert "reviewer_identity_declared_only" not in payload["failure_summary"]
 
 
@@ -2423,6 +2484,8 @@ def test_review_action_reports_resolved_queue_recovery_when_target_not_pending(t
     assert status == 409
     assert payload["error_code"] == "review_not_pending"
     assert payload["failure_summary"] == "review_not_pending; inspect resolved queue state before retry"
+    assert payload["message_key"] == "ui.review_action_failure.message.review_not_pending"
+    assert payload["failure_summary_key"] == "ui.review_action_failure.summary.review_not_pending"
     assert payload["failure_contract"]["target_state_recovery"]["status"] == "resolved_queue_check_required"
     assert payload["failure_contract"]["target_state_recovery"]["pending_queue_sufficient"] is False
     assert "later review decision" in payload["failure_contract"]["target_state_recovery"]["resolved_queue_reason"]
@@ -2490,6 +2553,7 @@ def test_review_action_rejects_invalid_reviewer_label_format(tmp_path):
 
     assert status == 400
     assert payload["error_code"] == "invalid_reviewer_label"
+    assert payload["message_key"] == "ui.review_action_failure.message.invalid_reviewer_label"
     assert "lowercase letter or digit" in payload["message"]
     assert payload["reviewer_context_requirements"]["reviewer_label_pattern"] == (
         "^[a-z0-9][a-z0-9._-]{1,63}$"
@@ -2607,7 +2671,9 @@ def test_http_review_action_enabled_route_handles_decision_persistence_failure(t
         payload = json.loads(body)
         assert payload["error_code"] == "decision_persistence_failed"
         assert "Chronicle primary-record append failed" in payload["message"]
+        assert payload["message_key"] == "ui.review_action_failure.message.decision_persistence_failed"
         assert payload["failure_summary"] == "decision_persistence_failed; inspect audit trail and primary record state"
+        assert payload["failure_summary_key"] == "ui.review_action_failure.summary.decision_persistence_failed"
         assert payload["audit_id"].startswith("aud_")
         assert payload["failure_contract"]["rollback_status"] == "fail_closed"
         assert payload["failure_contract"]["recovery_commands"][0] == "chronicle review queue --include-resolved --json"
