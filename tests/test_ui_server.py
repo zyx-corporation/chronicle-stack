@@ -1363,6 +1363,9 @@ def test_ui_data_service_detail_endpoints(tmp_path):
         "ui.package_readiness.note.read_only_derived"
     )
     assert review_detail["package_readiness"]["suggested_commands"][0] == "chronicle show --json"
+    assert review_detail["package_readiness"]["suggested_command_details"][0]["summary_key"] == (
+        "ui.template.package_readiness.command.chronicle_show"
+    )
     assert review_detail["latest_audit_id"].startswith("aud_")
     assert review_detail["latest_reviewer_identity"]["kind"] == "local_operator"
     assert review_detail["review_capability"]["status"] == "advisory_only"
@@ -1642,6 +1645,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "preview.counts_summary_key" in html
     assert "label('notice.review_package_readiness', 'Review Package Readiness')" in html
     assert "readiness.counts_summary_key" in html
+    assert "const localizedSuggestedCommands = (Array.isArray(readiness.suggested_command_details) ? readiness.suggested_command_details : []).map(item => (" in html
     assert "label('notice.provider_response', 'Provider Response')" in html
     assert "summary.counts_summary_key" in html
     assert "label('notice.related_links', 'Related Links')" in html

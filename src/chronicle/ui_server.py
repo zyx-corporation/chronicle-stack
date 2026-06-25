@@ -294,6 +294,29 @@ def _retrieval_handoff_command_detail(command: str) -> dict[str, Any]:
     }
 
 
+def _package_readiness_command_detail(command: str) -> dict[str, Any]:
+    if command.startswith('chronicle package review --purpose "runtime retrieval handoff"'):
+        template_key = "ui.template.package_readiness.command.package_review_runtime_handoff"
+    elif command.startswith('chronicle package context --purpose "runtime retrieval handoff" --persist'):
+        template_key = "ui.template.package_readiness.command.package_context_runtime_handoff"
+    elif command.startswith('chronicle package review --purpose "review target handoff"'):
+        template_key = "ui.template.package_readiness.command.package_review_target_handoff"
+    elif command.startswith('chronicle package context --purpose "review target handoff" --persist'):
+        template_key = "ui.template.package_readiness.command.package_context_target_handoff"
+    elif command.startswith("chronicle show --json"):
+        template_key = "ui.template.package_readiness.command.chronicle_show"
+    elif command.startswith("chronicle review queue --json"):
+        template_key = "ui.template.package_readiness.command.review_queue"
+    else:
+        template_key = "ui.template.package_readiness.command.generic"
+    return {
+        "command": command,
+        "summary_key": template_key,
+        "summary_params": {"command": command},
+        "summary": command,
+    }
+
+
 def _review_action_failure_summary_contract(
     *,
     error_code: str,
@@ -2909,6 +2932,7 @@ class ChronicleUIDataService:
                     "review_status": "not_available",
                 },
                 "suggested_commands": [],
+                "suggested_command_details": [],
             }
 
         payload = getattr(event, "payload", {})
@@ -2918,6 +2942,10 @@ class ChronicleUIDataService:
             handoff["suggested_commands"] = [
                 'chronicle package review --purpose "runtime retrieval handoff"',
                 'chronicle package context --purpose "runtime retrieval handoff" --persist',
+            ]
+            handoff["suggested_command_details"] = [
+                _package_readiness_command_detail(command)
+                for command in handoff["suggested_commands"]
             ]
             return handoff
 
@@ -2945,6 +2973,10 @@ class ChronicleUIDataService:
                     "review_status": "not_available",
                 },
                 "suggested_commands": ["chronicle show --json", "chronicle review queue --json"],
+                "suggested_command_details": [
+                    _package_readiness_command_detail("chronicle show --json"),
+                    _package_readiness_command_detail("chronicle review queue --json"),
+                ],
                 "package_review_required": True,
             }
 
@@ -2974,6 +3006,12 @@ class ChronicleUIDataService:
             "suggested_commands": [
                 'chronicle package review --purpose "review target handoff"',
                 'chronicle package context --purpose "review target handoff" --persist',
+            ],
+            "suggested_command_details": [
+                _package_readiness_command_detail('chronicle package review --purpose "review target handoff"'),
+                _package_readiness_command_detail(
+                    'chronicle package context --purpose "review target handoff" --persist'
+                ),
             ],
             "package_review_required": True,
             "package_manifest_preview": package.manifest.model_dump(mode="json"),
@@ -6880,6 +6918,11 @@ function renderPackageReadinessNotice(record) {{
   const packageReview = readiness.package_review || {{}};
   const manifest = readiness.package_manifest_preview || {{}};
   const readinessButtons = reviewQueueStatusButtons(readiness.status, 'package:');
+  const localizedSuggestedCommands = (Array.isArray(readiness.suggested_command_details) ? readiness.suggested_command_details : []).map(item => (
+    item && item.summary_key
+      ? formatLabel(item.summary_key, item.summary_params || {{}}, item.summary || item.command || '')
+      : (item.summary || item.command || '')
+  ));
   const localizedCounts = readiness.counts_summary_key
     ? formatLabel(readiness.counts_summary_key, readiness.counts_summary_params || {{}}, '')
     : '';
@@ -6895,7 +6938,7 @@ function renderPackageReadinessNotice(record) {{
       manifest,
       readiness.eligible_context_ids,
       detailLine('Hit counts', localizedCounts)
-      + detailListLine('Suggested commands', readiness.suggested_commands, ' | ')
+      + detailListLine('Suggested commands', localizedSuggestedCommands.length > 0 ? localizedSuggestedCommands : readiness.suggested_commands, ' | ')
       + detailLine('Scope note', localizedBoundaryNote),
       readinessButtons,
     )
