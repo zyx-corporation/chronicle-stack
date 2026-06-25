@@ -359,6 +359,9 @@ def test_startup_metadata(tmp_path):
         "review_capability_ready",
         "pending_target_state",
     ]
+    assert payload["ui_boundary"]["write_route_contract"]["authorization_contract"]["action_authorization_matrix"][0]["summary_key"] == (
+        "ui.review_authorization_contract.action_matrix.approve"
+    )
     assert payload["ui_boundary"]["write_route_contract"]["target_state_contract"]["required_current_review_status"] == "needs_review"
     assert payload["ui_boundary"]["write_route_contract"]["target_state_contract"]["resolved_status_code"] == 409
     assert payload["ui_boundary"]["write_route_contract"]["target_state_contract"]["scope_note_key"] == (
@@ -1286,6 +1289,9 @@ def test_ui_data_service_detail_endpoints(tmp_path):
     assert review_detail["action_preview"]["success_contract"]["follow_up_commands"][0] == "chronicle review queue --include-resolved --json"
     assert review_detail["action_preview"]["write_route_contract"]["success_status_code"] == 200
     assert review_detail["action_preview"]["write_route_contract"]["authorization_contract"]["action_authorization_matrix"][2]["action"] == "request-changes"
+    assert review_detail["action_preview"]["write_route_contract"]["authorization_contract"]["action_authorization_matrix"][2]["summary_key"] == (
+        "ui.review_authorization_contract.action_matrix.request_changes"
+    )
     assert review_detail["action_preview"]["write_route_contract"]["target_state_contract"]["action_target_matrix"][0]["resulting_queue_state"] == "resolved_hidden_by_default"
     assert review_detail["action_preview"]["write_route_contract"]["target_state_contract"]["action_target_matrix"][2]["summary_key"] == (
         "ui.review_target_state_contract.action_target_matrix.request_changes"
@@ -1860,7 +1866,8 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "const localizedFailureFamilies = (writeRouteContract.failure_families || []).map(item => {" in html
     assert "detailLine('Authorization status', authorizationContract.authorization_status || '')" in html
     assert "detailListLine('Authorization checks', authorizationContract.server_side_checks, ' | ')" in html
-    assert "detailListLine('Action authorization matrix', (authorizationContract.action_authorization_matrix || []).map(item => ((item.action || 'action') + ': intent=' + (item.ui_intent || '') + '; pending=' + String(item.pending_required) + '; note=' + (item.note_status || ''))), ' | ')" in html
+    assert html.count("const localizedActionAuthorizationMatrix = (authorizationContract.action_authorization_matrix || []).map(item => (") >= 2
+    assert "detailListLine('Action authorization matrix', localizedActionAuthorizationMatrix, ' | ')" in html
     assert "detailLine('Required review status', targetStateContract.required_current_review_status || '')" in html
     assert "detailListLine('Target-state checks', targetStateContract.target_state_checks, ' | ')" in html
     assert "const localizedTargetStateScopeNote = targetStateContract.scope_note_key" in html

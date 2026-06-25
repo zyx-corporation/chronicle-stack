@@ -553,6 +553,50 @@ def _review_target_state_action_matrix() -> list[dict[str, Any]]:
     ]
 
 
+def _review_action_authorization_matrix() -> list[dict[str, Any]]:
+    return [
+        {
+            "action": "approve",
+            "ui_intent": "approve",
+            "pending_required": True,
+            "note_status": "optional",
+            "authorized_reviewer_kinds": [ReviewerIdentityKind.LOCAL_OPERATOR.value],
+            "summary_key": "ui.review_authorization_contract.action_matrix.approve",
+            "summary_params": {},
+            "summary": (
+                "approve expects matching ui_intent, a pending target, and local_operator reviewer "
+                "metadata inside the local single-operator boundary."
+            ),
+        },
+        {
+            "action": "reject",
+            "ui_intent": "reject",
+            "pending_required": True,
+            "note_status": "optional",
+            "authorized_reviewer_kinds": [ReviewerIdentityKind.LOCAL_OPERATOR.value],
+            "summary_key": "ui.review_authorization_contract.action_matrix.reject",
+            "summary_params": {},
+            "summary": (
+                "reject expects matching ui_intent, a pending target, and local_operator reviewer "
+                "metadata inside the local single-operator boundary."
+            ),
+        },
+        {
+            "action": "request-changes",
+            "ui_intent": "request-changes",
+            "pending_required": True,
+            "note_status": "optional",
+            "authorized_reviewer_kinds": [ReviewerIdentityKind.LOCAL_OPERATOR.value],
+            "summary_key": "ui.review_authorization_contract.action_matrix.request_changes",
+            "summary_params": {},
+            "summary": (
+                "request-changes expects matching ui_intent, a pending target, and local_operator "
+                "reviewer metadata inside the local single-operator boundary."
+            ),
+        },
+    ]
+
+
 def _runtime_preview_title_contract(preview: dict[str, Any]) -> tuple[str | None, dict[str, Any]]:
     record_kind = str(preview.get("record_kind", ""))
     title = str(preview.get("title", ""))
@@ -1232,29 +1276,7 @@ def _ui_authorization_contract(metadata: UIBoundaryMetadata) -> dict[str, Any]:
         "scope_note": (
             "Current browser-triggered authorization is a local single-operator boundary only; it does not claim hosted or multi-user-safe authority semantics."
         ),
-        "action_authorization_matrix": [
-            {
-                "action": "approve",
-                "ui_intent": "approve",
-                "pending_required": True,
-                "note_status": "optional",
-                "authorized_reviewer_kinds": [ReviewerIdentityKind.LOCAL_OPERATOR.value],
-            },
-            {
-                "action": "reject",
-                "ui_intent": "reject",
-                "pending_required": True,
-                "note_status": "optional",
-                "authorized_reviewer_kinds": [ReviewerIdentityKind.LOCAL_OPERATOR.value],
-            },
-            {
-                "action": "request-changes",
-                "ui_intent": "request-changes",
-                "pending_required": True,
-                "note_status": "optional",
-                "authorized_reviewer_kinds": [ReviewerIdentityKind.LOCAL_OPERATOR.value],
-            },
-        ],
+        "action_authorization_matrix": _review_action_authorization_matrix(),
     }
 
 
@@ -6425,6 +6447,11 @@ function writeRouteDetailLines(writeRouteContract, identityProofContract, author
       ? formatLabel(item.summary_key, item.summary_params || {{}}, item.summary || '')
       : ((item.action || 'action') + ': pending=' + String(item.requires_pending) + '; queue=' + (item.resulting_queue_state || '') + '; disposition=' + (item.resulting_disposition || ''))
   ));
+  const localizedActionAuthorizationMatrix = (authorizationContract.action_authorization_matrix || []).map(item => (
+    item && item.summary_key
+      ? formatLabel(item.summary_key, item.summary_params || {{}}, item.summary || '')
+      : ((item.action || 'action') + ': intent=' + (item.ui_intent || '') + '; pending=' + String(item.pending_required) + '; note=' + (item.note_status || ''))
+  ));
   return detailLine('Write route', writeRouteContract.route_template || '')
     + detailListLine('Write actions', writeRouteContract.actions, ' | ')
     + detailListLine('Action routes', (writeRouteContract.action_routes || []).map(item => ((item.action || 'action') + ': ' + (item.path_template || ''))), ' | ')
@@ -6444,7 +6471,7 @@ function writeRouteDetailLines(writeRouteContract, identityProofContract, author
     + detailLine('Required assurance', authorizationContract.required_identity_assurance_status || '')
     + detailLine('Pending target required', authorizationContract.target_pending_required)
     + detailListLine('Authorization checks', authorizationContract.server_side_checks, ' | ')
-    + detailListLine('Action authorization matrix', (authorizationContract.action_authorization_matrix || []).map(item => ((item.action || 'action') + ': intent=' + (item.ui_intent || '') + '; pending=' + String(item.pending_required) + '; note=' + (item.note_status || ''))), ' | ')
+    + detailListLine('Action authorization matrix', localizedActionAuthorizationMatrix, ' | ')
     + detailLine('Required review status', targetStateContract.required_current_review_status || '')
     + detailLine('Resolved status code', targetStateContract.resolved_status_code ?? '')
     + detailListLine('Target-state checks', targetStateContract.target_state_checks, ' | ')
@@ -7120,6 +7147,11 @@ function renderOverviewMutationReadinessPanel(mutationReadiness) {{
       ? formatLabel(item.summary_key, item.summary_params || {{}}, item.summary || '')
       : ((item.action || 'action') + ': pending=' + String(item.requires_pending) + '; queue=' + (item.resulting_queue_state || '') + '; disposition=' + (item.resulting_disposition || ''))
   ));
+  const localizedActionAuthorizationMatrix = (authorizationContract.action_authorization_matrix || []).map(item => (
+    item && item.summary_key
+      ? formatLabel(item.summary_key, item.summary_params || {{}}, item.summary || '')
+      : ((item.action || 'action') + ': intent=' + (item.ui_intent || '') + '; pending=' + String(item.pending_required) + '; note=' + (item.note_status || ''))
+  ));
   const enablementChecks = Array.isArray(mutationReadiness.enablement_checks) ? mutationReadiness.enablement_checks : [];
   const operationalReadiness = mutationReadiness.operational_readiness || {{}};
   return renderPanel(
@@ -7138,7 +7170,7 @@ function renderOverviewMutationReadinessPanel(mutationReadiness) {{
     + detailLine('Required assurance', authorizationContract.required_identity_assurance_status || '')
     + detailLine('Pending target required', authorizationContract.target_pending_required)
     + detailListLine('Authorization checks', authorizationContract.server_side_checks, ' | ')
-    + detailListLine('Action authorization matrix', (authorizationContract.action_authorization_matrix || []).map(item => ((item.action || 'action') + ': intent=' + (item.ui_intent || '') + '; pending=' + String(item.pending_required) + '; note=' + (item.note_status || ''))), ' | ')
+    + detailListLine('Action authorization matrix', localizedActionAuthorizationMatrix, ' | ')
     + detailLine('Required review status', targetStateContract.required_current_review_status || '')
     + detailLine('Resolved status code', targetStateContract.resolved_status_code ?? '')
     + detailListLine('Target-state checks', targetStateContract.target_state_checks, ' | ')
