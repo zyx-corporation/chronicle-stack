@@ -1299,6 +1299,9 @@ def test_ui_data_service_detail_endpoints(tmp_path):
     assert retrieval_detail["retrieval_handoff"]["query"] == "UI Context"
     assert retrieval_detail["retrieval_handoff"]["package_review_required"] is True
     assert retrieval_detail["retrieval_handoff"]["downstream_commands"][0].startswith("chronicle package review")
+    assert retrieval_detail["retrieval_handoff"]["downstream_command_details"][0]["summary_key"] == (
+        "ui.template.retrieval_handoff.command.package_review"
+    )
     assert retrieval_detail["package_handoff_preview"]["status"] == "package_context_available"
     assert ids["context_id"] in retrieval_detail["package_handoff_preview"]["eligible_context_ids"]
     assert retrieval_detail["package_handoff_preview"]["counts_summary_key"] == (
@@ -1632,6 +1635,8 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "loadDetail" in html
     assert "label('notice.runtime_preview', 'Runtime Preview')" in html
     assert "label('notice.retrieval_handoff', 'Retrieval Handoff')" in html
+    assert "const localizedDownstreamCommands = (Array.isArray(handoff.downstream_command_details) ? handoff.downstream_command_details : []).map(item => (" in html
+    assert "detailListLine('Downstream commands', localizedDownstreamCommands.length > 0 ? localizedDownstreamCommands : handoff.downstream_commands, ' | ')" in html
     assert "label('notice.invocation_plan', 'Invocation Plan')" in html
     assert "label('notice.package_handoff_preview', 'Package Handoff Preview')" in html
     assert "preview.counts_summary_key" in html

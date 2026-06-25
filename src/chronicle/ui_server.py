@@ -277,6 +277,23 @@ def _invocation_plan_command_detail(command: str) -> dict[str, Any]:
     }
 
 
+def _retrieval_handoff_command_detail(command: str) -> dict[str, Any]:
+    if command.startswith('chronicle package review --purpose "runtime retrieval handoff"'):
+        template_key = "ui.template.retrieval_handoff.command.package_review"
+    elif command.startswith('chronicle package context --purpose "runtime retrieval handoff" --persist'):
+        template_key = "ui.template.retrieval_handoff.command.package_context_persist"
+    elif command.startswith("chronicle review queue --json"):
+        template_key = "ui.template.retrieval_handoff.command.review_queue"
+    else:
+        template_key = "ui.template.retrieval_handoff.command.generic"
+    return {
+        "command": command,
+        "summary_key": template_key,
+        "summary_params": {"command": command},
+        "summary": command,
+    }
+
+
 def _review_action_failure_summary_contract(
     *,
     error_code: str,
@@ -3923,6 +3940,11 @@ class ChronicleUIDataService:
                 counts_key, counts_params = _retrieval_handoff_counts_contract(handoff_payload)
                 handoff_payload["hit_counts_summary_key"] = counts_key
                 handoff_payload["hit_counts_summary_params"] = counts_params
+                handoff_payload["downstream_command_details"] = [
+                    _retrieval_handoff_command_detail(command)
+                    for command in handoff_payload.get("downstream_commands", [])
+                    if isinstance(command, str) and command
+                ]
                 record["retrieval_handoff"] = handoff_payload
                 record["package_handoff_preview"] = self.runtime_package_handoff(plan)
             if "runtime_invocation_plan" in payload:
@@ -6715,6 +6737,11 @@ function renderRetrievalHandoffNotice(record) {{
   if (!record.retrieval_handoff) return '';
   const handoff = record.retrieval_handoff;
   const localizedMessage = localizedPayloadText(handoff);
+  const localizedDownstreamCommands = (Array.isArray(handoff.downstream_command_details) ? handoff.downstream_command_details : []).map(item => (
+    item && item.summary_key
+      ? formatLabel(item.summary_key, item.summary_params || {{}}, item.summary || item.command || '')
+      : (item.summary || item.command || '')
+  ));
   const localizedHitCounts = handoff.hit_counts_summary_key
     ? formatLabel(
         handoff.hit_counts_summary_key,
@@ -6732,7 +6759,7 @@ function renderRetrievalHandoffNotice(record) {{
       + detailLine('Query', handoff.query || '')
       + '<p>' + esc(localizedHitCounts) + '</p>'
       + detailListLine('Referenced IDs', handoff.referenced_record_ids)
-      + detailListLine('Downstream commands', handoff.downstream_commands, ' | ')
+      + detailListLine('Downstream commands', localizedDownstreamCommands.length > 0 ? localizedDownstreamCommands : handoff.downstream_commands, ' | ')
       + detailListLine('Notes', handoff.notes, ' | ')
   );
 }}
