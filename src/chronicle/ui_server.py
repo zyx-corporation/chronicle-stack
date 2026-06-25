@@ -498,6 +498,39 @@ def _review_status_code_when_contract(
     return key, {}, text
 
 
+def _review_status_code_summary_contract(
+    status_code: int, family: str
+) -> tuple[str, dict[str, Any], str]:
+    mapping = {
+        (200, "success"): (
+            "ui.review_write_route_status_code.summary.success",
+            "200: success; review decision persistence and audit insertion both succeed",
+        ),
+        (400, "pre_mutation_or_gate"): (
+            "ui.review_write_route_status_code.summary.validation_failed",
+            "400: pre_mutation_or_gate; reviewer-context or ui_intent validation fails before authorization",
+        ),
+        (403, "pre_mutation_or_gate"): (
+            "ui.review_write_route_status_code.summary.authorization_blocked",
+            "403: pre_mutation_or_gate; mutation gate or authorization boundary blocks the write route",
+        ),
+        (404, "pre_mutation_or_gate"): (
+            "ui.review_write_route_status_code.summary.target_missing",
+            "404: pre_mutation_or_gate; the requested review target cannot be found in current Chronicle state",
+        ),
+        (409, "pre_mutation_or_gate"): (
+            "ui.review_write_route_status_code.summary.target_not_pending",
+            "409: pre_mutation_or_gate; the target is no longer pending for the requested action",
+        ),
+        (500, "durable_write_path"): (
+            "ui.review_write_route_status_code.summary.durable_write_failed",
+            "500: durable_write_path; a durable write-path side effect fails and the route stays fail-closed",
+        ),
+    }
+    key, text = mapping.get((status_code, family), ("", f"{status_code}: {family}"))
+    return key, {}, text
+
+
 def _review_target_state_note_contract(kind: str) -> tuple[str, dict[str, Any], str]:
     if kind == "scope":
         note = (
@@ -1347,6 +1380,7 @@ def _ui_write_route_contract(metadata: UIBoundaryMetadata) -> dict[str, Any]:
         (HTTPStatus.INTERNAL_SERVER_ERROR.value, "durable_write_path"),
     ]:
         when_key, when_params, when = _review_status_code_when_contract(status_code, family)
+        summary_key, summary_params, summary = _review_status_code_summary_contract(status_code, family)
         status_code_contract.append(
             {
                 "status_code": status_code,
@@ -1354,6 +1388,9 @@ def _ui_write_route_contract(metadata: UIBoundaryMetadata) -> dict[str, Any]:
                 "when": when,
                 "when_key": when_key,
                 "when_params": when_params,
+                "summary": summary,
+                "summary_key": summary_key,
+                "summary_params": summary_params,
             }
         )
     pre_gate_summary_key, pre_gate_summary_params, pre_gate_summary = (
@@ -6452,16 +6489,20 @@ function writeRouteDetailLines(writeRouteContract, identityProofContract, author
       ? formatLabel(item.summary_key, item.summary_params || {{}}, item.summary || '')
       : ((item.action || 'action') + ': intent=' + (item.ui_intent || '') + '; pending=' + String(item.pending_required) + '; note=' + (item.note_status || ''))
   ));
+  const localizedStatusCodeContract = (writeRouteContract.status_code_contract || []).map(item => {{
+    if (item && item.summary_key) {{
+      return formatLabel(item.summary_key, item.summary_params || {{}}, item.summary || '');
+    }}
+    const localizedWhen = item && item.when_key
+      ? formatLabel(item.when_key, item.when_params || {{}}, item.when || '')
+      : (item.when || '');
+    return (String(item.status_code ?? '') + ': ' + (item.family || 'family') + '; ' + localizedWhen);
+  }});
   return detailLine('Write route', writeRouteContract.route_template || '')
     + detailListLine('Write actions', writeRouteContract.actions, ' | ')
     + detailListLine('Action routes', (writeRouteContract.action_routes || []).map(item => ((item.action || 'action') + ': ' + (item.path_template || ''))), ' | ')
     + detailListLine('CLI route equivalents', (writeRouteContract.action_routes || []).map(item => ((item.action || 'action') + ': ' + (item.cli_equivalent_template || ''))), ' | ')
-    + detailListLine('Status-code contract', (writeRouteContract.status_code_contract || []).map(item => {{
-      const localizedWhen = item && item.when_key
-        ? formatLabel(item.when_key, item.when_params || {{}}, item.when || '')
-        : (item.when || '');
-      return (String(item.status_code ?? '') + ': ' + (item.family || 'family') + '; ' + localizedWhen);
-    }}), ' | ')
+    + detailListLine('Status-code contract', localizedStatusCodeContract, ' | ')
     + (includeRequestFields ? detailListLine('Write request fields', writeRouteContract.expected_request_fields, ' | ') : '')
     + detailLine('Write success status', writeRouteContract.success_status_code ?? '')
     + detailLine('Write blocked status', writeRouteContract.blocked_status_code ?? '')

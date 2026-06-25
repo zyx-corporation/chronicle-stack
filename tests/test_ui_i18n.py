@@ -349,6 +349,12 @@ def test_ui_i18n_catalog_covers_review_target_state_note_keys():
         "ui.review_authorization_contract.action_matrix.approve",
         "ui.review_authorization_contract.action_matrix.reject",
         "ui.review_authorization_contract.action_matrix.request_changes",
+        "ui.review_write_route_status_code.summary.success",
+        "ui.review_write_route_status_code.summary.validation_failed",
+        "ui.review_write_route_status_code.summary.authorization_blocked",
+        "ui.review_write_route_status_code.summary.target_missing",
+        "ui.review_write_route_status_code.summary.target_not_pending",
+        "ui.review_write_route_status_code.summary.durable_write_failed",
     }
     for locale in ("ja", "en", "zh-CN"):
         missing = required_keys.difference(UI_I18N_CATALOG[locale])

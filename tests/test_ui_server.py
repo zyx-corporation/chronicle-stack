@@ -292,6 +292,9 @@ def test_startup_metadata(tmp_path):
             "when": "review decision persistence and audit insertion both succeed",
             "when_key": "ui.review_write_route_status_code.when.success",
             "when_params": {},
+            "summary": "200: success; review decision persistence and audit insertion both succeed",
+            "summary_key": "ui.review_write_route_status_code.summary.success",
+            "summary_params": {},
         },
         {
             "status_code": 400,
@@ -299,6 +302,9 @@ def test_startup_metadata(tmp_path):
             "when": "reviewer-context or ui_intent validation fails before authorization",
             "when_key": "ui.review_write_route_status_code.when.validation_failed",
             "when_params": {},
+            "summary": "400: pre_mutation_or_gate; reviewer-context or ui_intent validation fails before authorization",
+            "summary_key": "ui.review_write_route_status_code.summary.validation_failed",
+            "summary_params": {},
         },
         {
             "status_code": 403,
@@ -306,6 +312,9 @@ def test_startup_metadata(tmp_path):
             "when": "mutation gate or authorization boundary blocks the write route",
             "when_key": "ui.review_write_route_status_code.when.authorization_blocked",
             "when_params": {},
+            "summary": "403: pre_mutation_or_gate; mutation gate or authorization boundary blocks the write route",
+            "summary_key": "ui.review_write_route_status_code.summary.authorization_blocked",
+            "summary_params": {},
         },
         {
             "status_code": 404,
@@ -313,6 +322,9 @@ def test_startup_metadata(tmp_path):
             "when": "the requested review target cannot be found in current Chronicle state",
             "when_key": "ui.review_write_route_status_code.when.target_missing",
             "when_params": {},
+            "summary": "404: pre_mutation_or_gate; the requested review target cannot be found in current Chronicle state",
+            "summary_key": "ui.review_write_route_status_code.summary.target_missing",
+            "summary_params": {},
         },
         {
             "status_code": 409,
@@ -320,6 +332,9 @@ def test_startup_metadata(tmp_path):
             "when": "the target is no longer pending for the requested action",
             "when_key": "ui.review_write_route_status_code.when.target_not_pending",
             "when_params": {},
+            "summary": "409: pre_mutation_or_gate; the target is no longer pending for the requested action",
+            "summary_key": "ui.review_write_route_status_code.summary.target_not_pending",
+            "summary_params": {},
         },
         {
             "status_code": 500,
@@ -327,6 +342,9 @@ def test_startup_metadata(tmp_path):
             "when": "a durable write-path side effect fails and the route stays fail-closed",
             "when_key": "ui.review_write_route_status_code.when.durable_write_failed",
             "when_params": {},
+            "summary": "500: durable_write_path; a durable write-path side effect fails and the route stays fail-closed",
+            "summary_key": "ui.review_write_route_status_code.summary.durable_write_failed",
+            "summary_params": {},
         },
     ]
     assert payload["ui_boundary"]["write_route_contract"]["blocked_status_code"] == 403
@@ -349,6 +367,12 @@ def test_startup_metadata(tmp_path):
     assert payload["ui_boundary"]["write_route_contract"]["failure_families"][1]["family"] == "durable_write_path"
     assert payload["ui_boundary"]["write_route_contract"]["failure_families"][1]["summary_key"] == (
         "ui.review_write_route_failure_family.durable_write_path"
+    )
+    assert payload["ui_boundary"]["write_route_contract"]["status_code_contract"][0]["summary_key"] == (
+        "ui.review_write_route_status_code.summary.success"
+    )
+    assert payload["ui_boundary"]["write_route_contract"]["status_code_contract"][5]["summary_key"] == (
+        "ui.review_write_route_status_code.summary.durable_write_failed"
     )
     assert payload["ui_boundary"]["write_route_contract"]["authorization_contract"]["authorization_status"] == "advisory_only"
     assert payload["ui_boundary"]["write_route_contract"]["authorization_contract"]["required_identity_assurance_status"] == "boundary_aligned"
@@ -1166,8 +1190,8 @@ def test_ui_html_filtering_includes_provider_response_metadata_fields(tmp_path, 
     assert "detailLine('Write route', writeRouteContract.route_template || '')" in html
     assert "detailListLine('Action routes', (writeRouteContract.action_routes || []).map(item => ((item.action || 'action') + ': ' + (item.path_template || ''))), ' | ')" in html
     assert "detailListLine('CLI route equivalents', (writeRouteContract.action_routes || []).map(item => ((item.action || 'action') + ': ' + (item.cli_equivalent_template || ''))), ' | ')" in html
-    assert "const localizedWhen = item && item.when_key" in html
-    assert "detailListLine('Status-code contract', (writeRouteContract.status_code_contract || []).map(item => {" in html
+    assert "const localizedStatusCodeContract = (writeRouteContract.status_code_contract || []).map(item => {" in html
+    assert "detailListLine('Status-code contract', localizedStatusCodeContract, ' | ')" in html
     assert "detailListLine('Write request fields', writeRouteContract.expected_request_fields, ' | ')" in html
     assert "detailListLine('Effective reviewer fields', reviewerContextRequirements.effective_required_fields, ' | ')" in html
     assert "Review queue blocked-route preview stays read-only and returns the CLI fallback contract." in html
