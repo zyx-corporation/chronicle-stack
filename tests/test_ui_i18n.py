@@ -343,6 +343,9 @@ def test_ui_i18n_catalog_covers_review_target_state_note_keys():
     required_keys = {
         "ui.review_target_state_contract.note.scope",
         "ui.review_target_state_contract.note.resolved_behavior",
+        "ui.review_target_state_contract.action_target_matrix.approve",
+        "ui.review_target_state_contract.action_target_matrix.reject",
+        "ui.review_target_state_contract.action_target_matrix.request_changes",
     }
     for locale in ("ja", "en", "zh-CN"):
         missing = required_keys.difference(UI_I18N_CATALOG[locale])

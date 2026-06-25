@@ -512,6 +512,47 @@ def _review_target_state_note_contract(kind: str) -> tuple[str, dict[str, Any], 
     return ("", {}, "")
 
 
+def _review_target_state_action_matrix() -> list[dict[str, Any]]:
+    return [
+        {
+            "action": "approve",
+            "requires_pending": True,
+            "resulting_queue_state": "resolved_hidden_by_default",
+            "resulting_disposition": "approve",
+            "summary_key": "ui.review_target_state_contract.action_target_matrix.approve",
+            "summary_params": {},
+            "summary": (
+                "approve requires a pending target, resolves the review, and hides it from the "
+                "default pending queue after success."
+            ),
+        },
+        {
+            "action": "reject",
+            "requires_pending": True,
+            "resulting_queue_state": "resolved_hidden_by_default",
+            "resulting_disposition": "reject",
+            "summary_key": "ui.review_target_state_contract.action_target_matrix.reject",
+            "summary_params": {},
+            "summary": (
+                "reject requires a pending target, resolves the review, and hides it from the "
+                "default pending queue after success."
+            ),
+        },
+        {
+            "action": "request-changes",
+            "requires_pending": True,
+            "resulting_queue_state": "remains_pending",
+            "resulting_disposition": "request_changes",
+            "summary_key": "ui.review_target_state_contract.action_target_matrix.request_changes",
+            "summary_params": {},
+            "summary": (
+                "request-changes requires a pending target and keeps the review in the pending "
+                "queue until a later resolving decision."
+            ),
+        },
+    ]
+
+
 def _runtime_preview_title_contract(preview: dict[str, Any]) -> tuple[str | None, dict[str, Any]]:
     record_kind = str(preview.get("record_kind", ""))
     title = str(preview.get("title", ""))
@@ -1235,26 +1276,7 @@ def _ui_target_state_contract() -> dict[str, Any]:
         "scope_note": scope_note,
         "scope_note_key": scope_note_key,
         "scope_note_params": scope_note_params,
-        "action_target_matrix": [
-            {
-                "action": "approve",
-                "requires_pending": True,
-                "resulting_queue_state": "resolved_hidden_by_default",
-                "resulting_disposition": "approve",
-            },
-            {
-                "action": "reject",
-                "requires_pending": True,
-                "resulting_queue_state": "resolved_hidden_by_default",
-                "resulting_disposition": "reject",
-            },
-            {
-                "action": "request-changes",
-                "requires_pending": True,
-                "resulting_queue_state": "remains_pending",
-                "resulting_disposition": "request_changes",
-            },
-        ],
+        "action_target_matrix": _review_target_state_action_matrix(),
         "resolved_behavior_note": resolved_behavior_note,
         "resolved_behavior_note_key": resolved_behavior_note_key,
         "resolved_behavior_note_params": resolved_behavior_note_params,
@@ -6398,6 +6420,11 @@ function writeRouteDetailLines(writeRouteContract, identityProofContract, author
   const localizedResolvedBehaviorNote = targetStateContract.resolved_behavior_note_key
     ? formatLabel(targetStateContract.resolved_behavior_note_key, targetStateContract.resolved_behavior_params || {{}}, targetStateContract.resolved_behavior_note || '')
     : (targetStateContract.resolved_behavior_note || '');
+  const localizedActionTargetMatrix = (targetStateContract.action_target_matrix || []).map(item => (
+    item && item.summary_key
+      ? formatLabel(item.summary_key, item.summary_params || {{}}, item.summary || '')
+      : ((item.action || 'action') + ': pending=' + String(item.requires_pending) + '; queue=' + (item.resulting_queue_state || '') + '; disposition=' + (item.resulting_disposition || ''))
+  ));
   return detailLine('Write route', writeRouteContract.route_template || '')
     + detailListLine('Write actions', writeRouteContract.actions, ' | ')
     + detailListLine('Action routes', (writeRouteContract.action_routes || []).map(item => ((item.action || 'action') + ': ' + (item.path_template || ''))), ' | ')
@@ -6422,7 +6449,7 @@ function writeRouteDetailLines(writeRouteContract, identityProofContract, author
     + detailLine('Resolved status code', targetStateContract.resolved_status_code ?? '')
     + detailListLine('Target-state checks', targetStateContract.target_state_checks, ' | ')
     + detailLine('Target-state scope note', localizedTargetStateScopeNote)
-    + detailListLine('Action target matrix', (targetStateContract.action_target_matrix || []).map(item => ((item.action || 'action') + ': pending=' + String(item.requires_pending) + '; queue=' + (item.resulting_queue_state || '') + '; disposition=' + (item.resulting_disposition || ''))), ' | ')
+    + detailListLine('Action target matrix', localizedActionTargetMatrix, ' | ')
     + detailLine('Resolved behavior note', localizedResolvedBehaviorNote)
     + detailListLine('Failure families', localizedFailureFamilies, ' | ')
     + detailLine('Identity proof status', identityProofContract.proof_status || '')

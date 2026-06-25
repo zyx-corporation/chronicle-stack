@@ -365,6 +365,9 @@ def test_startup_metadata(tmp_path):
         "ui.review_target_state_contract.note.scope"
     )
     assert payload["ui_boundary"]["write_route_contract"]["target_state_contract"]["action_target_matrix"][2]["resulting_queue_state"] == "remains_pending"
+    assert payload["ui_boundary"]["write_route_contract"]["target_state_contract"]["action_target_matrix"][0]["summary_key"] == (
+        "ui.review_target_state_contract.action_target_matrix.approve"
+    )
     assert payload["ui_boundary"]["write_route_contract"]["target_state_contract"]["resolved_behavior_note_key"] == (
         "ui.review_target_state_contract.note.resolved_behavior"
     )
@@ -1283,6 +1286,9 @@ def test_ui_data_service_detail_endpoints(tmp_path):
     assert review_detail["action_preview"]["write_route_contract"]["success_status_code"] == 200
     assert review_detail["action_preview"]["write_route_contract"]["authorization_contract"]["action_authorization_matrix"][2]["action"] == "request-changes"
     assert review_detail["action_preview"]["write_route_contract"]["target_state_contract"]["action_target_matrix"][0]["resulting_queue_state"] == "resolved_hidden_by_default"
+    assert review_detail["action_preview"]["write_route_contract"]["target_state_contract"]["action_target_matrix"][2]["summary_key"] == (
+        "ui.review_target_state_contract.action_target_matrix.request_changes"
+    )
     assert review_detail["action_preview"]["write_route_contract"]["identity_proof_contract"]["proof_status"] == "local_operator_advisory"
     assert review_detail["reviewer_enforcement_summary"]["status"] == "descriptive_only"
     assert review_detail["reviewer_validation_gate_summary"]["status"] == "read_only_preview"
@@ -1858,7 +1864,9 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "detailListLine('Target-state checks', targetStateContract.target_state_checks, ' | ')" in html
     assert "const localizedTargetStateScopeNote = targetStateContract.scope_note_key" in html
     assert "detailLine('Target-state scope note', localizedTargetStateScopeNote)" in html
-    assert "detailListLine('Action target matrix', (targetStateContract.action_target_matrix || []).map(item => ((item.action || 'action') + ': pending=' + String(item.requires_pending) + '; queue=' + (item.resulting_queue_state || '') + '; disposition=' + (item.resulting_disposition || ''))), ' | ')" in html
+    assert "const localizedActionTargetMatrix = (targetStateContract.action_target_matrix || []).map(item => (" in html
+    assert "item && item.summary_key" in html
+    assert "detailListLine('Action target matrix', localizedActionTargetMatrix, ' | ')" in html
     assert "const localizedResolvedBehaviorNote = targetStateContract.resolved_behavior_note_key" in html
     assert "detailLine('Resolved behavior note', localizedResolvedBehaviorNote)" in html
     assert "detailListLine('Failure families', localizedFailureFamilies, ' | ')" in html
