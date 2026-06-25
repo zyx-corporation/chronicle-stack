@@ -1309,6 +1309,9 @@ def test_ui_data_service_detail_endpoints(tmp_path):
     assert retrieval_detail["package_handoff_preview"]["counts_summary_key"] == (
         "ui.template.package_handoff.counts"
     )
+    assert retrieval_detail["package_handoff_preview"]["suggested_command_details"][0]["summary_key"] == (
+        "ui.template.package_handoff.command.package_review"
+    )
     assert retrieval_detail["package_handoff_preview"]["boundary_note_key"] == (
         "ui.package_handoff.note.read_only_derived"
     )
@@ -1645,6 +1648,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "label('notice.invocation_plan', 'Invocation Plan')" in html
     assert "label('notice.package_handoff_preview', 'Package Handoff Preview')" in html
     assert "preview.counts_summary_key" in html
+    assert "const localizedSuggestedCommands = (Array.isArray(preview.suggested_command_details) ? preview.suggested_command_details : []).map(item => (" in html
     assert "label('notice.review_package_readiness', 'Review Package Readiness')" in html
     assert "readiness.counts_summary_key" in html
     assert "const localizedSuggestedCommands = (Array.isArray(readiness.suggested_command_details) ? readiness.suggested_command_details : []).map(item => (" in html

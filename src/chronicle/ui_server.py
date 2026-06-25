@@ -317,6 +317,23 @@ def _package_readiness_command_detail(command: str) -> dict[str, Any]:
     }
 
 
+def _package_handoff_command_detail(command: str) -> dict[str, Any]:
+    if command.startswith('chronicle package review --purpose "runtime retrieval handoff"'):
+        template_key = "ui.template.package_handoff.command.package_review"
+    elif command.startswith('chronicle package context --purpose "runtime retrieval handoff" --persist'):
+        template_key = "ui.template.package_handoff.command.package_context_persist"
+    elif command.startswith("chronicle review queue --json"):
+        template_key = "ui.template.package_handoff.command.review_queue"
+    else:
+        template_key = "ui.template.package_handoff.command.generic"
+    return {
+        "command": command,
+        "summary_key": template_key,
+        "summary_params": {"command": command},
+        "summary": command,
+    }
+
+
 def _review_action_failure_summary_contract(
     *,
     error_code: str,
@@ -2831,6 +2848,15 @@ class ChronicleUIDataService:
             "Package handoff preview remains derived, read-only, and non-authoritative over primary Chronicle records."
         )
         payload["boundary_note_key"] = "ui.package_handoff.note.read_only_derived"
+        payload["suggested_commands"] = [
+            'chronicle package review --purpose "runtime retrieval handoff"',
+            'chronicle package context --purpose "runtime retrieval handoff" --persist',
+            "chronicle review queue --json",
+        ]
+        payload["suggested_command_details"] = [
+            _package_handoff_command_detail(command)
+            for command in payload["suggested_commands"]
+        ]
         if not context_ids:
             payload["message"] = "No context records were selected by the retrieval dry-run, so package preview is advisory only."
             payload["message_key"] = _package_handoff_message_key(str(payload["status"]))
@@ -6836,6 +6862,11 @@ function renderPackageHandoffPreviewNotice(record) {{
   const preview = record.package_handoff_preview;
   const packageReview = preview.package_review || {{}};
   const manifest = preview.package_manifest_preview || {{}};
+  const localizedSuggestedCommands = (Array.isArray(preview.suggested_command_details) ? preview.suggested_command_details : []).map(item => (
+    item && item.summary_key
+      ? formatLabel(item.summary_key, item.summary_params || {{}}, item.summary || item.command || '')
+      : (item.summary || item.command || '')
+  ));
   const localizedCounts = preview.counts_summary_key
     ? formatLabel(preview.counts_summary_key, preview.counts_summary_params || {{}}, '')
     : '';
@@ -6852,6 +6883,7 @@ function renderPackageHandoffPreviewNotice(record) {{
       preview.eligible_context_ids,
       detailLine('Hit counts', localizedCounts)
       + detailListLine('Skipped records', preview.skipped_record_ids)
+      + detailListLine('Suggested commands', localizedSuggestedCommands.length > 0 ? localizedSuggestedCommands : preview.suggested_commands, ' | ')
       + detailLine('Scope note', localizedBoundaryNote),
     )
   );
