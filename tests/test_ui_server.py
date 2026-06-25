@@ -794,6 +794,10 @@ def test_ui_data_service_read_endpoints(tmp_path):
         service.summary_jobs_list()["summary_jobs"][0]["action_preview_summary"]["message_key"]
         == "ui.action_preview.message.preview_only_blocked"
     )
+    assert (
+        service.summary_jobs_list()["summary_jobs"][0]["action_preview_summary"]["cli_equivalent_summary_key"]
+        == "ui.template.review_action_preview.cli_equivalent_summary"
+    )
     assert service.summary_jobs_list()["summary_jobs"][0]["action_preview_summary"]["cli_equivalent"].startswith(
         "chronicle review approve --event evt_"
     )
@@ -1214,6 +1218,7 @@ def test_ui_html_filtering_includes_provider_response_metadata_fields(tmp_path, 
     assert "detailListLine('Status-code contract', localizedStatusCodeContract, ' | ')" in html
     assert "const localizedPossibleErrors = (Array.isArray(failureContract.possible_error_details) ? failureContract.possible_error_details : []).map(item => (" in html
     assert "const localizedRecoveryCommands = (Array.isArray(failureContract.recovery_command_details) ? failureContract.recovery_command_details : []).map(item => (" in html
+    assert "const localizedCliEquivalent = payload.cli_equivalent_detail && payload.cli_equivalent_detail.summary_key" in html
     assert "detailListLine('Write request fields', writeRouteContract.expected_request_fields, ' | ')" in html
     assert "detailListLine('Effective reviewer fields', reviewerContextRequirements.effective_required_fields, ' | ')" in html
     assert "Review queue blocked-route preview stays read-only and returns the CLI fallback contract." in html
@@ -1510,6 +1515,9 @@ def test_ui_detail_assurance_can_align_with_configured_boundary(tmp_path):
     assert review_detail["action_preview"]["failure_contract"]["durable_mutation_reported_on_failure"] is False
     assert review_detail["action_preview"]["failure_contract"]["possible_error_details"][0]["message_key"] == (
         "ui.review_action_failure.message.mutation_disabled"
+    )
+    assert review_detail["action_preview"]["cli_equivalent_detail"]["summary_key"] == (
+        "ui.template.review_action_preview.cli_equivalent_summary"
     )
     assert review_detail["action_preview"]["failure_contract"]["recovery_command_details"][0]["summary_key"] == (
         "ui.template.review_action_preview.recovery_summary"
@@ -2113,6 +2121,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "label('notice.review_capability', 'Review Capability')" in html
     assert "label('notice.action_preview', 'Action Preview')" in html
     assert "const localizedPreviewMessage = localizedPayloadText(preview)" in html
+    assert "const localizedCliEquivalent = preview.cli_equivalent_summary_key" in html
     assert "summaryJsonLine('Execution request', executionRequest)" in html
     assert "const localizedDownstreamCommands = (Array.isArray(plan.downstream_command_details) ? plan.downstream_command_details : []).map(item => (" in html
     assert "detailListLine('Downstream commands', localizedDownstreamCommands.length > 0 ? localizedDownstreamCommands : plan.downstream_commands, ' | ')" in html
@@ -2265,6 +2274,9 @@ def test_http_root_and_read_only_endpoints(tmp_path):
         assert payload["failure_contract"]["recovery_commands"] == [
             f"chronicle review approve --event {ids['runtime_summary_event_id']}"
         ]
+        assert payload["cli_equivalent_detail"]["summary_key"] == (
+            "ui.template.review_action_preview.cli_equivalent_summary"
+        )
         assert payload["cli_equivalent"] == (
             f"chronicle review approve --event {ids['runtime_summary_event_id']}"
         )
@@ -2285,6 +2297,9 @@ def test_http_root_and_read_only_endpoints(tmp_path):
         assert payload["failure_contract"]["recovery_commands"] == [
             f"chronicle review request-changes --event {ids['runtime_summary_event_id']}"
         ]
+        assert payload["cli_equivalent_detail"]["summary_key"] == (
+            "ui.template.review_action_preview.cli_equivalent_summary"
+        )
         assert payload["cli_equivalent"] == (
             f"chronicle review request-changes --event {ids['runtime_summary_event_id']}"
         )

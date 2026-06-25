@@ -141,6 +141,7 @@ def test_ui_i18n_catalog_contains_core_shell_and_navigation_keys():
         "ui.template.invocation_plan.command.execute_plan",
         "ui.template.invocation_plan.command.runtime_operation_execute",
         "ui.template.invocation_plan.command.generic",
+        "ui.template.review_action_preview.cli_equivalent_summary",
         "ui.graph_summary.message.available",
         "ui.graph_summary.message.unavailable",
         "ui.template.graph_summary.counts",

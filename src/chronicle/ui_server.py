@@ -249,6 +249,15 @@ def _review_command_detail(command: str, *, kind: str) -> dict[str, Any]:
     }
 
 
+def _review_cli_equivalent_detail(command: str) -> dict[str, Any]:
+    return {
+        "command": command,
+        "summary_key": "ui.template.review_action_preview.cli_equivalent_summary",
+        "summary_params": {"command": command},
+        "summary": command,
+    }
+
+
 def _invocation_plan_command_detail(command: str) -> dict[str, Any]:
     if command.startswith("chronicle runtime config show --json"):
         template_key = "ui.template.invocation_plan.command.runtime_config_show"
@@ -486,6 +495,12 @@ def _cli_parity_message_key(aligned: bool) -> str:
 def _review_action_preview_summary_contract(kind: str, command: str) -> tuple[str, dict[str, Any], str]:
     if not command:
         return ("", {}, "")
+    if kind == "cli_equivalent":
+        return (
+            "ui.template.review_action_preview.cli_equivalent_summary",
+            {"command": command},
+            command,
+        )
     if kind == "recovery":
         return ("ui.template.review_action_preview.recovery_summary", {"command": command}, command)
     if kind == "follow_up":
@@ -3573,6 +3588,7 @@ class ChronicleUIDataService:
             payload["action"] = action
         if cli_equivalent is not None:
             payload["cli_equivalent"] = cli_equivalent
+            payload["cli_equivalent_detail"] = _review_cli_equivalent_detail(cli_equivalent)
         if reviewer_context_requirements is not None:
             payload["reviewer_context_requirements"] = reviewer_context_requirements
         if reviewer_enforcement_summary is not None:
@@ -3683,6 +3699,12 @@ class ChronicleUIDataService:
             event_id=target_event_id,
             audit_id=None,
         )
+        cli_equivalent_summary_key, cli_equivalent_summary_params, cli_equivalent_summary = (
+            _review_action_preview_summary_contract(
+                "cli_equivalent",
+                cli_equivalent,
+            )
+        )
         recovery_summary_key, recovery_summary_params, recovery_summary = (
             _review_action_preview_summary_contract(
                 "recovery",
@@ -3714,6 +3736,10 @@ class ChronicleUIDataService:
             ),
             "message_key": _review_action_preview_message_key(mutation_enabled, can_review_now),
             "cli_equivalent": cli_equivalent,
+            "cli_equivalent_summary": cli_equivalent_summary,
+            "cli_equivalent_summary_key": cli_equivalent_summary_key,
+            "cli_equivalent_summary_params": cli_equivalent_summary_params,
+            "cli_equivalent_detail": _review_cli_equivalent_detail(cli_equivalent),
             "recovery_summary": recovery_summary,
             "recovery_summary_key": recovery_summary_key,
             "recovery_summary_params": recovery_summary_params,
@@ -4912,6 +4938,13 @@ function reviewActionCoreDetailLines(payload, action = '', recordId = '') {{
   const reviewerContext = payload.reviewer_context_requirements || {{}};
   const writeRouteContract = payload.write_route_contract || {{}};
   const identityProofContract = writeRouteContract.identity_proof_contract || {{}};
+  const localizedCliEquivalent = payload.cli_equivalent_detail && payload.cli_equivalent_detail.summary_key
+    ? formatLabel(
+        payload.cli_equivalent_detail.summary_key,
+        payload.cli_equivalent_detail.summary_params || {{}},
+        payload.cli_equivalent_detail.summary || payload.cli_equivalent || ''
+      )
+    : (payload.cli_equivalent || '');
   const localizedFailureSummary = payload.failure_summary_key
     ? formatLabel(payload.failure_summary_key, payload.failure_summary_params || {{}}, payload.failure_summary || '')
     : (payload.failure_summary || '');
@@ -4921,7 +4954,7 @@ function reviewActionCoreDetailLines(payload, action = '', recordId = '') {{
     + detailLine('Error code', payload.error_code || '')
     + detailLine('Identity assurance', payload.identity_assurance_status || '')
     + detailLine('Identity assurance message', payload.identity_assurance_message || '')
-    + detailLine('CLI equivalent', payload.cli_equivalent || '')
+    + detailLine('CLI equivalent', localizedCliEquivalent)
     + detailLine('Failure summary', localizedFailureSummary)
     + detailLine('Warnings', detailMessages(payload.warning_details, payload.warning_codes))
     + reviewerContextDetailLines(reviewerContext, identityProofContract);
@@ -5004,6 +5037,9 @@ function renderReviewMutationForm(title, prefix) {{
     + '<label>' + esc(uiLabel('Note')) + ' <input id="' + esc(prefix) + '-reviewer-note" placeholder="' + esc(t('placeholder.review_note')) + '"></label></p></div>';
 }}
 function renderPreviewSummary(preview) {{
+  const localizedCliEquivalent = preview.cli_equivalent_summary_key
+    ? formatLabel(preview.cli_equivalent_summary_key, preview.cli_equivalent_summary_params || {{}}, preview.cli_equivalent_summary || preview.cli_equivalent || '')
+    : (preview.cli_equivalent || '');
   const localizedRecoverySummary = preview.recovery_summary_key
     ? formatLabel(preview.recovery_summary_key, preview.recovery_summary_params || {{}}, preview.recovery_summary || '')
     : (preview.recovery_summary || '');
@@ -5014,8 +5050,8 @@ function renderPreviewSummary(preview) {{
     ? '<strong>' + esc(preview.status) + '</strong><br>' + esc(localizeTextValue(preview.message || ''))
     : esc(localizeTextValue(preview.message || ''));
   const extras = [
-    preview.cli_equivalent
-      ? '<br><span class="id">cli=' + esc(preview.cli_equivalent) + '</span>'
+    localizedCliEquivalent
+      ? '<br><span class="id">cli=' + esc(localizedCliEquivalent) + '</span>'
       : '',
     localizedRecoverySummary
       ? '<br><span class="id">recovery=' + esc(localizedRecoverySummary) + '</span>'
