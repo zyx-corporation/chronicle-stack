@@ -1471,6 +1471,9 @@ def test_ui_runtime_detail_supports_invocation_plan(tmp_path):
     assert detail["invocation_plan"]["provider_summary_key"] == (
         "ui.template.invocation_plan.provider_summary"
     )
+    assert detail["invocation_plan"]["downstream_command_details"][0]["summary_key"] == (
+        "ui.template.invocation_plan.command.runtime_config_show"
+    )
     assert "network_not_allowed_by_contract" in detail["invocation_plan"]["blocking_reasons"]
     assert detail["invocation_plan"]["execution_request"]["prompt"] == "Invocation summary prompt."
     assert any(link["path"].startswith("/api/summary-jobs/") for link in detail["related_links"])
@@ -2111,6 +2114,8 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "label('notice.action_preview', 'Action Preview')" in html
     assert "const localizedPreviewMessage = localizedPayloadText(preview)" in html
     assert "summaryJsonLine('Execution request', executionRequest)" in html
+    assert "const localizedDownstreamCommands = (Array.isArray(plan.downstream_command_details) ? plan.downstream_command_details : []).map(item => (" in html
+    assert "detailListLine('Downstream commands', localizedDownstreamCommands.length > 0 ? localizedDownstreamCommands : plan.downstream_commands, ' | ')" in html
     assert "downstreamCommands.map(command => copyCommandButton(command, 'action-preview-response', t('button.copy_cli')))" in html
     assert "ui.label.execution_request" in html
     assert "uiLabel('Approve')" in html

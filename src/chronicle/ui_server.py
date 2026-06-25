@@ -249,6 +249,25 @@ def _review_command_detail(command: str, *, kind: str) -> dict[str, Any]:
     }
 
 
+def _invocation_plan_command_detail(command: str) -> dict[str, Any]:
+    if command.startswith("chronicle runtime config show --json"):
+        template_key = "ui.template.invocation_plan.command.runtime_config_show"
+    elif command.startswith("chronicle review queue --json"):
+        template_key = "ui.template.invocation_plan.command.review_queue"
+    elif command.startswith("chronicle runtime execute-plan --event "):
+        template_key = "ui.template.invocation_plan.command.execute_plan"
+    elif command.startswith("chronicle runtime summarize --text "):
+        template_key = "ui.template.invocation_plan.command.runtime_operation_execute"
+    else:
+        template_key = "ui.template.invocation_plan.command.generic"
+    return {
+        "command": command,
+        "summary_key": template_key,
+        "summary_params": {"command": command},
+        "summary": command,
+    }
+
+
 def _review_action_failure_summary_contract(
     *,
     error_code: str,
@@ -3894,6 +3913,11 @@ class ChronicleUIDataService:
                 )
                 plan_payload["provider_summary_key"] = provider_summary_key
                 plan_payload["provider_summary_params"] = provider_summary_params
+                plan_payload["downstream_command_details"] = [
+                    _invocation_plan_command_detail(command)
+                    for command in plan_payload.get("downstream_commands", [])
+                    if isinstance(command, str) and command
+                ]
                 record["invocation_plan"] = plan_payload
             return {"record": record}
 
@@ -6729,6 +6753,11 @@ function renderInvocationPlanNotice(record) {{
   const requestPreview = plan.request_preview || {{}};
   const executionRequest = plan.execution_request || {{}};
   const downstreamCommands = Array.isArray(plan.downstream_commands) ? plan.downstream_commands : [];
+  const localizedDownstreamCommands = (Array.isArray(plan.downstream_command_details) ? plan.downstream_command_details : []).map(item => (
+    item && item.summary_key
+      ? formatLabel(item.summary_key, item.summary_params || {{}}, item.summary || item.command || '')
+      : (item.summary || item.command || '')
+  ));
   const localizedMessage = localizedPayloadText(plan);
   const localizedProviderSummary = plan.provider_summary_key
     ? formatLabel(
@@ -6749,7 +6778,7 @@ function renderInvocationPlanNotice(record) {{
       + detailListLine('Blocking reasons', plan.blocking_reasons, ' | ')
       + summaryJsonLine('Request preview', requestPreview)
       + summaryJsonLine('Execution request', executionRequest)
-      + detailListLine('Downstream commands', plan.downstream_commands, ' | ')
+      + detailListLine('Downstream commands', localizedDownstreamCommands.length > 0 ? localizedDownstreamCommands : plan.downstream_commands, ' | ')
       + (downstreamCommands.length > 0 ? '<p>' + downstreamCommands.map(command => copyCommandButton(command, 'action-preview-response', t('button.copy_cli'))).join(' ') + '</p>' : '')
       + detailListLine('Notes', plan.notes, ' | ')
   );
