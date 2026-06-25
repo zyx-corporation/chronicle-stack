@@ -235,6 +235,20 @@ def _review_possible_error_detail(error_code: str) -> dict[str, Any]:
     }
 
 
+def _review_command_detail(command: str, *, kind: str) -> dict[str, Any]:
+    template_key = (
+        "ui.template.review_action_preview.recovery_summary"
+        if kind == "recovery"
+        else "ui.template.review_action_preview.follow_up_summary"
+    )
+    return {
+        "command": command,
+        "summary_key": template_key,
+        "summary_params": {"command": command},
+        "summary": command,
+    }
+
+
 def _review_action_failure_summary_contract(
     *,
     error_code: str,
@@ -3426,6 +3440,9 @@ class ChronicleUIDataService:
             error_code=error_code,
             audit_id=audit_id,
         )
+        recovery_command_details = [
+            _review_command_detail(command, kind="recovery") for command in recovery_commands
+        ]
         target_state_recovery = ChronicleUIDataService._review_action_target_state_recovery(error_code)
         pre_gate_summary_key, pre_gate_summary_params, pre_gate_summary = (
             _review_failure_family_summary_contract("pre_mutation_or_gate")
@@ -3464,6 +3481,7 @@ class ChronicleUIDataService:
                 else cli_equivalent or "Use the equivalent chronicle review CLI command for recovery or inspection."
             ),
             "recovery_commands": recovery_commands,
+            "recovery_command_details": recovery_command_details,
             "target_state_recovery": target_state_recovery,
         }
 
@@ -3590,6 +3608,9 @@ class ChronicleUIDataService:
             ]
             if command
         ]
+        follow_up_command_details = [
+            _review_command_detail(command, kind="follow_up") for command in follow_up_commands
+        ]
         return {
             "transaction_status": "decision_and_audit_persisted",
             "rollback_status": "not_required",
@@ -3603,6 +3624,7 @@ class ChronicleUIDataService:
             ],
             "recovery_path": follow_up_commands[0] if follow_up_commands else cli_equivalent or "Use the equivalent chronicle review CLI command for follow-up inspection.",
             "follow_up_commands": follow_up_commands,
+            "follow_up_command_details": follow_up_command_details,
         }
 
     @staticmethod
@@ -4903,6 +4925,16 @@ function contractDetailLines(successContract, failureContract, targetId) {{
       ? formatLabel(item.message_key, item.message_params || {{}}, item.message || item.code || '')
       : (item.message || item.code || '')
   ));
+  const localizedRecoveryCommands = (Array.isArray((failureContract || {{}}).recovery_command_details) ? failureContract.recovery_command_details : []).map(item => (
+    item && item.summary_key
+      ? formatLabel(item.summary_key, item.summary_params || {{}}, item.summary || item.command || '')
+      : (item.summary || item.command || '')
+  ));
+  const localizedFollowUpCommands = (Array.isArray((successContract || {{}}).follow_up_command_details) ? successContract.follow_up_command_details : []).map(item => (
+    item && item.summary_key
+      ? formatLabel(item.summary_key, item.summary_params || {{}}, item.summary || item.command || '')
+      : (item.summary || item.command || '')
+  ));
   const lines = []
     + detailLine('Recovery path', resolvedContract.recovery_path || '')
     + detailLine('Rollback status', resolvedContract.rollback_status || '')
@@ -4917,8 +4949,8 @@ function contractDetailLines(successContract, failureContract, targetId) {{
     + detailLine('Chronicle state command', targetStateRecovery.chronicle_state_command || '')
     + detailListLine('Possible errors', localizedPossibleErrors.length > 0 ? localizedPossibleErrors : ((failureContract || {{}}).possible_error_codes), ' | ')
     + detailListLine('Failure families', localizedFailureFamilies, ' | ')
-    + detailListLine('Recovery commands', (failureContract || {{}}).recovery_commands, ' | ')
-    + detailListLine('Follow-up commands', (successContract || {{}}).follow_up_commands, ' | ');
+    + detailListLine('Recovery commands', localizedRecoveryCommands.length > 0 ? localizedRecoveryCommands : ((failureContract || {{}}).recovery_commands), ' | ')
+    + detailListLine('Follow-up commands', localizedFollowUpCommands.length > 0 ? localizedFollowUpCommands : ((successContract || {{}}).follow_up_commands), ' | ');
   return lines + (resolvedContract.recovery_path ? '<p>' + copyCommandButton(resolvedContract.recovery_path, targetId, t('button.copy_recovery_cli')) + '</p>' : '');
 }}
 function renderReviewActionResultPanel(title, responseStatus, path, payload, targetId, options = {{}}) {{
@@ -6599,11 +6631,16 @@ function recoveryContractDetailLines(failureContract, targetId = 'action-preview
       ? formatLabel(item.message_key, item.message_params || {{}}, item.message || item.code || '')
       : (item.message || item.code || '')
   ));
+  const localizedRecoveryCommands = (Array.isArray(failureContract.recovery_command_details) ? failureContract.recovery_command_details : []).map(item => (
+    item && item.summary_key
+      ? formatLabel(item.summary_key, item.summary_params || {{}}, item.summary || item.command || '')
+      : (item.summary || item.command || '')
+  ));
   return detailLine('Rollback status', failureContract.rollback_status || '')
     + detailLine('Durable mutation on failure', failureContract.durable_mutation_reported_on_failure)
     + detailLine('Recovery path', failureContract.recovery_path || '')
     + detailListLine('Possible errors', localizedPossibleErrors.length > 0 ? localizedPossibleErrors : failureContract.possible_error_codes, ' | ')
-    + detailListLine('Recovery commands', recoveryCommands, ' | ')
+    + detailListLine('Recovery commands', localizedRecoveryCommands.length > 0 ? localizedRecoveryCommands : recoveryCommands, ' | ')
     + (failureContract.recovery_path ? '<p>' + copyCommandButton(failureContract.recovery_path, targetId, t('button.copy_recovery_cli')) + '</p>' : '')
     + (recoveryCommands.length > 0 ? '<p>' + recoveryCommands.map(command => copyCommandButton(command, targetId, t('button.copy_cli'))).join(' ') + '</p>' : '');
 }}
