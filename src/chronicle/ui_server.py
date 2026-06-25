@@ -5130,12 +5130,20 @@ function renderPreviewContractSummary(preview, previewTarget = 'action-preview-r
   const authorizationContract = writeRouteContract.authorization_contract || {{}};
   const targetStateContract = writeRouteContract.target_state_contract || {{}};
   const recoveryPath = failureContract.recovery_path || '';
+  const localizedRecoverySummary = preview && preview.recovery_summary_key
+    ? formatLabel(preview.recovery_summary_key, preview.recovery_summary_params || {{}}, preview.recovery_summary || recoveryPath || '')
+    : (preview && preview.recovery_summary) || recoveryPath;
   const possibleErrors = Array.isArray(failureContract.possible_error_codes)
     ? failureContract.possible_error_codes
     : [];
   const followUpCommands = Array.isArray(successContract.follow_up_commands)
     ? successContract.follow_up_commands
     : [];
+  const localizedFollowUpCommands = (Array.isArray(successContract.follow_up_command_details) ? successContract.follow_up_command_details : []).map(item => (
+    item && item.summary_key
+      ? formatLabel(item.summary_key, item.summary_params || {{}}, item.summary || item.command || '')
+      : (item.summary || item.command || '')
+  ));
   const requestFields = Array.isArray(writeRouteContract.expected_request_fields)
     ? writeRouteContract.expected_request_fields
     : [];
@@ -5187,14 +5195,14 @@ function renderPreviewContractSummary(preview, previewTarget = 'action-preview-r
       ? '<br><span class="id">proof-fields=' + esc(identityProofContract.required_identity_fields.join(' | ')) + '</span>'
       : '',
     recoveryPath
-      ? '<br><span class="id">recovery=' + esc(recoveryPath) + '</span> '
+      ? '<br><span class="id">recovery=' + esc(localizedRecoverySummary) + '</span> '
         + copyCommandButton(recoveryPath, previewTarget, t('button.copy_recovery_cli'))
       : '',
     possibleErrors.length > 0
       ? '<br><span class="id">errors=' + esc(possibleErrors.join(' | ')) + '</span>'
       : '',
     followUpCommands.length > 0
-      ? '<br><span class="id">follow-up=' + esc(followUpCommands.join(' | ')) + '</span>'
+      ? '<br><span class="id">follow-up=' + esc((localizedFollowUpCommands.length > 0 ? localizedFollowUpCommands : followUpCommands).join(' | ')) + '</span>'
       : '',
   ].join('');
 }}
