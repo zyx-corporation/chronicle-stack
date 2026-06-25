@@ -5162,6 +5162,11 @@ function renderPreviewContractSummary(preview, previewTarget = 'action-preview-r
   const possibleErrors = Array.isArray(failureContract.possible_error_codes)
     ? failureContract.possible_error_codes
     : [];
+  const localizedPossibleErrors = (Array.isArray(failureContract.possible_error_details) ? failureContract.possible_error_details : []).map(item => (
+    item && item.message_key
+      ? formatLabel(item.message_key, item.message_params || {{}}, item.message || item.code || '')
+      : (item.message || item.code || '')
+  ));
   const followUpCommands = Array.isArray(successContract.follow_up_commands)
     ? successContract.follow_up_commands
     : [];
@@ -5225,7 +5230,7 @@ function renderPreviewContractSummary(preview, previewTarget = 'action-preview-r
         + copyCommandButton(recoveryPath, previewTarget, t('button.copy_recovery_cli'))
       : '',
     possibleErrors.length > 0
-      ? '<br><span class="id">errors=' + esc(possibleErrors.join(' | ')) + '</span>'
+      ? '<br><span class="id">errors=' + esc((localizedPossibleErrors.length > 0 ? localizedPossibleErrors : possibleErrors).join(' | ')) + '</span>'
       : '',
     followUpCommands.length > 0
       ? '<br><span class="id">follow-up=' + esc((localizedFollowUpCommands.length > 0 ? localizedFollowUpCommands : followUpCommands).join(' | ')) + '</span>'

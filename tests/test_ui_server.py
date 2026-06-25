@@ -1195,6 +1195,7 @@ def test_ui_html_filtering_includes_provider_response_metadata_fields(tmp_path, 
     assert "proof-fields=" in html
     assert "errors=" in html
     assert "const localizedRecoverySummary = preview && preview.recovery_summary_key" in html
+    assert "const localizedPossibleErrors = (Array.isArray(failureContract.possible_error_details) ? failureContract.possible_error_details : []).map(item => (" in html
     assert "const localizedFollowUpCommands = (Array.isArray(successContract.follow_up_command_details) ? successContract.follow_up_command_details : []).map(item => (" in html
     assert "follow-up=" in html
     assert "detailLine('Enablement ready', mutationReadiness.enablement_ready)" in html
