@@ -1192,6 +1192,7 @@ def test_ui_html_filtering_includes_provider_response_metadata_fields(tmp_path, 
     assert "detailListLine('CLI route equivalents', (writeRouteContract.action_routes || []).map(item => ((item.action || 'action') + ': ' + (item.cli_equivalent_template || ''))), ' | ')" in html
     assert "const localizedStatusCodeContract = (writeRouteContract.status_code_contract || []).map(item => {" in html
     assert "detailListLine('Status-code contract', localizedStatusCodeContract, ' | ')" in html
+    assert "const localizedPossibleErrors = (Array.isArray(failureContract.possible_error_details) ? failureContract.possible_error_details : []).map(item => (" in html
     assert "detailListLine('Write request fields', writeRouteContract.expected_request_fields, ' | ')" in html
     assert "detailListLine('Effective reviewer fields', reviewerContextRequirements.effective_required_fields, ' | ')" in html
     assert "Review queue blocked-route preview stays read-only and returns the CLI fallback contract." in html
@@ -1483,6 +1484,9 @@ def test_ui_detail_assurance_can_align_with_configured_boundary(tmp_path):
     assert review_detail["action_preview"]["actions"][0]["post_expected_error_code"] == "mutation_disabled"
     assert review_detail["action_preview"]["failure_contract"]["rollback_status"] == "fail_closed"
     assert review_detail["action_preview"]["failure_contract"]["durable_mutation_reported_on_failure"] is False
+    assert review_detail["action_preview"]["failure_contract"]["possible_error_details"][0]["message_key"] == (
+        "ui.review_action_failure.message.mutation_disabled"
+    )
     assert review_detail["action_preview"]["failure_contract"]["recovery_commands"] == [
         f"chronicle review approve --event {ids['runtime_summary_event_id']}"
     ]

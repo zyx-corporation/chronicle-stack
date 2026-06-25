@@ -226,6 +226,15 @@ def _review_action_failure_message_key(error_code: str) -> str:
     return f"ui.review_action_failure.message.{error_code}"
 
 
+def _review_possible_error_detail(error_code: str) -> dict[str, Any]:
+    return {
+        "code": error_code,
+        "message_key": _review_action_failure_message_key(error_code),
+        "message": ChronicleUIDataService._review_action_failure_message(error_code),
+        "message_params": {},
+    }
+
+
 def _review_action_failure_summary_contract(
     *,
     error_code: str,
@@ -3398,6 +3407,7 @@ class ChronicleUIDataService:
             "decision_persistence_failed",
         ]
         possible_error_codes = pre_mutation_or_gate_errors + durable_write_path_errors
+        possible_error_details = [_review_possible_error_detail(code) for code in possible_error_codes]
         recovery_commands = ChronicleUIDataService._review_recovery_commands(
             event_id=event_id,
             action=action,
@@ -3419,6 +3429,7 @@ class ChronicleUIDataService:
             "durable_mutation_reported_on_failure": False,
             "partial_failure_visible": True,
             "possible_error_codes": possible_error_codes,
+            "possible_error_details": possible_error_details,
             "failure_families": [
                 {
                     "family": "pre_mutation_or_gate",
@@ -4875,6 +4886,11 @@ function contractDetailLines(successContract, failureContract, targetId) {{
   const localizedResolvedQueueReason = targetStateRecovery.resolved_queue_reason_key
     ? formatLabel(targetStateRecovery.resolved_queue_reason_key, targetStateRecovery.resolved_queue_reason_params || {{}}, targetStateRecovery.resolved_queue_reason || '')
     : (targetStateRecovery.resolved_queue_reason || '');
+  const localizedPossibleErrors = (Array.isArray((failureContract || {{}}).possible_error_details) ? failureContract.possible_error_details : []).map(item => (
+    item && item.message_key
+      ? formatLabel(item.message_key, item.message_params || {{}}, item.message || item.code || '')
+      : (item.message || item.code || '')
+  ));
   const lines = []
     + detailLine('Recovery path', resolvedContract.recovery_path || '')
     + detailLine('Rollback status', resolvedContract.rollback_status || '')
@@ -4887,7 +4903,7 @@ function contractDetailLines(successContract, failureContract, targetId) {{
     + detailLine('Resolved queue reason', localizedResolvedQueueReason)
     + detailLine('Resolved queue command', targetStateRecovery.resolved_queue_command || '')
     + detailLine('Chronicle state command', targetStateRecovery.chronicle_state_command || '')
-    + detailListLine('Possible errors', (failureContract || {{}}).possible_error_codes, ' | ')
+    + detailListLine('Possible errors', localizedPossibleErrors.length > 0 ? localizedPossibleErrors : ((failureContract || {{}}).possible_error_codes), ' | ')
     + detailListLine('Failure families', localizedFailureFamilies, ' | ')
     + detailListLine('Recovery commands', (failureContract || {{}}).recovery_commands, ' | ')
     + detailListLine('Follow-up commands', (successContract || {{}}).follow_up_commands, ' | ');
@@ -6556,10 +6572,15 @@ function reviewerLabelDetailLines(reviewerContext) {{
 }}
 function recoveryContractDetailLines(failureContract, targetId = 'action-preview-response') {{
   const recoveryCommands = Array.isArray(failureContract.recovery_commands) ? failureContract.recovery_commands : [];
+  const localizedPossibleErrors = (Array.isArray(failureContract.possible_error_details) ? failureContract.possible_error_details : []).map(item => (
+    item && item.message_key
+      ? formatLabel(item.message_key, item.message_params || {{}}, item.message || item.code || '')
+      : (item.message || item.code || '')
+  ));
   return detailLine('Rollback status', failureContract.rollback_status || '')
     + detailLine('Durable mutation on failure', failureContract.durable_mutation_reported_on_failure)
     + detailLine('Recovery path', failureContract.recovery_path || '')
-    + detailListLine('Possible errors', failureContract.possible_error_codes, ' | ')
+    + detailListLine('Possible errors', localizedPossibleErrors.length > 0 ? localizedPossibleErrors : failureContract.possible_error_codes, ' | ')
     + detailListLine('Recovery commands', recoveryCommands, ' | ')
     + (failureContract.recovery_path ? '<p>' + copyCommandButton(failureContract.recovery_path, targetId, t('button.copy_recovery_cli')) + '</p>' : '')
     + (recoveryCommands.length > 0 ? '<p>' + recoveryCommands.map(command => copyCommandButton(command, targetId, t('button.copy_cli'))).join(' ') + '</p>' : '');
