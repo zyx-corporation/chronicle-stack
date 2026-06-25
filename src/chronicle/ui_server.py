@@ -7115,6 +7115,11 @@ function renderOverviewMutationReadinessPanel(mutationReadiness) {{
   const identityProofContract = writeRouteContract.identity_proof_contract || {{}};
   const authorizationContract = writeRouteContract.authorization_contract || {{}};
   const targetStateContract = writeRouteContract.target_state_contract || {{}};
+  const localizedActionTargetMatrix = (targetStateContract.action_target_matrix || []).map(item => (
+    item && item.summary_key
+      ? formatLabel(item.summary_key, item.summary_params || {{}}, item.summary || '')
+      : ((item.action || 'action') + ': pending=' + String(item.requires_pending) + '; queue=' + (item.resulting_queue_state || '') + '; disposition=' + (item.resulting_disposition || ''))
+  ));
   const enablementChecks = Array.isArray(mutationReadiness.enablement_checks) ? mutationReadiness.enablement_checks : [];
   const operationalReadiness = mutationReadiness.operational_readiness || {{}};
   return renderPanel(
@@ -7137,7 +7142,7 @@ function renderOverviewMutationReadinessPanel(mutationReadiness) {{
     + detailLine('Required review status', targetStateContract.required_current_review_status || '')
     + detailLine('Resolved status code', targetStateContract.resolved_status_code ?? '')
     + detailListLine('Target-state checks', targetStateContract.target_state_checks, ' | ')
-    + detailListLine('Action target matrix', (targetStateContract.action_target_matrix || []).map(item => ((item.action || 'action') + ': pending=' + String(item.requires_pending) + '; queue=' + (item.resulting_queue_state || '') + '; disposition=' + (item.resulting_disposition || ''))), ' | ')
+    + detailListLine('Action target matrix', localizedActionTargetMatrix, ' | ')
     + detailListLine('Failure families', (writeRouteContract.failure_families || []).map(item => ((item.family || 'family') + ': ' + ((item.possible_error_codes || []).join(', ')))), ' | ')
     + mutationOperationalDetailLines(operationalReadiness, blockerSummaries, enablementChecks)
     + detailListLine('Effective reviewer fields', reviewerContextRequirements.effective_required_fields, ' | ')

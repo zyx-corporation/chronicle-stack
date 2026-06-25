@@ -1148,6 +1148,7 @@ def test_ui_html_filtering_includes_provider_response_metadata_fields(tmp_path, 
     assert "follow-up=" in html
     assert "detailLine('Enablement ready', mutationReadiness.enablement_ready)" in html
     assert "detailLine('Scope note', mutationReadiness.scope_note_key ? formatLabel(mutationReadiness.scope_note_key, mutationReadiness.scope_note_params || {}, mutationReadiness.scope_note || '') : (mutationReadiness.scope_note || ''))" in html
+    assert html.count("const localizedActionTargetMatrix = (targetStateContract.action_target_matrix || []).map(item => (") >= 2
     assert "detailLine('Operational readiness', operationalReadiness.status || '')" in html
     assert "const localizedRemainingChecks = (Array.isArray(operationalReadiness.unsatisfied_checks) ? operationalReadiness.unsatisfied_checks : []).map(item => (" in html
     assert "detailListLine('Remaining checks', localizedRemainingChecks.length > 0 ? localizedRemainingChecks : (operationalReadiness.blocking_summaries || []), ' | ')" in html
@@ -1864,7 +1865,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "detailListLine('Target-state checks', targetStateContract.target_state_checks, ' | ')" in html
     assert "const localizedTargetStateScopeNote = targetStateContract.scope_note_key" in html
     assert "detailLine('Target-state scope note', localizedTargetStateScopeNote)" in html
-    assert "const localizedActionTargetMatrix = (targetStateContract.action_target_matrix || []).map(item => (" in html
+    assert html.count("const localizedActionTargetMatrix = (targetStateContract.action_target_matrix || []).map(item => (") >= 2
     assert "item && item.summary_key" in html
     assert "detailListLine('Action target matrix', localizedActionTargetMatrix, ' | ')" in html
     assert "const localizedResolvedBehaviorNote = targetStateContract.resolved_behavior_note_key" in html
