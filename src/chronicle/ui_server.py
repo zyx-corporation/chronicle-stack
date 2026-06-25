@@ -7152,6 +7152,12 @@ function renderOverviewMutationReadinessPanel(mutationReadiness) {{
       ? formatLabel(item.summary_key, item.summary_params || {{}}, item.summary || '')
       : ((item.action || 'action') + ': intent=' + (item.ui_intent || '') + '; pending=' + String(item.pending_required) + '; note=' + (item.note_status || ''))
   ));
+  const localizedFailureFamilies = (writeRouteContract.failure_families || []).map(item => {{
+    const summary = item && item.summary_key
+      ? formatLabel(item.summary_key, item.summary_params || {{}}, item.summary || '')
+      : (item.summary || '');
+    return ((item.family || 'family') + ': ' + summary + '; ' + ((item.possible_error_codes || []).join(', ')));
+  }});
   const enablementChecks = Array.isArray(mutationReadiness.enablement_checks) ? mutationReadiness.enablement_checks : [];
   const operationalReadiness = mutationReadiness.operational_readiness || {{}};
   return renderPanel(
@@ -7175,7 +7181,7 @@ function renderOverviewMutationReadinessPanel(mutationReadiness) {{
     + detailLine('Resolved status code', targetStateContract.resolved_status_code ?? '')
     + detailListLine('Target-state checks', targetStateContract.target_state_checks, ' | ')
     + detailListLine('Action target matrix', localizedActionTargetMatrix, ' | ')
-    + detailListLine('Failure families', (writeRouteContract.failure_families || []).map(item => ((item.family || 'family') + ': ' + ((item.possible_error_codes || []).join(', ')))), ' | ')
+    + detailListLine('Failure families', localizedFailureFamilies, ' | ')
     + mutationOperationalDetailLines(operationalReadiness, blockerSummaries, enablementChecks)
     + detailListLine('Effective reviewer fields', reviewerContextRequirements.effective_required_fields, ' | ')
     + detailListLine('Reviewer fields', reviewerContextRequirements.required_fields, ' | ')
