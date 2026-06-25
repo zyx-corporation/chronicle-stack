@@ -1376,6 +1376,18 @@ def _ui_write_route_contract(metadata: UIBoundaryMetadata) -> dict[str, Any]:
             "action": action,
             "path_template": f"/api/review-actions/<event_id>/{action}",
             "cli_equivalent_template": f"chronicle review {action} --event <event_id>",
+            "path_summary_key": "ui.template.review_write_route.action_route",
+            "path_summary_params": {
+                "action": action,
+                "path_template": f"/api/review-actions/<event_id>/{action}",
+            },
+            "path_summary": f"{action}: /api/review-actions/<event_id>/{action}",
+            "cli_summary_key": "ui.template.review_write_route.cli_equivalent",
+            "cli_summary_params": {
+                "action": action,
+                "cli_equivalent_template": f"chronicle review {action} --event <event_id>",
+            },
+            "cli_summary": f"{action}: chronicle review {action} --event <event_id>",
         }
         for action in actions
     ]
@@ -6514,10 +6526,20 @@ function writeRouteDetailLines(writeRouteContract, identityProofContract, author
       : (item.when || '');
     return (String(item.status_code ?? '') + ': ' + (item.family || 'family') + '; ' + localizedWhen);
   }});
+  const localizedActionRoutes = (writeRouteContract.action_routes || []).map(item => (
+    item && item.path_summary_key
+      ? formatLabel(item.path_summary_key, item.path_summary_params || {{}}, item.path_summary || '')
+      : ((item.action || 'action') + ': ' + (item.path_template || ''))
+  ));
+  const localizedCliRouteEquivalents = (writeRouteContract.action_routes || []).map(item => (
+    item && item.cli_summary_key
+      ? formatLabel(item.cli_summary_key, item.cli_summary_params || {{}}, item.cli_summary || '')
+      : ((item.action || 'action') + ': ' + (item.cli_equivalent_template || ''))
+  ));
   return detailLine('Write route', writeRouteContract.route_template || '')
     + detailListLine('Write actions', writeRouteContract.actions, ' | ')
-    + detailListLine('Action routes', (writeRouteContract.action_routes || []).map(item => ((item.action || 'action') + ': ' + (item.path_template || ''))), ' | ')
-    + detailListLine('CLI route equivalents', (writeRouteContract.action_routes || []).map(item => ((item.action || 'action') + ': ' + (item.cli_equivalent_template || ''))), ' | ')
+    + detailListLine('Action routes', localizedActionRoutes, ' | ')
+    + detailListLine('CLI route equivalents', localizedCliRouteEquivalents, ' | ')
     + detailListLine('Status-code contract', localizedStatusCodeContract, ' | ')
     + (includeRequestFields ? detailListLine('Write request fields', writeRouteContract.expected_request_fields, ' | ') : '')
     + detailLine('Write success status', writeRouteContract.success_status_code ?? '')

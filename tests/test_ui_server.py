@@ -273,16 +273,34 @@ def test_startup_metadata(tmp_path):
             "action": "approve",
             "path_template": "/api/review-actions/<event_id>/approve",
             "cli_equivalent_template": "chronicle review approve --event <event_id>",
+            "path_summary_key": "ui.template.review_write_route.action_route",
+            "path_summary_params": {"action": "approve", "path_template": "/api/review-actions/<event_id>/approve"},
+            "path_summary": "approve: /api/review-actions/<event_id>/approve",
+            "cli_summary_key": "ui.template.review_write_route.cli_equivalent",
+            "cli_summary_params": {"action": "approve", "cli_equivalent_template": "chronicle review approve --event <event_id>"},
+            "cli_summary": "approve: chronicle review approve --event <event_id>",
         },
         {
             "action": "reject",
             "path_template": "/api/review-actions/<event_id>/reject",
             "cli_equivalent_template": "chronicle review reject --event <event_id>",
+            "path_summary_key": "ui.template.review_write_route.action_route",
+            "path_summary_params": {"action": "reject", "path_template": "/api/review-actions/<event_id>/reject"},
+            "path_summary": "reject: /api/review-actions/<event_id>/reject",
+            "cli_summary_key": "ui.template.review_write_route.cli_equivalent",
+            "cli_summary_params": {"action": "reject", "cli_equivalent_template": "chronicle review reject --event <event_id>"},
+            "cli_summary": "reject: chronicle review reject --event <event_id>",
         },
         {
             "action": "request-changes",
             "path_template": "/api/review-actions/<event_id>/request-changes",
             "cli_equivalent_template": "chronicle review request-changes --event <event_id>",
+            "path_summary_key": "ui.template.review_write_route.action_route",
+            "path_summary_params": {"action": "request-changes", "path_template": "/api/review-actions/<event_id>/request-changes"},
+            "path_summary": "request-changes: /api/review-actions/<event_id>/request-changes",
+            "cli_summary_key": "ui.template.review_write_route.cli_equivalent",
+            "cli_summary_params": {"action": "request-changes", "cli_equivalent_template": "chronicle review request-changes --event <event_id>"},
+            "cli_summary": "request-changes: chronicle review request-changes --event <event_id>",
         },
     ]
     assert payload["ui_boundary"]["write_route_contract"]["status_code_contract"] == [
@@ -1188,8 +1206,10 @@ def test_ui_html_filtering_includes_provider_response_metadata_fields(tmp_path, 
     assert "formatLabel(item.summary_key, item.summary_params || {}, item.summary || item.code || 'blocker')" in html
     assert "detailLine('Reviewer label pattern', reviewerContext.reviewer_label_pattern || '')" in html
     assert "detailLine('Write route', writeRouteContract.route_template || '')" in html
-    assert "detailListLine('Action routes', (writeRouteContract.action_routes || []).map(item => ((item.action || 'action') + ': ' + (item.path_template || ''))), ' | ')" in html
-    assert "detailListLine('CLI route equivalents', (writeRouteContract.action_routes || []).map(item => ((item.action || 'action') + ': ' + (item.cli_equivalent_template || ''))), ' | ')" in html
+    assert "const localizedActionRoutes = (writeRouteContract.action_routes || []).map(item => (" in html
+    assert "const localizedCliRouteEquivalents = (writeRouteContract.action_routes || []).map(item => (" in html
+    assert "detailListLine('Action routes', localizedActionRoutes, ' | ')" in html
+    assert "detailListLine('CLI route equivalents', localizedCliRouteEquivalents, ' | ')" in html
     assert "const localizedStatusCodeContract = (writeRouteContract.status_code_contract || []).map(item => {" in html
     assert "detailListLine('Status-code contract', localizedStatusCodeContract, ' | ')" in html
     assert "const localizedPossibleErrors = (Array.isArray(failureContract.possible_error_details) ? failureContract.possible_error_details : []).map(item => (" in html

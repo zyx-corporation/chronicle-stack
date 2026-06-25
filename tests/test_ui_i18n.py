@@ -355,6 +355,8 @@ def test_ui_i18n_catalog_covers_review_target_state_note_keys():
         "ui.review_write_route_status_code.summary.target_missing",
         "ui.review_write_route_status_code.summary.target_not_pending",
         "ui.review_write_route_status_code.summary.durable_write_failed",
+        "ui.template.review_write_route.action_route",
+        "ui.template.review_write_route.cli_equivalent",
     }
     for locale in ("ja", "en", "zh-CN"):
         missing = required_keys.difference(UI_I18N_CATALOG[locale])
