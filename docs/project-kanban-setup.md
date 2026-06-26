@@ -271,6 +271,21 @@ PR templates should ask for:
 - RDE review.
 - Local act CI result, when CI changes or release readiness are affected.
 
+## Manual setup steps
+
+The current connector cannot create or update GitHub Projects directly. Configure the project in the GitHub UI or through a GitHub Projects API client using the fields and transitions above.
+
+Recommended manual sequence:
+
+1. Create a repository or organization project named `Chronicle Stack Development`.
+2. Add the repository to the project.
+3. Add the fields listed in this document.
+4. Create the `Flow` board view grouped by `Status`.
+5. Create the `Planning` table view with Work Type, Decision State, RDE Required, Target Stage, Linked PR, Linked ADR, and Priority visible.
+6. Add automation rules only where they do not require semantic judgment.
+7. Use `.github/ISSUE_TEMPLATE/work-item.yml` for new work items.
+8. Use `.github/PULL_REQUEST_TEMPLATE.md` for PR evidence.
+
 ## RDE review
 
 ### Preserved
@@ -286,7 +301,7 @@ PR templates should ask for:
 
 ### Completed
 
-- Recommended Project name, views, fields, state transitions, and automation guidance.
+- Recommended Project name, views, fields, state transitions, automation guidance, manual setup steps, and template alignment.
 
 ### Unresolved
 
