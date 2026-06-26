@@ -1632,7 +1632,11 @@ def _ui_write_route_contract(metadata: UIBoundaryMetadata) -> dict[str, Any]:
         "target_state_contract": target_state_contract,
         "success_contract": {
             "transaction_status": "decision_and_audit_persisted",
+            "transaction_status_summary_key": "ui.review_success_contract.transaction_status.decision_and_audit_persisted",
+            "transaction_status_summary": "decision and audit persisted",
             "rollback_status": "not_required",
+            "rollback_status_summary_key": "ui.review_contract.rollback_status.not_required",
+            "rollback_status_summary": "not required",
             "durable_mutation_reported": True,
             "durable_success_requirements": [
                 "route_gating_passed",
@@ -1643,7 +1647,13 @@ def _ui_write_route_contract(metadata: UIBoundaryMetadata) -> dict[str, Any]:
         },
         "failure_contract": {
             "rollback_status": "fail_closed",
+            "rollback_status_summary_key": "ui.review_contract.rollback_status.fail_closed",
+            "rollback_status_summary": "fail closed",
             "durable_mutation_reported_on_failure": False,
+            "durable_mutation_reported_on_failure_summary_key": (
+                "ui.review_failure_contract.durable_mutation_reported_on_failure.false"
+            ),
+            "durable_mutation_reported_on_failure_summary": "false",
             "possible_error_codes": pre_mutation_or_gate_errors + durable_write_path_errors,
             "failure_families": [
                 {
@@ -3644,7 +3654,13 @@ class ChronicleUIDataService:
                 "No durable GUI review result is reported as applied unless both review decision persistence and audit insertion succeed."
             ),
             "rollback_status": "fail_closed",
+            "rollback_status_summary_key": "ui.review_contract.rollback_status.fail_closed",
+            "rollback_status_summary": "fail closed",
             "durable_mutation_reported_on_failure": False,
+            "durable_mutation_reported_on_failure_summary_key": (
+                "ui.review_failure_contract.durable_mutation_reported_on_failure.false"
+            ),
+            "durable_mutation_reported_on_failure_summary": "false",
             "partial_failure_visible": True,
             "possible_error_codes": possible_error_codes,
             "possible_error_details": possible_error_details,
@@ -3803,7 +3819,11 @@ class ChronicleUIDataService:
         ]
         return {
             "transaction_status": "decision_and_audit_persisted",
+            "transaction_status_summary_key": "ui.review_success_contract.transaction_status.decision_and_audit_persisted",
+            "transaction_status_summary": "decision and audit persisted",
             "rollback_status": "not_required",
+            "rollback_status_summary_key": "ui.review_contract.rollback_status.not_required",
+            "rollback_status_summary": "not required",
             "durable_mutation_reported": True,
             "audit_insertion_required": True,
             "durable_success_requirements": [
@@ -5152,12 +5172,25 @@ function contractDetailLines(successContract, failureContract, targetId) {{
       ? formatLabel(item.summary_key, item.summary_params || {{}}, item.summary || item.command || '')
       : (item.summary || item.command || '')
   ));
+  const localizedRollbackStatus = resolvedContract.rollback_status_summary_key
+    ? formatLabel(resolvedContract.rollback_status_summary_key, resolvedContract.rollback_status_summary_params || {{}}, resolvedContract.rollback_status_summary || resolvedContract.rollback_status || '')
+    : (resolvedContract.rollback_status_summary || resolvedContract.rollback_status || '');
+  const localizedTransactionStatus = (successContract || {{}}).transaction_status_summary_key
+    ? formatLabel(successContract.transaction_status_summary_key, successContract.transaction_status_summary_params || {{}}, successContract.transaction_status_summary || successContract.transaction_status || '')
+    : ((successContract || {{}}).transaction_status_summary || (successContract || {{}}).transaction_status || '');
+  const localizedDurableOnFailure = typeof (failureContract || {{}}).durable_mutation_reported_on_failure === 'boolean'
+    ? (
+      failureContract.durable_mutation_reported_on_failure_summary_key
+        ? formatLabel(failureContract.durable_mutation_reported_on_failure_summary_key, failureContract.durable_mutation_reported_on_failure_summary_params || {{}}, failureContract.durable_mutation_reported_on_failure_summary || String(failureContract.durable_mutation_reported_on_failure))
+        : (failureContract.durable_mutation_reported_on_failure_summary || String(failureContract.durable_mutation_reported_on_failure))
+    )
+    : '';
   const lines = []
     + detailLine('Recovery path', resolvedContract.recovery_path || '')
-    + detailLine('Rollback status', resolvedContract.rollback_status || '')
-    + detailLine('Transaction status', (successContract || {{}}).transaction_status || '')
+    + detailLine('Rollback status', localizedRollbackStatus)
+    + detailLine('Transaction status', localizedTransactionStatus)
     + detailListLine('Durable success requirements', (successContract || {{}}).durable_success_requirements, ' | ')
-    + detailLine('Durable mutation on failure', (failureContract || {{}}).durable_mutation_reported_on_failure)
+    + detailLine('Durable mutation on failure', localizedDurableOnFailure)
     + detailLine('Target-state recovery status', targetStateRecovery.status || '')
     + detailLine('Target-state recovery summary', localizedTargetStateSummary)
     + detailLine('Pending queue sufficient', targetStateRecovery.pending_queue_sufficient)
@@ -5283,6 +5316,19 @@ function renderPreviewContractSummary(preview, previewTarget = 'action-preview-r
   const localizedBlockedStatus = writeRouteContract.blocked_status_summary_key
     ? formatLabel(writeRouteContract.blocked_status_summary_key, writeRouteContract.blocked_status_summary_params || {{}}, writeRouteContract.blocked_status_summary || String(writeRouteContract.blocked_status_code || ''))
     : (writeRouteContract.blocked_status_summary || String(writeRouteContract.blocked_status_code || ''));
+  const localizedRollbackStatus = failureContract.rollback_status_summary_key
+    ? formatLabel(failureContract.rollback_status_summary_key, failureContract.rollback_status_summary_params || {{}}, failureContract.rollback_status_summary || failureContract.rollback_status || '')
+    : (failureContract.rollback_status_summary || failureContract.rollback_status || '');
+  const localizedTransactionStatus = successContract.transaction_status_summary_key
+    ? formatLabel(successContract.transaction_status_summary_key, successContract.transaction_status_summary_params || {{}}, successContract.transaction_status_summary || successContract.transaction_status || '')
+    : (successContract.transaction_status_summary || successContract.transaction_status || '');
+  const localizedDurableOnFailure = typeof failureContract.durable_mutation_reported_on_failure === 'boolean'
+    ? (
+      failureContract.durable_mutation_reported_on_failure_summary_key
+        ? formatLabel(failureContract.durable_mutation_reported_on_failure_summary_key, failureContract.durable_mutation_reported_on_failure_summary_params || {{}}, failureContract.durable_mutation_reported_on_failure_summary || String(failureContract.durable_mutation_reported_on_failure))
+        : (failureContract.durable_mutation_reported_on_failure_summary || String(failureContract.durable_mutation_reported_on_failure))
+    )
+    : '';
   const requestFields = Array.isArray(writeRouteContract.expected_request_fields)
     ? writeRouteContract.expected_request_fields
     : [];
@@ -5298,13 +5344,13 @@ function renderPreviewContractSummary(preview, previewTarget = 'action-preview-r
   if (!recoveryPath && possibleErrors.length === 0 && followUpCommands.length === 0 && requestFields.length === 0 && transactionOrder.length === 0 && serverSideChecks.length === 0 && targetStateChecks.length === 0) return '';
   return [
     failureContract.rollback_status
-      ? '<br><span class="id">rollback=' + esc(failureContract.rollback_status) + '</span>'
+      ? '<br><span class="id">rollback=' + esc(localizedRollbackStatus) + '</span>'
       : '',
     successContract.transaction_status
-      ? '<br><span class="id">transaction=' + esc(successContract.transaction_status) + '</span>'
+      ? '<br><span class="id">transaction=' + esc(localizedTransactionStatus) + '</span>'
       : '',
     typeof failureContract.durable_mutation_reported_on_failure === 'boolean'
-      ? '<br><span class="id">durable-on-failure=' + esc(failureContract.durable_mutation_reported_on_failure) + '</span>'
+      ? '<br><span class="id">durable-on-failure=' + esc(localizedDurableOnFailure) + '</span>'
       : '',
     writeRouteContract.route_template
       ? '<br><span class="id">write-route=' + esc(writeRouteContract.route_template) + '</span>'
@@ -6914,8 +6960,18 @@ function recoveryContractDetailLines(failureContract, targetId = 'action-preview
       ? formatLabel(item.summary_key, item.summary_params || {{}}, item.summary || item.command || '')
       : (item.summary || item.command || '')
   ));
-  return detailLine('Rollback status', failureContract.rollback_status || '')
-    + detailLine('Durable mutation on failure', failureContract.durable_mutation_reported_on_failure)
+  const localizedRollbackStatus = failureContract.rollback_status_summary_key
+    ? formatLabel(failureContract.rollback_status_summary_key, failureContract.rollback_status_summary_params || {{}}, failureContract.rollback_status_summary || failureContract.rollback_status || '')
+    : (failureContract.rollback_status_summary || failureContract.rollback_status || '');
+  const localizedDurableOnFailure = typeof failureContract.durable_mutation_reported_on_failure === 'boolean'
+    ? (
+      failureContract.durable_mutation_reported_on_failure_summary_key
+        ? formatLabel(failureContract.durable_mutation_reported_on_failure_summary_key, failureContract.durable_mutation_reported_on_failure_summary_params || {{}}, failureContract.durable_mutation_reported_on_failure_summary || String(failureContract.durable_mutation_reported_on_failure))
+        : (failureContract.durable_mutation_reported_on_failure_summary || String(failureContract.durable_mutation_reported_on_failure))
+    )
+    : '';
+  return detailLine('Rollback status', localizedRollbackStatus)
+    + detailLine('Durable mutation on failure', localizedDurableOnFailure)
     + detailLine('Recovery path', failureContract.recovery_path || '')
     + detailListLine('Possible errors', localizedPossibleErrors.length > 0 ? localizedPossibleErrors : failureContract.possible_error_codes, ' | ')
     + detailListLine('Recovery commands', localizedRecoveryCommands.length > 0 ? localizedRecoveryCommands : recoveryCommands, ' | ')

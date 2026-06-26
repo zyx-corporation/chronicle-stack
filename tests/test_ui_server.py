@@ -1226,6 +1226,9 @@ def test_ui_html_filtering_includes_provider_response_metadata_fields(tmp_path, 
     assert "const localizedTargetStateChecks = (Array.isArray(targetStateContract.target_state_check_details) ? targetStateContract.target_state_check_details : []).map(item => (" in html
     assert "const localizedSuccessStatus = writeRouteContract.success_status_summary_key" in html
     assert "const localizedBlockedStatus = writeRouteContract.blocked_status_summary_key" in html
+    assert "const localizedRollbackStatus = failureContract.rollback_status_summary_key" in html
+    assert "const localizedTransactionStatus = successContract.transaction_status_summary_key" in html
+    assert "const localizedDurableOnFailure = typeof failureContract.durable_mutation_reported_on_failure === 'boolean'" in html
     assert "follow-up=" in html
     assert "detailLine('Enablement ready', mutationReadiness.enablement_ready)" in html
     assert "detailLine('Scope note', mutationReadiness.scope_note_key ? formatLabel(mutationReadiness.scope_note_key, mutationReadiness.scope_note_params || {}, mutationReadiness.scope_note || '') : (mutationReadiness.scope_note || ''))" in html
@@ -1419,6 +1422,14 @@ def test_ui_data_service_detail_endpoints(tmp_path):
             "target_state_check_details"
         ][1]["summary_key"]
         == "ui.review_target_state_contract.check.target_review_status_needs_review"
+    )
+    assert (
+        review_detail["action_preview"]["success_contract"]["transaction_status_summary_key"]
+        == "ui.review_success_contract.transaction_status.decision_and_audit_persisted"
+    )
+    assert (
+        review_detail["action_preview"]["failure_contract"]["rollback_status_summary_key"]
+        == "ui.review_contract.rollback_status.fail_closed"
     )
     assert review_detail["reviewer_enforcement_summary"]["status"] == "descriptive_only"
     assert review_detail["reviewer_validation_gate_summary"]["status"] == "read_only_preview"
@@ -2346,8 +2357,16 @@ def test_http_root_and_read_only_endpoints(tmp_path):
             "chronicle review queue --include-resolved --json",
             f"chronicle review approve --event {ids['runtime_summary_event_id']}",
         ]
+        assert payload["success_contract"]["rollback_status_summary_key"] == "ui.review_contract.rollback_status.not_required"
+        assert payload["success_contract"]["transaction_status_summary_key"] == (
+            "ui.review_success_contract.transaction_status.decision_and_audit_persisted"
+        )
         assert payload["failure_contract"]["rollback_status"] == "fail_closed"
         assert payload["failure_contract"]["durable_mutation_reported_on_failure"] is False
+        assert payload["failure_contract"]["rollback_status_summary_key"] == "ui.review_contract.rollback_status.fail_closed"
+        assert payload["failure_contract"]["durable_mutation_reported_on_failure_summary_key"] == (
+            "ui.review_failure_contract.durable_mutation_reported_on_failure.false"
+        )
         assert payload["failure_contract"]["failure_families"][0]["family"] == "pre_mutation_or_gate"
         assert payload["failure_contract"]["recovery_commands"] == [
             f"chronicle review approve --event {ids['runtime_summary_event_id']}"
