@@ -31,6 +31,8 @@ The project will classify exploratory and delivery work according to the questio
 
 Every substantial LLM-assisted development cycle should preserve the learning lineage: the originating question, the hypothesis, the prototype or MVP boundary, the decision made, the delta from the prior state, and any RDE review.
 
+Kanban will be integrated with GitHub Issues as a state and flow view. Issues are the planning source of truth; Kanban boards are derived views over those Issues, not a separate task database.
+
 ## Definitions
 
 ### Prototype First
@@ -75,6 +77,22 @@ An Agile iteration should identify:
 - what tests or checks stabilize the change;
 - what RDE review says about semantic drift.
 
+### Kanban
+
+Kanban is the visual flow layer for Issue-based work. It shows where an Issue is in the delivery stream, but it does not replace the Issue as the source of planning truth.
+
+Kanban cards should not contain unique requirements, decisions, acceptance criteria, RDE review, or implementation rationale that are absent from the Issue. Those details belong in the Issue, linked PRs, ADRs, or Chronicle records.
+
+The recommended minimum columns are:
+
+- `Backlog`: unstarted question, request, defect, or opportunity.
+- `Ready`: sufficiently specified and unblocked.
+- `In Progress`: active implementation or investigation.
+- `Review`: PR opened, decision pending, or review required.
+- `Done`: merged, completed, or explicitly closed.
+- `Deferred`: intentionally postponed.
+- `Rejected / Not planned`: rejected, invalid, duplicate, or intentionally not pursued.
+
 ## Methodology
 
 Chronicle Stack development should follow this order when exploring uncertain features:
@@ -88,6 +106,18 @@ Chronicle Stack development should follow this order when exploring uncertain fe
 7. If adopted, convert the result into specification, tests, and stable boundaries.
 8. Run RDE review to compare the result against the original intent.
 9. Use TDD or equivalent tests to stabilize behavior before treating it as production-path code.
+
+## Issue / Kanban / PR / ADR responsibilities
+
+The project will use the following responsibility split:
+
+- `Issue`: planning source of truth. Holds the question, hypothesis, work label, acceptance criteria, non-goals, context, and links.
+- `Kanban`: derived state view. Shows flow and bottlenecks, but does not hold unique planning truth.
+- `PR`: implementation evidence. Holds Summary, Boundary, Verification, Warning classification, and RDE review for the concrete change.
+- `ADR`: stable decision record. Holds accepted architectural, methodological, or policy decisions.
+- `Chronicle`: long-term lineage record. Preserves the wider context, decision history, deltas, and later reconstruction surface.
+
+This means that moving a card on a Kanban board is not itself a decision record. The decision must be visible in the Issue, PR, ADR, or Chronicle record.
 
 ## LLM-assisted development rule
 
@@ -121,7 +151,7 @@ Substantial work products should be explicitly labeled as one of the following:
 - `Production Candidate`: intended for hardening, tests, documentation, and compatibility review.
 - `Deprecated / Discarded`: retained only for lineage or comparison.
 
-The label should appear in the issue, PR body, design note, or related Chronicle record.
+The label should appear in the issue, PR body, design note, or related Chronicle record. When a Kanban board is used, the same classification should be visible through Issue labels or fields rather than board-only card text.
 
 ## Consequences
 
@@ -131,6 +161,7 @@ The label should appear in the issue, PR body, design note, or related Chronicle
 - MVP work remains tied to value validation instead of becoming a vague early product label.
 - Agile iteration remains grounded in learning, not just issue throughput.
 - TDD and RDE become explicit phase gates for moving from exploration to stable implementation.
+- Kanban can show work flow without becoming a competing source of truth.
 - Chronicle Stack dogfoods its own principle: the value is not only what was built, but what was learned and preserved.
 
 ### Negative
@@ -139,6 +170,7 @@ The label should appear in the issue, PR body, design note, or related Chronicle
 - Some fast prototypes may be discarded even if they appear to work.
 - The team must resist pressure to treat a convincing demo as validated product value.
 - Work may appear slower when moving from prototype to production candidate because tests, boundary review, and RDE are required.
+- Kanban cards must be kept synchronized with Issue state to avoid misleading flow views.
 
 ## Acceptance guidance
 
@@ -163,6 +195,13 @@ An Agile iteration is acceptable only if:
 - it does not silently rewrite core assumptions;
 - it leaves enough evidence for later reconstruction.
 
+A Kanban state transition is acceptable only if:
+
+- the underlying Issue contains the relevant planning truth;
+- the Issue state, labels, or linked PRs justify the movement;
+- board-only notes do not contain unique requirements or decisions;
+- Done means merged, explicitly completed, or intentionally closed with a reason.
+
 ## RDE review
 
 ### Preserved
@@ -171,30 +210,38 @@ An Agile iteration is acceptable only if:
 - MVP remains valuable for testing user, adoption, or business value.
 - Agile remains valuable for iterative learning and adaptation.
 - TDD remains the mechanism for stabilizing intended behavior.
+- GitHub Issues remain a practical unit for planning and traceability.
 
 ### Transformed
 
 - These methods are not treated as generic development slogans. They are converted into Chronicle Stack-specific development modes with required lineage and decision recording.
+- Kanban is treated as a derived state view over Issues rather than a separate planning authority.
 
 ### Completed
 
-- Distinct definitions for Prototype First, MVP, and Agile.
+- Distinct definitions for Prototype First, MVP, Agile, and Kanban.
 - A methodology for LLM-assisted development cycles.
 - Work-product labels for prototypes, MVPs, research spikes, demos, production candidates, and discarded artifacts.
 - Criteria for moving from exploration to production candidate.
+- Responsibility split between Issue, Kanban, PR, ADR, and Chronicle.
 
 ### Unresolved
 
 - Exact CLI or Chronicle object support for recording these classifications is not defined in this ADR.
 - PR templates and issue templates may need later updates to include work-product labels and RDE review fields.
+- The exact GitHub Project fields / Kanban columns are not automated by this ADR.
 
 ### Deviation risks
 
 - Treating a prototype as production because it runs.
 - Calling a demo an MVP without a value hypothesis.
 - Letting Agile devolve into issue throughput without preserving decision lineage.
+- Letting Kanban become a competing task database instead of an Issue view.
+- Letting board-only card notes contain decisions that are not preserved in Issues, PRs, ADRs, or Chronicles.
 - Letting LLM-generated implementation details overwrite the project’s core design principles.
 
 ### Next update policy
 
 Future work should add issue and PR templates that ask contributors to identify whether a change is Prototype, MVP, Research Spike, Demo, or Production Candidate, and to include a minimal RDE review when the change affects architecture, context boundaries, AI behavior, or product direction.
+
+Future work should also add GitHub Project / Kanban guidance that makes Issue labels and fields the source for work classification and board state.
