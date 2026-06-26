@@ -1243,6 +1243,9 @@ def _reviewer_context_requirements(metadata: UIBoundaryMetadata) -> dict[str, An
     effective_required_fields = ["reviewer_label", "reviewer_kind", "ui_intent"]
     if metadata.session_gating:
         effective_required_fields.append("session_label")
+    accepted_reviewer_kinds = [ReviewerIdentityKind.LOCAL_OPERATOR.value]
+    advisory_only_reviewer_kinds = [ReviewerIdentityKind.USER_DECLARED.value]
+    session_boundary_status = "required" if metadata.session_gating else "optional"
     expectation_summary = (
         "Explicit local GUI mutation currently expects local_operator reviewer metadata, matching ui_intent, and a session label inside the session-gated loopback-local boundary."
         if metadata.session_gating
@@ -1251,16 +1254,44 @@ def _reviewer_context_requirements(metadata: UIBoundaryMetadata) -> dict[str, An
     return {
         "required_fields": ["reviewer_label", "reviewer_kind", "ui_intent"],
         "effective_required_fields": effective_required_fields,
+        "effective_required_field_details": [
+            {
+                "field": str(field),
+                "summary_key": f"ui.write_request_field.{field}",
+                "summary": str(field).replace("_", " "),
+            }
+            for field in effective_required_fields
+        ],
         "reviewer_label_pattern": REVIEWER_LABEL_PATTERN.pattern,
         "reviewer_label_examples": ["alice", "desk-operator.01"],
         "session_label_required": bool(metadata.session_gating),
         "session_label_pattern": SESSION_LABEL_PATTERN.pattern,
         "session_label_examples": ["desk-session-1", "review.local-01"],
-        "accepted_reviewer_kinds": [ReviewerIdentityKind.LOCAL_OPERATOR.value],
+        "accepted_reviewer_kinds": accepted_reviewer_kinds,
+        "accepted_reviewer_kind_details": [
+            {
+                "kind": str(kind),
+                "summary_key": f"ui.reviewer_kind.{kind}",
+                "summary": str(kind).replace("_", " "),
+            }
+            for kind in accepted_reviewer_kinds
+        ],
         "required_reviewer_kinds_for_mutation": [ReviewerIdentityKind.LOCAL_OPERATOR.value],
-        "advisory_only_reviewer_kinds": [ReviewerIdentityKind.USER_DECLARED.value],
-        "session_boundary_status": "required" if metadata.session_gating else "optional",
+        "advisory_only_reviewer_kinds": advisory_only_reviewer_kinds,
+        "advisory_only_reviewer_kind_details": [
+            {
+                "kind": str(kind),
+                "summary_key": f"ui.reviewer_kind.{kind}",
+                "summary": str(kind).replace("_", " "),
+            }
+            for kind in advisory_only_reviewer_kinds
+        ],
+        "session_boundary_status": session_boundary_status,
+        "session_boundary_status_summary_key": f"ui.reviewer_context.session_boundary_status.{session_boundary_status}",
+        "session_boundary_status_summary": session_boundary_status.replace("_", " "),
         "ui_intent_required": True,
+        "ui_intent_required_summary_key": "ui.reviewer_context.ui_intent_required.true",
+        "ui_intent_required_summary": "true",
         "expectation_summary": expectation_summary,
         "expectation_summary_key": (
             "ui.reviewer_context.expectation.required"
@@ -5117,13 +5148,34 @@ function reviewerContextDetailLines(reviewerContext, identityProofContract = {{}
   const uiIntentNote = reviewerContext.ui_intent_note_key
     ? formatLabel(reviewerContext.ui_intent_note_key, reviewerContext.ui_intent_note_params || {{}}, reviewerContext.ui_intent_note || '')
     : (reviewerContext.ui_intent_note || '');
+  const localizedEffectiveFields = (Array.isArray(reviewerContext.effective_required_field_details) ? reviewerContext.effective_required_field_details : []).map(item => (
+    item && item.summary_key
+      ? formatLabel(item.summary_key, item.summary_params || {{}}, item.summary || item.field || '')
+      : (item.summary || item.field || '')
+  ));
+  const localizedAcceptedKinds = (Array.isArray(reviewerContext.accepted_reviewer_kind_details) ? reviewerContext.accepted_reviewer_kind_details : []).map(item => (
+    item && item.summary_key
+      ? formatLabel(item.summary_key, item.summary_params || {{}}, item.summary || item.kind || '')
+      : (item.summary || item.kind || '')
+  ));
+  const localizedAdvisoryKinds = (Array.isArray(reviewerContext.advisory_only_reviewer_kind_details) ? reviewerContext.advisory_only_reviewer_kind_details : []).map(item => (
+    item && item.summary_key
+      ? formatLabel(item.summary_key, item.summary_params || {{}}, item.summary || item.kind || '')
+      : (item.summary || item.kind || '')
+  ));
+  const localizedSessionBoundary = reviewerContext.session_boundary_status_summary_key
+    ? formatLabel(reviewerContext.session_boundary_status_summary_key, reviewerContext.session_boundary_status_summary_params || {{}}, reviewerContext.session_boundary_status_summary || reviewerContext.session_boundary_status || '')
+    : (reviewerContext.session_boundary_status_summary || reviewerContext.session_boundary_status || '');
+  const localizedUiIntentRequired = reviewerContext.ui_intent_required_summary_key
+    ? formatLabel(reviewerContext.ui_intent_required_summary_key, reviewerContext.ui_intent_required_summary_params || {{}}, reviewerContext.ui_intent_required_summary || String(reviewerContext.ui_intent_required))
+    : (reviewerContext.ui_intent_required_summary || String(reviewerContext.ui_intent_required));
   return ''
     + detailLine('Reviewer expectation summary', expectationSummary)
-    + detailListLine('Reviewer fields', effectiveFields, ' | ')
-    + detailListLine('Reviewer kinds', acceptedKinds, ' | ')
-    + detailListLine('Advisory-only reviewer kinds', advisoryKinds, ' | ')
-    + detailLine('Session boundary', reviewerContext.session_boundary_status || '')
-    + detailLine('UI intent required', reviewerContext.ui_intent_required)
+    + detailListLine('Reviewer fields', localizedEffectiveFields.length > 0 ? localizedEffectiveFields : effectiveFields, ' | ')
+    + detailListLine('Reviewer kinds', localizedAcceptedKinds.length > 0 ? localizedAcceptedKinds : acceptedKinds, ' | ')
+    + detailListLine('Advisory-only reviewer kinds', localizedAdvisoryKinds.length > 0 ? localizedAdvisoryKinds : advisoryKinds, ' | ')
+    + detailLine('Session boundary', localizedSessionBoundary)
+    + detailLine('UI intent required', localizedUiIntentRequired)
     + detailListLine('Session label examples', sessionExamples, ' | ')
     + detailLine('Authority note', authorityNote)
     + detailLine('Reviewer label note', reviewerLabelNote)

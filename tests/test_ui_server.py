@@ -243,7 +243,13 @@ def test_startup_metadata(tmp_path):
         "local_operator"
     ]
     assert payload["ui_boundary"]["reviewer_context_requirements"]["session_boundary_status"] == "optional"
+    assert payload["ui_boundary"]["reviewer_context_requirements"]["session_boundary_status_summary_key"] == (
+        "ui.reviewer_context.session_boundary_status.optional"
+    )
     assert payload["ui_boundary"]["reviewer_context_requirements"]["ui_intent_required"] is True
+    assert payload["ui_boundary"]["reviewer_context_requirements"]["ui_intent_required_summary_key"] == (
+        "ui.reviewer_context.ui_intent_required.true"
+    )
     assert payload["ui_boundary"]["reviewer_context_requirements"]["expectation_summary"].startswith(
         "Preview/read-only review context currently expects local_operator reviewer metadata"
     )
@@ -485,7 +491,13 @@ def test_startup_metadata_with_configured_auth_mode(tmp_path):
     assert payload["ui_boundary"]["reviewer_context_requirements"]["accepted_reviewer_kinds"] == [
         "local_operator"
     ]
+    assert payload["ui_boundary"]["reviewer_context_requirements"]["accepted_reviewer_kind_details"][0][
+        "summary_key"
+    ] == "ui.reviewer_kind.local_operator"
     assert payload["ui_boundary"]["reviewer_context_requirements"]["session_boundary_status"] == "required"
+    assert payload["ui_boundary"]["reviewer_context_requirements"]["session_boundary_status_summary_key"] == (
+        "ui.reviewer_context.session_boundary_status.required"
+    )
     assert payload["ui_boundary"]["reviewer_context_requirements"]["expectation_summary"].startswith(
         "Explicit local GUI mutation currently expects local_operator reviewer metadata"
     )
@@ -1268,6 +1280,9 @@ def test_ui_html_filtering_includes_provider_response_metadata_fields(tmp_path, 
     assert "const localizedCliEquivalent = payload.cli_equivalent_detail && payload.cli_equivalent_detail.summary_key" in html
     assert "detailListLine('Write request fields', localizedWriteRequestFields.length > 0 ? localizedWriteRequestFields : writeRouteContract.expected_request_fields, ' | ')" in html
     assert "detailListLine('Effective reviewer fields', reviewerContextRequirements.effective_required_fields, ' | ')" in html
+    assert "const localizedEffectiveFields = (Array.isArray(reviewerContext.effective_required_field_details) ? reviewerContext.effective_required_field_details : []).map(item => (" in html
+    assert "const localizedAcceptedKinds = (Array.isArray(reviewerContext.accepted_reviewer_kind_details) ? reviewerContext.accepted_reviewer_kind_details : []).map(item => (" in html
+    assert "const localizedAdvisoryKinds = (Array.isArray(reviewerContext.advisory_only_reviewer_kind_details) ? reviewerContext.advisory_only_reviewer_kind_details : []).map(item => (" in html
     assert "Review queue blocked-route preview stays read-only and returns the CLI fallback contract." in html
     assert "Runtime-record blocked-route preview stays read-only and returns the CLI fallback contract." in html
     assert "Local mutation is enabled for this runtime-record list view." in html
@@ -2017,9 +2032,11 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "function reviewerContextDetailLines(reviewerContext, identityProofContract = {})" in html
     assert "const expectationSummary = reviewerContext.expectation_summary_key" in html
     assert "detailLine('Reviewer expectation summary', expectationSummary)" in html
-    assert "detailListLine('Advisory-only reviewer kinds', advisoryKinds, ' | ')" in html
-    assert "detailLine('Session boundary', reviewerContext.session_boundary_status || '')" in html
-    assert "detailLine('UI intent required', reviewerContext.ui_intent_required)" in html
+    assert "detailListLine('Advisory-only reviewer kinds', localizedAdvisoryKinds.length > 0 ? localizedAdvisoryKinds : advisoryKinds, ' | ')" in html
+    assert "const localizedSessionBoundary = reviewerContext.session_boundary_status_summary_key" in html
+    assert "const localizedUiIntentRequired = reviewerContext.ui_intent_required_summary_key" in html
+    assert "detailLine('Session boundary', localizedSessionBoundary)" in html
+    assert "detailLine('UI intent required', localizedUiIntentRequired)" in html
     assert "const authorityNote = reviewerContext.authority_note_key" in html
     assert "detailLine('Authority note', authorityNote)" in html
     assert "detailLine('Session label required', reviewerContextRequirements.session_label_required)" in html
