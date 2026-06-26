@@ -53,7 +53,7 @@ ruff check src/ tests/
 Chronicle Stack は hosted GitHub Actions をCI実行基盤として使いません。CI相当の検証は、ローカル環境の `act` で明示的に実行します。
 
 ```bash
-scripts/act-ci.sh
+bash scripts/act-ci.sh
 ```
 
 ローカル act CI では、次を実行します。
