@@ -392,6 +392,18 @@ def test_startup_metadata(tmp_path):
     assert payload["ui_boundary"]["write_route_contract"]["status_code_contract"][5]["summary_key"] == (
         "ui.review_write_route_status_code.summary.durable_write_failed"
     )
+    assert payload["ui_boundary"]["write_route_contract"]["expected_request_field_details"][0]["summary_key"] == (
+        "ui.write_request_field.reviewer_label"
+    )
+    assert payload["ui_boundary"]["write_route_contract"]["transaction_order_details"][0]["summary_key"] == (
+        "ui.review_write_route.transaction_order.step_1"
+    )
+    assert payload["ui_boundary"]["write_route_contract"]["success_status_summary_key"] == (
+        "ui.review_write_route_status_code.summary.success"
+    )
+    assert payload["ui_boundary"]["write_route_contract"]["blocked_status_summary_key"] == (
+        "ui.review_write_route_status_code.summary.authorization_blocked"
+    )
     assert payload["ui_boundary"]["write_route_contract"]["authorization_contract"]["authorization_status"] == "advisory_only"
     assert payload["ui_boundary"]["write_route_contract"]["authorization_contract"]["required_identity_assurance_status"] == "boundary_aligned"
     assert payload["ui_boundary"]["write_route_contract"]["authorization_contract"]["target_pending_required"] is True
@@ -401,6 +413,9 @@ def test_startup_metadata(tmp_path):
         "review_capability_ready",
         "pending_target_state",
     ]
+    assert payload["ui_boundary"]["write_route_contract"]["authorization_contract"]["server_side_check_details"][0]["summary_key"] == (
+        "ui.review_authorization_contract.server_side_check.mutation_enabled"
+    )
     assert payload["ui_boundary"]["write_route_contract"]["authorization_contract"]["action_authorization_matrix"][0]["summary_key"] == (
         "ui.review_authorization_contract.action_matrix.approve"
     )
@@ -412,6 +427,9 @@ def test_startup_metadata(tmp_path):
     assert payload["ui_boundary"]["write_route_contract"]["target_state_contract"]["action_target_matrix"][2]["resulting_queue_state"] == "remains_pending"
     assert payload["ui_boundary"]["write_route_contract"]["target_state_contract"]["action_target_matrix"][0]["summary_key"] == (
         "ui.review_target_state_contract.action_target_matrix.approve"
+    )
+    assert payload["ui_boundary"]["write_route_contract"]["target_state_contract"]["target_state_check_details"][0]["summary_key"] == (
+        "ui.review_target_state_contract.check.target_exists_in_chronicle_state"
     )
     assert payload["ui_boundary"]["write_route_contract"]["target_state_contract"]["resolved_behavior_note_key"] == (
         "ui.review_target_state_contract.note.resolved_behavior"
@@ -747,6 +765,9 @@ def test_ui_data_service_read_endpoints(tmp_path):
         "ui.mutation_readiness.note.preview_only_requirements_pending"
     )
     assert runtime_summary_row["mutation_enablement_summary"]["blocked_status_code"] == 403
+    assert runtime_summary_row["mutation_enablement_summary"]["blocked_status_summary_key"] == (
+        "ui.review_write_route_status_code.summary.authorization_blocked"
+    )
     assert runtime_summary_row["mutation_enablement_summary"]["identity_proof_status"] == "local_operator_advisory"
     assert runtime_summary_row["mutation_enablement_summary"]["remaining_summary"].startswith(
         "Capability flag enabled: "
@@ -1199,6 +1220,12 @@ def test_ui_html_filtering_includes_provider_response_metadata_fields(tmp_path, 
     assert "const localizedFollowUpCommands = (Array.isArray(successContract.follow_up_command_details) ? successContract.follow_up_command_details : []).map(item => (" in html
     assert "const localizedProofStatus = identityProofContract.proof_status_message_key" in html
     assert "const localizedProofFields = (Array.isArray(identityProofContract.required_identity_field_details) ? identityProofContract.required_identity_field_details : []).map(item => (" in html
+    assert "const localizedRequestFields = (Array.isArray(writeRouteContract.expected_request_field_details) ? writeRouteContract.expected_request_field_details : []).map(item => (" in html
+    assert "const localizedTransactionOrder = (Array.isArray(writeRouteContract.transaction_order_details) ? writeRouteContract.transaction_order_details : []).map(item => (" in html
+    assert "const localizedAuthorizationChecks = (Array.isArray(authorizationContract.server_side_check_details) ? authorizationContract.server_side_check_details : []).map(item => (" in html
+    assert "const localizedTargetStateChecks = (Array.isArray(targetStateContract.target_state_check_details) ? targetStateContract.target_state_check_details : []).map(item => (" in html
+    assert "const localizedSuccessStatus = writeRouteContract.success_status_summary_key" in html
+    assert "const localizedBlockedStatus = writeRouteContract.blocked_status_summary_key" in html
     assert "follow-up=" in html
     assert "detailLine('Enablement ready', mutationReadiness.enablement_ready)" in html
     assert "detailLine('Scope note', mutationReadiness.scope_note_key ? formatLabel(mutationReadiness.scope_note_key, mutationReadiness.scope_note_params || {}, mutationReadiness.scope_note || '') : (mutationReadiness.scope_note || ''))" in html
@@ -1210,6 +1237,7 @@ def test_ui_html_filtering_includes_provider_response_metadata_fields(tmp_path, 
     assert "const localizedOperationalMessage = operationalReadiness.message_key" in html
     assert "const localizedProofStatus = summary.identity_proof_status_message_key" in html
     assert "const localizedProofFields = (Array.isArray(summary.identity_proof_field_details) ? summary.identity_proof_field_details : []).map(item => (" in html
+    assert "const localizedBlockedStatus = summary.blocked_status_summary_key" in html
     assert "mutationOperationalDetailLines(operationalReadiness, blockerSummaries, enablementChecks)" in html
     assert "function renderMutationEnablementNotice(record)" in html
     assert "label('notice.mutation_enablement', 'Mutation Enablement')" in html
@@ -1373,6 +1401,24 @@ def test_ui_data_service_detail_endpoints(tmp_path):
             "required_identity_field_details"
         ][0]["summary_key"]
         == "ui.identity_proof.field.reviewer_label"
+    )
+    assert (
+        review_detail["action_preview"]["write_route_contract"]["expected_request_field_details"][0][
+            "summary_key"
+        ]
+        == "ui.write_request_field.reviewer_label"
+    )
+    assert (
+        review_detail["action_preview"]["write_route_contract"]["authorization_contract"][
+            "server_side_check_details"
+        ][2]["summary_key"]
+        == "ui.review_authorization_contract.server_side_check.review_capability_ready"
+    )
+    assert (
+        review_detail["action_preview"]["write_route_contract"]["target_state_contract"][
+            "target_state_check_details"
+        ][1]["summary_key"]
+        == "ui.review_target_state_contract.check.target_review_status_needs_review"
     )
     assert review_detail["reviewer_enforcement_summary"]["status"] == "descriptive_only"
     assert review_detail["reviewer_validation_gate_summary"]["status"] == "read_only_preview"

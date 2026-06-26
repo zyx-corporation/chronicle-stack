@@ -1416,6 +1416,12 @@ def _reviewer_identity_proof_contract(metadata: UIBoundaryMetadata) -> dict[str,
 
 
 def _ui_authorization_contract(metadata: UIBoundaryMetadata) -> dict[str, Any]:
+    server_side_checks = [
+        "mutation_enabled",
+        "reviewer_identity_assurance_boundary_aligned",
+        "review_capability_ready",
+        "pending_target_state",
+    ]
     return {
         "authorization_status": (
             "explicit_local_reviewer_declared"
@@ -1426,11 +1432,14 @@ def _ui_authorization_contract(metadata: UIBoundaryMetadata) -> dict[str, Any]:
         "required_identity_assurance_status": "boundary_aligned",
         "required_review_capability_status": "ready",
         "target_pending_required": True,
-        "server_side_checks": [
-            "mutation_enabled",
-            "reviewer_identity_assurance_boundary_aligned",
-            "review_capability_ready",
-            "pending_target_state",
+        "server_side_checks": server_side_checks,
+        "server_side_check_details": [
+            {
+                "code": code,
+                "summary_key": f"ui.review_authorization_contract.server_side_check.{code}",
+                "summary": code.replace("_", " "),
+            }
+            for code in server_side_checks
         ],
         "scope_note": (
             "Current browser-triggered authorization is a local single-operator boundary only; it does not claim hosted or multi-user-safe authority semantics."
@@ -1444,15 +1453,24 @@ def _ui_target_state_contract() -> dict[str, Any]:
     resolved_behavior_note_key, resolved_behavior_note_params, resolved_behavior_note = (
         _review_target_state_note_contract("resolved_behavior")
     )
+    target_state_checks = [
+        "target_exists_in_chronicle_state",
+        "target_review_status_needs_review",
+        "target_pending_for_requested_action",
+    ]
     return {
         "required_current_review_status": "needs_review",
         "pending_target_required": True,
         "resolved_status_code": HTTPStatus.CONFLICT.value,
         "not_found_status_code": HTTPStatus.NOT_FOUND.value,
-        "target_state_checks": [
-            "target_exists_in_chronicle_state",
-            "target_review_status_needs_review",
-            "target_pending_for_requested_action",
+        "target_state_checks": target_state_checks,
+        "target_state_check_details": [
+            {
+                "code": code,
+                "summary_key": f"ui.review_target_state_contract.check.{code}",
+                "summary": code.replace("_", " "),
+            }
+            for code in target_state_checks
         ],
         "scope_note": scope_note,
         "scope_note_key": scope_note_key,
@@ -1537,19 +1555,40 @@ def _ui_write_route_contract(metadata: UIBoundaryMetadata) -> dict[str, Any]:
     durable_summary_key, durable_summary_params, durable_summary = (
         _review_failure_family_summary_contract("durable_write_path")
     )
+    expected_request_fields = reviewer_context.get("effective_required_fields", [])
+    transaction_order = [
+        "validate route + reviewer context",
+        "perform review decision persistence attempt",
+        "perform audit insertion attempt",
+        "report success only if both durable side effects succeeded",
+    ]
     return {
         "route_template": "/api/review-actions/<event_id>/<action>",
         "actions": actions,
         "action_routes": action_routes,
         "status_code_contract": status_code_contract,
-        "expected_request_fields": reviewer_context.get("effective_required_fields", []),
+        "expected_request_fields": expected_request_fields,
+        "expected_request_field_details": [
+            {
+                "field": str(field),
+                "summary_key": f"ui.write_request_field.{field}",
+                "summary": str(field).replace("_", " "),
+            }
+            for field in expected_request_fields
+        ],
         "optional_request_fields": ["note"],
         "accepted_reviewer_kinds": reviewer_context.get("accepted_reviewer_kinds", []),
         "advisory_only_reviewer_kinds": reviewer_context.get("advisory_only_reviewer_kinds", []),
         "session_gated": bool(metadata.session_gating),
         "mutation_enabled": mutation_enabled,
         "success_status_code": HTTPStatus.OK.value,
+        "success_status_summary": status_code_contract[0]["summary"],
+        "success_status_summary_key": status_code_contract[0]["summary_key"],
+        "success_status_summary_params": status_code_contract[0]["summary_params"],
         "blocked_status_code": HTTPStatus.FORBIDDEN.value,
+        "blocked_status_summary": status_code_contract[2]["summary"],
+        "blocked_status_summary_key": status_code_contract[2]["summary_key"],
+        "blocked_status_summary_params": status_code_contract[2]["summary_params"],
         "validation_status_code": HTTPStatus.BAD_REQUEST.value,
         "resolved_status_code": HTTPStatus.CONFLICT.value,
         "missing_target_status_code": HTTPStatus.NOT_FOUND.value,
@@ -1560,11 +1599,14 @@ def _ui_write_route_contract(metadata: UIBoundaryMetadata) -> dict[str, Any]:
             "decision_persisted",
             "audit_persisted",
         ],
-        "transaction_order": [
-            "validate route + reviewer context",
-            "perform review decision persistence attempt",
-            "perform audit insertion attempt",
-            "report success only if both durable side effects succeeded",
+        "transaction_order": transaction_order,
+        "transaction_order_details": [
+            {
+                "step": step,
+                "summary_key": f"ui.review_write_route.transaction_order.step_{index + 1}",
+                "summary": step,
+            }
+            for index, step in enumerate(transaction_order)
         ],
         "transaction_rule": (
             "No durable GUI review result is reported as applied unless both review decision persistence and audit insertion succeed."
@@ -2723,6 +2765,15 @@ class ChronicleUIDataService:
             if isinstance(first_unsatisfied.get("summary_params", {}), dict)
             else {},
             "blocked_status_code": write_route_contract.get("blocked_status_code"),
+            "blocked_status_summary": str(write_route_contract.get("blocked_status_summary", "")),
+            "blocked_status_summary_key": str(
+                write_route_contract.get("blocked_status_summary_key", "")
+            ),
+            "blocked_status_summary_params": dict(
+                write_route_contract.get("blocked_status_summary_params", {})
+            )
+            if isinstance(write_route_contract.get("blocked_status_summary_params", {}), dict)
+            else {},
             "success_status_code": write_route_contract.get("success_status_code"),
             "identity_proof_status": str(identity_proof_contract.get("proof_status", "")),
             "identity_proof_status_message": str(
@@ -5206,6 +5257,32 @@ function renderPreviewContractSummary(preview, previewTarget = 'action-preview-r
       ? formatLabel(item.summary_key, item.summary_params || {{}}, item.summary || item.field || '')
       : (item.summary || item.field || '')
   ));
+  const localizedRequestFields = (Array.isArray(writeRouteContract.expected_request_field_details) ? writeRouteContract.expected_request_field_details : []).map(item => (
+    item && item.summary_key
+      ? formatLabel(item.summary_key, item.summary_params || {{}}, item.summary || item.field || '')
+      : (item.summary || item.field || '')
+  ));
+  const localizedTransactionOrder = (Array.isArray(writeRouteContract.transaction_order_details) ? writeRouteContract.transaction_order_details : []).map(item => (
+    item && item.summary_key
+      ? formatLabel(item.summary_key, item.summary_params || {{}}, item.summary || item.step || '')
+      : (item.summary || item.step || '')
+  ));
+  const localizedAuthorizationChecks = (Array.isArray(authorizationContract.server_side_check_details) ? authorizationContract.server_side_check_details : []).map(item => (
+    item && item.summary_key
+      ? formatLabel(item.summary_key, item.summary_params || {{}}, item.summary || item.code || '')
+      : (item.summary || item.code || '')
+  ));
+  const localizedTargetStateChecks = (Array.isArray(targetStateContract.target_state_check_details) ? targetStateContract.target_state_check_details : []).map(item => (
+    item && item.summary_key
+      ? formatLabel(item.summary_key, item.summary_params || {{}}, item.summary || item.code || '')
+      : (item.summary || item.code || '')
+  ));
+  const localizedSuccessStatus = writeRouteContract.success_status_summary_key
+    ? formatLabel(writeRouteContract.success_status_summary_key, writeRouteContract.success_status_summary_params || {{}}, writeRouteContract.success_status_summary || String(writeRouteContract.success_status_code || ''))
+    : (writeRouteContract.success_status_summary || String(writeRouteContract.success_status_code || ''));
+  const localizedBlockedStatus = writeRouteContract.blocked_status_summary_key
+    ? formatLabel(writeRouteContract.blocked_status_summary_key, writeRouteContract.blocked_status_summary_params || {{}}, writeRouteContract.blocked_status_summary || String(writeRouteContract.blocked_status_code || ''))
+    : (writeRouteContract.blocked_status_summary || String(writeRouteContract.blocked_status_code || ''));
   const requestFields = Array.isArray(writeRouteContract.expected_request_fields)
     ? writeRouteContract.expected_request_fields
     : [];
@@ -5233,22 +5310,22 @@ function renderPreviewContractSummary(preview, previewTarget = 'action-preview-r
       ? '<br><span class="id">write-route=' + esc(writeRouteContract.route_template) + '</span>'
       : '',
     requestFields.length > 0
-      ? '<br><span class="id">request-fields=' + esc(requestFields.join(' | ')) + '</span>'
+      ? '<br><span class="id">request-fields=' + esc((localizedRequestFields.length > 0 ? localizedRequestFields : requestFields).join(' | ')) + '</span>'
       : '',
     transactionOrder.length > 0
-      ? '<br><span class="id">transaction-order=' + esc(transactionOrder.join(' -> ')) + '</span>'
+      ? '<br><span class="id">transaction-order=' + esc((localizedTransactionOrder.length > 0 ? localizedTransactionOrder : transactionOrder).join(' -> ')) + '</span>'
       : '',
     serverSideChecks.length > 0
-      ? '<br><span class="id">authorization-checks=' + esc(serverSideChecks.join(' | ')) + '</span>'
+      ? '<br><span class="id">authorization-checks=' + esc((localizedAuthorizationChecks.length > 0 ? localizedAuthorizationChecks : serverSideChecks).join(' | ')) + '</span>'
       : '',
     targetStateChecks.length > 0
-      ? '<br><span class="id">target-state-checks=' + esc(targetStateChecks.join(' | ')) + '</span>'
+      ? '<br><span class="id">target-state-checks=' + esc((localizedTargetStateChecks.length > 0 ? localizedTargetStateChecks : targetStateChecks).join(' | ')) + '</span>'
       : '',
     writeRouteContract.success_status_code
-      ? '<br><span class="id">success-status=' + esc(writeRouteContract.success_status_code) + '</span>'
+      ? '<br><span class="id">success-status=' + esc(localizedSuccessStatus) + '</span>'
       : '',
     writeRouteContract.blocked_status_code
-      ? '<br><span class="id">blocked-status=' + esc(writeRouteContract.blocked_status_code) + '</span>'
+      ? '<br><span class="id">blocked-status=' + esc(localizedBlockedStatus) + '</span>'
       : '',
     identityProofContract.proof_status
       ? '<br><span class="id">proof-status=' + esc(localizedProofStatus) + '</span>'
@@ -5335,6 +5412,9 @@ function renderMutationEnablementSummary(summary) {{
       ? formatLabel(item.summary_key, item.summary_params || {{}}, item.summary || item.field || '')
       : (item.summary || item.field || '')
   ));
+  const localizedBlockedStatus = summary.blocked_status_summary_key
+    ? formatLabel(summary.blocked_status_summary_key, summary.blocked_status_summary_params || {{}}, summary.blocked_status_summary || String(summary.blocked_status_code || ''))
+    : (summary.blocked_status_summary || String(summary.blocked_status_code || ''));
   const localizedMessage = summary.message_key
     ? formatLabel(summary.message_key, summary.message_params || {{}}, summary.message || '')
     : localizeTextValue(summary.message || '');
@@ -5362,7 +5442,7 @@ function renderMutationEnablementSummary(summary) {{
       ? '<span class="id">remaining-summary=' + esc(localizedRemainingSummary) + '</span>'
       : '',
     summary.blocked_status_code
-      ? '<span class="id">blocked-status=' + esc(summary.blocked_status_code) + '</span>'
+      ? '<span class="id">blocked-status=' + esc(localizedBlockedStatus) + '</span>'
       : '',
     summary.identity_proof_status
       ? '<span class="id">proof-status=' + esc(localizedProofStatus) + '</span>'
