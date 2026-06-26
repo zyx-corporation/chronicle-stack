@@ -1197,6 +1197,8 @@ def test_ui_html_filtering_includes_provider_response_metadata_fields(tmp_path, 
     assert "const localizedRecoverySummary = preview && preview.recovery_summary_key" in html
     assert "const localizedPossibleErrors = (Array.isArray(failureContract.possible_error_details) ? failureContract.possible_error_details : []).map(item => (" in html
     assert "const localizedFollowUpCommands = (Array.isArray(successContract.follow_up_command_details) ? successContract.follow_up_command_details : []).map(item => (" in html
+    assert "const localizedProofStatus = identityProofContract.proof_status_message_key" in html
+    assert "const localizedProofFields = (Array.isArray(identityProofContract.required_identity_field_details) ? identityProofContract.required_identity_field_details : []).map(item => (" in html
     assert "follow-up=" in html
     assert "detailLine('Enablement ready', mutationReadiness.enablement_ready)" in html
     assert "detailLine('Scope note', mutationReadiness.scope_note_key ? formatLabel(mutationReadiness.scope_note_key, mutationReadiness.scope_note_params || {}, mutationReadiness.scope_note || '') : (mutationReadiness.scope_note || ''))" in html
@@ -1206,6 +1208,8 @@ def test_ui_html_filtering_includes_provider_response_metadata_fields(tmp_path, 
     assert "const localizedRemainingChecks = (Array.isArray(operationalReadiness.unsatisfied_checks) ? operationalReadiness.unsatisfied_checks : []).map(item => (" in html
     assert "detailListLine('Remaining checks', localizedRemainingChecks.length > 0 ? localizedRemainingChecks : (operationalReadiness.blocking_summaries || []), ' | ')" in html
     assert "const localizedOperationalMessage = operationalReadiness.message_key" in html
+    assert "const localizedProofStatus = summary.identity_proof_status_message_key" in html
+    assert "const localizedProofFields = (Array.isArray(summary.identity_proof_field_details) ? summary.identity_proof_field_details : []).map(item => (" in html
     assert "mutationOperationalDetailLines(operationalReadiness, blockerSummaries, enablementChecks)" in html
     assert "function renderMutationEnablementNotice(record)" in html
     assert "label('notice.mutation_enablement', 'Mutation Enablement')" in html
@@ -1358,6 +1362,18 @@ def test_ui_data_service_detail_endpoints(tmp_path):
         "ui.review_target_state_contract.action_target_matrix.request_changes"
     )
     assert review_detail["action_preview"]["write_route_contract"]["identity_proof_contract"]["proof_status"] == "local_operator_advisory"
+    assert (
+        review_detail["action_preview"]["write_route_contract"]["identity_proof_contract"][
+            "proof_status_message_key"
+        ]
+        == "ui.identity_proof.status.local_operator_advisory"
+    )
+    assert (
+        review_detail["action_preview"]["write_route_contract"]["identity_proof_contract"][
+            "required_identity_field_details"
+        ][0]["summary_key"]
+        == "ui.identity_proof.field.reviewer_label"
+    )
     assert review_detail["reviewer_enforcement_summary"]["status"] == "descriptive_only"
     assert review_detail["reviewer_validation_gate_summary"]["status"] == "read_only_preview"
     assert review_detail["review_preview_only"] is True

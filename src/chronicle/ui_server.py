@@ -1378,14 +1378,26 @@ def _reviewer_validation_gate_summary(metadata: UIBoundaryMetadata) -> dict[str,
 
 def _reviewer_identity_proof_contract(metadata: UIBoundaryMetadata) -> dict[str, Any]:
     reviewer_context = _reviewer_context_requirements(metadata)
+    proof_status = (
+        "session_gated_local_operator"
+        if metadata.session_gating
+        else "local_operator_advisory"
+    )
+    required_identity_fields = reviewer_context.get("effective_required_fields", [])
     return {
-        "proof_status": (
-            "session_gated_local_operator"
-            if metadata.session_gating
-            else "local_operator_advisory"
-        ),
+        "proof_status": proof_status,
+        "proof_status_message_key": f"ui.identity_proof.status.{proof_status}",
+        "proof_status_message": proof_status.replace("_", " "),
         "accepted_auth_modes": [UIAuthMode.LOOPBACK_LOCAL],
-        "required_identity_fields": reviewer_context.get("effective_required_fields", []),
+        "required_identity_fields": required_identity_fields,
+        "required_identity_field_details": [
+            {
+                "field": str(field),
+                "summary_key": f"ui.identity_proof.field.{field}",
+                "summary": str(field).replace("_", " "),
+            }
+            for field in required_identity_fields
+        ],
         "session_label_required": bool(metadata.session_gating),
         "session_label_pattern": reviewer_context.get("session_label_pattern", ""),
         "required_reviewer_kinds_for_mutation": reviewer_context.get(
@@ -2713,9 +2725,20 @@ class ChronicleUIDataService:
             "blocked_status_code": write_route_contract.get("blocked_status_code"),
             "success_status_code": write_route_contract.get("success_status_code"),
             "identity_proof_status": str(identity_proof_contract.get("proof_status", "")),
+            "identity_proof_status_message": str(
+                identity_proof_contract.get("proof_status_message", "")
+            ),
+            "identity_proof_status_message_key": str(
+                identity_proof_contract.get("proof_status_message_key", "")
+            ),
             "identity_proof_fields": [
                 str(item)
                 for item in identity_proof_contract.get("required_identity_fields", [])
+            ],
+            "identity_proof_field_details": [
+                item
+                for item in identity_proof_contract.get("required_identity_field_details", [])
+                if isinstance(item, dict)
             ],
         }
 
@@ -5175,6 +5198,14 @@ function renderPreviewContractSummary(preview, previewTarget = 'action-preview-r
       ? formatLabel(item.summary_key, item.summary_params || {{}}, item.summary || item.command || '')
       : (item.summary || item.command || '')
   ));
+  const localizedProofStatus = identityProofContract.proof_status_message_key
+    ? formatLabel(identityProofContract.proof_status_message_key, identityProofContract.proof_status_message_params || {{}}, identityProofContract.proof_status_message || identityProofContract.proof_status || '')
+    : (identityProofContract.proof_status_message || identityProofContract.proof_status || '');
+  const localizedProofFields = (Array.isArray(identityProofContract.required_identity_field_details) ? identityProofContract.required_identity_field_details : []).map(item => (
+    item && item.summary_key
+      ? formatLabel(item.summary_key, item.summary_params || {{}}, item.summary || item.field || '')
+      : (item.summary || item.field || '')
+  ));
   const requestFields = Array.isArray(writeRouteContract.expected_request_fields)
     ? writeRouteContract.expected_request_fields
     : [];
@@ -5220,10 +5251,10 @@ function renderPreviewContractSummary(preview, previewTarget = 'action-preview-r
       ? '<br><span class="id">blocked-status=' + esc(writeRouteContract.blocked_status_code) + '</span>'
       : '',
     identityProofContract.proof_status
-      ? '<br><span class="id">proof-status=' + esc(identityProofContract.proof_status) + '</span>'
+      ? '<br><span class="id">proof-status=' + esc(localizedProofStatus) + '</span>'
       : '',
     Array.isArray(identityProofContract.required_identity_fields) && identityProofContract.required_identity_fields.length > 0
-      ? '<br><span class="id">proof-fields=' + esc(identityProofContract.required_identity_fields.join(' | ')) + '</span>'
+      ? '<br><span class="id">proof-fields=' + esc((localizedProofFields.length > 0 ? localizedProofFields : identityProofContract.required_identity_fields).join(' | ')) + '</span>'
       : '',
     recoveryPath
       ? '<br><span class="id">recovery=' + esc(localizedRecoverySummary) + '</span> '
@@ -5296,6 +5327,14 @@ function mutationEnablementBadge(summary) {{
 function renderMutationEnablementSummary(summary) {{
   if (!summary || !summary.status) return '';
   const proofFields = Array.isArray(summary.identity_proof_fields) ? summary.identity_proof_fields : [];
+  const localizedProofStatus = summary.identity_proof_status_message_key
+    ? formatLabel(summary.identity_proof_status_message_key, summary.identity_proof_status_message_params || {{}}, summary.identity_proof_status_message || summary.identity_proof_status || '')
+    : (summary.identity_proof_status_message || summary.identity_proof_status || '');
+  const localizedProofFields = (Array.isArray(summary.identity_proof_field_details) ? summary.identity_proof_field_details : []).map(item => (
+    item && item.summary_key
+      ? formatLabel(item.summary_key, item.summary_params || {{}}, item.summary || item.field || '')
+      : (item.summary || item.field || '')
+  ));
   const localizedMessage = summary.message_key
     ? formatLabel(summary.message_key, summary.message_params || {{}}, summary.message || '')
     : localizeTextValue(summary.message || '');
@@ -5326,10 +5365,10 @@ function renderMutationEnablementSummary(summary) {{
       ? '<span class="id">blocked-status=' + esc(summary.blocked_status_code) + '</span>'
       : '',
     summary.identity_proof_status
-      ? '<span class="id">proof-status=' + esc(summary.identity_proof_status) + '</span>'
+      ? '<span class="id">proof-status=' + esc(localizedProofStatus) + '</span>'
       : '',
     proofFields.length > 0
-      ? '<span class="id">proof-fields=' + esc(proofFields.join(' | ')) + '</span>'
+      ? '<span class="id">proof-fields=' + esc((localizedProofFields.length > 0 ? localizedProofFields : proofFields).join(' | ')) + '</span>'
       : '',
   ].filter(Boolean).join('<br>');
 }}
