@@ -6,10 +6,10 @@ Author: Tomoyuki Kano
 Related:
 
 - `docs/specs/roadmap-linkage-v0.1.md`
-- `docs/roadmap-v0.4.md`
-- `docs/roadmap-v0.5.md`
-- `docs/federation-requirements.md`
-- `docs/federation-implementation-roadmap.md`
+- `docs/roadmaps/roadmap-v0.4.md`
+- `docs/roadmaps/roadmap-v0.5.md`
+- `docs/federation/requirements.md`
+- `docs/roadmaps/federation-implementation-roadmap.md`
 - `docs/future/README.md`
 
 ## 1. 目的
@@ -36,7 +36,7 @@ Related:
 
 読み替えが必要な点は、当初の v0.3 / v0.4 / v0.5 / v0.6 の名称と、現在の実装済みリリース番号が一致しないことである。したがって、この文書は「リリース番号の確定表」ではなく、「設計接続表」として扱う。
 
-### 2.2 `docs/roadmap-v0.4.md`
+### 2.2 `docs/roadmaps/roadmap-v0.4.md`
 
 この文書は、Operational Readiness Layer のロードマップである。対象は `chronicle doctor`、Export Manifest、Redaction-aware Export、Dashboard navigation/filtering、Graph export inspection である。
 
@@ -46,7 +46,7 @@ Related:
 
 このロードマップは、全体ロードマップでは「Operational Readiness Baseline」として位置づける。
 
-### 2.3 `docs/roadmap-v0.5.md`
+### 2.3 `docs/roadmaps/roadmap-v0.5.md`
 
 この文書は、Security-aware Composition and Integration Layer のロードマップである。v0.5 は連携機能を増やす版ではなく、連携しても文脈主権を壊さないための版として定義されている。
 
@@ -54,7 +54,7 @@ Related:
 
 このロードマップは、全体ロードマップでは「Security and Boundary Baseline」として位置づける。分散連合やAI連携へ進む前に、必ずここを通過する。
 
-### 2.4 `docs/federation-requirements.md`
+### 2.4 `docs/federation/requirements.md`
 
 この文書は、Chronicle Stack を AI時代の文脈SNSとして成立させるための要求仕様である。中心要求は、各主体が文脈正本をローカルに保持し、共有可能な意味だけを、来歴、権限、撤回可能性、監査証跡付きで連合できることである。
 
@@ -62,7 +62,7 @@ Related:
 
 この文書は、全体ロードマップでは「長期要求の上位仕様」として扱う。実装順序を直接決める文書ではなく、各実装フェーズが逸脱していないかを検査する基準である。
 
-### 2.5 `docs/federation-implementation-roadmap.md`
+### 2.5 `docs/roadmaps/federation-implementation-roadmap.md`
 
 この文書は、分散連合拡張を Phase 0 から Phase 9 へ分解した実装計画である。
 
