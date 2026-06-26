@@ -77,7 +77,7 @@ ruff: All checks passed
 Hosted GitHub Actions は使用しない。CI相当の検証は、ローカル環境の `act` で明示的に実行する。
 
 ```bash
-scripts/act-ci.sh
+bash scripts/act-ci.sh
 ```
 
 Local act CI の workflow は `.act/workflows/ci.yml` に置く。`.github/workflows/` 配下には置かないため、GitHub hosted Actions の push / pull_request trigger としては実行されない。
