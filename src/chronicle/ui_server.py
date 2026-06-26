@@ -1428,8 +1428,22 @@ def _ui_authorization_contract(metadata: UIBoundaryMetadata) -> dict[str, Any]:
             if metadata.authorization_mode == UIAuthorizationMode.REVIEWER_DECLARED
             else "advisory_only"
         ),
+        "authorization_status_summary_key": (
+            "ui.review_authorization_contract.status.explicit_local_reviewer_declared"
+            if metadata.authorization_mode == UIAuthorizationMode.REVIEWER_DECLARED
+            else "ui.review_authorization_contract.status.advisory_only"
+        ),
+        "authorization_status_summary": (
+            "explicit local reviewer declared"
+            if metadata.authorization_mode == UIAuthorizationMode.REVIEWER_DECLARED
+            else "advisory only"
+        ),
         "required_authorization_mode": UIAuthorizationMode.REVIEWER_DECLARED,
         "required_identity_assurance_status": "boundary_aligned",
+        "required_identity_assurance_status_summary_key": (
+            "ui.review_authorization_contract.required_identity_assurance_status.boundary_aligned"
+        ),
+        "required_identity_assurance_status_summary": "boundary aligned",
         "required_review_capability_status": "ready",
         "target_pending_required": True,
         "server_side_checks": server_side_checks,
@@ -1460,6 +1474,10 @@ def _ui_target_state_contract() -> dict[str, Any]:
     ]
     return {
         "required_current_review_status": "needs_review",
+        "required_current_review_status_summary_key": (
+            "ui.review_target_state_contract.required_current_review_status.needs_review"
+        ),
+        "required_current_review_status_summary": "needs review",
         "pending_target_required": True,
         "resolved_status_code": HTTPStatus.CONFLICT.value,
         "not_found_status_code": HTTPStatus.NOT_FOUND.value,
@@ -6892,30 +6910,73 @@ function writeRouteDetailLines(writeRouteContract, identityProofContract, author
       ? formatLabel(item.cli_summary_key, item.cli_summary_params || {{}}, item.cli_summary || '')
       : ((item.action || 'action') + ': ' + (item.cli_equivalent_template || ''))
   ));
+  const localizedWriteRequestFields = (writeRouteContract.expected_request_field_details || []).map(item => (
+    item && item.summary_key
+      ? formatLabel(item.summary_key, item.summary_params || {{}}, item.summary || '')
+      : (item.summary || item.field || '')
+  ));
+  const localizedWriteSuccessStatus = writeRouteContract.success_status_summary_key
+    ? formatLabel(writeRouteContract.success_status_summary_key, writeRouteContract.success_status_summary_params || {{}}, writeRouteContract.success_status_summary || String(writeRouteContract.success_status_code ?? ''))
+    : (writeRouteContract.success_status_summary || String(writeRouteContract.success_status_code ?? ''));
+  const localizedWriteBlockedStatus = writeRouteContract.blocked_status_summary_key
+    ? formatLabel(writeRouteContract.blocked_status_summary_key, writeRouteContract.blocked_status_summary_params || {{}}, writeRouteContract.blocked_status_summary || String(writeRouteContract.blocked_status_code ?? ''))
+    : (writeRouteContract.blocked_status_summary || String(writeRouteContract.blocked_status_code ?? ''));
+  const localizedTransactionOrder = (writeRouteContract.transaction_order_details || []).map(item => (
+    item && item.summary_key
+      ? formatLabel(item.summary_key, item.summary_params || {{}}, item.summary || '')
+      : (item.summary || item.step || '')
+  ));
+  const localizedAuthorizationStatus = authorizationContract.authorization_status_summary_key
+    ? formatLabel(authorizationContract.authorization_status_summary_key, authorizationContract.authorization_status_summary_params || {{}}, authorizationContract.authorization_status_summary || authorizationContract.authorization_status || '')
+    : (authorizationContract.authorization_status_summary || authorizationContract.authorization_status || '');
+  const localizedRequiredAssurance = authorizationContract.required_identity_assurance_status_summary_key
+    ? formatLabel(authorizationContract.required_identity_assurance_status_summary_key, authorizationContract.required_identity_assurance_status_summary_params || {{}}, authorizationContract.required_identity_assurance_status_summary || authorizationContract.required_identity_assurance_status || '')
+    : (authorizationContract.required_identity_assurance_status_summary || authorizationContract.required_identity_assurance_status || '');
+  const localizedAuthorizationChecks = (authorizationContract.server_side_check_details || []).map(item => (
+    item && item.summary_key
+      ? formatLabel(item.summary_key, item.summary_params || {{}}, item.summary || '')
+      : (item.summary || item.code || '')
+  ));
+  const localizedRequiredReviewStatus = targetStateContract.required_current_review_status_summary_key
+    ? formatLabel(targetStateContract.required_current_review_status_summary_key, targetStateContract.required_current_review_status_summary_params || {{}}, targetStateContract.required_current_review_status_summary || targetStateContract.required_current_review_status || '')
+    : (targetStateContract.required_current_review_status_summary || targetStateContract.required_current_review_status || '');
+  const localizedTargetStateChecks = (targetStateContract.target_state_check_details || []).map(item => (
+    item && item.summary_key
+      ? formatLabel(item.summary_key, item.summary_params || {{}}, item.summary || '')
+      : (item.summary || item.code || '')
+  ));
+  const localizedIdentityProofStatus = identityProofContract.proof_status_message_key
+    ? formatLabel(identityProofContract.proof_status_message_key, identityProofContract.proof_status_message_params || {{}}, identityProofContract.proof_status_message || identityProofContract.proof_status || '')
+    : (identityProofContract.proof_status_message || identityProofContract.proof_status || '');
+  const localizedIdentityProofFields = (identityProofContract.required_identity_field_details || []).map(item => (
+    item && item.summary_key
+      ? formatLabel(item.summary_key, item.summary_params || {{}}, item.summary || '')
+      : (item.summary || item.field || '')
+  ));
   return detailLine('Write route', writeRouteContract.route_template || '')
     + detailListLine('Write actions', writeRouteContract.actions, ' | ')
     + detailListLine('Action routes', localizedActionRoutes, ' | ')
     + detailListLine('CLI route equivalents', localizedCliRouteEquivalents, ' | ')
     + detailListLine('Status-code contract', localizedStatusCodeContract, ' | ')
-    + (includeRequestFields ? detailListLine('Write request fields', writeRouteContract.expected_request_fields, ' | ') : '')
-    + detailLine('Write success status', writeRouteContract.success_status_code ?? '')
-    + detailLine('Write blocked status', writeRouteContract.blocked_status_code ?? '')
+    + (includeRequestFields ? detailListLine('Write request fields', localizedWriteRequestFields.length > 0 ? localizedWriteRequestFields : writeRouteContract.expected_request_fields, ' | ') : '')
+    + detailLine('Write success status', localizedWriteSuccessStatus)
+    + detailLine('Write blocked status', localizedWriteBlockedStatus)
     + detailListLine('Durable success requirements', writeRouteContract.durable_success_requirements, ' | ')
-    + detailListLine('Transaction order', writeRouteContract.transaction_order, ' | ')
-    + detailLine('Authorization status', authorizationContract.authorization_status || '')
-    + detailLine('Required assurance', authorizationContract.required_identity_assurance_status || '')
+    + detailListLine('Transaction order', localizedTransactionOrder.length > 0 ? localizedTransactionOrder : writeRouteContract.transaction_order, ' | ')
+    + detailLine('Authorization status', localizedAuthorizationStatus)
+    + detailLine('Required assurance', localizedRequiredAssurance)
     + detailLine('Pending target required', authorizationContract.target_pending_required)
-    + detailListLine('Authorization checks', authorizationContract.server_side_checks, ' | ')
+    + detailListLine('Authorization checks', localizedAuthorizationChecks.length > 0 ? localizedAuthorizationChecks : authorizationContract.server_side_checks, ' | ')
     + detailListLine('Action authorization matrix', localizedActionAuthorizationMatrix, ' | ')
-    + detailLine('Required review status', targetStateContract.required_current_review_status || '')
+    + detailLine('Required review status', localizedRequiredReviewStatus)
     + detailLine('Resolved status code', targetStateContract.resolved_status_code ?? '')
-    + detailListLine('Target-state checks', targetStateContract.target_state_checks, ' | ')
+    + detailListLine('Target-state checks', localizedTargetStateChecks.length > 0 ? localizedTargetStateChecks : targetStateContract.target_state_checks, ' | ')
     + detailLine('Target-state scope note', localizedTargetStateScopeNote)
     + detailListLine('Action target matrix', localizedActionTargetMatrix, ' | ')
     + detailLine('Resolved behavior note', localizedResolvedBehaviorNote)
     + detailListLine('Failure families', localizedFailureFamilies, ' | ')
-    + detailLine('Identity proof status', identityProofContract.proof_status || '')
-    + detailListLine('Identity proof fields', identityProofContract.required_identity_fields, ' | ');
+    + detailLine('Identity proof status', localizedIdentityProofStatus)
+    + detailListLine('Identity proof fields', localizedIdentityProofFields.length > 0 ? localizedIdentityProofFields : identityProofContract.required_identity_fields, ' | ');
 }}
 function mutationOperationalDetailLines(operationalReadiness, blockerSummaries, enablementChecks, checksLabel = 'Enablement checks') {{
   const localizedChecks = enablementChecks.map(check => {{

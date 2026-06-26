@@ -405,7 +405,13 @@ def test_startup_metadata(tmp_path):
         "ui.review_write_route_status_code.summary.authorization_blocked"
     )
     assert payload["ui_boundary"]["write_route_contract"]["authorization_contract"]["authorization_status"] == "advisory_only"
+    assert payload["ui_boundary"]["write_route_contract"]["authorization_contract"]["authorization_status_summary_key"] == (
+        "ui.review_authorization_contract.status.advisory_only"
+    )
     assert payload["ui_boundary"]["write_route_contract"]["authorization_contract"]["required_identity_assurance_status"] == "boundary_aligned"
+    assert payload["ui_boundary"]["write_route_contract"]["authorization_contract"]["required_identity_assurance_status_summary_key"] == (
+        "ui.review_authorization_contract.required_identity_assurance_status.boundary_aligned"
+    )
     assert payload["ui_boundary"]["write_route_contract"]["authorization_contract"]["target_pending_required"] is True
     assert payload["ui_boundary"]["write_route_contract"]["authorization_contract"]["server_side_checks"] == [
         "mutation_enabled",
@@ -420,6 +426,9 @@ def test_startup_metadata(tmp_path):
         "ui.review_authorization_contract.action_matrix.approve"
     )
     assert payload["ui_boundary"]["write_route_contract"]["target_state_contract"]["required_current_review_status"] == "needs_review"
+    assert payload["ui_boundary"]["write_route_contract"]["target_state_contract"]["required_current_review_status_summary_key"] == (
+        "ui.review_target_state_contract.required_current_review_status.needs_review"
+    )
     assert payload["ui_boundary"]["write_route_contract"]["target_state_contract"]["resolved_status_code"] == 409
     assert payload["ui_boundary"]["write_route_contract"]["target_state_contract"]["scope_note_key"] == (
         "ui.review_target_state_contract.note.scope"
@@ -1257,7 +1266,7 @@ def test_ui_html_filtering_includes_provider_response_metadata_fields(tmp_path, 
     assert "const localizedPossibleErrors = (Array.isArray(failureContract.possible_error_details) ? failureContract.possible_error_details : []).map(item => (" in html
     assert "const localizedRecoveryCommands = (Array.isArray(failureContract.recovery_command_details) ? failureContract.recovery_command_details : []).map(item => (" in html
     assert "const localizedCliEquivalent = payload.cli_equivalent_detail && payload.cli_equivalent_detail.summary_key" in html
-    assert "detailListLine('Write request fields', writeRouteContract.expected_request_fields, ' | ')" in html
+    assert "detailListLine('Write request fields', localizedWriteRequestFields.length > 0 ? localizedWriteRequestFields : writeRouteContract.expected_request_fields, ' | ')" in html
     assert "detailListLine('Effective reviewer fields', reviewerContextRequirements.effective_required_fields, ' | ')" in html
     assert "Review queue blocked-route preview stays read-only and returns the CLI fallback contract." in html
     assert "Runtime-record blocked-route preview stays read-only and returns the CLI fallback contract." in html
@@ -2017,12 +2026,13 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "detailListLine('Durable success requirements', writeRouteContract.durable_success_requirements, ' | ')" in html
     assert "detailListLine('Transaction order', writeRouteContract.transaction_order, ' | ')" in html
     assert "const localizedFailureFamilies = (writeRouteContract.failure_families || []).map(item => {" in html
-    assert "detailLine('Authorization status', authorizationContract.authorization_status || '')" in html
-    assert "detailListLine('Authorization checks', authorizationContract.server_side_checks, ' | ')" in html
+    assert "const localizedAuthorizationStatus = authorizationContract.authorization_status_summary_key" in html
+    assert "const localizedRequiredAssurance = authorizationContract.required_identity_assurance_status_summary_key" in html
+    assert "detailListLine('Authorization checks', localizedAuthorizationChecks.length > 0 ? localizedAuthorizationChecks : authorizationContract.server_side_checks, ' | ')" in html
     assert html.count("const localizedActionAuthorizationMatrix = (authorizationContract.action_authorization_matrix || []).map(item => (") >= 2
     assert "detailListLine('Action authorization matrix', localizedActionAuthorizationMatrix, ' | ')" in html
-    assert "detailLine('Required review status', targetStateContract.required_current_review_status || '')" in html
-    assert "detailListLine('Target-state checks', targetStateContract.target_state_checks, ' | ')" in html
+    assert "const localizedRequiredReviewStatus = targetStateContract.required_current_review_status_summary_key" in html
+    assert "detailListLine('Target-state checks', localizedTargetStateChecks.length > 0 ? localizedTargetStateChecks : targetStateContract.target_state_checks, ' | ')" in html
     assert "const localizedTargetStateScopeNote = targetStateContract.scope_note_key" in html
     assert "detailLine('Target-state scope note', localizedTargetStateScopeNote)" in html
     assert html.count("const localizedActionTargetMatrix = (targetStateContract.action_target_matrix || []).map(item => (") >= 2
