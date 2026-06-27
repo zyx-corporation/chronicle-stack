@@ -80,6 +80,7 @@ Current state:
 - overview runtime-record surfaces now summarize recorded trial sufficiency and import-readiness trends without changing the primary record boundary
 - overview and triage surfaces now summarize repeated insufficiency signals as read-only escalation cues before any downstream implementation-repo decision
 - overview and triage surfaces now also expose dedicated read-only escalation drilldowns that reopen the related runtime-record list/detail context
+- escalation drilldowns now also expose local-only issue-template scaffolds so operators can carry the same derived summary into external tooling manually if needed
 
 ## Completion criteria by lane
 

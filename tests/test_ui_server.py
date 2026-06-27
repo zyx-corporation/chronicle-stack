@@ -800,6 +800,12 @@ def test_ui_overview_data(tmp_path):
     assert overview["runtime_records_summary"]["query_engine_trial_escalation_drilldown_summary"][
         "dataset_key"
     ] == "runtime_records"
+    assert (
+        overview["runtime_records_summary"]["query_engine_trial_escalation_drilldown_summary"][
+            "issue_template_title"
+        ]
+        == "Downstream query-engine trial summary"
+    )
     assert overview["summary_jobs_summary"]["status_counts"]["pending_review"] == 1
     assert overview["summary_jobs_summary"]["review_capability_counts"]["advisory_only"] == 1
     assert overview["summary_jobs_summary"]["auth_readiness_counts"]["advisory_only"] == 1
@@ -1325,6 +1331,7 @@ def test_ui_html_filtering_includes_provider_response_metadata_fields(tmp_path, 
     assert "summaryJsonLine('Query-engine trial summary', runtimeRecords.query_engine_trial_summary)" in html
     assert "summaryJsonLine('Trial escalation', runtimeRecords.query_engine_trial_escalation_summary)" in html
     assert "renderQueryEngineTrialEscalationDrilldownSummary(runtimeRecords.query_engine_trial_escalation_drilldown_summary || {})" in html
+    assert "label('ui.label.issue_template_title', 'Issue template title')" in html
     assert "summaryJsonLine('Provider statuses', summaryJobs.provider_response_status_counts)" in html
     assert "summaryJsonLine('Mutation readiness counts', runtimeRecords.mutation_readiness_counts)" in html
     assert "summaryJsonLine('Mutation operational counts', runtimeRecords.mutation_operational_counts)" in html
@@ -1651,6 +1658,10 @@ def test_overview_runtime_records_summarize_query_engine_trials(tmp_path):
     assert overview["triage"]["query_engine_trial_escalation_drilldown_summary"]["detail_path"] == (
         f"/api/runtime-records/{insufficient_event_id}"
     )
+    assert (
+        "Downstream Query-Engine Escalation Follow-up"
+        in overview["triage"]["query_engine_trial_escalation_drilldown_summary"]["issue_template_body"]
+    )
 
 
 def test_overview_runtime_records_escalate_repeated_query_engine_trials(tmp_path):
@@ -1721,6 +1732,8 @@ def test_overview_runtime_records_escalate_repeated_query_engine_trials(tmp_path
     assert drilldown["status"] == "escalate"
     assert drilldown["active_count"] == 2
     assert drilldown["detail_path"] == f"/api/runtime-records/{second_event_id}"
+    assert drilldown["issue_template_title"] == "Downstream query-engine escalation follow-up"
+    assert "repeated_insufficient_consumers: shared-consumer" in drilldown["issue_template_body"]
 
 
 def test_ui_runtime_detail_supports_invocation_plan(tmp_path):
@@ -2212,6 +2225,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "summaryJsonLine('CLI parity counts', triage.cli_parity_counts)" in html
     assert "summaryJsonLine('Trial escalation', triage.query_engine_trial_escalation_summary)" in html
     assert "renderQueryEngineTrialEscalationDrilldownSummary(triage.query_engine_trial_escalation_drilldown_summary || {})" in html
+    assert "label('button.copy_issue_body', 'Copy issue body')" in html
     assert "summaryJsonLine('Identity assurance counts', triage.identity_assurance_counts)" in html
     assert "summaryJsonLine('Reviewer kind counts', triage.reviewer_kind_counts)" in html
     assert "summaryJsonLine('Warning counts', triage.warning_counts)" in html
@@ -2293,6 +2307,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "label('overview.query_engine_trial_insufficient', 'Insufficient trials')" in html
     assert "label('overview.query_engine_trial_escalation', 'Trial escalation cues')" in html
     assert "function renderQueryEngineTrialEscalationDrilldownSummary(summary)" in html
+    assert "copyCommandButton(String(summary.issue_template_body || ''), 'action-preview-response', label('button.copy_issue_body', 'Copy issue body'))" in html
     assert '"Audit ID": "監査ID"' in html
     assert "payload.failure_summary_key" in html
     assert "payload && payload.message_key" in html

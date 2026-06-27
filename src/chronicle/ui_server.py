@@ -931,6 +931,34 @@ def _query_engine_trial_escalation_drilldown_summary(
     escalation_summary: dict[str, Any],
 ) -> dict[str, Any]:
     status = str(escalation_summary.get("status", "no_trial_records"))
+    repeated_consumers = list(
+        escalation_summary.get("repeated_insufficient_consumers", []) or []
+    )
+    missing_behaviors = list(escalation_summary.get("top_missing_behaviors", []) or [])
+    issue_title = (
+        "Downstream query-engine escalation follow-up"
+        if status in {"watch", "escalate"}
+        else "Downstream query-engine trial summary"
+    )
+    issue_body = "\n".join(
+        [
+            "# Downstream Query-Engine Escalation Follow-up",
+            "",
+            f"- status: {status}",
+            f"- active_count: {int(escalation_summary.get('active_count', 0) or 0)}",
+            f"- insufficient_trial_count: {int(escalation_summary.get('insufficient_trial_count', 0) or 0)}",
+            f"- advisory_import_trial_count: {int(escalation_summary.get('advisory_import_trial_count', 0) or 0)}",
+            f"- repeated_insufficient_consumers: {', '.join(repeated_consumers) if repeated_consumers else '(none)'}",
+            f"- top_missing_behaviors: {' | '.join(missing_behaviors) if missing_behaviors else '(none)'}",
+            f"- latest_trial_detail_path: {str(escalation_summary.get('latest_trial_detail_path', '') or '(none)')}",
+            "",
+            "## Boundary",
+            "",
+            "- Chronicle primary records remain authoritative.",
+            "- This scaffold is descriptive only and does not create an issue automatically.",
+            "- External GraphRAG/query runtime work stays outside Chronicle Stack core.",
+        ]
+    )
     return {
         "summary_variant": "overview_escalation",
         "dataset_key": "runtime_records",
@@ -943,13 +971,11 @@ def _query_engine_trial_escalation_drilldown_summary(
         "insufficient_trial_count": int(
             escalation_summary.get("insufficient_trial_count", 0) or 0
         ),
-        "repeated_insufficient_consumers": list(
-            escalation_summary.get("repeated_insufficient_consumers", []) or []
-        ),
-        "top_missing_behaviors": list(
-            escalation_summary.get("top_missing_behaviors", []) or []
-        ),
+        "repeated_insufficient_consumers": repeated_consumers,
+        "top_missing_behaviors": missing_behaviors,
         "reasons": list(escalation_summary.get("reasons", []) or []),
+        "issue_template_title": issue_title,
+        "issue_template_body": issue_body,
         "fact_line": (
             f"status={status}; active={int(escalation_summary.get('active_count', 0) or 0)}; "
             f"insufficient={int(escalation_summary.get('insufficient_trial_count', 0) or 0)}"
@@ -6204,6 +6230,14 @@ function renderQueryEngineTrialEscalationDrilldownSummary(summary) {{
     cellCode(label('ui.label.insufficient_trials', 'Insufficient trials') + '=' + String(summary.insufficient_trial_count ?? 0)),
     cellCode(label('ui.label.repeated_consumers', 'Repeated consumers') + '=' + ((summary.repeated_insufficient_consumers || []).join(', ') || '(none)')),
     cellCode(label('ui.label.missing_behaviors', 'Missing behaviors') + '=' + ((summary.top_missing_behaviors || []).join(' | ') || '(none)')),
+    cellCode(label('ui.label.issue_template_title', 'Issue template title') + '=' + String(summary.issue_template_title || '')),
+    cellDetails(label('ui.label.issue_template_body', 'Issue template body'), [
+      cellCode(String(summary.issue_template_body || '')),
+      navigationCluster([
+        copyCommandButton(String(summary.issue_template_title || ''), 'action-preview-response', label('button.copy_issue_title', 'Copy issue title')),
+        copyCommandButton(String(summary.issue_template_body || ''), 'action-preview-response', label('button.copy_issue_body', 'Copy issue body')),
+      ]),
+    ]),
     navigationCluster([
       listJumpButton(label('button.open_list', 'Open List'), summary.list_path || ''),
       detailJumpButton(summary.detail_path || '', label('button.open_detail', 'Open Detail')),
