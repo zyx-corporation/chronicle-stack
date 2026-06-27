@@ -11,6 +11,7 @@ import html
 import ipaddress
 import json
 import re
+import secrets
 import webbrowser
 from dataclasses import asdict, dataclass
 from http import HTTPStatus
@@ -57,6 +58,7 @@ DEFAULT_UI_HOST = "127.0.0.1"
 DEFAULT_UI_PORT = 8765
 REVIEWER_LABEL_PATTERN = re.compile(r"^[a-z0-9][a-z0-9._-]{1,63}$")
 SESSION_LABEL_PATTERN = re.compile(r"^[a-z0-9][a-z0-9._-]{1,63}$")
+MUTATION_TOKEN_HEADER = "X-Chronicle-UI-Mutation-Token"
 
 
 class UIAuthMode:
@@ -87,6 +89,9 @@ class UIBoundaryMetadata:
     primary_record_authoritative: bool = True
     mutation_readiness_status: str = "preview_only"
     mutation_readiness_message: str = "GUI mutation remains disabled; read-only preview only."
+    mutation_token_required: bool = False
+    mutation_token_transport: str = "header"
+    mutation_token_header: str = MUTATION_TOKEN_HEADER
     mutation_enabled_summary_key: str = "ui.boolean.false"
     mutation_enabled_summary: str = "false"
     mutation_capability_flag_summary_key: str = "ui.boolean.false"
@@ -1338,6 +1343,14 @@ def _reviewer_context_requirements(metadata: UIBoundaryMetadata) -> dict[str, An
         ),
         "ui_intent_note": "ui_intent must match the requested action so preview and apply paths stay fail-closed.",
         "ui_intent_note_key": "ui.reviewer_context.note.ui_intent",
+        "mutation_token_required": bool(metadata.mutation_enabled),
+        "mutation_token_transport": metadata.mutation_token_transport,
+        "mutation_token_header": metadata.mutation_token_header,
+        "mutation_token_note": (
+            "A per-session local mutation token is required on browser-triggered write routes."
+            if metadata.mutation_enabled
+            else "Per-session local mutation tokens are only required after GUI mutation is explicitly enabled."
+        ),
     }
 
 
@@ -1386,6 +1399,7 @@ def _reviewer_enforcement_summary(metadata: UIBoundaryMetadata) -> dict[str, Any
 def _reviewer_validation_gate_summary(metadata: UIBoundaryMetadata) -> dict[str, Any]:
     reviewer_context = _reviewer_context_requirements(metadata)
     validation_error_codes = [
+        "invalid_mutation_token",
         "reviewer_label_required",
         "invalid_reviewer_label",
         "session_label_required",
@@ -1418,6 +1432,7 @@ def _reviewer_validation_gate_summary(metadata: UIBoundaryMetadata) -> dict[str,
         "target_state_error_codes": ["review_target_not_found", "review_not_pending"],
         "durable_write_error_codes": ["audit_insertion_failed", "decision_persistence_failed"],
         "route_gate_error_code": "mutation_disabled",
+        "mutation_token_header": metadata.mutation_token_header,
         "session_gated": bool(metadata.session_gating),
         "pending_target_required": True,
         "ui_intent_required": True,
@@ -1562,6 +1577,7 @@ def _ui_write_route_contract(metadata: UIBoundaryMetadata) -> dict[str, Any]:
     actions = ["approve", "reject", "request-changes"]
     pre_mutation_or_gate_errors = [
         "mutation_disabled",
+        "invalid_mutation_token",
         "reviewer_label_required",
         "invalid_reviewer_label",
         "session_label_required",
@@ -1639,6 +1655,9 @@ def _ui_write_route_contract(metadata: UIBoundaryMetadata) -> dict[str, Any]:
         "action_routes": action_routes,
         "status_code_contract": status_code_contract,
         "expected_request_fields": expected_request_fields,
+        "mutation_token_required": bool(metadata.mutation_enabled),
+        "mutation_token_transport": metadata.mutation_token_transport,
+        "mutation_token_header": metadata.mutation_token_header,
         "expected_request_field_details": [
             {
                 "field": str(field),
@@ -1947,6 +1966,7 @@ class ChronicleUIDataService:
         enable_ui_mutation: bool = False,
         auth_mode: str = UIAuthMode.NOT_ENABLED,
         authorization_mode: str = UIAuthorizationMode.NOT_ENABLED,
+        mutation_session_token: str = "",
     ) -> None:
         self.root = root or Path.cwd()
         self.host = host
@@ -1954,6 +1974,7 @@ class ChronicleUIDataService:
         self.enable_ui_mutation = enable_ui_mutation
         self.auth_mode = auth_mode
         self.authorization_mode = authorization_mode
+        self.mutation_session_token = mutation_session_token
         self.chronicle = ChronicleService(self.root)
         self.audit = AuditService(self.root)
         self.lifecycle = LifecycleService(self.root)
@@ -3773,6 +3794,7 @@ class ChronicleUIDataService:
     ) -> dict[str, Any]:
         pre_mutation_or_gate_errors = [
             "mutation_disabled",
+            "invalid_mutation_token",
             "reviewer_label_required",
             "invalid_reviewer_label",
             "session_label_required",
@@ -3851,6 +3873,7 @@ class ChronicleUIDataService:
     def _review_action_failure_message(error_code: str) -> str:
         messages = {
             "mutation_disabled": "GUI mutation remains disabled for this session; use the CLI review path instead.",
+            "invalid_mutation_token": "The local mutation token is missing or invalid for this browser session.",
             "reviewer_label_required": "Reviewer label is missing, so the UI cannot attribute the review action.",
             "invalid_reviewer_label": "Reviewer label must start with a lowercase letter or digit and use only lowercase letters, digits, dot, underscore, or hyphen.",
             "session_label_required": "Session label is required for the current session-gated local mutation boundary.",
@@ -4860,6 +4883,7 @@ class ChronicleUIDataService:
         root = html.escape(str(self.root.resolve()))
         review_warning_labels_json = json.dumps(REVIEW_WARNING_LABELS, ensure_ascii=False)
         ui_i18n_catalog_json = json.dumps(UI_I18N_CATALOG, ensure_ascii=False)
+        mutation_token_json = json.dumps(self.mutation_session_token, ensure_ascii=False)
         return f"""<!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -7147,6 +7171,8 @@ function writeRouteDetailLines(writeRouteContract, identityProofContract, author
     + detailListLine('CLI route equivalents', localizedCliRouteEquivalents, ' | ')
     + detailListLine('Status-code contract', localizedStatusCodeContract, ' | ')
     + (includeRequestFields ? detailListLine('Write request fields', localizedWriteRequestFields.length > 0 ? localizedWriteRequestFields : writeRouteContract.expected_request_fields, ' | ') : '')
+    + detailLine('Mutation token required', String(writeRouteContract.mutation_token_required))
+    + detailLine('Mutation token header', writeRouteContract.mutation_token_header || '')
     + detailLine('Write success status', localizedWriteSuccessStatus)
     + detailLine('Write blocked status', localizedWriteBlockedStatus)
     + detailListLine('Durable success requirements', writeRouteContract.durable_success_requirements, ' | ')
@@ -7636,9 +7662,16 @@ async function responseJsonOrEmpty(response) {{
 }}
 async function postJson(path, body = undefined) {{
   const options = {{ method: 'POST' }};
+  const headers = {{}};
+  if (window.__chronicleMutationToken) {{
+    headers['{MUTATION_TOKEN_HEADER}'] = window.__chronicleMutationToken;
+  }}
   if (body !== undefined) {{
-    options.headers = {{ 'Content-Type': 'application/json' }};
+    headers['Content-Type'] = 'application/json';
     options.body = JSON.stringify(body);
+  }}
+  if (Object.keys(headers).length > 0) {{
+    options.headers = headers;
   }}
   const response = await fetch(path, options);
   const payload = await responseJsonOrEmpty(response);
@@ -8359,6 +8392,7 @@ window.__chronicleFilters = {{ runtimeRecords: '', reviewQueue: '', summaryJobs:
 window.__chronicleSorts = {{ runtimeRecords: 'latest', reviewQueue: 'attention', summaryJobs: 'latest' }};
 window.__chronicleDetailTrail = [];
 window.__chronicleLocale = initialLocale();
+window.__chronicleMutationToken = {mutation_token_json};
 document.getElementById('view').addEventListener('input', handleViewInput);
 document.getElementById('view').addEventListener('change', handleViewChange);
 document.getElementById('locale-select').addEventListener('change', event => setLocale(event.target.value));
@@ -8381,6 +8415,7 @@ def create_handler(
     auth_mode: str = UIAuthMode.NOT_ENABLED,
     authorization_mode: str = UIAuthorizationMode.NOT_ENABLED,
 ) -> type[BaseHTTPRequestHandler]:
+    mutation_session_token = secrets.token_urlsafe(24)
     service = ChronicleUIDataService(
         root,
         host=host,
@@ -8388,6 +8423,7 @@ def create_handler(
         enable_ui_mutation=enable_ui_mutation,
         auth_mode=auth_mode,
         authorization_mode=authorization_mode,
+        mutation_session_token=mutation_session_token,
     )
 
     class ChronicleUIRequestHandler(BaseHTTPRequestHandler):
@@ -8409,6 +8445,27 @@ def create_handler(
 
         def do_POST(self) -> None:  # noqa: N802 - stdlib API
             parsed = urlparse(self.path)
+            boundary = service.ui_boundary()["ui_boundary"]
+            if parsed.path.startswith("/api/review-actions/") and boundary.get("mutation_enabled", False):
+                supplied_token = str(self.headers.get(MUTATION_TOKEN_HEADER, "") or "")
+                if supplied_token != mutation_session_token:
+                    self._send_json(
+                        service._review_action_failure_payload(
+                            error_code="invalid_mutation_token",
+                            mutation_enabled=True,
+                            reviewer_context_requirements=boundary.get("reviewer_context_requirements", {}),
+                            reviewer_enforcement_summary=boundary.get("reviewer_enforcement_summary", {}),
+                            reviewer_validation_gate_summary=boundary.get("reviewer_validation_gate_summary", {}),
+                            write_route_contract=boundary.get("write_route_contract", {}),
+                            success_contract=service._review_action_success_contract(),
+                            failure_contract=service._review_action_failure_contract(
+                                mutation_enabled=True,
+                                error_code="invalid_mutation_token",
+                            ),
+                        ),
+                        status=HTTPStatus.FORBIDDEN,
+                    )
+                    return
             content_length = int(self.headers.get("Content-Length", "0") or 0)
             raw_body = self.rfile.read(content_length) if content_length > 0 else b"{}"
             try:

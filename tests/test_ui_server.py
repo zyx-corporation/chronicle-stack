@@ -2,6 +2,7 @@
 
 import http.client
 import json
+import re
 import threading
 from pathlib import Path
 
@@ -68,15 +69,25 @@ def _http_get(host: str, port: int, path: str) -> tuple[int, str]:
         connection.close()
 
 
-def _http_post(host: str, port: int, path: str, body: dict | None = None) -> tuple[int, str]:
+def _http_post(
+    host: str,
+    port: int,
+    path: str,
+    body: dict | None = None,
+    *,
+    headers: dict[str, str] | None = None,
+) -> tuple[int, str]:
     connection = http.client.HTTPConnection(host, port, timeout=5)
     try:
         payload = json.dumps(body or {}).encode("utf-8")
+        request_headers = {"Content-Type": "application/json", "Content-Length": str(len(payload))}
+        if headers:
+            request_headers.update(headers)
         connection.request(
             "POST",
             path,
             body=payload,
-            headers={"Content-Type": "application/json", "Content-Length": str(len(payload))},
+            headers=request_headers,
         )
         response = connection.getresponse()
         return response.status, response.read().decode("utf-8")
@@ -84,20 +95,38 @@ def _http_post(host: str, port: int, path: str, body: dict | None = None) -> tup
         connection.close()
 
 
-def _http_post_raw(host: str, port: int, path: str, body: str) -> tuple[int, str]:
+def _http_post_raw(
+    host: str,
+    port: int,
+    path: str,
+    body: str,
+    *,
+    headers: dict[str, str] | None = None,
+) -> tuple[int, str]:
     connection = http.client.HTTPConnection(host, port, timeout=5)
     try:
         payload = body.encode("utf-8")
+        request_headers = {"Content-Type": "application/json", "Content-Length": str(len(payload))}
+        if headers:
+            request_headers.update(headers)
         connection.request(
             "POST",
             path,
             body=payload,
-            headers={"Content-Type": "application/json", "Content-Length": str(len(payload))},
+            headers=request_headers,
         )
         response = connection.getresponse()
         return response.status, response.read().decode("utf-8")
     finally:
         connection.close()
+
+
+def _http_mutation_token(host: str, port: int) -> str:
+    status, html = _http_get(host, port, "/")
+    assert status == 200
+    match = re.search(r'window\.__chronicleMutationToken = "([^"]+)";', html)
+    assert match is not None
+    return match.group(1)
 
 
 def _populate(root):
@@ -265,7 +294,8 @@ def test_startup_metadata(tmp_path):
         "ui_intent",
     ]
     assert payload["ui_boundary"]["reviewer_validation_gate_summary"]["status"] == "read_only_preview"
-    assert payload["ui_boundary"]["reviewer_validation_gate_summary"]["validation_error_codes"][:3] == [
+    assert payload["ui_boundary"]["reviewer_validation_gate_summary"]["validation_error_codes"][:4] == [
+        "invalid_mutation_token",
         "reviewer_label_required",
         "invalid_reviewer_label",
         "session_label_required",
@@ -1778,6 +1808,8 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert ".shell-grid {" in html
     assert "#detail { position: sticky;" in html
     assert "@media (max-width: 980px)" in html
+    assert "window.__chronicleMutationToken =" in html
+    assert "headers['X-Chronicle-UI-Mutation-Token'] = window.__chronicleMutationToken;" in html
     assert '<div class="shell-grid">' in html
     assert ".json-block {" in html
     assert ".fact-line {" in html
@@ -2534,6 +2566,7 @@ def test_http_review_action_enabled_route_applies_decision(tmp_path):
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
     try:
+        token = _http_mutation_token(host, port)
         status, body = _http_post(
             host,
             port,
@@ -2545,6 +2578,7 @@ def test_http_review_action_enabled_route_applies_decision(tmp_path):
                 "ui_intent": "approve",
                 "note": "approved from ui",
             },
+            headers={"X-Chronicle-UI-Mutation-Token": token},
         )
         assert status == 200
         payload = json.loads(body)
@@ -2574,13 +2608,8 @@ def test_http_review_action_enabled_route_applies_decision(tmp_path):
         thread.join(timeout=5)
 
 
-def test_http_review_action_enabled_route_handles_audit_failure(tmp_path, monkeypatch):
+def test_http_review_action_enabled_route_rejects_missing_mutation_token(tmp_path):
     ids = _populate(tmp_path)
-
-    def _broken_audit_record(self, *args, **kwargs):
-        raise RuntimeError("audit insert boom")
-
-    monkeypatch.setattr(AuditService, "record", _broken_audit_record)
     try:
         server = make_server(
             host="127.0.0.1",
@@ -2606,8 +2635,61 @@ def test_http_review_action_enabled_route_handles_audit_failure(tmp_path, monkey
                 "reviewer_kind": "local_operator",
                 "session_label": "ui-http-test",
                 "ui_intent": "approve",
+            },
+        )
+        assert status == 403
+        payload = json.loads(body)
+        assert payload["error_code"] == "invalid_mutation_token"
+        assert payload["message_key"] == "ui.review_action_failure.message.invalid_mutation_token"
+        assert payload["write_route_contract"]["mutation_token_required"] is True
+        assert payload["write_route_contract"]["mutation_token_header"] == (
+            "X-Chronicle-UI-Mutation-Token"
+        )
+        assert payload["reviewer_validation_gate_summary"]["validation_error_codes"][0] == (
+            "invalid_mutation_token"
+        )
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=5)
+
+
+def test_http_review_action_enabled_route_handles_audit_failure(tmp_path, monkeypatch):
+    ids = _populate(tmp_path)
+
+    def _broken_audit_record(self, *args, **kwargs):
+        raise RuntimeError("audit insert boom")
+
+    monkeypatch.setattr(AuditService, "record", _broken_audit_record)
+    try:
+        server = make_server(
+            host="127.0.0.1",
+            port=0,
+            root=tmp_path,
+            mutation_capability_flag=True,
+            enable_ui_mutation=True,
+            auth_mode=UIAuthMode.LOOPBACK_LOCAL,
+            authorization_mode=UIAuthorizationMode.REVIEWER_DECLARED,
+        )
+    except PermissionError as exc:
+        pytest.skip(f"local socket bind unavailable in this environment: {exc}")
+    host, port = server.server_address
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        token = _http_mutation_token(host, port)
+        status, body = _http_post(
+            host,
+            port,
+            f"/api/review-actions/{ids['runtime_summary_event_id']}/approve",
+            {
+                "reviewer_label": "alice",
+                "reviewer_kind": "local_operator",
+                "session_label": "ui-http-test",
+                "ui_intent": "approve",
                 "note": "approved from ui",
             },
+            headers={"X-Chronicle-UI-Mutation-Token": token},
         )
         assert status == 500
         payload = json.loads(body)
@@ -2651,8 +2733,13 @@ def test_http_review_action_rejects_invalid_json_and_non_object_body(tmp_path):
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
     try:
+        token = _http_mutation_token(host, port)
         status, body = _http_post_raw(
-            host, port, f"/api/review-actions/{ids['runtime_summary_event_id']}/approve", "{"
+            host,
+            port,
+            f"/api/review-actions/{ids['runtime_summary_event_id']}/approve",
+            "{",
+            headers={"X-Chronicle-UI-Mutation-Token": token},
         )
         assert status == 400
         payload = json.loads(body)
@@ -2660,7 +2747,11 @@ def test_http_review_action_rejects_invalid_json_and_non_object_body(tmp_path):
         assert payload["message_key"] == "ui.review_action_failure.message.invalid_json"
 
         status, body = _http_post_raw(
-            host, port, f"/api/review-actions/{ids['runtime_summary_event_id']}/approve", "[]"
+            host,
+            port,
+            f"/api/review-actions/{ids['runtime_summary_event_id']}/approve",
+            "[]",
+            headers={"X-Chronicle-UI-Mutation-Token": token},
         )
         assert status == 400
         payload = json.loads(body)
@@ -2794,13 +2885,15 @@ def test_review_action_requires_session_label_before_authorization_check(tmp_pat
         "chronicle review queue --include-resolved --json",
         f"chronicle review approve --event {ids['runtime_summary_event_id']}",
     ]
-    assert payload["failure_contract"]["possible_error_codes"][1:4] == [
+    assert payload["failure_contract"]["possible_error_codes"][:4] == [
+        "mutation_disabled",
+        "invalid_mutation_token",
         "reviewer_label_required",
         "invalid_reviewer_label",
-        "session_label_required",
     ]
-    assert payload["failure_contract"]["failure_families"][0]["possible_error_codes"][:3] == [
+    assert payload["failure_contract"]["failure_families"][0]["possible_error_codes"][:4] == [
         "mutation_disabled",
+        "invalid_mutation_token",
         "reviewer_label_required",
         "invalid_reviewer_label",
     ]
@@ -3032,6 +3125,7 @@ def test_http_review_action_enabled_route_handles_decision_persistence_failure(t
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
     try:
+        token = _http_mutation_token(host, port)
         status, body = _http_post(
             host,
             port,
@@ -3043,6 +3137,7 @@ def test_http_review_action_enabled_route_handles_decision_persistence_failure(t
                 "ui_intent": "approve",
                 "note": "approved from ui",
             },
+            headers={"X-Chronicle-UI-Mutation-Token": token},
         )
         assert status == 500
         payload = json.loads(body)
