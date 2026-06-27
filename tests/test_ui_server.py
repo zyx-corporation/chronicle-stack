@@ -205,6 +205,9 @@ def test_startup_metadata(tmp_path):
     assert payload["auth_mode"] == "not_enabled"
     assert payload["authorization_mode"] == "not_enabled"
     assert payload["ui_boundary"]["loopback_only"] is True
+    assert payload["ui_boundary"]["mutation_enabled_summary_key"] == "ui.boolean.false"
+    assert payload["ui_boundary"]["mutation_capability_flag_summary_key"] == "ui.boolean.false"
+    assert payload["ui_boundary"]["session_gating_summary_key"] == "ui.boolean.false"
     assert payload["ui_boundary"]["mutation_readiness_status"] == "preview_only"
     assert "write_routes_disabled" in payload["ui_boundary"]["mutation_blockers"]
     assert payload["ui_boundary"]["mutation_blocker_details"][0]["code"] == "write_routes_disabled"
@@ -215,6 +218,8 @@ def test_startup_metadata(tmp_path):
     auth_boundary_summary = payload["ui_boundary"]["auth_boundary_summary"]
     assert auth_boundary_summary["message_key"] == "ui.auth_boundary_summary.message.auth_not_enabled"
     assert auth_boundary_summary["scope_note_key"] == "ui.auth_readiness.scope.auth_not_enabled"
+    assert auth_boundary_summary["session_gating_summary_key"] == "ui.boolean.false"
+    assert auth_boundary_summary["shared_machine_safe_summary_key"] == "ui.boolean.false"
     assert auth_boundary_summary["blocker_details"][0]["message_key"] == "ui.auth_boundary_blocker.auth_not_enabled"
     assert auth_boundary_summary["blocker_summaries"][0]["summary_key"] == "ui.template.auth_boundary_blocker_summary"
     assert auth_boundary_summary["blocker_summaries"][0]["summary_params"]["message"]
@@ -566,6 +571,7 @@ def test_mutation_readiness_summary_can_reach_enablement_ready(tmp_path):
     readiness = service.mutation_readiness_summary()
 
     assert readiness["enablement_ready"] is True
+    assert readiness["enablement_ready_summary_key"] == "ui.boolean.true"
     assert readiness["enablement_satisfied_count"] == readiness["enablement_required_count"] == 6
     assert all(check["satisfied"] is True for check in readiness["enablement_checks"])
     assert readiness["operational_readiness"]["status"] == "ready"
@@ -659,6 +665,7 @@ def test_ui_overview_data(tmp_path):
     assert overview["mutation_readiness"]["blocker_summaries"][0]["summary"].startswith("Boundary prerequisites: ")
     assert overview["mutation_readiness"]["pending_boundary_warning_counts"]["reviewer_identity_missing"] == 3
     assert overview["mutation_readiness"]["enablement_ready"] is False
+    assert overview["mutation_readiness"]["enablement_ready_summary_key"] == "ui.boolean.false"
     assert overview["mutation_readiness"]["enablement_satisfied_count"] == 1
     assert overview["mutation_readiness"]["enablement_required_count"] == 6
     assert overview["mutation_readiness"]["operational_readiness"]["status"] == "blocked"
@@ -1268,7 +1275,8 @@ def test_ui_html_filtering_includes_provider_response_metadata_fields(tmp_path, 
     assert "const localizedTransactionStatus = successContract.transaction_status_summary_key" in html
     assert "const localizedDurableOnFailure = typeof failureContract.durable_mutation_reported_on_failure === 'boolean'" in html
     assert "follow-up=" in html
-    assert "detailLine('Enablement ready', mutationReadiness.enablement_ready)" in html
+    assert "const localizedEnablementReady = mutationReadiness.enablement_ready_summary_key" in html
+    assert "detailLine('Enablement ready', localizedEnablementReady)" in html
     assert "detailLine('Scope note', mutationReadiness.scope_note_key ? formatLabel(mutationReadiness.scope_note_key, mutationReadiness.scope_note_params || {}, mutationReadiness.scope_note || '') : (mutationReadiness.scope_note || ''))" in html
     assert html.count("const localizedActionTargetMatrix = (targetStateContract.action_target_matrix || []).map(item => (") >= 2
     assert html.count("const localizedFailureFamilies = (writeRouteContract.failure_families || []).map(item => {") >= 2
@@ -1415,6 +1423,7 @@ def test_ui_data_service_detail_endpoints(tmp_path):
     review_detail = service.detail_payload(f"/api/review-queue/{ids['runtime_summary_event_id']}")["record"]
     assert review_detail["target_event_id"] == ids["runtime_summary_event_id"]
     assert review_detail["mutation_enablement"]["enablement_ready"] is False
+    assert review_detail["mutation_enablement"]["enablement_ready_summary_key"] == "ui.boolean.false"
     assert review_detail["mutation_enablement"]["blocker_summaries"]
     assert review_detail["mutation_enablement"]["write_route_contract"]["actions"] == [
         "approve",
@@ -1602,6 +1611,9 @@ def test_ui_runtime_detail_supports_invocation_plan(tmp_path):
     assert detail["invocation_plan"]["provider_summary_key"] == (
         "ui.template.invocation_plan.provider_summary"
     )
+    assert detail["invocation_plan"]["invocation_ready_summary_key"] == "ui.boolean.false"
+    assert detail["invocation_plan"]["would_use_network_summary_key"] == "ui.boolean.true"
+    assert detail["invocation_plan"]["network_allowed_by_contract_summary_key"] == "ui.boolean.false"
     assert detail["invocation_plan"]["downstream_command_details"][0]["summary_key"] == (
         "ui.template.invocation_plan.command.runtime_config_show"
     )
@@ -2263,6 +2275,9 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "const localizedDownstreamCommands = (Array.isArray(plan.downstream_command_details) ? plan.downstream_command_details : []).map(item => (" in html
     assert "detailListLine('Downstream commands', localizedDownstreamCommands.length > 0 ? localizedDownstreamCommands : plan.downstream_commands, ' | ')" in html
     assert "downstreamCommands.map(command => copyCommandButton(command, 'action-preview-response', t('button.copy_cli')))" in html
+    assert "const localizedInvocationReady = plan.invocation_ready_summary_key" in html
+    assert "const localizedWouldUseNetwork = plan.would_use_network_summary_key" in html
+    assert "const localizedNetworkAllowed = plan.network_allowed_by_contract_summary_key" in html
     assert "ui.label.execution_request" in html
     assert "uiLabel('Approve')" in html
     assert "uiLabel('Reject')" in html
@@ -2315,6 +2330,11 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "const localizedProviderKind = runtimeConfigContract.provider_kind_summary_key" in html
     assert "const localizedAllowNetwork = runtimeConfigContract.allow_network_summary_key" in html
     assert "const localizedAllowExternalContext = runtimeConfigContract.allow_external_context_summary_key" in html
+    assert "const localizedMutationEnabled = uiBoundary.mutation_enabled_summary_key" in html
+    assert "const localizedMutationCapabilityFlag = uiBoundary.mutation_capability_flag_summary_key" in html
+    assert "const localizedSessionGating = uiBoundary.session_gating_summary_key" in html
+    assert "authBoundary.session_gating_summary_key ? formatLabel(authBoundary.session_gating_summary_key" in html
+    assert "authBoundary.shared_machine_safe_summary_key ? formatLabel(authBoundary.shared_machine_safe_summary_key" in html
 
 
 def test_http_root_and_read_only_endpoints(tmp_path):

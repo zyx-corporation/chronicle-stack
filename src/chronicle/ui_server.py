@@ -87,6 +87,12 @@ class UIBoundaryMetadata:
     primary_record_authoritative: bool = True
     mutation_readiness_status: str = "preview_only"
     mutation_readiness_message: str = "GUI mutation remains disabled; read-only preview only."
+    mutation_enabled_summary_key: str = "ui.boolean.false"
+    mutation_enabled_summary: str = "false"
+    mutation_capability_flag_summary_key: str = "ui.boolean.false"
+    mutation_capability_flag_summary: str = "false"
+    session_gating_summary_key: str = "ui.boolean.false"
+    session_gating_summary: str = "false"
     mutation_blockers: tuple[str, ...] = (
         "write_routes_disabled",
         "auth_not_enabled",
@@ -156,6 +162,10 @@ def _auth_boundary_summary(metadata: UIBoundaryMetadata) -> dict[str, Any]:
         "next_steps": next_steps,
         "shared_machine_safe": metadata.shared_machine_safe,
         "session_gating": metadata.session_gating,
+        "shared_machine_safe_summary_key": _boolean_summary_payload(bool(metadata.shared_machine_safe))[0],
+        "shared_machine_safe_summary": _boolean_summary_payload(bool(metadata.shared_machine_safe))[1],
+        "session_gating_summary_key": _boolean_summary_payload(bool(metadata.session_gating))[0],
+        "session_gating_summary": _boolean_summary_payload(bool(metadata.session_gating))[1],
     }
 
 
@@ -1821,9 +1831,15 @@ def build_ui_boundary_metadata(
         read_only=not mutation_enabled,
         mutation_enabled=mutation_enabled,
         mutation_capability_flag=mutation_capability_flag,
+        mutation_enabled_summary_key=_boolean_summary_payload(bool(mutation_enabled))[0],
+        mutation_enabled_summary=_boolean_summary_payload(bool(mutation_enabled))[1],
+        mutation_capability_flag_summary_key=_boolean_summary_payload(bool(mutation_capability_flag))[0],
+        mutation_capability_flag_summary=_boolean_summary_payload(bool(mutation_capability_flag))[1],
         auth_mode=auth_mode,
         authorization_mode=authorization_mode,
         session_gating=auth_mode == UIAuthMode.LOOPBACK_LOCAL,
+        session_gating_summary_key=_boolean_summary_payload(bool(auth_mode == UIAuthMode.LOOPBACK_LOCAL))[0],
+        session_gating_summary=_boolean_summary_payload(bool(auth_mode == UIAuthMode.LOOPBACK_LOCAL))[1],
         shared_machine_safe=mutation_enabled,
         mutation_blockers=tuple(blockers),
         mutation_readiness_status="enabled" if mutation_enabled else "preview_only",
@@ -2790,6 +2806,12 @@ class ChronicleUIDataService:
             "pending_boundary_warning_counts": pending_boundary_warning_counts,
             "enablement_checks": enablement_checks,
             "enablement_ready": satisfied_checks == len(enablement_checks),
+            "enablement_ready_summary_key": _boolean_summary_payload(
+                satisfied_checks == len(enablement_checks)
+            )[0],
+            "enablement_ready_summary": _boolean_summary_payload(
+                satisfied_checks == len(enablement_checks)
+            )[1],
             "enablement_satisfied_count": satisfied_checks,
             "enablement_required_count": len(enablement_checks),
             "operational_readiness": operational_readiness,
@@ -4232,6 +4254,24 @@ class ChronicleUIDataService:
                 )
                 plan_payload["provider_summary_key"] = provider_summary_key
                 plan_payload["provider_summary_params"] = provider_summary_params
+                plan_payload["invocation_ready_summary_key"] = _boolean_summary_payload(
+                    bool(plan_payload.get("invocation_ready"))
+                )[0]
+                plan_payload["invocation_ready_summary"] = _boolean_summary_payload(
+                    bool(plan_payload.get("invocation_ready"))
+                )[1]
+                plan_payload["would_use_network_summary_key"] = _boolean_summary_payload(
+                    bool(plan_payload.get("would_use_network"))
+                )[0]
+                plan_payload["would_use_network_summary"] = _boolean_summary_payload(
+                    bool(plan_payload.get("would_use_network"))
+                )[1]
+                plan_payload["network_allowed_by_contract_summary_key"] = _boolean_summary_payload(
+                    bool(plan_payload.get("network_allowed_by_contract"))
+                )[0]
+                plan_payload["network_allowed_by_contract_summary"] = _boolean_summary_payload(
+                    bool(plan_payload.get("network_allowed_by_contract"))
+                )[1]
                 plan_payload["downstream_command_details"] = [
                     _invocation_plan_command_detail(command)
                     for command in plan_payload.get("downstream_commands", [])
@@ -7264,15 +7304,24 @@ function renderInvocationPlanNotice(record) {{
         (plan.provider_kind || '') + ' / ' + (plan.provider_name || '')
       )
     : ((plan.provider_kind || '') + ' / ' + (plan.provider_name || ''));
+  const localizedInvocationReady = plan.invocation_ready_summary_key
+    ? formatLabel(plan.invocation_ready_summary_key, plan.invocation_ready_summary_params || {{}}, plan.invocation_ready_summary || String(plan.invocation_ready))
+    : (plan.invocation_ready_summary || String(plan.invocation_ready));
+  const localizedWouldUseNetwork = plan.would_use_network_summary_key
+    ? formatLabel(plan.would_use_network_summary_key, plan.would_use_network_summary_params || {{}}, plan.would_use_network_summary || String(plan.would_use_network))
+    : (plan.would_use_network_summary || String(plan.would_use_network));
+  const localizedNetworkAllowed = plan.network_allowed_by_contract_summary_key
+    ? formatLabel(plan.network_allowed_by_contract_summary_key, plan.network_allowed_by_contract_summary_params || {{}}, plan.network_allowed_by_contract_summary || String(plan.network_allowed_by_contract))
+    : (plan.network_allowed_by_contract_summary || String(plan.network_allowed_by_contract));
   return renderNotice(
     label('notice.invocation_plan', 'Invocation Plan'),
     messageParagraph(localizedMessage)
       + detailLine('Provider', localizedProviderSummary)
       + detailLine('Model', plan.model_name || '')
       + detailLine('Operation', plan.operation || '')
-      + detailLine('Invocation ready', plan.invocation_ready)
-      + detailLine('Would use network', plan.would_use_network)
-      + detailLine('Network allowed by contract', plan.network_allowed_by_contract)
+      + detailLine('Invocation ready', localizedInvocationReady)
+      + detailLine('Would use network', localizedWouldUseNetwork)
+      + detailLine('Network allowed by contract', localizedNetworkAllowed)
       + detailListLine('Blocking reasons', plan.blocking_reasons, ' | ')
       + summaryJsonLine('Request preview', requestPreview)
       + summaryJsonLine('Execution request', executionRequest)
@@ -7398,10 +7447,13 @@ function renderMutationEnablementNotice(record) {{
   const authorizationContract = writeRouteContract.authorization_contract || {{}};
   const targetStateContract = writeRouteContract.target_state_contract || {{}};
   const readinessButtons = reviewQueueStatusButtons(readiness.status);
+  const localizedEnablementReady = readiness.enablement_ready_summary_key
+    ? formatLabel(readiness.enablement_ready_summary_key, readiness.enablement_ready_summary_params || {{}}, readiness.enablement_ready_summary || String(readiness.enablement_ready))
+    : (readiness.enablement_ready_summary || String(readiness.enablement_ready));
   return renderNotice(
     label('notice.mutation_enablement', 'Mutation Enablement'),
     statusScopeNoticeBody(readiness.status, readiness.message, readinessButtons, readiness.scope_note)
-      + detailLine('Enablement ready', readiness.enablement_ready)
+      + detailLine('Enablement ready', localizedEnablementReady)
       + detailLine('Enablement checks', String(readiness.enablement_satisfied_count ?? 0) + '/' + String(readiness.enablement_required_count ?? 0))
       + detailLine('Blockers', detailMessages(blockerDetails, readiness.blockers))
       + mutationOperationalDetailLines(operationalReadiness, blockerSummaries, enablementChecks, 'Checks')
@@ -7741,14 +7793,23 @@ function renderOverviewUiBoundaryPanel(uiBoundary) {{
   const identityProofContract = writeRouteContract.identity_proof_contract || {{}};
   const authorizationContract = writeRouteContract.authorization_contract || {{}};
   const targetStateContract = writeRouteContract.target_state_contract || {{}};
+  const localizedMutationEnabled = uiBoundary.mutation_enabled_summary_key
+    ? formatLabel(uiBoundary.mutation_enabled_summary_key, uiBoundary.mutation_enabled_summary_params || {{}}, uiBoundary.mutation_enabled_summary || String(uiBoundary.mutation_enabled))
+    : (uiBoundary.mutation_enabled_summary || String(uiBoundary.mutation_enabled));
+  const localizedMutationCapabilityFlag = uiBoundary.mutation_capability_flag_summary_key
+    ? formatLabel(uiBoundary.mutation_capability_flag_summary_key, uiBoundary.mutation_capability_flag_summary_params || {{}}, uiBoundary.mutation_capability_flag_summary || String(uiBoundary.mutation_capability_flag))
+    : (uiBoundary.mutation_capability_flag_summary || String(uiBoundary.mutation_capability_flag));
+  const localizedSessionGating = uiBoundary.session_gating_summary_key
+    ? formatLabel(uiBoundary.session_gating_summary_key, uiBoundary.session_gating_summary_params || {{}}, uiBoundary.session_gating_summary || String(uiBoundary.session_gating))
+    : (uiBoundary.session_gating_summary || String(uiBoundary.session_gating));
   return renderPanel(
     sectionTitle(label('section.ui_boundary', 'UI Boundary'))
     + detailLine('Bind scope', uiBoundary.bind_scope || '')
-    + detailLine('Mutation enabled', uiBoundary.mutation_enabled)
-    + detailLine('Mutation capability flag', uiBoundary.mutation_capability_flag)
+    + detailLine('Mutation enabled', localizedMutationEnabled)
+    + detailLine('Mutation capability flag', localizedMutationCapabilityFlag)
     + detailLine('Auth mode', uiBoundary.auth_mode || '')
     + detailLine('Authorization mode', uiBoundary.authorization_mode || '')
-    + detailLine('Session gating', uiBoundary.session_gating)
+    + detailLine('Session gating', localizedSessionGating)
     + detailLine('Mutation readiness', uiBoundary.mutation_readiness_status || '')
     + writeRouteDetailLines(writeRouteContract, identityProofContract, authorizationContract, targetStateContract, true)
   );
@@ -7769,8 +7830,8 @@ function renderOverviewAuthBoundaryPanel(authBoundary, authBoundaryOverview) {{
     + '</p>'
     + statusMessageBody(authBoundary.status, localizedPayloadText(authBoundary))
     + detailLine('Scope note', authBoundary.scope_note_key ? formatLabel(authBoundary.scope_note_key, authBoundary.scope_note_params || {{}}, authBoundary.scope_note || '') : (authBoundary.scope_note || ''))
-    + detailLine('Session gating', authBoundary.session_gating)
-    + detailLine('Shared machine safe', authBoundary.shared_machine_safe)
+    + detailLine('Session gating', authBoundary.session_gating_summary_key ? formatLabel(authBoundary.session_gating_summary_key, authBoundary.session_gating_summary_params || {{}}, authBoundary.session_gating_summary || String(authBoundary.session_gating)) : (authBoundary.session_gating_summary || String(authBoundary.session_gating)))
+    + detailLine('Shared machine safe', authBoundary.shared_machine_safe_summary_key ? formatLabel(authBoundary.shared_machine_safe_summary_key, authBoundary.shared_machine_safe_summary_params || {{}}, authBoundary.shared_machine_safe_summary || String(authBoundary.shared_machine_safe)) : (authBoundary.shared_machine_safe_summary || String(authBoundary.shared_machine_safe)))
     + metricsSection(metricsBody)
     + detailListLine('Auth blockers', authBoundary.blockers, ' | ')
     + detailListLine('Auth blocker summaries', blockerSummaries.map(item => (item.summary || item.code || 'blocker')), ' | ')
@@ -7846,13 +7907,16 @@ function renderOverviewMutationReadinessPanel(mutationReadiness) {{
   }});
   const enablementChecks = Array.isArray(mutationReadiness.enablement_checks) ? mutationReadiness.enablement_checks : [];
   const operationalReadiness = mutationReadiness.operational_readiness || {{}};
+  const localizedEnablementReady = mutationReadiness.enablement_ready_summary_key
+    ? formatLabel(mutationReadiness.enablement_ready_summary_key, mutationReadiness.enablement_ready_summary_params || {{}}, mutationReadiness.enablement_ready_summary || String(mutationReadiness.enablement_ready))
+    : (mutationReadiness.enablement_ready_summary || String(mutationReadiness.enablement_ready));
   return renderPanel(
     sectionTitle(label('section.mutation_readiness', 'Mutation Readiness'))
     + statusMessageBody(mutationReadiness.status, localizedPayloadText(mutationReadiness))
     + detailLine('Scope note', mutationReadiness.scope_note_key ? formatLabel(mutationReadiness.scope_note_key, mutationReadiness.scope_note_params || {{}}, mutationReadiness.scope_note || '') : (mutationReadiness.scope_note || ''))
     + detailLine('Ready rows', mutationReadiness.ready_row_count ?? 0)
     + detailLine('Advisory rows', mutationReadiness.advisory_row_count ?? 0)
-    + detailLine('Enablement ready', mutationReadiness.enablement_ready)
+    + detailLine('Enablement ready', localizedEnablementReady)
     + detailLine('Enablement checks', String(mutationReadiness.enablement_satisfied_count ?? 0) + '/' + String(mutationReadiness.enablement_required_count ?? 0))
     + detailListLine('Blockers', mutationReadiness.blockers, ' | ')
     + detailLine('Blocker details', detailMessages(blockerDetails, mutationReadiness.blockers))
