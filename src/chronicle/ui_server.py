@@ -842,6 +842,35 @@ def _runtime_preview_title_contract(preview: dict[str, Any]) -> tuple[str | None
     return None, {}
 
 
+def _query_engine_trial_preview_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    trial_payload = payload.get("query_engine_trial_record", {})
+    sufficient = bool(trial_payload.get("sufficient", False))
+    import_ready = bool(trial_payload.get("import_ready", False))
+    sufficient_key, sufficient_summary = _boolean_summary_payload(sufficient)
+    import_ready_key, import_ready_summary = _boolean_summary_payload(import_ready)
+    return {
+        "message": "Recorded downstream query-engine trial outcome is available for review.",
+        "message_key": "ui.query_engine_trial.message.recorded",
+        "query": str(trial_payload.get("query", "")),
+        "bundle_dir": str(trial_payload.get("bundle_dir", "")),
+        "bundle_manifest_path": str(payload.get("bundle_manifest_path", "")),
+        "reviewer": str(trial_payload.get("reviewer", "")),
+        "downstream_consumer": str(trial_payload.get("downstream_consumer", "")),
+        "sufficient": sufficient,
+        "sufficient_summary_key": sufficient_key,
+        "sufficient_summary": sufficient_summary,
+        "files_reviewed": [str(item) for item in trial_payload.get("files_reviewed", [])],
+        "import_validation_status": str(trial_payload.get("import_validation_status", "")),
+        "import_ready": import_ready,
+        "import_ready_summary_key": import_ready_key,
+        "import_ready_summary": import_ready_summary,
+        "missing_behavior": str(trial_payload.get("missing_behavior", "")),
+        "notes": [str(item) for item in trial_payload.get("notes", [])],
+        "boundary_note": "Recorded evaluation metadata is read-only; Chronicle primary records remain authoritative.",
+        "boundary_note_key": "ui.query_engine_trial.note.read_only_derived",
+    }
+
+
 def _provider_response_message_key(summary: dict[str, Any]) -> str:
     return (
         "ui.provider_response.message.present"
@@ -2729,15 +2758,9 @@ class ChronicleUIDataService:
             data["runtime_record_kind"] = preview.record_kind
             data["runtime_record_preview"] = preview_payload
             if "query_engine_trial_record" in data["payload"]:
-                trial_payload = data["payload"]["query_engine_trial_record"]
-                data["query_engine_trial_preview"] = {
-                    "message": "Recorded downstream query-engine trial outcome is available for review.",
-                    "message_key": "ui.query_engine_trial.message.recorded",
-                    "reviewer": str(trial_payload.get("reviewer", "")),
-                    "downstream_consumer": str(trial_payload.get("downstream_consumer", "")),
-                    "sufficient": bool(trial_payload.get("sufficient", False)),
-                    "missing_behavior": str(trial_payload.get("missing_behavior", "")),
-                }
+                data["query_engine_trial_preview"] = _query_engine_trial_preview_payload(
+                    data["payload"]
+                )
             review_row = self._review_queue_row(event.event_id)
             if review_row is not None:
                 mutation_enablement = self.mutation_readiness_summary()
@@ -4441,15 +4464,7 @@ class ChronicleUIDataService:
             record["runtime_record_kind"] = preview.record_kind
             record["runtime_record_preview"] = preview_payload
             if "query_engine_trial_record" in payload:
-                trial_payload = payload["query_engine_trial_record"]
-                record["query_engine_trial_preview"] = {
-                    "message": "Recorded downstream query-engine trial outcome is available for review.",
-                    "message_key": "ui.query_engine_trial.message.recorded",
-                    "reviewer": str(trial_payload.get("reviewer", "")),
-                    "downstream_consumer": str(trial_payload.get("downstream_consumer", "")),
-                    "sufficient": bool(trial_payload.get("sufficient", False)),
-                    "missing_behavior": str(trial_payload.get("missing_behavior", "")),
-                }
+                record["query_engine_trial_preview"] = _query_engine_trial_preview_payload(payload)
             record["suggested_cli_family"] = preview.suggested_cli_family
             record["related_links"] = self.runtime_related_links(parts[2], payload)
             record["response_metadata_summary"] = self._runtime_response_metadata_summary(payload=payload)
@@ -7308,6 +7323,36 @@ function renderRuntimePreviewNotice(record) {{
       + detailLine('CLI', preview.suggested_cli_family || '')
   );
 }}
+function renderQueryEngineTrialPreviewNotice(record) {{
+  if (!record.query_engine_trial_preview) return '';
+  const preview = record.query_engine_trial_preview;
+  const localizedMessage = localizedPayloadText(preview);
+  const localizedSufficient = preview.sufficient_summary_key
+    ? formatLabel(preview.sufficient_summary_key, {{}}, preview.sufficient_summary || String(Boolean(preview.sufficient)))
+    : (preview.sufficient_summary || String(Boolean(preview.sufficient)));
+  const localizedImportReady = preview.import_ready_summary_key
+    ? formatLabel(preview.import_ready_summary_key, {{}}, preview.import_ready_summary || String(Boolean(preview.import_ready)))
+    : (preview.import_ready_summary || String(Boolean(preview.import_ready)));
+  const localizedBoundaryNote = preview.boundary_note_key
+    ? formatLabel(preview.boundary_note_key, {{}}, preview.boundary_note || '')
+    : (preview.boundary_note || '');
+  return renderNotice(
+    label('notice.query_engine_trial_preview', 'Query-Engine Trial Preview'),
+    messageParagraph(localizedMessage)
+      + detailLine('Query', preview.query || '')
+      + detailLine('Bundle dir', preview.bundle_dir || '')
+      + detailLine('Bundle manifest', preview.bundle_manifest_path || '')
+      + detailLine('Reviewer', preview.reviewer || '')
+      + detailLine('Downstream consumer', preview.downstream_consumer || '')
+      + detailLine('Sufficient', localizedSufficient)
+      + detailLine('Import validation', preview.import_validation_status || '')
+      + detailLine('Import ready', localizedImportReady)
+      + detailListLine('Files reviewed', preview.files_reviewed)
+      + detailLine('Missing behavior', preview.missing_behavior || '')
+      + detailListLine('Notes', preview.notes, ' | ')
+      + detailLine('Scope note', localizedBoundaryNote)
+  );
+}}
 function packageContextDetailLines(packageReview, manifest, eligibleContextIds = [], extraLines = '') {{
   return detailListLine('Eligible contexts', eligibleContextIds)
     + extraLines
@@ -8579,6 +8624,7 @@ function detailNavigationOptions(endpoint, record) {{
 }}
 const detailNoticeRenderers = [
   renderRuntimePreviewNotice,
+  renderQueryEngineTrialPreviewNotice,
   renderResponseMetadataNotice,
   renderRetrievalHandoffNotice,
   renderQueryEngineHandoffPreviewNotice,

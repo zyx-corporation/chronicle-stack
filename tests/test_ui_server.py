@@ -1538,12 +1538,33 @@ def test_runtime_records_include_query_engine_trial_rows(tmp_path):
     assert trial_row["runtime_record_kind"] == "query_engine_trial"
     assert trial_row["runtime_record_preview"]["title_key"] == "ui.template.runtime_preview.title.query_engine_trial"
     assert trial_row["query_engine_trial_preview"]["message_key"] == "ui.query_engine_trial.message.recorded"
+    assert trial_row["query_engine_trial_preview"]["query"] == "UI Context"
+    assert trial_row["query_engine_trial_preview"]["files_reviewed"][0] == "bundle_manifest.json"
 
     detail = service.detail_payload(f"/api/runtime-records/{event_id}")["record"]
     assert detail["runtime_record_kind"] == "query_engine_trial"
+    assert detail["query_engine_trial_preview"]["query"] == "UI Context"
+    assert detail["query_engine_trial_preview"]["bundle_dir"].endswith("handoff-bundle")
+    assert detail["query_engine_trial_preview"]["bundle_manifest_path"].endswith(
+        "handoff-bundle/bundle_manifest.json"
+    )
     assert detail["query_engine_trial_preview"]["reviewer"] == "ui-reviewer"
     assert detail["query_engine_trial_preview"]["downstream_consumer"] == "ui-consumer"
     assert detail["query_engine_trial_preview"]["sufficient"] is True
+    assert detail["query_engine_trial_preview"]["sufficient_summary_key"] == "ui.boolean.true"
+    assert detail["query_engine_trial_preview"]["import_validation_status"] in {
+        "contract_validated",
+        "advisory_only",
+    }
+    assert isinstance(detail["query_engine_trial_preview"]["import_ready"], bool)
+    assert detail["query_engine_trial_preview"]["import_ready_summary_key"] in {
+        "ui.boolean.true",
+        "ui.boolean.false",
+    }
+    assert "query_engine_handoff.json" in detail["query_engine_trial_preview"]["files_reviewed"]
+    assert detail["query_engine_trial_preview"]["boundary_note_key"] == (
+        "ui.query_engine_trial.note.read_only_derived"
+    )
     assert detail["query_engine_trial_preview"]["message_key"] == "ui.query_engine_trial.message.recorded"
 
 
@@ -2146,6 +2167,8 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "reviewWarningLabel('reviewer_session_label_missing')" in html
     assert "filterValueLabel('runtimeRecords', 'retrieval_plan')" in html
     assert "filterValueLabel('runtimeRecords', 'query_engine_trial')" in html
+    assert "label('notice.query_engine_trial_preview', 'Query-Engine Trial Preview')" in html
+    assert "detailLine('Bundle manifest', preview.bundle_manifest_path || '')" in html
     assert "filterValueLabel('reviewQueue', 'response_id')" in html
     assert "summaryJsonLine('Runtime kinds', triage.runtime_record_kinds)" in html
     assert "statusScopeNoticeBody(readiness.status, readiness.message, readinessButtons, readiness.scope_note)" in html

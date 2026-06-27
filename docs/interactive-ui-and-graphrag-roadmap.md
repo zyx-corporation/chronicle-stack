@@ -76,6 +76,7 @@ Current state:
 - downstream trial outcomes can now be written back into Chronicle as review-oriented assistant-output records
 - recorded downstream trial outcomes can now be inspected through dedicated read-only CLI list/detail commands
 - runtime-record API and interactive UI read models now present recorded downstream trial outcomes as a distinct read-only runtime record kind
+- runtime-record detail views now render recorded trial bundle paths, reviewed files, and import-readiness metadata for local inspection
 
 ## Completion criteria by lane
 
