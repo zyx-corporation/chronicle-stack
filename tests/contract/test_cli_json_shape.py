@@ -160,6 +160,7 @@ def test_runtime_retrieve_plan_json_shape(tmp_path):
     payload = json.loads(result.stdout)
     for key in ["provider_kind", "query", "vector_hits", "graph_hits", "chronicle_hits", "query_engine_handoff", "notes"]:
         assert key in payload, f"Missing key '{key}' in runtime retrieve-plan"
+    assert "import_validation" in payload["query_engine_handoff"]
 
 
 def test_runtime_invoke_plan_json_shape(tmp_path):

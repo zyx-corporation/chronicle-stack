@@ -168,6 +168,23 @@ class RuntimeRetrievalComposition(BaseModel):
     notes: list[str] = Field(default_factory=list)
 
 
+class RuntimeQueryEngineImportCheck(BaseModel):
+    name: str
+    passed: bool = False
+    detail: str = ""
+
+
+class RuntimeQueryEngineImportValidation(BaseModel):
+    contract_version: str = "1.0"
+    status: str = "contract_validated"
+    import_ready: bool = False
+    graph_export_available: bool = False
+    graph_export_node_count: int = 0
+    graph_export_edge_count: int = 0
+    checks: list[RuntimeQueryEngineImportCheck] = Field(default_factory=list)
+    notes: list[str] = Field(default_factory=list)
+
+
 class RuntimeQueryEngineHandoff(BaseModel):
     contract_version: str = "1.0"
     status: str = "contract_available"
@@ -188,6 +205,7 @@ class RuntimeQueryEngineHandoff(BaseModel):
     external_query_runtime_included: bool = False
     suggested_commands: list[str] = Field(default_factory=list)
     prohibited_assumptions: list[str] = Field(default_factory=list)
+    import_validation: RuntimeQueryEngineImportValidation | None = None
     notes: list[str] = Field(default_factory=list)
 
 

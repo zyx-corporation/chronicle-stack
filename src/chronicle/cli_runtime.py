@@ -139,6 +139,12 @@ def runtime_retrieve_plan_cmd(
                 f"refs={len(plan.query_engine_handoff.referenced_record_ids)} "
                 f"contexts={len(plan.query_engine_handoff.eligible_context_ids)}"
             )
+            if plan.query_engine_handoff.import_validation is not None:
+                typer.echo(
+                    "Import validation: "
+                    f"status={plan.query_engine_handoff.import_validation.status} "
+                    f"ready={plan.query_engine_handoff.import_validation.import_ready}"
+                )
         typer.echo(f"Recorded: {plan.recorded}")
         if plan.event_id:
             typer.echo(f"Event: {plan.event_id}")

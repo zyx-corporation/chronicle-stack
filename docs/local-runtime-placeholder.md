@@ -48,6 +48,7 @@ retrieval plan の detail view では、downstream runtime へ渡す前の hando
 - hit count summary
 - cross-surface composition summary
 - query-engine handoff contract preview
+- downstream import validation preview
 - referenced record IDs
 - recommended next CLI commands
 - package review required boundary note

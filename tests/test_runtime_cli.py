@@ -997,6 +997,8 @@ def test_runtime_retrieve_plan_json(tmp_path: Path) -> None:
     assert payload["query_engine_handoff"]["contract_version"] == "1.0"
     assert payload["query_engine_handoff"]["graph_export_format"] == "graph-json"
     assert payload["query_engine_handoff"]["suggested_commands"][0] == "chronicle graph summary --json"
+    assert payload["query_engine_handoff"]["import_validation"]["status"] == "contract_validated"
+    assert payload["query_engine_handoff"]["import_validation"]["import_ready"] is True
     assert payload["vector_hits"]
     assert payload["chronicle_hits"]
 

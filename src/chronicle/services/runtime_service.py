@@ -26,6 +26,8 @@ from chronicle.models.runtime import (
     RuntimeInvocationPlan,
     RuntimeProviderKind,
     RuntimeQueryEngineHandoff,
+    RuntimeQueryEngineImportCheck,
+    RuntimeQueryEngineImportValidation,
     RuntimeRecordPreview,
     RuntimeRetrievalComposition,
     RuntimeRetrievalHandoff,
@@ -287,7 +289,8 @@ class RuntimeService:
         composition = _compose_retrieval_hits(vector_hits, graph_hits, chronicle_hits)
         query_engine_handoff = _build_query_engine_handoff(
             query=query,
-            graph_adapter=graph_adapter,
+            graph= self.graph_export.export_graph(),
+            graph_adapter_result=graph_adapter,
             composition=composition,
             referenced_record_ids=_unique_identifiers_from_hits(vector_hits, graph_hits, chronicle_hits),
         )
@@ -961,7 +964,8 @@ def _compose_retrieval_hits(
 def _build_query_engine_handoff(
     *,
     query: str,
-    graph_adapter,
+    graph,
+    graph_adapter_result,
     composition: RuntimeRetrievalComposition,
     referenced_record_ids: list[str],
 ) -> RuntimeQueryEngineHandoff:
@@ -971,11 +975,21 @@ def _build_query_engine_handoff(
     derived_surfaces = [summary.source for summary in composition.source_summaries if summary.hit_count > 0]
     if not derived_surfaces:
         derived_surfaces = [summary.source for summary in composition.source_summaries]
+    import_validation = _build_query_engine_import_validation(
+        handoff_contract_version="1.0",
+        handoff_status=status,
+        graph=graph,
+        graph_export_format="graph-json",
+        graph_export_contract_version=(graph_adapter_result.export_contract_version if graph_adapter_result is not None else "unknown"),
+        graph_incremental_mode=(graph_adapter_result.incremental_mode if graph_adapter_result is not None else "event-driven_rebuildable"),
+        primary_record_path=".chronicle/chronicle.jsonl",
+        referenced_record_ids=referenced_record_ids,
+    )
     return RuntimeQueryEngineHandoff(
         status=status,
         query=query,
-        graph_export_contract_version=(graph_adapter.export_contract_version if graph_adapter is not None else "unknown"),
-        graph_incremental_mode=(graph_adapter.incremental_mode if graph_adapter is not None else "event-driven_rebuildable"),
+        graph_export_contract_version=(graph_adapter_result.export_contract_version if graph_adapter_result is not None else "unknown"),
+        graph_incremental_mode=(graph_adapter_result.incremental_mode if graph_adapter_result is not None else "event-driven_rebuildable"),
         derived_surfaces=derived_surfaces,
         referenced_record_ids=referenced_record_ids,
         eligible_context_ids=context_ids,
@@ -993,9 +1007,112 @@ def _build_query_engine_handoff(
             "no external query execution is implied",
             "primary Chronicle records remain authoritative",
         ],
+        import_validation=import_validation,
         notes=[
             "downstream query-engine handoff stays derived and read-only",
             "graph-json export remains rebuildable from Chronicle events",
             "handoff is advisory until a downstream consumer explicitly imports it",
+        ],
+    )
+
+
+
+def _build_query_engine_import_validation(
+    *,
+    handoff_contract_version: str,
+    handoff_status: str,
+    graph,
+    graph_export_format: str,
+    graph_export_contract_version: str,
+    graph_incremental_mode: str,
+    primary_record_path: str,
+    referenced_record_ids: list[str],
+) -> RuntimeQueryEngineImportValidation:
+    export_contract = getattr(graph, "export_contract", None)
+    export_manifest = getattr(graph, "export_manifest", None)
+    checks = [
+        RuntimeQueryEngineImportCheck(
+            name="graph_export_available",
+            passed=graph is not None,
+            detail="graph-json export is available for downstream inspection" if graph is not None else "graph-json export is unavailable",
+        ),
+        RuntimeQueryEngineImportCheck(
+            name="graph_export_format_matches",
+            passed=bool(export_manifest is not None and export_manifest.export_format == graph_export_format),
+            detail=(
+                f"handoff={graph_export_format}; export={export_manifest.export_format}"
+                if export_manifest is not None
+                else "graph export manifest unavailable"
+            ),
+        ),
+        RuntimeQueryEngineImportCheck(
+            name="graph_contract_version_matches",
+            passed=bool(export_contract is not None and export_contract.contract_version == graph_export_contract_version),
+            detail=(
+                f"handoff={graph_export_contract_version}; export={export_contract.contract_version}"
+                if export_contract is not None
+                else "graph export contract unavailable"
+            ),
+        ),
+        RuntimeQueryEngineImportCheck(
+            name="incremental_mode_matches",
+            passed=bool(export_contract is not None and export_contract.incremental_mode == graph_incremental_mode),
+            detail=(
+                f"handoff={graph_incremental_mode}; export={export_contract.incremental_mode}"
+                if export_contract is not None
+                else "graph export contract unavailable"
+            ),
+        ),
+        RuntimeQueryEngineImportCheck(
+            name="primary_record_matches",
+            passed=bool(export_contract is not None and export_contract.primary_record == primary_record_path),
+            detail=(
+                f"handoff={primary_record_path}; export={export_contract.primary_record}"
+                if export_contract is not None
+                else "graph export contract unavailable"
+            ),
+        ),
+        RuntimeQueryEngineImportCheck(
+            name="runtime_boundaries_preserved",
+            passed=bool(
+                export_contract is not None
+                and not export_contract.graph_runtime_included
+                and not export_contract.external_runtime_required
+            ),
+            detail=(
+                "graph export keeps runtime responsibilities outside Chronicle core"
+                if export_contract is not None
+                else "graph export contract unavailable"
+            ),
+        ),
+        RuntimeQueryEngineImportCheck(
+            name="referenced_records_present",
+            passed=bool(referenced_record_ids),
+            detail=(
+                f"referenced records={len(referenced_record_ids)}"
+                if referenced_record_ids
+                else "no referenced records available for downstream import"
+            ),
+        ),
+    ]
+    structural_checks_pass = all(check.passed for check in checks[:-1])
+    import_ready = structural_checks_pass and bool(referenced_record_ids)
+    if not structural_checks_pass:
+        status = "contract_mismatch"
+    elif handoff_status == "advisory_only":
+        status = "advisory_only"
+    else:
+        status = "contract_validated"
+    return RuntimeQueryEngineImportValidation(
+        status=status,
+        import_ready=import_ready,
+        graph_export_available=graph is not None,
+        graph_export_node_count=(len(graph.nodes) if graph is not None else 0),
+        graph_export_edge_count=(len(graph.edges) if graph is not None else 0),
+        checks=checks,
+        notes=[
+            "validation inspects derived graph export compatibility only",
+            "no downstream import or query execution occurs here",
+            "primary Chronicle records remain authoritative over any derived consumer state",
         ],
     )

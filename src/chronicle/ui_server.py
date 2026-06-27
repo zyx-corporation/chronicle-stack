@@ -562,6 +562,24 @@ def _query_engine_handoff_counts_contract(
     }
 
 
+def _query_engine_import_validation_message_key(status: str) -> str:
+    if status == "contract_validated":
+        return "ui.query_engine_import_validation.message.contract_validated"
+    if status == "advisory_only":
+        return "ui.query_engine_import_validation.message.advisory_only"
+    return "ui.query_engine_import_validation.message.contract_mismatch"
+
+
+def _query_engine_import_validation_counts_contract(
+    *, node_count: int, edge_count: int, check_count: int
+) -> tuple[str, dict[str, Any]]:
+    return "ui.template.query_engine_import_validation.counts", {
+        "node_count": node_count,
+        "edge_count": edge_count,
+        "check_count": check_count,
+    }
+
+
 def _query_engine_handoff_command_detail(command: str) -> dict[str, Any]:
     if command.startswith("chronicle graph summary"):
         template_key = "ui.template.query_engine_handoff.command.graph_summary"
@@ -3167,6 +3185,17 @@ class ChronicleUIDataService:
         handoff["message_key"] = _query_engine_handoff_message_key(str(handoff.get("status", "unavailable")))
         handoff["counts_summary_key"] = counts_key
         handoff["counts_summary_params"] = counts_params
+        validation = handoff.get("import_validation", {})
+        validation_counts_key, validation_counts_params = _query_engine_import_validation_counts_contract(
+            node_count=int(validation.get("graph_export_node_count", 0)),
+            edge_count=int(validation.get("graph_export_edge_count", 0)),
+            check_count=len(validation.get("checks", [])) if isinstance(validation.get("checks", []), list) else 0,
+        )
+        if isinstance(validation, dict):
+            validation["message_key"] = _query_engine_import_validation_message_key(str(validation.get("status", "contract_mismatch")))
+            validation["counts_summary_key"] = validation_counts_key
+            validation["counts_summary_params"] = validation_counts_params
+        handoff["import_validation"] = validation
         handoff["boundary_note"] = (
             "Query-engine handoff preview remains derived, read-only, and non-authoritative over primary Chronicle records."
         )
@@ -7508,6 +7537,16 @@ function renderQueryEngineHandoffPreviewNotice(record) {{
   const localizedBoundaryNote = preview.boundary_note_key
     ? formatLabel(preview.boundary_note_key, {{}}, preview.boundary_note || '')
     : (preview.boundary_note || '');
+  const importValidation = preview.import_validation || {{}};
+  const localizedImportValidation = importValidation.message_key
+    ? formatLabel(importValidation.message_key, importValidation.message_params || {{}}, localizedPayloadText(importValidation) || importValidation.status || '')
+    : (localizedPayloadText(importValidation) || importValidation.status || '');
+  const localizedImportCounts = importValidation.counts_summary_key
+    ? formatLabel(importValidation.counts_summary_key, importValidation.counts_summary_params || {{}}, '')
+    : '';
+  const importChecks = Array.isArray(importValidation.checks)
+    ? importValidation.checks.map(item => (item.name || 'check') + '=' + String(Boolean(item.passed)) + (item.detail ? ' (' + item.detail + ')' : ''))
+    : [];
   return renderNotice(
     label('notice.query_engine_handoff_preview', 'Query-Engine Handoff Preview'),
     statusMessageBody(preview.status, localizedPayloadText(preview))
@@ -7523,6 +7562,11 @@ function renderQueryEngineHandoffPreviewNotice(record) {{
       + detailListLine('Skipped records', preview.skipped_record_ids)
       + detailListLine('Suggested commands', localizedSuggestedCommands.length > 0 ? localizedSuggestedCommands : preview.suggested_commands, ' | ')
       + detailListLine('Prohibited assumptions', preview.prohibited_assumptions, ' | ')
+      + detailLine('Import validation', localizedImportValidation)
+      + detailLine('Import-ready', String(Boolean(importValidation.import_ready)))
+      + detailLine('Import counts', localizedImportCounts)
+      + detailListLine('Import checks', importChecks)
+      + detailListLine('Import notes', importValidation.notes, ' | ')
       + detailListLine('Notes', preview.notes, ' | ')
       + detailLine('Scope note', localizedBoundaryNote)
   );
@@ -7543,6 +7587,16 @@ function renderPackageHandoffPreviewNotice(record) {{
   const localizedBoundaryNote = preview.boundary_note_key
     ? formatLabel(preview.boundary_note_key, {{}}, preview.boundary_note || '')
     : (preview.boundary_note || '');
+  const importValidation = preview.import_validation || {{}};
+  const localizedImportValidation = importValidation.message_key
+    ? formatLabel(importValidation.message_key, importValidation.message_params || {{}}, localizedPayloadText(importValidation) || importValidation.status || '')
+    : (localizedPayloadText(importValidation) || importValidation.status || '');
+  const localizedImportCounts = importValidation.counts_summary_key
+    ? formatLabel(importValidation.counts_summary_key, importValidation.counts_summary_params || {{}}, '')
+    : '';
+  const importChecks = Array.isArray(importValidation.checks)
+    ? importValidation.checks.map(item => (item.name || 'check') + '=' + String(Boolean(item.passed)) + (item.detail ? ' (' + item.detail + ')' : ''))
+    : [];
   return renderNotice(
     label('notice.package_handoff_preview', 'Package Handoff Preview'),
     packageContextNoticeBody(
