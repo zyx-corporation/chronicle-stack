@@ -25,3 +25,5 @@ chronicle package query-engine-trial-record \
 - does not execute downstream imports
 - does not host query execution
 - does not make derived bundle files authoritative
+
+Inspect recorded trials later with `docs/downstream-query-engine-trial-inspection.md`.

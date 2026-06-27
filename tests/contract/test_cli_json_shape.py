@@ -267,6 +267,47 @@ def test_package_query_engine_trial_record_json_shape(tmp_path):
         assert key in trial_payload, f"Missing key '{key}' in query-engine trial payload"
 
 
+def test_package_query_engine_trial_list_json_shape(tmp_path):
+    """chronicle package query-engine-trial-list --json must expose stable summary keys."""
+    runner = _setup_cli(tmp_path)
+    runner.invoke(app, ["init", "--title", "Trial List Shape"])
+    output_dir = tmp_path / "bundle"
+    runner.invoke(
+        app,
+        ["package", "query-engine-bundle", "--query", "shape", "--output-dir", str(output_dir)],
+    )
+    runner.invoke(
+        app,
+        [
+            "package",
+            "query-engine-trial-record",
+            "--bundle-dir",
+            str(output_dir),
+            "--reviewer",
+            "shape-reviewer",
+            "--consumer",
+            "shape-consumer",
+            "--sufficient",
+        ],
+    )
+
+    result = runner.invoke(app, ["package", "query-engine-trial-list", "--json"])
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    for key in [
+        "event_id",
+        "summary",
+        "query",
+        "reviewer",
+        "downstream_consumer",
+        "sufficient",
+        "import_validation_status",
+        "import_ready",
+        "missing_behavior",
+    ]:
+        assert key in payload[0], f"Missing key '{key}' in query-engine trial list payload"
+
+
 def test_runtime_invoke_plan_json_shape(tmp_path):
     """chronicle runtime invoke-plan --json must expose stable invocation-plan keys."""
     runner = _setup_cli(tmp_path)

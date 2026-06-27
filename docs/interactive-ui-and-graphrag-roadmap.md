@@ -74,6 +74,7 @@ Current state:
 - handoff bundles now include a descriptive acceptance checklist before any downstream implementation-repo escalation
 - handoff bundles now include a trial report template so real downstream evaluations can be recorded before escalation
 - downstream trial outcomes can now be written back into Chronicle as review-oriented assistant-output records
+- recorded downstream trial outcomes can now be inspected through dedicated read-only CLI list/detail commands
 
 ## Completion criteria by lane
 

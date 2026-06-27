@@ -129,6 +129,37 @@ def _load_bundle_manifest(bundle_dir: Path) -> dict[str, Any]:
         ) from exc
 
 
+def _query_engine_trial_record_summary(event: dict[str, Any]) -> dict[str, Any]:
+    payload = event.get("payload", {}).get("query_engine_trial_record", {})
+    return {
+        "event_id": event.get("event_id", ""),
+        "summary": event.get("summary", ""),
+        "query": payload.get("query", ""),
+        "reviewer": payload.get("reviewer", ""),
+        "downstream_consumer": payload.get("downstream_consumer", ""),
+        "sufficient": bool(payload.get("sufficient", False)),
+        "import_validation_status": payload.get("import_validation_status", "advisory_only"),
+        "import_ready": bool(payload.get("import_ready", False)),
+        "missing_behavior": payload.get("missing_behavior", ""),
+    }
+
+
+def _list_query_engine_trial_records() -> list[dict[str, Any]]:
+    events = ChronicleService().jsonl.read_all(skip_corrupt=True)
+    records: list[dict[str, Any]] = []
+    for event in events:
+        dumped = event.model_dump(mode="json")
+        payload = dumped.get("payload", {})
+        trial_payload = payload.get("query_engine_trial_record")
+        if dumped.get("event_type") != EventType.ASSISTANT_OUTPUT.value or not isinstance(trial_payload, dict):
+            continue
+        if trial_payload.get("record_kind") != "query_engine_bundle_trial":
+            continue
+        records.append(dumped)
+    records.sort(key=lambda item: item.get("timestamp", ""), reverse=True)
+    return records
+
+
 @package_app.command("context")
 def context_package_cmd(
     purpose: Annotated[str, typer.Option("--purpose", help="Purpose for building the package.")],
@@ -298,6 +329,61 @@ def query_engine_trial_record_cmd(
         typer.echo(f"  Reviewer: {reviewer}")
         typer.echo(f"  Consumer: {downstream_consumer}")
         typer.echo(f"  Sufficient: {sufficient}")
+    except ChronicleError as exc:
+        handle_error(exc, json_output)
+
+
+@package_app.command("query-engine-trial-list")
+def query_engine_trial_list_cmd(
+    json_output: Annotated[bool, typer.Option("--json")] = False,
+) -> None:
+    """List recorded downstream query-engine bundle trials."""
+    try:
+        ChronicleService().require_initialized()
+        records = [_query_engine_trial_record_summary(event) for event in _list_query_engine_trial_records()]
+        if json_output:
+            typer.echo(json.dumps(records, ensure_ascii=False, indent=2))
+            return
+        if not records:
+            typer.echo("No query-engine trial records found.")
+            return
+        for record in records:
+            typer.echo(
+                f"{record['event_id']}  sufficient={record['sufficient']}  "
+                f"reviewer={record['reviewer']}  consumer={record['downstream_consumer']}"
+            )
+    except ChronicleError as exc:
+        handle_error(exc, json_output)
+
+
+@package_app.command("query-engine-trial-show")
+def query_engine_trial_show_cmd(
+    event_id: Annotated[str, typer.Option("--event", help="Recorded query-engine trial event ID.")],
+    json_output: Annotated[bool, typer.Option("--json")] = False,
+) -> None:
+    """Show one recorded downstream query-engine bundle trial."""
+    try:
+        ChronicleService().require_initialized()
+        for event in _list_query_engine_trial_records():
+            if event.get("event_id") == event_id:
+                if json_output:
+                    typer.echo(json.dumps(event, ensure_ascii=False, indent=2))
+                    return
+                record = _query_engine_trial_record_summary(event)
+                typer.echo(f"Trial event: {record['event_id']}")
+                typer.echo(f"  Query: {record['query']}")
+                typer.echo(f"  Reviewer: {record['reviewer']}")
+                typer.echo(f"  Consumer: {record['downstream_consumer']}")
+                typer.echo(f"  Sufficient: {record['sufficient']}")
+                typer.echo(f"  Import validation: {record['import_validation_status']}")
+                if record["missing_behavior"]:
+                    typer.echo(f"  Missing behavior: {record['missing_behavior']}")
+                return
+        raise ChronicleError(
+            code="QUERY_ENGINE_TRIAL_RECORD_NOT_FOUND",
+            message=f"Query-engine trial record not found: {event_id}",
+            hint="Run `chronicle package query-engine-trial-list --json` to inspect available trial events.",
+        )
     except ChronicleError as exc:
         handle_error(exc, json_output)
 

@@ -228,6 +228,7 @@ v1.2 以降では、`/api/events/<id>`, `/api/contexts/<id>`, `/api/artifacts/<i
 - [Downstream Query-Engine Acceptance Checklist](docs/downstream-query-engine-acceptance-checklist.md)
 - [Downstream Query-Engine Trial Report Template](docs/downstream-query-engine-trial-report-template.md)
 - [Downstream Query-Engine Trial Record](docs/downstream-query-engine-trial-record.md)
+- [Downstream Query-Engine Trial Inspection](docs/downstream-query-engine-trial-inspection.md)
 - [Local AI Index Placeholder](docs/local-ai-index-placeholder.md)
 - [v1.7 Phase D/E Progress](docs/v1.7-phase-d-e-progress.md)
 - [v1.7 Phase D/E Smoke Profile](docs/smoke-test-v1.7-phase-d-e.md)

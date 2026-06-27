@@ -111,3 +111,45 @@ def test_package_query_engine_trial_record_persists_assistant_output_event(tmp_p
     assert payload["payload"]["query_engine_trial_record"]["reviewer"] == "tester"
     assert payload["payload"]["query_engine_trial_record"]["downstream_consumer"] == "downstream-demo"
     assert payload["payload"]["query_engine_trial_record"]["sufficient"] is True
+
+
+def test_package_query_engine_trial_list_and_show(tmp_path: Path) -> None:
+    os.chdir(str(tmp_path))
+    runner.invoke(app, ["init", "--title", "Bundle Trial Inspection"])
+    output_dir = tmp_path / "handoff-bundle"
+    runner.invoke(
+        app,
+        ["package", "query-engine-bundle", "--query", "graph context", "--output-dir", str(output_dir)],
+    )
+    record_result = runner.invoke(
+        app,
+        [
+            "package",
+            "query-engine-trial-record",
+            "--bundle-dir",
+            str(output_dir),
+            "--reviewer",
+            "reviewer-a",
+            "--consumer",
+            "consumer-a",
+            "--insufficient",
+            "--missing-behavior",
+            "needs downstream runtime",
+            "--json",
+        ],
+    )
+    event_payload = json.loads(record_result.stdout)
+    event_id = event_payload["event_id"]
+
+    list_result = runner.invoke(app, ["package", "query-engine-trial-list", "--json"])
+    assert list_result.exit_code == 0
+    listed = json.loads(list_result.stdout)
+    assert listed[0]["event_id"] == event_id
+    assert listed[0]["reviewer"] == "reviewer-a"
+    assert listed[0]["sufficient"] is False
+
+    show_result = runner.invoke(app, ["package", "query-engine-trial-show", "--event", event_id, "--json"])
+    assert show_result.exit_code == 0
+    shown = json.loads(show_result.stdout)
+    assert shown["event_id"] == event_id
+    assert shown["payload"]["query_engine_trial_record"]["missing_behavior"] == "needs downstream runtime"
