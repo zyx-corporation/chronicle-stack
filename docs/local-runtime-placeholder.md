@@ -55,7 +55,7 @@ retrieval plan の detail view では、downstream runtime へ渡す前の hando
 - package handoff preview for eligible `ctx_*` records
 - derived package review snapshot before persistence or sharing
 
-この handoff 表示は GraphRAG runtime を実装するものではなく、どの local surface が候補になっているかを operator が確認するための dry-run です。
+この handoff 表示は GraphRAG runtime を実装するものではなく、どの local surface が候補になっているかを operator が確認するための dry-run です。下流 consumer 向けの見本は `docs/query-engine-handoff-consumer-example.md` と `docs/examples/query-engine-handoff-example.json` にあります。
 
 `/api/runtime-config` では、stored provider contract を read-only で確認できます。
 

@@ -542,7 +542,7 @@ chronicle runtime retrieve-plan --query "release note context" --record
 chronicle runtime retrieve-plan --query "release note context" --json
 ```
 
-`retrieve-plan` は local dry-run の retrieval composition を表示します。
+`retrieve-plan` は local dry-run の retrieval composition を表示します。`--json` では downstream consumer 向けの `query_engine_handoff` example/fixture と同型の契約も確認できます。
 
 対象:
 
