@@ -597,9 +597,16 @@ def test_ui_overview_data(tmp_path):
     assert overview["runtime_boundary"]["graphrag_runtime"] is False
     assert overview["runtime_boundary"]["vector_db"] is False
     assert overview["runtime_boundary"]["graph_db"] is False
+    assert overview["runtime_boundary"]["read_only_summary_key"] == "ui.boolean.true"
+    assert overview["runtime_boundary"]["external_model_api_summary_key"] == "ui.boolean.false"
     assert overview["runtime_config"]["config"]["provider_kind"] == "http"
+    assert overview["runtime_config"]["source_summary_key"] == "ui.runtime_config.source.stored"
+    assert overview["runtime_config"]["config"]["provider_kind_summary_key"] == (
+        "ui.runtime_config.provider_kind.http"
+    )
     assert overview["runtime_config"]["config"]["model_name"] == "manual-http-model"
     assert overview["runtime_config"]["config"]["allow_network"] is True
+    assert overview["runtime_config"]["config"]["allow_network_summary_key"] == "ui.boolean.true"
     assert overview["ui_boundary"]["mutation_enabled"] is False
     assert overview["ui_boundary"]["mutation_capability_flag"] is False
     assert overview["ui_boundary"]["auth_mode"] == "not_enabled"
@@ -874,6 +881,12 @@ def test_ui_data_service_read_endpoints(tmp_path):
         "summary_jobs"
     )
     assert service.runtime_config_state()["runtime_config"]["config"]["provider_name"] == "ui-local"
+    assert service.runtime_config_state()["runtime_config"]["source_summary_key"] == (
+        "ui.runtime_config.source.stored"
+    )
+    assert service.runtime_config_state()["runtime_config"]["config"]["provider_kind_summary_key"] == (
+        "ui.runtime_config.provider_kind.local"
+    )
     assert service.review_queue()["review_queue"][0]["review_preview_only"] is True
     assert service.review_queue()["review_queue"][0]["target_event_id"].startswith("evt_")
     assert service.review_queue()["review_queue"][0]["review_capability"]["status"] == "advisory_only"
@@ -1079,7 +1092,11 @@ def test_ui_data_service_exposes_provider_response_metadata_in_read_only_views(t
         "message_key": "ui.provider_response.message.present",
         "response_id": "resp_ui_metadata",
         "finish_reason": "stop",
+        "finish_reason_summary_key": "ui.provider_response.finish_reason.stop",
+        "finish_reason_summary": "stop",
         "provider_status": "ok",
+        "provider_status_summary_key": "ui.provider_response.provider_status.ok",
+        "provider_status_summary": "ok",
         "usage_input_tokens": 14,
         "usage_output_tokens": 7,
         "usage_total_tokens": 21,
@@ -2072,6 +2089,8 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "function renderResponseMetadataNotice(record)" in html
     assert "function localizedLinkLabel(item)" in html
     assert "detailLine('Response ID', summary.response_id || '')" in html
+    assert "const localizedFinishReason = summary.finish_reason_summary_key" in html
+    assert "const localizedProviderStatus = summary.provider_status_summary_key" in html
     assert "detailLine('Usage total tokens', summary.usage_total_tokens ?? '')" in html
     assert "responseMetadataDetailLines(summary)" in html
     assert "messageParagraph(localizedPayloadText(summary))" in html
@@ -2083,6 +2102,8 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert '"Rollback status": "ロールバック状態"' in html
     assert '"Response ID": "応答ID"' in html
     assert '"Read-only": "読み取り専用"' in html
+    assert '"Source": "ソース"' in html
+    assert '"Provider kind": "プロバイダ種別"' in html
     assert '"Runtime records": "ランタイム記録"' in html
     assert '"Audit ID": "監査ID"' in html
     assert "payload.failure_summary_key" in html
@@ -2289,6 +2310,11 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "/api/package-review" in html
     assert "/api/ai-index-status" in html
     assert "does not write records" in html
+    assert "const localizedReadOnly = runtime.read_only_summary_key" in html
+    assert "const localizedSource = runtimeConfig.source_summary_key" in html
+    assert "const localizedProviderKind = runtimeConfigContract.provider_kind_summary_key" in html
+    assert "const localizedAllowNetwork = runtimeConfigContract.allow_network_summary_key" in html
+    assert "const localizedAllowExternalContext = runtimeConfigContract.allow_external_context_summary_key" in html
 
 
 def test_http_root_and_read_only_endpoints(tmp_path):

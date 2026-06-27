@@ -814,6 +814,18 @@ def _graph_summary_message_key(status: str) -> str:
     )
 
 
+def _status_summary_payload(prefix: str, value: str | None) -> tuple[str | None, str]:
+    normalized = str(value or "").strip()
+    if not normalized:
+        return None, ""
+    return f"{prefix}.{normalized}", normalized.replace("_", " ")
+
+
+def _boolean_summary_payload(value: bool) -> tuple[str, str]:
+    normalized = str(bool(value)).lower()
+    return f"ui.boolean.{normalized}", normalized
+
+
 def _graph_summary_counts_contract(node_count: int, edge_count: int) -> tuple[str, dict[str, Any]]:
     return "ui.template.graph_summary.counts", {
         "node_count": node_count,
@@ -2904,7 +2916,32 @@ class ChronicleUIDataService:
 
     def runtime_config_state(self) -> dict[str, Any]:
         state = self.runtime_config.show()
-        return {"runtime_config": state.model_dump(mode="json")}
+        payload = state.model_dump(mode="json")
+        source_key, source_summary = _status_summary_payload(
+            "ui.runtime_config.source",
+            payload.get("source"),
+        )
+        payload["source_summary_key"] = source_key
+        payload["source_summary"] = source_summary
+        config = payload.get("config", {})
+        if isinstance(config, dict):
+            provider_kind_key, provider_kind_summary = _status_summary_payload(
+                "ui.runtime_config.provider_kind",
+                config.get("provider_kind"),
+            )
+            config["provider_kind_summary_key"] = provider_kind_key
+            config["provider_kind_summary"] = provider_kind_summary
+            allow_network_key, allow_network_summary = _boolean_summary_payload(
+                bool(config.get("allow_network"))
+            )
+            config["allow_network_summary_key"] = allow_network_key
+            config["allow_network_summary"] = allow_network_summary
+            allow_external_context_key, allow_external_context_summary = _boolean_summary_payload(
+                bool(config.get("allow_external_context"))
+            )
+            config["allow_external_context_summary_key"] = allow_external_context_key
+            config["allow_external_context_summary"] = allow_external_context_summary
+        return {"runtime_config": payload}
 
     def package_review_snapshot(self) -> dict[str, Any]:
         try:
@@ -3244,15 +3281,30 @@ class ChronicleUIDataService:
         return links
 
     def runtime_boundary(self) -> dict[str, Any]:
+        read_only_key, read_only_summary = _boolean_summary_payload(True)
+        external_model_api_key, external_model_api_summary = _boolean_summary_payload(False)
+        graphrag_runtime_key, graphrag_runtime_summary = _boolean_summary_payload(False)
+        vector_db_key, vector_db_summary = _boolean_summary_payload(False)
+        graph_db_key, graph_db_summary = _boolean_summary_payload(False)
         return {
             "read_only": True,
+            "read_only_summary_key": read_only_key,
+            "read_only_summary": read_only_summary,
             "foreground_process": True,
             "daemon": False,
             "server_default_host": DEFAULT_UI_HOST,
             "external_model_api": False,
+            "external_model_api_summary_key": external_model_api_key,
+            "external_model_api_summary": external_model_api_summary,
             "graphrag_runtime": False,
+            "graphrag_runtime_summary_key": graphrag_runtime_key,
+            "graphrag_runtime_summary": graphrag_runtime_summary,
             "vector_db": False,
+            "vector_db_summary_key": vector_db_key,
+            "vector_db_summary": vector_db_summary,
             "graph_db": False,
+            "graph_db_summary_key": graph_db_key,
+            "graph_db_summary": graph_db_summary,
             "correctness_proof": False,
         }
 
@@ -3268,6 +3320,14 @@ class ChronicleUIDataService:
             metadata_count=len(metadata),
             response_key_count=len(keys),
         )
+        finish_reason_key, finish_reason_summary = _status_summary_payload(
+            "ui.provider_response.finish_reason",
+            metadata.get("finish_reason"),
+        )
+        provider_status_key, provider_status_summary = _status_summary_payload(
+            "ui.provider_response.provider_status",
+            metadata.get("provider_status"),
+        )
         return {
             "present": bool(metadata or keys),
             "message": (
@@ -3282,7 +3342,11 @@ class ChronicleUIDataService:
             ),
             "response_id": metadata.get("response_id"),
             "finish_reason": metadata.get("finish_reason"),
+            "finish_reason_summary_key": finish_reason_key,
+            "finish_reason_summary": finish_reason_summary,
             "provider_status": metadata.get("provider_status"),
+            "provider_status_summary_key": provider_status_key,
+            "provider_status_summary": provider_status_summary,
             "usage_input_tokens": metadata.get("usage_input_tokens"),
             "usage_output_tokens": metadata.get("usage_output_tokens"),
             "usage_total_tokens": metadata.get("usage_total_tokens"),
@@ -7218,9 +7282,15 @@ function renderInvocationPlanNotice(record) {{
   );
 }}
 function responseMetadataDetailLines(summary) {{
+  const localizedFinishReason = summary.finish_reason_summary_key
+    ? formatLabel(summary.finish_reason_summary_key, summary.finish_reason_summary_params || {{}}, summary.finish_reason_summary || summary.finish_reason || '')
+    : (summary.finish_reason_summary || summary.finish_reason || '');
+  const localizedProviderStatus = summary.provider_status_summary_key
+    ? formatLabel(summary.provider_status_summary_key, summary.provider_status_summary_params || {{}}, summary.provider_status_summary || summary.provider_status || '')
+    : (summary.provider_status_summary || summary.provider_status || '');
   return detailLine('Response ID', summary.response_id || '')
-    + detailLine('Finish reason', summary.finish_reason || '')
-    + detailLine('Provider status', summary.provider_status || '')
+    + detailLine('Finish reason', localizedFinishReason)
+    + detailLine('Provider status', localizedProviderStatus)
     + detailLine('Usage input tokens', summary.usage_input_tokens ?? '')
     + detailLine('Usage output tokens', summary.usage_output_tokens ?? '')
     + detailLine('Usage total tokens', summary.usage_total_tokens ?? '')
@@ -7617,24 +7687,51 @@ function renderOverviewCountsPanel(counts) {{
   );
 }}
 function renderOverviewRuntimeBoundaryPanel(runtime) {{
+  const localizedReadOnly = runtime.read_only_summary_key
+    ? formatLabel(runtime.read_only_summary_key, runtime.read_only_summary_params || {{}}, runtime.read_only_summary || String(runtime.read_only))
+    : (runtime.read_only_summary || String(runtime.read_only));
+  const localizedExternalModelApi = runtime.external_model_api_summary_key
+    ? formatLabel(runtime.external_model_api_summary_key, runtime.external_model_api_summary_params || {{}}, runtime.external_model_api_summary || String(runtime.external_model_api))
+    : (runtime.external_model_api_summary || String(runtime.external_model_api));
+  const localizedGraphragRuntime = runtime.graphrag_runtime_summary_key
+    ? formatLabel(runtime.graphrag_runtime_summary_key, runtime.graphrag_runtime_summary_params || {{}}, runtime.graphrag_runtime_summary || String(runtime.graphrag_runtime))
+    : (runtime.graphrag_runtime_summary || String(runtime.graphrag_runtime));
+  const localizedVectorDb = runtime.vector_db_summary_key
+    ? formatLabel(runtime.vector_db_summary_key, runtime.vector_db_summary_params || {{}}, runtime.vector_db_summary || String(runtime.vector_db))
+    : (runtime.vector_db_summary || String(runtime.vector_db));
+  const localizedGraphDb = runtime.graph_db_summary_key
+    ? formatLabel(runtime.graph_db_summary_key, runtime.graph_db_summary_params || {{}}, runtime.graph_db_summary || String(runtime.graph_db))
+    : (runtime.graph_db_summary || String(runtime.graph_db));
   return renderPanel(
     sectionTitle(label('section.runtime_boundary', 'Runtime Boundary'))
-    + detailLine('Read-only', runtime.read_only)
-    + detailLine('External model API', runtime.external_model_api)
-    + detailLine('GraphRAG runtime', runtime.graphrag_runtime)
-    + detailLine('Vector DB', runtime.vector_db)
-    + detailLine('Graph DB', runtime.graph_db)
+    + detailLine('Read-only', localizedReadOnly)
+    + detailLine('External model API', localizedExternalModelApi)
+    + detailLine('GraphRAG runtime', localizedGraphragRuntime)
+    + detailLine('Vector DB', localizedVectorDb)
+    + detailLine('Graph DB', localizedGraphDb)
   );
 }}
 function renderOverviewRuntimeConfigPanel(runtimeConfig, runtimeConfigContract) {{
+  const localizedSource = runtimeConfig.source_summary_key
+    ? formatLabel(runtimeConfig.source_summary_key, runtimeConfig.source_summary_params || {{}}, runtimeConfig.source_summary || runtimeConfig.source || '')
+    : (runtimeConfig.source_summary || runtimeConfig.source || '');
+  const localizedProviderKind = runtimeConfigContract.provider_kind_summary_key
+    ? formatLabel(runtimeConfigContract.provider_kind_summary_key, runtimeConfigContract.provider_kind_summary_params || {{}}, runtimeConfigContract.provider_kind_summary || runtimeConfigContract.provider_kind || '')
+    : (runtimeConfigContract.provider_kind_summary || runtimeConfigContract.provider_kind || '');
+  const localizedAllowNetwork = runtimeConfigContract.allow_network_summary_key
+    ? formatLabel(runtimeConfigContract.allow_network_summary_key, runtimeConfigContract.allow_network_summary_params || {{}}, runtimeConfigContract.allow_network_summary || String(runtimeConfigContract.allow_network))
+    : (runtimeConfigContract.allow_network_summary || String(runtimeConfigContract.allow_network));
+  const localizedAllowExternalContext = runtimeConfigContract.allow_external_context_summary_key
+    ? formatLabel(runtimeConfigContract.allow_external_context_summary_key, runtimeConfigContract.allow_external_context_summary_params || {{}}, runtimeConfigContract.allow_external_context_summary || String(runtimeConfigContract.allow_external_context))
+    : (runtimeConfigContract.allow_external_context_summary || String(runtimeConfigContract.allow_external_context));
   return renderPanel(
     sectionTitle(label('section.runtime_config', 'Runtime Config'))
-    + detailLine('Source', runtimeConfig.source || '')
-    + detailLine('Provider kind', runtimeConfigContract.provider_kind || '')
+    + detailLine('Source', localizedSource)
+    + detailLine('Provider kind', localizedProviderKind)
     + detailLine('Provider name', runtimeConfigContract.provider_name || '')
     + detailLine('Model', runtimeConfigContract.model_name || '')
-    + detailLine('Allow network', runtimeConfigContract.allow_network)
-    + detailLine('Allow external context', runtimeConfigContract.allow_external_context)
+    + detailLine('Allow network', localizedAllowNetwork)
+    + detailLine('Allow external context', localizedAllowExternalContext)
     + detailListLine('Warnings', runtimeConfig.warnings, ' | ')
     + '<p>' + listJumpButton(label('button.open_runtime_config', 'Open Runtime Config'), '/api/runtime-config') + '</p>'
   );
