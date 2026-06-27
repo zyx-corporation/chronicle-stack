@@ -59,6 +59,8 @@ DEFAULT_UI_PORT = 8765
 REVIEWER_LABEL_PATTERN = re.compile(r"^[a-z0-9][a-z0-9._-]{1,63}$")
 SESSION_LABEL_PATTERN = re.compile(r"^[a-z0-9][a-z0-9._-]{1,63}$")
 MUTATION_TOKEN_HEADER = "X-Chronicle-UI-Mutation-Token"
+MUTATION_REQUEST_ID_PATTERN = re.compile(r"^[a-z0-9][a-z0-9._:-]{7,127}$")
+MUTATION_SESSION_ID_PATTERN = re.compile(r"^[a-z0-9][a-z0-9._:-]{7,127}$")
 
 
 class UIAuthMode:
@@ -1294,6 +1296,8 @@ def _reviewer_context_requirements(metadata: UIBoundaryMetadata) -> dict[str, An
         "session_label_required": bool(metadata.session_gating),
         "session_label_pattern": SESSION_LABEL_PATTERN.pattern,
         "session_label_examples": ["desk-session-1", "review.local-01"],
+        "mutation_session_id_pattern": MUTATION_SESSION_ID_PATTERN.pattern,
+        "mutation_request_id_pattern": MUTATION_REQUEST_ID_PATTERN.pattern,
         "accepted_reviewer_kinds": accepted_reviewer_kinds,
         "accepted_reviewer_kind_details": [
             {
@@ -1351,6 +1355,12 @@ def _reviewer_context_requirements(metadata: UIBoundaryMetadata) -> dict[str, An
             if metadata.mutation_enabled
             else "Per-session local mutation tokens are only required after GUI mutation is explicitly enabled."
         ),
+        "mutation_session_note": (
+            "Browser-triggered review apply requests must stay within the current local mutation session."
+        ),
+        "mutation_request_id_note": (
+            "Each browser-triggered review apply request must carry a unique local mutation request identifier."
+        ),
     }
 
 
@@ -1400,6 +1410,9 @@ def _reviewer_validation_gate_summary(metadata: UIBoundaryMetadata) -> dict[str,
     reviewer_context = _reviewer_context_requirements(metadata)
     validation_error_codes = [
         "invalid_mutation_token",
+        "invalid_mutation_session",
+        "mutation_request_id_required",
+        "invalid_mutation_request_id",
         "reviewer_label_required",
         "invalid_reviewer_label",
         "session_label_required",
@@ -1433,6 +1446,8 @@ def _reviewer_validation_gate_summary(metadata: UIBoundaryMetadata) -> dict[str,
         "durable_write_error_codes": ["audit_insertion_failed", "decision_persistence_failed"],
         "route_gate_error_code": "mutation_disabled",
         "mutation_token_header": metadata.mutation_token_header,
+        "mutation_session_id_pattern": MUTATION_SESSION_ID_PATTERN.pattern,
+        "mutation_request_id_pattern": MUTATION_REQUEST_ID_PATTERN.pattern,
         "session_gated": bool(metadata.session_gating),
         "pending_target_required": True,
         "ui_intent_required": True,
@@ -1578,6 +1593,10 @@ def _ui_write_route_contract(metadata: UIBoundaryMetadata) -> dict[str, Any]:
     pre_mutation_or_gate_errors = [
         "mutation_disabled",
         "invalid_mutation_token",
+        "invalid_mutation_session",
+        "mutation_request_id_required",
+        "invalid_mutation_request_id",
+        "duplicate_mutation_request",
         "reviewer_label_required",
         "invalid_reviewer_label",
         "session_label_required",
@@ -1658,6 +1677,8 @@ def _ui_write_route_contract(metadata: UIBoundaryMetadata) -> dict[str, Any]:
         "mutation_token_required": bool(metadata.mutation_enabled),
         "mutation_token_transport": metadata.mutation_token_transport,
         "mutation_token_header": metadata.mutation_token_header,
+        "mutation_session_id_pattern": MUTATION_SESSION_ID_PATTERN.pattern,
+        "mutation_request_id_pattern": MUTATION_REQUEST_ID_PATTERN.pattern,
         "expected_request_field_details": [
             {
                 "field": str(field),
@@ -1967,6 +1988,7 @@ class ChronicleUIDataService:
         auth_mode: str = UIAuthMode.NOT_ENABLED,
         authorization_mode: str = UIAuthorizationMode.NOT_ENABLED,
         mutation_session_token: str = "",
+        mutation_session_id: str = "",
     ) -> None:
         self.root = root or Path.cwd()
         self.host = host
@@ -1975,6 +1997,7 @@ class ChronicleUIDataService:
         self.auth_mode = auth_mode
         self.authorization_mode = authorization_mode
         self.mutation_session_token = mutation_session_token
+        self.mutation_session_id = mutation_session_id
         self.chronicle = ChronicleService(self.root)
         self.audit = AuditService(self.root)
         self.lifecycle = LifecycleService(self.root)
@@ -3795,6 +3818,10 @@ class ChronicleUIDataService:
         pre_mutation_or_gate_errors = [
             "mutation_disabled",
             "invalid_mutation_token",
+            "invalid_mutation_session",
+            "mutation_request_id_required",
+            "invalid_mutation_request_id",
+            "duplicate_mutation_request",
             "reviewer_label_required",
             "invalid_reviewer_label",
             "session_label_required",
@@ -3874,6 +3901,10 @@ class ChronicleUIDataService:
         messages = {
             "mutation_disabled": "GUI mutation remains disabled for this session; use the CLI review path instead.",
             "invalid_mutation_token": "The local mutation token is missing or invalid for this browser session.",
+            "invalid_mutation_session": "The local mutation session is missing or no longer aligned with this browser session.",
+            "mutation_request_id_required": "A unique local mutation request identifier is required for browser-triggered write routes.",
+            "invalid_mutation_request_id": "The local mutation request identifier format is invalid for this browser session.",
+            "duplicate_mutation_request": "This local mutation request identifier was already used in the current browser session.",
             "reviewer_label_required": "Reviewer label is missing, so the UI cannot attribute the review action.",
             "invalid_reviewer_label": "Reviewer label must start with a lowercase letter or digit and use only lowercase letters, digits, dot, underscore, or hyphen.",
             "session_label_required": "Session label is required for the current session-gated local mutation boundary.",
@@ -4884,6 +4915,7 @@ class ChronicleUIDataService:
         review_warning_labels_json = json.dumps(REVIEW_WARNING_LABELS, ensure_ascii=False)
         ui_i18n_catalog_json = json.dumps(UI_I18N_CATALOG, ensure_ascii=False)
         mutation_token_json = json.dumps(self.mutation_session_token, ensure_ascii=False)
+        mutation_session_id_json = json.dumps(self.mutation_session_id, ensure_ascii=False)
         return f"""<!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -7544,7 +7576,8 @@ function renderDetailActionPreviewControls(preview, actions, mutationTargetEvent
   return preview.ui_mutation_enabled
     ? '<p><label>' + esc(uiLabel('Reviewer')) + ' <input id="reviewer-label" value="local-ui" placeholder="' + esc(t('placeholder.reviewer')) + '"></label> '
       + '<label>' + esc(uiLabel('Kind')) + ' <select id="reviewer-kind"><option value="local_operator">local_operator</option><option value="user_declared">user_declared</option></select></label> '
-      + '<label>' + esc(uiLabel('Session')) + ' <input id="reviewer-session-label" value="local-ui-session" placeholder="' + esc(t('placeholder.session')) + '"></label></p>'
+      + '<label>' + esc(uiLabel('Session')) + ' <input id="reviewer-session-label" value="local-ui-session" placeholder="' + esc(t('placeholder.session')) + '"></label>'
+      + '<input type="hidden" id="reviewer-record-id" value="' + esc(mutationTargetEventId || '') + '"></p>'
       + '<p><label>' + esc(uiLabel('Note')) + ' <input id="reviewer-note" placeholder="' + esc(t('placeholder.review_note')) + '"></label></p>'
       + '<p>' + activeActionButtons + '</p>'
     : '<p><button disabled>' + esc(uiLabel('Approve')) + '</button> <button disabled>' + esc(uiLabel('Reject')) + '</button> <button disabled>' + esc(uiLabel('Request Changes')) + '</button></p>';
@@ -7702,12 +7735,18 @@ async function tryCopyText(command) {{
   return copied;
 }}
 function reviewActionRequestBody(action, fieldPrefix = 'reviewer') {{
+  const sessionId = window.__chronicleMutationSessionId || '';
+  const recordId = reviewFieldValue(fieldPrefix, 'record-id', '') || '';
+  const nextSequence = (window.__chronicleMutationRequestSequence || 0) + 1;
+  window.__chronicleMutationRequestSequence = nextSequence;
   return {{
     reviewer_label: reviewFieldValue(fieldPrefix, 'reviewer-label', ''),
     reviewer_kind: reviewFieldValue(fieldPrefix, 'reviewer-kind', 'local_operator') || 'local_operator',
     session_label: reviewFieldValue(fieldPrefix, 'reviewer-session-label', ''),
     note: reviewFieldValue(fieldPrefix, 'reviewer-note', ''),
     ui_intent: action || '',
+    mutation_session_id: sessionId,
+    mutation_request_id: 'mrq-' + sessionId + '-' + String(recordId || 'review') + '-' + String(nextSequence),
   }};
 }}
 function reloadCurrentEndpoint() {{
@@ -8393,6 +8432,8 @@ window.__chronicleSorts = {{ runtimeRecords: 'latest', reviewQueue: 'attention',
 window.__chronicleDetailTrail = [];
 window.__chronicleLocale = initialLocale();
 window.__chronicleMutationToken = {mutation_token_json};
+window.__chronicleMutationSessionId = {mutation_session_id_json};
+window.__chronicleMutationRequestSequence = 0;
 document.getElementById('view').addEventListener('input', handleViewInput);
 document.getElementById('view').addEventListener('change', handleViewChange);
 document.getElementById('locale-select').addEventListener('change', event => setLocale(event.target.value));
@@ -8416,6 +8457,8 @@ def create_handler(
     authorization_mode: str = UIAuthorizationMode.NOT_ENABLED,
 ) -> type[BaseHTTPRequestHandler]:
     mutation_session_token = secrets.token_urlsafe(24)
+    mutation_session_id = f"msn-{secrets.token_hex(8)}"
+    mutation_request_ids_seen: set[str] = set()
     service = ChronicleUIDataService(
         root,
         host=host,
@@ -8424,6 +8467,7 @@ def create_handler(
         auth_mode=auth_mode,
         authorization_mode=authorization_mode,
         mutation_session_token=mutation_session_token,
+        mutation_session_id=mutation_session_id,
     )
 
     class ChronicleUIRequestHandler(BaseHTTPRequestHandler):
@@ -8492,6 +8536,82 @@ def create_handler(
                     status=HTTPStatus.BAD_REQUEST,
                 )
                 return
+            if parsed.path.startswith("/api/review-actions/") and boundary.get("mutation_enabled", False):
+                mutation_session_id = str(body.get("mutation_session_id", "") or "").strip()
+                mutation_request_id = str(body.get("mutation_request_id", "") or "").strip()
+                if mutation_session_id != service.mutation_session_id:
+                    self._send_json(
+                        service._review_action_failure_payload(
+                            error_code="invalid_mutation_session",
+                            mutation_enabled=True,
+                            reviewer_context_requirements=boundary.get("reviewer_context_requirements", {}),
+                            reviewer_enforcement_summary=boundary.get("reviewer_enforcement_summary", {}),
+                            reviewer_validation_gate_summary=boundary.get("reviewer_validation_gate_summary", {}),
+                            write_route_contract=boundary.get("write_route_contract", {}),
+                            success_contract=service._review_action_success_contract(),
+                            failure_contract=service._review_action_failure_contract(
+                                mutation_enabled=True,
+                                error_code="invalid_mutation_session",
+                            ),
+                        ),
+                        status=HTTPStatus.FORBIDDEN,
+                    )
+                    return
+                if not mutation_request_id:
+                    self._send_json(
+                        service._review_action_failure_payload(
+                            error_code="mutation_request_id_required",
+                            mutation_enabled=True,
+                            reviewer_context_requirements=boundary.get("reviewer_context_requirements", {}),
+                            reviewer_enforcement_summary=boundary.get("reviewer_enforcement_summary", {}),
+                            reviewer_validation_gate_summary=boundary.get("reviewer_validation_gate_summary", {}),
+                            write_route_contract=boundary.get("write_route_contract", {}),
+                            success_contract=service._review_action_success_contract(),
+                            failure_contract=service._review_action_failure_contract(
+                                mutation_enabled=True,
+                                error_code="mutation_request_id_required",
+                            ),
+                        ),
+                        status=HTTPStatus.BAD_REQUEST,
+                    )
+                    return
+                if not MUTATION_REQUEST_ID_PATTERN.fullmatch(mutation_request_id):
+                    self._send_json(
+                        service._review_action_failure_payload(
+                            error_code="invalid_mutation_request_id",
+                            mutation_enabled=True,
+                            reviewer_context_requirements=boundary.get("reviewer_context_requirements", {}),
+                            reviewer_enforcement_summary=boundary.get("reviewer_enforcement_summary", {}),
+                            reviewer_validation_gate_summary=boundary.get("reviewer_validation_gate_summary", {}),
+                            write_route_contract=boundary.get("write_route_contract", {}),
+                            success_contract=service._review_action_success_contract(),
+                            failure_contract=service._review_action_failure_contract(
+                                mutation_enabled=True,
+                                error_code="invalid_mutation_request_id",
+                            ),
+                        ),
+                        status=HTTPStatus.BAD_REQUEST,
+                    )
+                    return
+                if mutation_request_id in mutation_request_ids_seen:
+                    self._send_json(
+                        service._review_action_failure_payload(
+                            error_code="duplicate_mutation_request",
+                            mutation_enabled=True,
+                            reviewer_context_requirements=boundary.get("reviewer_context_requirements", {}),
+                            reviewer_enforcement_summary=boundary.get("reviewer_enforcement_summary", {}),
+                            reviewer_validation_gate_summary=boundary.get("reviewer_validation_gate_summary", {}),
+                            write_route_contract=boundary.get("write_route_contract", {}),
+                            success_contract=service._review_action_success_contract(),
+                            failure_contract=service._review_action_failure_contract(
+                                mutation_enabled=True,
+                                error_code="duplicate_mutation_request",
+                            ),
+                        ),
+                        status=HTTPStatus.CONFLICT,
+                    )
+                    return
+                mutation_request_ids_seen.add(mutation_request_id)
             result = service.review_action_response(parsed.path, body)
             if result is not None:
                 status, payload = result

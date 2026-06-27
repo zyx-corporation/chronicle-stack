@@ -28,6 +28,11 @@ Current state:
 - add duplicate-submit protection for local review actions
 - make current mutation-session state more visible in UI boundary/readiness surfaces
 
+Current state:
+
+- local mutation session continuity metadata is implemented for browser-triggered review apply routes
+- duplicate local mutation request identifiers are rejected within the current local UI server session
+
 ### 3. Proposal-first editing flows
 
 - introduce append-only proposal surfaces for artifact/context changes

@@ -129,6 +129,14 @@ def _http_mutation_token(host: str, port: int) -> str:
     return match.group(1)
 
 
+def _http_mutation_session_id(host: str, port: int) -> str:
+    status, html = _http_get(host, port, "/")
+    assert status == 200
+    match = re.search(r'window\.__chronicleMutationSessionId = "([^"]+)";', html)
+    assert match is not None
+    return match.group(1)
+
+
 def _populate(root):
     ChronicleService(root).init("UI Test")
     context = ContextService(root).add_context(title="UI Context", visibility_hint=VisibilityHint.PUBLIC)
@@ -273,6 +281,12 @@ def test_startup_metadata(tmp_path):
     assert payload["ui_boundary"]["reviewer_context_requirements"]["session_label_pattern"] == (
         "^[a-z0-9][a-z0-9._-]{1,63}$"
     )
+    assert payload["ui_boundary"]["reviewer_context_requirements"]["mutation_session_id_pattern"] == (
+        "^[a-z0-9][a-z0-9._:-]{7,127}$"
+    )
+    assert payload["ui_boundary"]["reviewer_context_requirements"]["mutation_request_id_pattern"] == (
+        "^[a-z0-9][a-z0-9._:-]{7,127}$"
+    )
     assert payload["ui_boundary"]["reviewer_context_requirements"]["required_reviewer_kinds_for_mutation"] == [
         "local_operator"
     ]
@@ -294,8 +308,11 @@ def test_startup_metadata(tmp_path):
         "ui_intent",
     ]
     assert payload["ui_boundary"]["reviewer_validation_gate_summary"]["status"] == "read_only_preview"
-    assert payload["ui_boundary"]["reviewer_validation_gate_summary"]["validation_error_codes"][:4] == [
+    assert payload["ui_boundary"]["reviewer_validation_gate_summary"]["validation_error_codes"][:7] == [
         "invalid_mutation_token",
+        "invalid_mutation_session",
+        "mutation_request_id_required",
+        "invalid_mutation_request_id",
         "reviewer_label_required",
         "invalid_reviewer_label",
         "session_label_required",
@@ -1809,7 +1826,9 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "#detail { position: sticky;" in html
     assert "@media (max-width: 980px)" in html
     assert "window.__chronicleMutationToken =" in html
+    assert "window.__chronicleMutationSessionId =" in html
     assert "headers['X-Chronicle-UI-Mutation-Token'] = window.__chronicleMutationToken;" in html
+    assert "mutation_request_id: 'mrq-' + sessionId" in html
     assert '<div class="shell-grid">' in html
     assert ".json-block {" in html
     assert ".fact-line {" in html
@@ -2567,6 +2586,7 @@ def test_http_review_action_enabled_route_applies_decision(tmp_path):
     thread.start()
     try:
         token = _http_mutation_token(host, port)
+        mutation_session_id = _http_mutation_session_id(host, port)
         status, body = _http_post(
             host,
             port,
@@ -2577,6 +2597,8 @@ def test_http_review_action_enabled_route_applies_decision(tmp_path):
                 "session_label": "ui-http-test",
                 "ui_intent": "approve",
                 "note": "approved from ui",
+                "mutation_session_id": mutation_session_id,
+                "mutation_request_id": "mrq-ui-http-test-approve-1",
             },
             headers={"X-Chronicle-UI-Mutation-Token": token},
         )
@@ -2635,6 +2657,8 @@ def test_http_review_action_enabled_route_rejects_missing_mutation_token(tmp_pat
                 "reviewer_kind": "local_operator",
                 "session_label": "ui-http-test",
                 "ui_intent": "approve",
+                "mutation_session_id": "msn-missing",
+                "mutation_request_id": "mrq-ui-http-test-approve-missing-token",
             },
         )
         assert status == 403
@@ -2648,6 +2672,128 @@ def test_http_review_action_enabled_route_rejects_missing_mutation_token(tmp_pat
         assert payload["reviewer_validation_gate_summary"]["validation_error_codes"][0] == (
             "invalid_mutation_token"
         )
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=5)
+
+
+def test_http_review_action_enabled_route_rejects_invalid_mutation_session(tmp_path):
+    ids = _populate(tmp_path)
+    try:
+        server = make_server(
+            host="127.0.0.1",
+            port=0,
+            root=tmp_path,
+            mutation_capability_flag=True,
+            enable_ui_mutation=True,
+            auth_mode=UIAuthMode.LOOPBACK_LOCAL,
+            authorization_mode=UIAuthorizationMode.REVIEWER_DECLARED,
+        )
+    except PermissionError as exc:
+        pytest.skip(f"local socket bind unavailable in this environment: {exc}")
+    host, port = server.server_address
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        token = _http_mutation_token(host, port)
+        status, body = _http_post(
+            host,
+            port,
+            f"/api/review-actions/{ids['runtime_summary_event_id']}/approve",
+            {
+                "reviewer_label": "alice",
+                "reviewer_kind": "local_operator",
+                "session_label": "ui-http-test",
+                "ui_intent": "approve",
+                "mutation_session_id": "msn-wrong-session",
+                "mutation_request_id": "mrq-ui-http-test-approve-invalid-session",
+            },
+            headers={"X-Chronicle-UI-Mutation-Token": token},
+        )
+        assert status == 403
+        payload = json.loads(body)
+        assert payload["error_code"] == "invalid_mutation_session"
+        assert payload["message_key"] == "ui.review_action_failure.message.invalid_mutation_session"
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=5)
+
+
+def test_http_review_action_enabled_route_rejects_missing_or_duplicate_request_id(tmp_path):
+    ids = _populate(tmp_path)
+    try:
+        server = make_server(
+            host="127.0.0.1",
+            port=0,
+            root=tmp_path,
+            mutation_capability_flag=True,
+            enable_ui_mutation=True,
+            auth_mode=UIAuthMode.LOOPBACK_LOCAL,
+            authorization_mode=UIAuthorizationMode.REVIEWER_DECLARED,
+        )
+    except PermissionError as exc:
+        pytest.skip(f"local socket bind unavailable in this environment: {exc}")
+    host, port = server.server_address
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        token = _http_mutation_token(host, port)
+        mutation_session_id = _http_mutation_session_id(host, port)
+        status, body = _http_post(
+            host,
+            port,
+            f"/api/review-actions/{ids['runtime_summary_event_id']}/approve",
+            {
+                "reviewer_label": "alice",
+                "reviewer_kind": "local_operator",
+                "session_label": "ui-http-test",
+                "ui_intent": "approve",
+                "mutation_session_id": mutation_session_id,
+            },
+            headers={"X-Chronicle-UI-Mutation-Token": token},
+        )
+        assert status == 400
+        payload = json.loads(body)
+        assert payload["error_code"] == "mutation_request_id_required"
+        assert payload["message_key"] == "ui.review_action_failure.message.mutation_request_id_required"
+
+        request_id = "mrq-ui-http-test-approve-duplicate"
+        status, body = _http_post(
+            host,
+            port,
+            f"/api/review-actions/{ids['runtime_summary_event_id']}/approve",
+            {
+                "reviewer_label": "alice",
+                "reviewer_kind": "local_operator",
+                "session_label": "ui-http-test",
+                "ui_intent": "approve",
+                "mutation_session_id": mutation_session_id,
+                "mutation_request_id": request_id,
+            },
+            headers={"X-Chronicle-UI-Mutation-Token": token},
+        )
+        assert status == 200
+
+        status, body = _http_post(
+            host,
+            port,
+            f"/api/review-actions/{ids['runtime_summary_event_id']}/approve",
+            {
+                "reviewer_label": "alice",
+                "reviewer_kind": "local_operator",
+                "session_label": "ui-http-test",
+                "ui_intent": "approve",
+                "mutation_session_id": mutation_session_id,
+                "mutation_request_id": request_id,
+            },
+            headers={"X-Chronicle-UI-Mutation-Token": token},
+        )
+        assert status == 409
+        payload = json.loads(body)
+        assert payload["error_code"] == "duplicate_mutation_request"
+        assert payload["message_key"] == "ui.review_action_failure.message.duplicate_mutation_request"
     finally:
         server.shutdown()
         server.server_close()
@@ -2678,6 +2824,7 @@ def test_http_review_action_enabled_route_handles_audit_failure(tmp_path, monkey
     thread.start()
     try:
         token = _http_mutation_token(host, port)
+        mutation_session_id = _http_mutation_session_id(host, port)
         status, body = _http_post(
             host,
             port,
@@ -2688,6 +2835,8 @@ def test_http_review_action_enabled_route_handles_audit_failure(tmp_path, monkey
                 "session_label": "ui-http-test",
                 "ui_intent": "approve",
                 "note": "approved from ui",
+                "mutation_session_id": mutation_session_id,
+                "mutation_request_id": "mrq-ui-http-test-approve-audit-failure",
             },
             headers={"X-Chronicle-UI-Mutation-Token": token},
         )
@@ -2734,6 +2883,7 @@ def test_http_review_action_rejects_invalid_json_and_non_object_body(tmp_path):
     thread.start()
     try:
         token = _http_mutation_token(host, port)
+        _http_mutation_session_id(host, port)
         status, body = _http_post_raw(
             host,
             port,
@@ -2885,17 +3035,23 @@ def test_review_action_requires_session_label_before_authorization_check(tmp_pat
         "chronicle review queue --include-resolved --json",
         f"chronicle review approve --event {ids['runtime_summary_event_id']}",
     ]
-    assert payload["failure_contract"]["possible_error_codes"][:4] == [
+    assert payload["failure_contract"]["possible_error_codes"][:7] == [
         "mutation_disabled",
         "invalid_mutation_token",
+        "invalid_mutation_session",
+        "mutation_request_id_required",
+        "invalid_mutation_request_id",
+        "duplicate_mutation_request",
         "reviewer_label_required",
-        "invalid_reviewer_label",
     ]
-    assert payload["failure_contract"]["failure_families"][0]["possible_error_codes"][:4] == [
+    assert payload["failure_contract"]["failure_families"][0]["possible_error_codes"][:7] == [
         "mutation_disabled",
         "invalid_mutation_token",
+        "invalid_mutation_session",
+        "mutation_request_id_required",
+        "invalid_mutation_request_id",
+        "duplicate_mutation_request",
         "reviewer_label_required",
-        "invalid_reviewer_label",
     ]
 
 
@@ -3126,6 +3282,7 @@ def test_http_review_action_enabled_route_handles_decision_persistence_failure(t
     thread.start()
     try:
         token = _http_mutation_token(host, port)
+        mutation_session_id = _http_mutation_session_id(host, port)
         status, body = _http_post(
             host,
             port,
@@ -3136,6 +3293,8 @@ def test_http_review_action_enabled_route_handles_decision_persistence_failure(t
                 "session_label": "ui-http-test",
                 "ui_intent": "approve",
                 "note": "approved from ui",
+                "mutation_session_id": mutation_session_id,
+                "mutation_request_id": "mrq-ui-http-test-approve-persist-failure",
             },
             headers={"X-Chronicle-UI-Mutation-Token": token},
         )
