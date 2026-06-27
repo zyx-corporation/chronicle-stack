@@ -79,6 +79,7 @@ Current state:
 - runtime-record detail views now render recorded trial bundle paths, reviewed files, and import-readiness metadata for local inspection
 - overview runtime-record surfaces now summarize recorded trial sufficiency and import-readiness trends without changing the primary record boundary
 - overview and triage surfaces now summarize repeated insufficiency signals as read-only escalation cues before any downstream implementation-repo decision
+- overview and triage surfaces now also expose dedicated read-only escalation drilldowns that reopen the related runtime-record list/detail context
 
 ## Completion criteria by lane
 

@@ -927,6 +927,36 @@ def _query_engine_trial_escalation_summary(
     }
 
 
+def _query_engine_trial_escalation_drilldown_summary(
+    escalation_summary: dict[str, Any],
+) -> dict[str, Any]:
+    status = str(escalation_summary.get("status", "no_trial_records"))
+    return {
+        "summary_variant": "overview_escalation",
+        "dataset_key": "runtime_records",
+        "list_path": "/api/runtime-records",
+        "detail_path": escalation_summary.get("latest_trial_detail_path"),
+        "message_key": str(escalation_summary.get("message_key", "")),
+        "message": str(escalation_summary.get("message", "")),
+        "status": status,
+        "active_count": int(escalation_summary.get("active_count", 0) or 0),
+        "insufficient_trial_count": int(
+            escalation_summary.get("insufficient_trial_count", 0) or 0
+        ),
+        "repeated_insufficient_consumers": list(
+            escalation_summary.get("repeated_insufficient_consumers", []) or []
+        ),
+        "top_missing_behaviors": list(
+            escalation_summary.get("top_missing_behaviors", []) or []
+        ),
+        "reasons": list(escalation_summary.get("reasons", []) or []),
+        "fact_line": (
+            f"status={status}; active={int(escalation_summary.get('active_count', 0) or 0)}; "
+            f"insufficient={int(escalation_summary.get('insufficient_trial_count', 0) or 0)}"
+        ),
+    }
+
+
 def _provider_response_message_key(summary: dict[str, Any]) -> str:
     return (
         "ui.provider_response.message.present"
@@ -2314,6 +2344,9 @@ class ChronicleUIDataService:
             "latest_provider_response_detail_path": latest_provider_response_detail_path,
             "query_engine_trial_summary": query_engine_trial_summary,
             "query_engine_trial_escalation_summary": escalation_summary,
+            "query_engine_trial_escalation_drilldown_summary": (
+                _query_engine_trial_escalation_drilldown_summary(escalation_summary)
+            ),
         }
 
     def auth_boundary_overview(self, review_queue: list[dict[str, Any]] | None = None) -> dict[str, Any]:
@@ -2727,6 +2760,9 @@ class ChronicleUIDataService:
             "query_engine_trial_summary": runtime_summary.get("query_engine_trial_summary", {}),
             "query_engine_trial_escalation_summary": runtime_summary.get(
                 "query_engine_trial_escalation_summary", {}
+            ),
+            "query_engine_trial_escalation_drilldown_summary": runtime_summary.get(
+                "query_engine_trial_escalation_drilldown_summary", {}
             ),
             "review_capability_counts": review_capability_counts,
             "package_readiness_counts": readiness_counts,
@@ -6154,6 +6190,26 @@ function renderReviewerBoundaryDrilldownSummary(summary) {{
     ]),
   ]);
 }}
+function renderQueryEngineTrialEscalationDrilldownSummary(summary) {{
+  if (!summary || !summary.dataset_key) return '';
+  const message = summary.message_key
+    ? label(summary.message_key, summary.message || '')
+    : (summary.message || '');
+  return cellStack([
+    cellMeta(message),
+    cellMeta(summary.fact_line || ''),
+    cellCode(label('ui.label.dataset', 'Dataset') + '=runtime_records'),
+    cellCode(label('ui.label.status', 'Status') + '=' + String(summary.status || '')),
+    cellCode(label('ui.label.active_count', 'Active count') + '=' + String(summary.active_count ?? 0)),
+    cellCode(label('ui.label.insufficient_trials', 'Insufficient trials') + '=' + String(summary.insufficient_trial_count ?? 0)),
+    cellCode(label('ui.label.repeated_consumers', 'Repeated consumers') + '=' + ((summary.repeated_insufficient_consumers || []).join(', ') || '(none)')),
+    cellCode(label('ui.label.missing_behaviors', 'Missing behaviors') + '=' + ((summary.top_missing_behaviors || []).join(' | ') || '(none)')),
+    navigationCluster([
+      listJumpButton(label('button.open_list', 'Open List'), summary.list_path || ''),
+      detailJumpButton(summary.detail_path || '', label('button.open_detail', 'Open Detail')),
+    ]),
+  ]);
+}}
 function reviewerBoundaryDominantButtons(drilldownSummaries) {{
   const rows = Array.isArray(drilldownSummaries) ? drilldownSummaries : [];
   return rows.map(item => {{
@@ -8522,6 +8578,9 @@ function renderOverviewRuntimeRecordsPanel(counts, runtimeRecords) {{
   return renderPanel(
     sectionTitle(label('section.runtime_records', 'Runtime Records'))
     + overviewRuntimeRecordCountButtons(counts, runtimeRecords)
+    + cellDetails(label('ui.label.drilldown_summary', 'Drilldown summary'), [
+      renderQueryEngineTrialEscalationDrilldownSummary(runtimeRecords.query_engine_trial_escalation_drilldown_summary || {{}}),
+    ])
     + metricsSection(metricsBody)
     + sliceButtonRow(runtimeRecordsSliceButtons())
     + endpointLatestResponseCluster('/api/runtime-records', runtimeRecords.latest_provider_response_detail_path, 'button.open_latest_runtime_response', 'Open Latest Runtime Response')
@@ -8600,6 +8659,9 @@ function renderOverviewTriagePanel(triage, warningButtons, warningSummaries) {{
     sectionTitle(label('section.triage', 'Triage'))
     + overviewTriageCountRows(triage)
     + '<p>' + (warningButtons || '') + '</p>'
+    + cellDetails(label('ui.label.drilldown_summary', 'Drilldown summary'), [
+      renderQueryEngineTrialEscalationDrilldownSummary(triage.query_engine_trial_escalation_drilldown_summary || {{}}),
+    ])
     + metricsSection(metricsBody)
     + '<p>' + esc(label('overview.warning_priority', 'Warning priority')) + ': '
     + overviewWarningPriorityBadges(warningSummaries)
