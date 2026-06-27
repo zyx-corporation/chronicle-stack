@@ -4,6 +4,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from chronicle.ids import generate_id
+from chronicle.integration.query_engine_adapter_skeleton import QueryEngineAdapterSkeletonBuilder
+from chronicle.models.runtime import RuntimeQueryEngineHandoff
 from chronicle.integration.context_package_builder import (
     ContextPackageRecordBuilder,
     ContextSelectionPolicy,
@@ -34,6 +36,7 @@ class IntegrationPackageService:
     def __init__(self, root: Path | None = None) -> None:
         self.chronicle = ChronicleService(root)
         self.selection_policy = ContextSelectionPolicy()
+        self.query_engine_adapter_skeleton = QueryEngineAdapterSkeletonBuilder()
         self.record_builder = ContextPackageRecordBuilder()
         self.classification_summary = PackageClassificationSummary()
         self.store = IntegrationPackageStore(self.chronicle.paths)
@@ -81,6 +84,12 @@ class IntegrationPackageService:
             },
         )
         return IntegrationPackage(manifest=manifest, records=records)
+
+    def build_query_engine_adapter_skeleton(
+        self, handoff: RuntimeQueryEngineHandoff
+    ):
+        """Build a descriptive downstream adapter skeleton without executing it."""
+        return self.query_engine_adapter_skeleton.build(handoff)
 
     def save_package(self, package: IntegrationPackage) -> Path:
         """Persist a controlled integration package through the package store."""

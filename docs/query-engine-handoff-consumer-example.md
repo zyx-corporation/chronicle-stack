@@ -38,3 +38,7 @@ chronicle package review --purpose "runtime query-engine handoff"
 
 A downstream consumer can treat `import_validation.status=contract_validated` as a structural alignment signal only.
 It does not certify semantic correctness, ranking quality, security, or query-runtime behavior.
+
+## Next step
+
+When the checked-in fixture is sufficient, use `docs/query-engine-import-adapter-skeleton.md` as the non-executable starting point for a downstream adapter.

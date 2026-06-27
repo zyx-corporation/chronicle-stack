@@ -1,0 +1,64 @@
+{
+  "contract_version": "1.0",
+  "skeleton_kind": "query_engine_import_adapter",
+  "handoff_contract_version": "1.0",
+  "import_validation_contract_version": "1.0",
+  "primary_record_path": ".chronicle/chronicle.jsonl",
+  "graph_export_format": "graph-json",
+  "graph_export_contract_version": "1.0",
+  "required_inputs": [
+    "query_engine_handoff.json",
+    ".chronicle/chronicle.jsonl",
+    "graph.json"
+  ],
+  "recommended_sequence": [
+    {
+      "name": "inspect_handoff",
+      "required": true,
+      "command_hint": "chronicle runtime retrieve-plan --query \"release note context\" --json",
+      "notes": [
+        "confirm referenced records and prohibited assumptions"
+      ]
+    },
+    {
+      "name": "inspect_graph_contract",
+      "required": true,
+      "command_hint": "chronicle graph summary --json",
+      "notes": [
+        "confirm graph export contract version and incremental mode"
+      ]
+    },
+    {
+      "name": "materialize_graph_export",
+      "required": true,
+      "command_hint": "chronicle export --format graph-json -o graph.json",
+      "notes": [
+        "materialize the derived graph export for downstream reading"
+      ]
+    },
+    {
+      "name": "verify_import_validation",
+      "required": true,
+      "command_hint": "chronicle runtime retrieve-plan --query \"release note context\" --json",
+      "notes": [
+        "check import_validation before any downstream parsing"
+      ]
+    }
+  ],
+  "prohibited_capabilities": [
+    "do not execute a hosted query engine from Chronicle core",
+    "do not mutate Chronicle primary records during adapter import",
+    "do not treat derived consumer state as authoritative"
+  ],
+  "non_goals": [
+    "query execution",
+    "ranking quality certification",
+    "semantic correctness certification",
+    "runtime orchestration"
+  ],
+  "notes": [
+    "this skeleton is descriptive only",
+    "downstream implementers must keep import separate from Chronicle core",
+    "import validation remains a structural preflight rather than an execution step"
+  ]
+}
