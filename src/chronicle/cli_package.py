@@ -6,10 +6,13 @@ from typing import Annotated, Any
 
 import typer
 
+from chronicle.errors import ChronicleError
+from chronicle.interfaces.cli.common import handle_error
 from chronicle.models.integration_package import IntegrationPackageRecord, IntegrationTargetEnvironment
 from chronicle.models.package_review import PackageReviewStatus
 from chronicle.services.integration_package_service import IntegrationPackageService
 from chronicle.services.package_review_service import PackageReviewService
+from chronicle.services.runtime_service import RuntimeService
 
 package_app = typer.Typer(
     name="chronicle-package",
@@ -65,6 +68,37 @@ def context_package_cmd(
         typer.echo(f"Package written to {output}")
     else:
         typer.echo(payload)
+
+
+@package_app.command("query-engine-adapter")
+def query_engine_adapter_cmd(
+    query: Annotated[str, typer.Option("--query", help="Query to assemble a local downstream adapter skeleton for.")],
+    limit: Annotated[int, typer.Option("--limit", min=1, help="Maximum hits per retrieval surface.")] = 5,
+    output: Annotated[Path | None, typer.Option("--output", "-o")] = None,
+) -> None:
+    """Build a descriptive downstream query-engine adapter skeleton.
+
+    This command stays local, dry-run, and read-only. It does not execute
+    imports, hosted query engines, or external runtimes.
+    """
+    try:
+        plan = RuntimeService().retrieve_plan(query=query, limit=limit, record=False)
+        handoff = plan.query_engine_handoff
+        if handoff is None:
+            raise ChronicleError(
+                code="QUERY_ENGINE_HANDOFF_UNAVAILABLE",
+                message="Query-engine handoff is unavailable for this retrieval plan.",
+                hint="Run `chronicle runtime retrieve-plan --query ... --json` to inspect the current dry-run handoff surface.",
+            )
+        skeleton = IntegrationPackageService().build_query_engine_adapter_skeleton(handoff)
+        payload = json.dumps(skeleton.model_dump(mode="json"), ensure_ascii=False, indent=2)
+        if output:
+            output.write_text(payload, encoding="utf-8")
+            typer.echo(f"Adapter skeleton written to {output}")
+            return
+        typer.echo(payload)
+    except ChronicleError as exc:
+        handle_error(exc, json_output=True)
 
 
 @package_app.command("review")

@@ -2,6 +2,13 @@
 
 This document defines a descriptive adapter skeleton for downstream consumers that want to import Chronicle Stack handoff data.
 
+You can regenerate the same skeleton shape from the current repository state with:
+
+```bash
+chronicle package query-engine-adapter --query "release planning context"
+chronicle package query-engine-adapter --query "graph context" -o adapter-skeleton.json
+```
+
 ## Example artifact
 
 - JSON skeleton: `docs/examples/query-engine-import-adapter-skeleton.json`

@@ -69,6 +69,7 @@ Current state:
 - retrieval-plan payloads now include a read-only downstream query-engine handoff contract
 - runtime detail view now surfaces the handoff as a non-authoritative preview for derived consumers
 - import validation now checks the handoff against the current derived graph export without performing any downstream import
+- package CLI can now regenerate a descriptive downstream query-engine adapter skeleton from the current handoff
 
 ## Completion criteria by lane
 

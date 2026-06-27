@@ -163,6 +163,28 @@ def test_runtime_retrieve_plan_json_shape(tmp_path):
     assert "import_validation" in payload["query_engine_handoff"]
 
 
+def test_package_query_engine_adapter_json_shape(tmp_path):
+    """chronicle package query-engine-adapter must expose stable skeleton keys."""
+    runner = _setup_cli(tmp_path)
+    runner.invoke(app, ["init", "--title", "Adapter Shape"])
+
+    result = runner.invoke(app, ["package", "query-engine-adapter", "--query", "shape"])
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    for key in [
+        "contract_version",
+        "skeleton_kind",
+        "handoff_contract_version",
+        "required_inputs",
+        "recommended_sequence",
+        "prohibited_capabilities",
+        "non_goals",
+        "notes",
+    ]:
+        assert key in payload, f"Missing key '{key}' in package query-engine-adapter"
+
+
 def test_runtime_invoke_plan_json_shape(tmp_path):
     """chronicle runtime invoke-plan --json must expose stable invocation-plan keys."""
     runner = _setup_cli(tmp_path)

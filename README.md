@@ -149,6 +149,7 @@ chronicle injection plan --task "Draft release notes" --record
 chronicle export --format yaml
 chronicle export profile --format yaml --profile public-review
 chronicle package context --purpose "Sayane review" --target local
+chronicle package query-engine-adapter --query "What context should a downstream query engine inspect?"
 chronicle export --format graph-json -o graph.json
 chronicle export --format html -o chronicle-review-console.html
 chronicle ai-index status
