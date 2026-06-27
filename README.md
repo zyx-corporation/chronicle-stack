@@ -164,6 +164,8 @@ chronicle review queue
 chronicle review approve --event <EVENT_ID> --reviewer <NAME>
 chronicle review reject --event <EVENT_ID> --reviewer <NAME>
 chronicle review request-changes --event <EVENT_ID> --reviewer <NAME>
+chronicle artifact apply-proposal --event <PROPOSAL_EVENT_ID>
+chronicle context apply-proposal --event <PROPOSAL_EVENT_ID>
 chronicle ui-smoke
 chronicle ui-smoke --json
 chronicle ui

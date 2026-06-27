@@ -2610,7 +2610,17 @@ class ChronicleUIDataService:
 
     def proposal_records(self) -> dict[str, Any]:
         self.chronicle.require_initialized()
-        return {"proposals": self.proposals.list_proposals()}
+        rows = self.proposals.list_proposals()
+        for row in rows:
+            proposal = row.get("proposal", {})
+            target_kind = str(proposal.get("target_kind", ""))
+            event_id = str(row.get("event_id", ""))
+            if row.get("apply_ready") is True:
+                if target_kind == "artifact":
+                    row["cli_apply_hint"] = f"chronicle artifact apply-proposal --event {event_id}"
+                elif target_kind == "context":
+                    row["cli_apply_hint"] = f"chronicle context apply-proposal --event {event_id}"
+        return {"proposals": rows}
 
     def decisions(self) -> dict[str, Any]:
         self.chronicle.require_initialized()

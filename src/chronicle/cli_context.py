@@ -177,5 +177,35 @@ def context_propose_update_cmd(
         handle_error(exc, json_output)
 
 
+@context_app.command("apply-proposal")
+def context_apply_proposal_cmd(
+    event_id: Annotated[str, typer.Option("--event", help="Approved context proposal event to apply.")],
+    summary: Annotated[str, typer.Option("--summary")] = "",
+    json_output: Annotated[bool, typer.Option("--json")] = False,
+) -> None:
+    """Apply an approved context proposal through a new append-only Context snapshot."""
+    try:
+        context = ProposalService().apply_context_proposal(
+            proposal_event_id=event_id,
+            summary=summary,
+        )
+        if json_output:
+            typer.echo(
+                json.dumps(
+                    {
+                        "context": context.model_dump(mode="json"),
+                        "applied_from_proposal_event_id": event_id,
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                )
+            )
+        else:
+            typer.echo(f"Context proposal applied: {event_id}")
+            typer.echo(f"  Context: {context.context_id}")
+    except ChronicleError as exc:
+        handle_error(exc, json_output)
+
+
 if __name__ == "__main__":
     context_app()

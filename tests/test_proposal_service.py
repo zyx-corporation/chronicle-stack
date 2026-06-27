@@ -12,6 +12,7 @@ from chronicle.services.artifact_service import ArtifactService
 from chronicle.services.chronicle_service import ChronicleService
 from chronicle.services.context_service import ContextService
 from chronicle.services.proposal_service import ProposalService
+from chronicle.services.review_service import ReviewService
 
 
 @pytest.fixture
@@ -53,6 +54,56 @@ def test_context_proposal_records_target_context(chronicle_root):
     assert proposal.context_ids == [context.context_id]
     assert proposal.payload["proposal"]["proposed_fields"]["summary"] == "v2 summary proposal"
     assert proposal.payload["proposal"]["proposed_fields"]["tags"] == ["review", "draft"]
+
+
+def test_apply_artifact_proposal_after_approval_updates_artifact(chronicle_root, tmp_path):
+    source = tmp_path / "artifact.md"
+    source.write_text("artifact v1", encoding="utf-8")
+    artifact, _version = ArtifactService(chronicle_root).create(
+        title="Proposal Artifact",
+        artifact_type=ArtifactType.DOCUMENT,
+        source_file=source,
+    )
+    proposal = ProposalService(chronicle_root).propose_artifact_update(
+        artifact_id=artifact.artifact_id,
+        summary="Approved artifact proposal",
+        content="artifact v2 proposal",
+        proposed_title="Renamed Artifact",
+    )
+    ReviewService(chronicle_root).approve(event_id=proposal.event_id, reviewer="alice")
+
+    updated, version = ProposalService(chronicle_root).apply_artifact_proposal(
+        proposal_event_id=proposal.event_id
+    )
+
+    assert updated.title == "Renamed Artifact"
+    assert version.change_summary == "Approved artifact proposal"
+    assert ArtifactService(chronicle_root).chronicle.artifact_store.read_current(artifact.artifact_id) == (
+        "artifact v2 proposal"
+    )
+    proposals = ProposalService(chronicle_root).list_proposals()
+    assert proposals[0]["apply_ready"] is False
+    assert proposals[0]["applied"] is True
+
+
+def test_apply_context_proposal_after_approval_updates_context(chronicle_root):
+    context = ContextService(chronicle_root).add_context(title="Proposal Context", summary="v1")
+    proposal = ProposalService(chronicle_root).propose_context_update(
+        context_id=context.context_id,
+        summary="Approved context proposal",
+        proposed_title="Renamed Context",
+        proposed_summary="v2 summary proposal",
+        proposed_tags=["review", "draft"],
+    )
+    ReviewService(chronicle_root).approve(event_id=proposal.event_id, reviewer="alice")
+
+    updated = ProposalService(chronicle_root).apply_context_proposal(
+        proposal_event_id=proposal.event_id
+    )
+
+    assert updated.title == "Renamed Context"
+    assert updated.summary == "v2 summary proposal"
+    assert updated.tags == ["review", "draft"]
 
 
 def test_artifact_propose_update_cli_json(tmp_path):
@@ -119,3 +170,77 @@ def test_context_propose_update_cli_json(tmp_path):
     payload = json.loads(result.stdout)
     assert payload["payload"]["proposal"]["proposal_kind"] == "context_update"
     assert payload["payload"]["proposal"]["proposed_fields"]["summary"] == "v2 summary proposal"
+
+
+def test_artifact_apply_proposal_cli_json(tmp_path):
+    os.chdir(tmp_path)
+    runner = CliRunner()
+    runner.invoke(app, ["init", "--title", "Artifact Apply CLI"])
+    source = tmp_path / "artifact.md"
+    source.write_text("artifact v1", encoding="utf-8")
+    create = runner.invoke(
+        app,
+        ["artifact", "create", "--title", "CLI Artifact", "--type", "document", "--file", str(source), "--json"],
+    )
+    artifact_id = json.loads(create.stdout)["artifact"]["artifact_id"]
+    proposed = runner.invoke(
+        app,
+        [
+            "artifact",
+            "propose-update",
+            "--artifact",
+            artifact_id,
+            "--summary",
+            "Apply me",
+            "--content",
+            "artifact v2 proposal",
+            "--json",
+        ],
+    )
+    proposal_event_id = json.loads(proposed.stdout)["event_id"]
+    runner.invoke(app, ["review", "approve", "--event", proposal_event_id, "--reviewer", "alice"])
+
+    result = runner.invoke(
+        app,
+        ["artifact", "apply-proposal", "--event", proposal_event_id, "--json"],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["applied_from_proposal_event_id"] == proposal_event_id
+
+
+def test_context_apply_proposal_cli_json(tmp_path):
+    os.chdir(tmp_path)
+    runner = CliRunner()
+    runner.invoke(app, ["init", "--title", "Context Apply CLI"])
+    created = runner.invoke(
+        app,
+        ["add-context", "--title", "CLI Context", "--summary", "v1", "--json"],
+    )
+    context_id = json.loads(created.stdout)["context_id"]
+    proposed = runner.invoke(
+        app,
+        [
+            "context",
+            "propose-update",
+            "--context",
+            context_id,
+            "--summary",
+            "Apply me",
+            "--body",
+            "v2 summary proposal",
+            "--json",
+        ],
+    )
+    proposal_event_id = json.loads(proposed.stdout)["event_id"]
+    runner.invoke(app, ["review", "approve", "--event", proposal_event_id, "--reviewer", "alice"])
+
+    result = runner.invoke(
+        app,
+        ["context", "apply-proposal", "--event", proposal_event_id, "--json"],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["applied_from_proposal_event_id"] == proposal_event_id

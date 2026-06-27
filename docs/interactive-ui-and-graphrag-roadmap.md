@@ -43,7 +43,7 @@ Current state:
 
 - append-only proposal records are available for artifact/context update intent
 - proposal records surface in local UI artifact/context read models and `/api/proposals`
-- approval remains separate from CLI apply so accepted proposals do not mutate targets implicitly
+- approved proposals can be applied through explicit CLI apply commands with duplicate-apply protection
 
 ### 4. Graph export hardening and local retrieval adapter
 

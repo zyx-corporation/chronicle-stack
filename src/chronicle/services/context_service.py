@@ -122,3 +122,47 @@ class ContextService:
         if context_id not in contexts:
             raise ContextNotFoundError(context_id)
         return contexts[context_id]
+
+    def update_context(
+        self,
+        *,
+        context_id: str,
+        title: str | None = None,
+        summary: str | None = None,
+        scope: ContextScope | None = None,
+        tags: list[str] | None = None,
+        actor: Actor = Actor.USER,
+        event_summary: str = "",
+        extra_payload: dict | None = None,
+        source: SourceProvenance | None = None,
+    ) -> Context:
+        self.chronicle.require_initialized()
+        self.chronicle.rebuild_indexes()
+        contexts = self.chronicle.index.load_contexts()
+        if context_id not in contexts:
+            raise ContextNotFoundError(context_id)
+
+        current = contexts[context_id]
+        updated = current.model_copy(
+            update={
+                "title": title if title is not None and title.strip() else current.title,
+                "summary": summary if summary is not None else current.summary,
+                "scope": scope if scope is not None else current.scope,
+                "scope_hint": ScopeHint((scope if scope is not None else current.scope).value),
+                "tags": tags if tags is not None else current.tags,
+                "source": source if source is not None else current.source,
+            }
+        )
+        payload = {"context": updated.model_dump(mode="json")}
+        if extra_payload:
+            payload.update(extra_payload)
+        self.chronicle.record_event(
+            event_type=EventType.CONTEXT_ADDED,
+            actor=actor,
+            summary=event_summary or f"Context updated: {updated.title}",
+            payload=payload,
+            context_ids=[context_id],
+            source=source,
+        )
+        self.chronicle.rebuild_indexes()
+        return updated

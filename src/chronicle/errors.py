@@ -81,6 +81,42 @@ class ProposalChangeMissingError(ChronicleError):
         )
 
 
+class ProposalNotFoundError(ChronicleError):
+    def __init__(self, event_id: str) -> None:
+        super().__init__(
+            code="PROPOSAL_NOT_FOUND",
+            message=f"Proposal event not found: {event_id}",
+            hint="Pass an `evt_...` record created by `chronicle artifact propose-update` or `chronicle context propose-update`.",
+        )
+
+
+class ProposalApprovalRequiredError(ChronicleError):
+    def __init__(self, event_id: str) -> None:
+        super().__init__(
+            code="PROPOSAL_APPROVAL_REQUIRED",
+            message=f"Approved review decision required before applying proposal: {event_id}",
+            hint="Run `chronicle review approve --event <proposal_event_id> --reviewer <name>` first.",
+        )
+
+
+class ProposalAlreadyAppliedError(ChronicleError):
+    def __init__(self, event_id: str) -> None:
+        super().__init__(
+            code="PROPOSAL_ALREADY_APPLIED",
+            message=f"Proposal has already been applied: {event_id}",
+            hint="Inspect artifact/context history or `/api/proposals` for the existing apply result.",
+        )
+
+
+class ProposalTargetKindMismatchError(ChronicleError):
+    def __init__(self, event_id: str, expected: str, actual: str) -> None:
+        super().__init__(
+            code="PROPOSAL_TARGET_KIND_MISMATCH",
+            message=f"Proposal {event_id} targets `{actual}`, not `{expected}`.",
+            hint="Use the apply command that matches the proposal kind.",
+        )
+
+
 class VersionNotFoundError(ChronicleError):
     def __init__(self, version_id: str) -> None:
         super().__init__(

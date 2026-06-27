@@ -7,12 +7,20 @@ from typing import Any
 from chronicle.errors import (
     ArtifactNotFoundError,
     ContextNotFoundError,
+    ProposalAlreadyAppliedError,
+    ProposalApprovalRequiredError,
     ProposalChangeMissingError,
+    ProposalNotFoundError,
+    ProposalTargetKindMismatchError,
     SourceFileNotFoundError,
 )
 from chronicle.models.context import ContextScope
 from chronicle.models.event import Actor, EventType, ReviewStatus
+from chronicle.models.review import ReviewDisposition
+from chronicle.models.source import SourceProvenance
+from chronicle.services.artifact_service import ArtifactService
 from chronicle.services.chronicle_service import ChronicleService
+from chronicle.services.context_service import ContextService
 
 
 def _content_preview(value: str, *, limit: int = 280) -> str:
@@ -74,6 +82,7 @@ class ProposalService:
                 "length": len(proposed_content),
                 "sha256": hashlib.sha256(proposed_content.encode("utf-8")).hexdigest(),
                 "preview": _content_preview(proposed_content),
+                "content": proposed_content,
                 "source_file": str(source_file) if source_file is not None else None,
             }
 
@@ -143,6 +152,94 @@ class ProposalService:
         self.chronicle.rebuild_indexes()
         return event
 
+    def apply_artifact_proposal(
+        self,
+        *,
+        proposal_event_id: str,
+        summary: str = "",
+        actor: Actor = Actor.ASSISTANT,
+    ):
+        proposal_event = self._proposal_event(proposal_event_id)
+        proposal = proposal_event.payload["proposal"]
+        if proposal.get("proposal_kind") != "artifact_update":
+            raise ProposalTargetKindMismatchError(
+                proposal_event_id,
+                expected="artifact_update",
+                actual=str(proposal.get("proposal_kind", "unknown")),
+            )
+        self._require_approved_and_unapplied(proposal_event_id)
+        artifact_id = str(proposal.get("target_id", ""))
+        proposed_fields = proposal.get("proposed_fields", {})
+        proposed_content = proposal.get("proposed_content", {})
+        content = proposed_content.get("content")
+        if not isinstance(content, str):
+            content = ArtifactService(self.chronicle.paths.root).chronicle.artifact_store.read_current(artifact_id)
+        updated_artifact, version = ArtifactService(self.chronicle.paths.root).update(
+            artifact_id=artifact_id,
+            content=content,
+            summary=summary or str(proposal.get("proposal_summary", "")) or "Apply approved artifact proposal",
+            title=str(proposed_fields.get("title", "") or "") or None,
+            actor=actor,
+            extra_payload={
+                "proposal_apply": {
+                    "proposal_event_id": proposal_event_id,
+                    "proposal_kind": "artifact_update",
+                    "target_kind": "artifact",
+                    "target_id": artifact_id,
+                }
+            },
+            source=SourceProvenance(
+                source_type="proposal_apply",
+                source_ref=proposal_event_id,
+                source_tool="chronicle-proposal-apply",
+                source_model="human-approved-proposal",
+            ),
+        )
+        return updated_artifact, version
+
+    def apply_context_proposal(
+        self,
+        *,
+        proposal_event_id: str,
+        summary: str = "",
+        actor: Actor = Actor.USER,
+    ):
+        proposal_event = self._proposal_event(proposal_event_id)
+        proposal = proposal_event.payload["proposal"]
+        if proposal.get("proposal_kind") != "context_update":
+            raise ProposalTargetKindMismatchError(
+                proposal_event_id,
+                expected="context_update",
+                actual=str(proposal.get("proposal_kind", "unknown")),
+            )
+        self._require_approved_and_unapplied(proposal_event_id)
+        context_id = str(proposal.get("target_id", ""))
+        proposed_fields = proposal.get("proposed_fields", {})
+        updated = ContextService(self.chronicle.paths.root).update_context(
+            context_id=context_id,
+            title=str(proposed_fields.get("title", "") or "") or None,
+            summary=proposed_fields.get("summary"),
+            scope=ContextScope(str(proposed_fields["scope"])) if "scope" in proposed_fields else None,
+            tags=list(proposed_fields["tags"]) if isinstance(proposed_fields.get("tags"), list) else None,
+            actor=actor,
+            event_summary=summary or str(proposal.get("proposal_summary", "")) or "Apply approved context proposal",
+            extra_payload={
+                "proposal_apply": {
+                    "proposal_event_id": proposal_event_id,
+                    "proposal_kind": "context_update",
+                    "target_kind": "context",
+                    "target_id": context_id,
+                }
+            },
+            source=SourceProvenance(
+                source_type="proposal_apply",
+                source_ref=proposal_event_id,
+                source_tool="chronicle-proposal-apply",
+                source_model="human-approved-proposal",
+            ),
+        )
+        return updated
+
     def list_proposals(self) -> list[dict[str, Any]]:
         self.chronicle.require_initialized()
         rows: list[dict[str, Any]] = []
@@ -150,6 +247,9 @@ class ProposalService:
             proposal = getattr(event, "payload", {}).get("proposal")
             if not isinstance(proposal, dict):
                 continue
+            latest_disposition = self._latest_review_disposition(event.event_id)
+            applied = self._already_applied(event.event_id)
+            apply_ready = latest_disposition == ReviewDisposition.APPROVE.value and not applied
             rows.append(
                 {
                     "event_id": event.event_id,
@@ -157,6 +257,9 @@ class ProposalService:
                     "summary": event.summary,
                     "review_status": getattr(event.review_status, "value", None),
                     "proposal": proposal,
+                    "latest_review_disposition": latest_disposition,
+                    "apply_ready": apply_ready,
+                    "applied": applied,
                     "artifact_id": event.artifact_id,
                     "context_ids": list(event.context_ids),
                 }
@@ -171,3 +274,36 @@ class ProposalService:
             if row.get("proposal", {}).get("target_kind") == target_kind
             and row.get("proposal", {}).get("target_id") == target_id
         ]
+
+    def _proposal_event(self, proposal_event_id: str):
+        self.chronicle.require_initialized()
+        for event in self.chronicle.jsonl.read_all():
+            proposal = getattr(event, "payload", {}).get("proposal")
+            if event.event_id == proposal_event_id and isinstance(proposal, dict):
+                return event
+        raise ProposalNotFoundError(proposal_event_id)
+
+    def _latest_review_disposition(self, proposal_event_id: str) -> str | None:
+        latest: str | None = None
+        for event in self.chronicle.jsonl.read_all():
+            payload = getattr(event, "payload", {})
+            if payload.get("review_decision") is not True:
+                continue
+            if payload.get("target_event_id") != proposal_event_id:
+                continue
+            disposition = payload.get("disposition")
+            latest = str(disposition) if disposition else None
+        return latest
+
+    def _already_applied(self, proposal_event_id: str) -> bool:
+        for event in self.chronicle.jsonl.read_all():
+            proposal_apply = getattr(event, "payload", {}).get("proposal_apply")
+            if isinstance(proposal_apply, dict) and proposal_apply.get("proposal_event_id") == proposal_event_id:
+                return True
+        return False
+
+    def _require_approved_and_unapplied(self, proposal_event_id: str) -> None:
+        if self._already_applied(proposal_event_id):
+            raise ProposalAlreadyAppliedError(proposal_event_id)
+        if self._latest_review_disposition(proposal_event_id) != ReviewDisposition.APPROVE.value:
+            raise ProposalApprovalRequiredError(proposal_event_id)

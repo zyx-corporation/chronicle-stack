@@ -84,7 +84,10 @@ class ArtifactService:
         source_file: Path | None = None,
         content: str | None = None,
         summary: str = "",
+        title: str | None = None,
         actor: Actor = Actor.ASSISTANT,
+        extra_payload: dict | None = None,
+        source: SourceProvenance | None = None,
     ) -> tuple[Artifact, ArtifactVersion]:
         if source_file is None and content is None:
             raise ArtifactContentMissingError()
@@ -111,9 +114,10 @@ class ArtifactService:
             change_summary=summary or "updated",
         )
 
-        updated_artifact = artifact.model_copy(
-            update={"current_version_id": version_id, "updated_at": now}
-        )
+        artifact_updates = {"current_version_id": version_id, "updated_at": now}
+        if title is not None and title.strip():
+            artifact_updates["title"] = title
+        updated_artifact = artifact.model_copy(update=artifact_updates)
 
         self.chronicle.artifact_store.update_artifact_files(
             artifact_id, version, source_file=source_file, content=content
@@ -129,8 +133,10 @@ class ArtifactService:
             payload={
                 "artifact": updated_artifact.model_dump(mode="json"),
                 "version": version.model_dump(mode="json"),
+                **(extra_payload or {}),
             },
             artifact_id=artifact_id,
+            source=source,
         )
         self.chronicle.append_event(event)
         self.chronicle.rebuild_indexes()

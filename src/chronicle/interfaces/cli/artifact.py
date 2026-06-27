@@ -150,6 +150,38 @@ def artifact_propose_update_cmd(
         handle_error(exc, json_output)
 
 
+@artifact_app.command("apply-proposal")
+def artifact_apply_proposal_cmd(
+    event_id: Annotated[str, typer.Option("--event", help="Approved artifact proposal event to apply.")],
+    summary: Annotated[str, typer.Option("--summary")] = "",
+    json_output: Annotated[bool, typer.Option("--json")] = False,
+) -> None:
+    """Apply an approved artifact proposal through the normal versioned artifact write path."""
+    try:
+        updated, version = ProposalService().apply_artifact_proposal(
+            proposal_event_id=event_id,
+            summary=summary,
+        )
+        if json_output:
+            typer.echo(
+                json.dumps(
+                    {
+                        "artifact": updated.model_dump(mode="json"),
+                        "version": version.model_dump(mode="json"),
+                        "applied_from_proposal_event_id": event_id,
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                )
+            )
+        else:
+            typer.echo(f"Artifact proposal applied: {event_id}")
+            typer.echo(f"  Artifact: {updated.artifact_id}")
+            typer.echo(f"  New version: {version.version_id}")
+    except ChronicleError as exc:
+        handle_error(exc, json_output)
+
+
 @artifact_app.command("list")
 def artifact_list_cmd(json_output: Annotated[bool, typer.Option("--json")] = False) -> None:
     """List all Artifacts."""

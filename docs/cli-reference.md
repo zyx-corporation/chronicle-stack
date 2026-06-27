@@ -112,6 +112,19 @@ chronicle artifact history --artifact art_xxx --json
 
 `artifact update` では `--file` の指定が必須です。指定しない場合 `ARTIFACT_CONTENT_MISSING` エラーが発生します。
 
+### chronicle artifact propose-update / apply-proposal
+
+```bash
+chronicle artifact propose-update \
+  --artifact art_xxx \
+  --summary "Propose title/body change" \
+  --content "proposed body"
+
+chronicle artifact apply-proposal --event evt_xxx
+```
+
+`apply-proposal` は承認済み proposal event のみを受け付け、同じ proposal の二重 apply は拒否されます。
+
 ## chronicle decision record
 
 ```bash
@@ -628,6 +641,19 @@ chronicle review reject --event evt_xxx --reviewer alice --note "reason"
 chronicle review request-changes --event evt_xxx --reviewer alice --note "revise section 2"
 chronicle review approve --event evt_xxx --reviewer alice --json
 ```
+
+### chronicle context propose-update / apply-proposal
+
+```bash
+chronicle context propose-update \
+  --context ctx_xxx \
+  --summary "Propose context change" \
+  --body "updated summary"
+
+chronicle context apply-proposal --event evt_xxx
+```
+
+`context apply-proposal` は approval 済み proposal を新しい append-only Context snapshot として適用します。
 
 方針:
 

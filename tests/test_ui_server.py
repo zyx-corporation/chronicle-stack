@@ -823,16 +823,31 @@ def test_ui_data_service_read_endpoints(tmp_path):
         summary="UI artifact proposal",
         content="UI artifact proposal body",
     )
+    approved_context_proposal = ProposalService(tmp_path).propose_context_update(
+        context_id=ids["context_id"],
+        summary="Approved UI context proposal",
+        proposed_summary="Approved body",
+    )
+    ReviewService(tmp_path).approve(event_id=approved_context_proposal.event_id, reviewer="alice")
     service = ChronicleUIDataService(tmp_path)
 
     assert service.contexts()["contexts"][0]["title"] == "UI Context"
-    assert service.contexts()["contexts"][0]["proposal_count"] == 1
+    assert service.contexts()["contexts"][0]["proposal_count"] == 2
     assert service.artifacts()["artifacts"][0]["title"] == "UI Artifact"
     assert service.artifacts()["artifacts"][0]["proposal_count"] == 1
-    assert len(service.proposal_records()["proposals"]) == 2
+    assert len(service.proposal_records()["proposals"]) == 3
+    assert any(
+        proposal["apply_ready"] is True
+        and proposal["cli_apply_hint"].startswith("chronicle context apply-proposal --event evt_")
+        for proposal in service.proposal_records()["proposals"]
+        if proposal["event_id"] == approved_context_proposal.event_id
+    )
     assert service.decisions()["decisions"][0]["reason"] == "UI decision"
     assert service.boundary_rules()["boundary_rules"][0]["reason"] == "UI boundary"
-    assert service.audit_events()["audit_events"][0]["summary"] == "UI audit event"
+    assert any(
+        event["summary"] == "UI audit event"
+        for event in service.audit_events()["audit_events"]
+    )
     assert service.lifecycle_markers()["lifecycle_markers"][0]["reason"] == "UI lifecycle marker"
     assert len(service.runtime_records()["runtime_records"]) == 2
     assert service.runtime_records()["runtime_records"][0]["runtime_record_preview"]["title"]
