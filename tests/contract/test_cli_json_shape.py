@@ -201,6 +201,7 @@ def test_package_query_engine_bundle_manifest_json_shape(tmp_path):
     for key in [
         "contract_version",
         "bundle_kind",
+        "query",
         "handoff_contract_version",
         "graph_export_contract_version",
         "adapter_skeleton_contract_version",
@@ -214,6 +215,56 @@ def test_package_query_engine_bundle_manifest_json_shape(tmp_path):
         "notes",
     ]:
         assert key in payload, f"Missing key '{key}' in package query-engine-bundle manifest"
+
+
+def test_package_query_engine_trial_record_json_shape(tmp_path):
+    """chronicle package query-engine-trial-record --json must expose stable event and payload keys."""
+    runner = _setup_cli(tmp_path)
+    runner.invoke(app, ["init", "--title", "Trial Record Shape"])
+    output_dir = tmp_path / "bundle"
+    runner.invoke(
+        app,
+        ["package", "query-engine-bundle", "--query", "shape", "--output-dir", str(output_dir)],
+    )
+
+    result = runner.invoke(
+        app,
+        [
+            "package",
+            "query-engine-trial-record",
+            "--bundle-dir",
+            str(output_dir),
+            "--reviewer",
+            "shape-tester",
+            "--consumer",
+            "shape-demo",
+            "--insufficient",
+            "--missing-behavior",
+            "external runtime belongs downstream",
+            "--json",
+        ],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    for key in ["event_id", "event_type", "actor", "summary", "payload"]:
+        assert key in payload, f"Missing key '{key}' in package query-engine-trial-record event"
+    trial_payload = payload["payload"]["query_engine_trial_record"]
+    for key in [
+        "contract_version",
+        "record_kind",
+        "query",
+        "bundle_dir",
+        "reviewer",
+        "downstream_consumer",
+        "sufficient",
+        "files_reviewed",
+        "import_validation_status",
+        "import_ready",
+        "missing_behavior",
+        "notes",
+    ]:
+        assert key in trial_payload, f"Missing key '{key}' in query-engine trial payload"
 
 
 def test_runtime_invoke_plan_json_shape(tmp_path):

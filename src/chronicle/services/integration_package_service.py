@@ -102,6 +102,7 @@ class IntegrationPackageService:
         skeleton = self.query_engine_adapter_skeleton.build(handoff)
         import_validation = handoff.import_validation
         return QueryEngineHandoffBundleManifest(
+            query=handoff.query,
             handoff_contract_version=handoff.contract_version,
             graph_export_contract_version=handoff.graph_export_contract_version,
             adapter_skeleton_contract_version=skeleton.contract_version,

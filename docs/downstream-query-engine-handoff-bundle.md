@@ -24,6 +24,7 @@ chronicle package query-engine-bundle --query "release planning context" --outpu
 - inspect the derived `graph-json` export
 - review the bundled acceptance checklist before asking for a separate implementation repo
 - record the real downstream trial outcome with the bundled trial report template
+- persist the trial result back into Chronicle with the trial-record command when needed
 - hand the bundle to a downstream consumer repo without making Chronicle Stack itself executable as a query engine
 
 ## Boundary

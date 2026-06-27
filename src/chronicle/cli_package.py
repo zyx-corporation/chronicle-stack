@@ -8,8 +8,12 @@ import typer
 
 from chronicle.errors import ChronicleError
 from chronicle.interfaces.cli.common import handle_error
+from chronicle.models.event import Actor, Confidence, EventType, ReviewStatus
 from chronicle.models.integration_package import IntegrationPackageRecord, IntegrationTargetEnvironment
+from chronicle.models.integration_adapter import QueryEngineTrialRecord
 from chronicle.models.package_review import PackageReviewStatus
+from chronicle.models.source import SourceProvenance
+from chronicle.services.chronicle_service import ChronicleService
 from chronicle.services.graph_export_service import GraphExportService
 from chronicle.services.integration_package_service import IntegrationPackageService
 from chronicle.services.package_review_service import PackageReviewService
@@ -99,6 +103,30 @@ def _query_engine_bundle_trial_report_template(*, query: str) -> str:
             "- [ ] Any requested next step stays outside Chronicle Stack core",
         ]
     )
+
+
+def _load_bundle_manifest(bundle_dir: Path) -> dict[str, Any]:
+    manifest_path = bundle_dir / "bundle_manifest.json"
+    if not bundle_dir.exists():
+        raise ChronicleError(
+            code="QUERY_ENGINE_BUNDLE_DIR_NOT_FOUND",
+            message=f"Query-engine bundle directory not found: {bundle_dir}",
+            hint="Generate one with `chronicle package query-engine-bundle --query ... --output-dir ...` first.",
+        )
+    if not manifest_path.exists():
+        raise ChronicleError(
+            code="QUERY_ENGINE_BUNDLE_MANIFEST_NOT_FOUND",
+            message=f"Bundle manifest not found: {manifest_path}",
+            hint="Re-generate the bundle so `bundle_manifest.json` is present.",
+        )
+    try:
+        return json.loads(manifest_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise ChronicleError(
+            code="QUERY_ENGINE_BUNDLE_MANIFEST_INVALID",
+            message=f"Bundle manifest is not valid JSON: {manifest_path}",
+            hint=str(exc),
+        ) from exc
 
 
 @package_app.command("context")
@@ -217,6 +245,61 @@ def query_engine_bundle_cmd(
         typer.echo(f"Query-engine handoff bundle written to {output_dir}")
     except ChronicleError as exc:
         handle_error(exc, json_output=True)
+
+
+@package_app.command("query-engine-trial-record")
+def query_engine_trial_record_cmd(
+    bundle_dir: Annotated[Path, typer.Option("--bundle-dir", help="Existing downstream handoff bundle directory.")],
+    reviewer: Annotated[str, typer.Option("--reviewer", help="Reviewer recording the downstream trial result.")],
+    downstream_consumer: Annotated[str, typer.Option("--consumer", help="Downstream consumer or repo name.")],
+    sufficient: Annotated[bool, typer.Option("--sufficient/--insufficient", help="Whether the bundle was sufficient for the downstream trial.")] = False,
+    missing_behavior: Annotated[str, typer.Option("--missing-behavior", help="Describe missing behavior if the bundle was insufficient.")] = "",
+    note: Annotated[list[str] | None, typer.Option("--note", help="Additional review note. Repeatable.")] = None,
+    json_output: Annotated[bool, typer.Option("--json")] = False,
+) -> None:
+    """Record a downstream query-engine bundle trial as a Chronicle assistant_output event."""
+    try:
+        manifest = _load_bundle_manifest(bundle_dir)
+        trial_record = QueryEngineTrialRecord(
+            query=str(manifest.get("query", "")),
+            bundle_dir=str(bundle_dir),
+            reviewer=reviewer,
+            downstream_consumer=downstream_consumer,
+            sufficient=sufficient,
+            files_reviewed=[str(item) for item in manifest.get("files", [])],
+            import_validation_status=str(manifest.get("import_validation_status", "advisory_only")),
+            import_ready=bool(manifest.get("import_ready", False)),
+            missing_behavior=missing_behavior if not sufficient else "",
+            notes=list(note or []),
+        )
+        event = ChronicleService().record_event(
+            event_type=EventType.ASSISTANT_OUTPUT,
+            actor=Actor.ASSISTANT,
+            summary=(
+                f"Query-engine bundle trial recorded: {'sufficient' if sufficient else 'insufficient'}"
+            ),
+            payload={
+                "query_engine_trial_record": trial_record.model_dump(mode="json"),
+                "bundle_manifest_path": str(bundle_dir / "bundle_manifest.json"),
+            },
+            source=SourceProvenance(
+                source_type="file",
+                source_ref=str(bundle_dir),
+                source_tool="chronicle-package",
+                source_file=str(bundle_dir / "TRIAL_REPORT_TEMPLATE.md"),
+            ),
+            review_status=ReviewStatus.NEEDS_REVIEW,
+            confidence=Confidence.LOW,
+        )
+        if json_output:
+            typer.echo(json.dumps(event.model_dump(mode="json"), ensure_ascii=False, indent=2))
+            return
+        typer.echo(f"Trial record event: {event.event_id}")
+        typer.echo(f"  Reviewer: {reviewer}")
+        typer.echo(f"  Consumer: {downstream_consumer}")
+        typer.echo(f"  Sufficient: {sufficient}")
+    except ChronicleError as exc:
+        handle_error(exc, json_output)
 
 
 @package_app.command("review")

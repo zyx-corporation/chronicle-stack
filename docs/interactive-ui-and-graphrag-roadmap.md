@@ -73,6 +73,7 @@ Current state:
 - package CLI can now emit a local downstream handoff bundle directory for consumer repos
 - handoff bundles now include a descriptive acceptance checklist before any downstream implementation-repo escalation
 - handoff bundles now include a trial report template so real downstream evaluations can be recorded before escalation
+- downstream trial outcomes can now be written back into Chronicle as review-oriented assistant-output records
 
 ## Completion criteria by lane
 

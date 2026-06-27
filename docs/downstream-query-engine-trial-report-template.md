@@ -14,3 +14,5 @@ Use this template after a real downstream consumer trial to record whether the l
 ## Escalation rule
 
 Ask for a separate downstream implementation repo only when repeated real trials show that the local bundle is insufficient and the missing behavior belongs outside Chronicle Stack core.
+
+After a real trial, persist the outcome with `docs/downstream-query-engine-trial-record.md`.

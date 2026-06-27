@@ -64,6 +64,7 @@ def test_package_query_engine_bundle_writes_bundle_files(tmp_path: Path) -> None
     assert (output_dir / "TRIAL_REPORT_TEMPLATE.md").exists()
     manifest = json.loads((output_dir / "bundle_manifest.json").read_text(encoding="utf-8"))
     assert manifest["bundle_kind"] == "query_engine_handoff_bundle"
+    assert manifest["query"] == "graph context"
     assert manifest["acceptance_checklist_included"] is True
     assert manifest["trial_report_template_included"] is True
     assert "downstream implementation repo is requested only if this bundle is insufficient" in (
@@ -73,3 +74,40 @@ def test_package_query_engine_bundle_writes_bundle_files(tmp_path: Path) -> None
         output_dir / "TRIAL_REPORT_TEMPLATE.md"
     ).read_text(encoding="utf-8")
     assert "Query-engine handoff bundle written to" in result.stdout
+
+
+def test_package_query_engine_trial_record_persists_assistant_output_event(tmp_path: Path) -> None:
+    os.chdir(str(tmp_path))
+    runner.invoke(app, ["init", "--title", "Bundle Trial Record"])
+    output_dir = tmp_path / "handoff-bundle"
+    runner.invoke(
+        app,
+        ["package", "query-engine-bundle", "--query", "graph context", "--output-dir", str(output_dir)],
+    )
+
+    result = runner.invoke(
+        app,
+        [
+            "package",
+            "query-engine-trial-record",
+            "--bundle-dir",
+            str(output_dir),
+            "--reviewer",
+            "tester",
+            "--consumer",
+            "downstream-demo",
+            "--sufficient",
+            "--note",
+            "trial completed locally",
+            "--json",
+        ],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["event_type"] == "assistant_output"
+    assert payload["payload"]["query_engine_trial_record"]["record_kind"] == "query_engine_bundle_trial"
+    assert payload["payload"]["query_engine_trial_record"]["query"] == "graph context"
+    assert payload["payload"]["query_engine_trial_record"]["reviewer"] == "tester"
+    assert payload["payload"]["query_engine_trial_record"]["downstream_consumer"] == "downstream-demo"
+    assert payload["payload"]["query_engine_trial_record"]["sufficient"] is True
