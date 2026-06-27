@@ -125,6 +125,13 @@ def runtime_retrieve_plan_cmd(
         typer.echo(f"Vector hits: {len(plan.vector_hits)}")
         typer.echo(f"Graph hits: {len(plan.graph_hits)}")
         typer.echo(f"Chronicle hits: {len(plan.chronicle_hits)}")
+        if plan.composition is not None:
+            typer.echo(
+                "Composed coverage: "
+                f"total={plan.composition.total_hit_count} "
+                f"unique={plan.composition.unique_identifier_count} "
+                f"overlap={plan.composition.overlap_identifier_count}"
+            )
         typer.echo(f"Recorded: {plan.recorded}")
         if plan.event_id:
             typer.echo(f"Event: {plan.event_id}")

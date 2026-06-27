@@ -7391,8 +7391,12 @@ function renderRetrievalHandoffNotice(record) {{
       + detailLine('Query', handoff.query || '')
       + '<p>' + esc(localizedHitCounts) + '</p>'
       + detailListLine('Referenced IDs', handoff.referenced_record_ids)
+      + (compositionSummary ? '<p>' + esc(compositionSummary) + '</p>' : '')
+      + detailListLine('Source coverage', sourceSummaries, ' | ')
+      + detailListLine('Composed hits', composedHits)
       + detailListLine('Downstream commands', localizedDownstreamCommands.length > 0 ? localizedDownstreamCommands : handoff.downstream_commands, ' | ')
       + detailListLine('Notes', handoff.notes, ' | ')
+      + detailListLine('Composition notes', composition.notes, ' | ')
   );
 }}
 function packageContextNoticeBody(status, message, packageReview, manifest, eligibleContextIds = [], extraLines = '', buttons = []) {{

@@ -20,14 +20,17 @@ from chronicle.errors import (
 from chronicle.models.event import Actor, Confidence, ReviewStatus
 from chronicle.models.artifact import ArtifactType
 from chronicle.models.runtime import (
+    RuntimeComposedRetrievalHit,
     RuntimeConfig,
     RuntimeExecutionResult,
     RuntimeInvocationPlan,
     RuntimeProviderKind,
     RuntimeRecordPreview,
+    RuntimeRetrievalComposition,
     RuntimeRetrievalHandoff,
     RuntimeRetrievalHit,
     RuntimeRetrievalPlan,
+    RuntimeRetrievalSourceSummary,
     RuntimeStatus,
     RuntimeSummaryResult,
 )
@@ -280,12 +283,14 @@ class RuntimeService:
             "no external runtime invoked",
             "primary Chronicle record remains authoritative",
         ]
+        composition = _compose_retrieval_hits(vector_hits, graph_hits, chronicle_hits)
         plan = RuntimeRetrievalPlan(
             query=query,
             vector_hits=vector_hits,
             graph_hits=graph_hits,
             chronicle_hits=chronicle_hits,
             graph_adapter=graph_adapter,
+            composition=composition,
             notes=notes,
         )
         if not record:
@@ -595,6 +600,11 @@ class RuntimeService:
             graph_hit_count=len(plan.graph_hits),
             chronicle_hit_count=len(plan.chronicle_hits),
             referenced_record_ids=_unique_identifiers(plan),
+            composition=plan.composition or _compose_retrieval_hits(
+                plan.vector_hits,
+                plan.graph_hits,
+                plan.chronicle_hits,
+            ),
             downstream_commands=[
                 'chronicle package review --purpose "runtime retrieval handoff"',
                 'chronicle package context --purpose "runtime retrieval handoff" --persist',
@@ -853,3 +863,79 @@ def _unique_identifiers(plan: RuntimeRetrievalPlan) -> list[str]:
             identifiers.append(hit.identifier)
             seen.add(hit.identifier)
     return identifiers
+
+
+def _compose_retrieval_hits(
+    vector_hits: list[RuntimeRetrievalHit],
+    graph_hits: list[RuntimeRetrievalHit],
+    chronicle_hits: list[RuntimeRetrievalHit],
+) -> RuntimeRetrievalComposition:
+    grouped_hits = [
+        ("vector_index", vector_hits),
+        ("graph_export_adapter", graph_hits),
+        ("chronicle_search", chronicle_hits),
+    ]
+    source_summaries: list[RuntimeRetrievalSourceSummary] = []
+    composed: dict[str, dict[str, object]] = {}
+
+    for source_name, hits in grouped_hits:
+        identifiers = {hit.identifier for hit in hits if hit.identifier}
+        scores = [hit.score for hit in hits if hit.score is not None]
+        source_summaries.append(
+            RuntimeRetrievalSourceSummary(
+                source=source_name,
+                hit_count=len(hits),
+                unique_identifier_count=len(identifiers),
+                max_score=max(scores) if scores else None,
+            )
+        )
+        for hit in hits:
+            if not hit.identifier:
+                continue
+            entry = composed.setdefault(
+                hit.identifier,
+                {
+                    "identifier": hit.identifier,
+                    "summary": hit.summary,
+                    "detail": hit.detail,
+                    "sources": [],
+                    "best_score": hit.score,
+                },
+            )
+            if source_name not in entry["sources"]:
+                entry["sources"].append(source_name)
+            if not entry.get("summary") and hit.summary:
+                entry["summary"] = hit.summary
+            if not entry.get("detail") and hit.detail:
+                entry["detail"] = hit.detail
+            best_score = entry.get("best_score")
+            if hit.score is not None and (best_score is None or hit.score > best_score):
+                entry["best_score"] = hit.score
+
+    composed_hits = [
+        RuntimeComposedRetrievalHit(
+            identifier=str(entry["identifier"]),
+            summary=str(entry.get("summary", "")),
+            detail=str(entry.get("detail", "")),
+            sources=sorted(str(source) for source in entry.get("sources", [])),
+            source_count=len(entry.get("sources", [])),
+            best_score=(round(float(entry["best_score"]), 4) if entry.get("best_score") is not None else None),
+        )
+        for entry in composed.values()
+    ]
+    composed_hits.sort(key=lambda hit: (-hit.source_count, -(hit.best_score or 0.0), hit.identifier))
+    overlap_identifier_count = sum(1 for hit in composed_hits if hit.source_count > 1)
+    total_hit_count = len(vector_hits) + len(graph_hits) + len(chronicle_hits)
+    notes = [
+        "composed from local vector, graph, and Chronicle search surfaces",
+        "shared identifiers highlight cross-surface overlap only",
+        "composition remains read-only and dry-run oriented",
+    ]
+    return RuntimeRetrievalComposition(
+        total_hit_count=total_hit_count,
+        unique_identifier_count=len(composed_hits),
+        overlap_identifier_count=overlap_identifier_count,
+        source_summaries=source_summaries,
+        composed_hits=composed_hits,
+        notes=notes,
+    )

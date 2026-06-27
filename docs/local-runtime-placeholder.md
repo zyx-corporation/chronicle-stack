@@ -46,6 +46,7 @@ runtime 記録は local UI の read-only endpoint から確認できます。
 retrieval plan の detail view では、downstream runtime へ渡す前の handoff contract を read-only で確認できます。
 
 - hit count summary
+- cross-surface composition summary
 - referenced record IDs
 - recommended next CLI commands
 - package review required boundary note

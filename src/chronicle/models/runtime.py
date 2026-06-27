@@ -143,6 +143,31 @@ class LocalGraphRetrievalAdapterResult(BaseModel):
     notes: list[str] = Field(default_factory=list)
 
 
+class RuntimeRetrievalSourceSummary(BaseModel):
+    source: str
+    hit_count: int = 0
+    unique_identifier_count: int = 0
+    max_score: float | None = None
+
+
+class RuntimeComposedRetrievalHit(BaseModel):
+    identifier: str
+    summary: str
+    detail: str = ""
+    sources: list[str] = Field(default_factory=list)
+    source_count: int = 0
+    best_score: float | None = None
+
+
+class RuntimeRetrievalComposition(BaseModel):
+    total_hit_count: int = 0
+    unique_identifier_count: int = 0
+    overlap_identifier_count: int = 0
+    source_summaries: list[RuntimeRetrievalSourceSummary] = Field(default_factory=list)
+    composed_hits: list[RuntimeComposedRetrievalHit] = Field(default_factory=list)
+    notes: list[str] = Field(default_factory=list)
+
+
 class RuntimeRetrievalPlan(BaseModel):
     provider_kind: RuntimeProviderKind = RuntimeProviderKind.LOCAL
     invocation_mode: str = "explicit-manual-dry-run"
@@ -152,6 +177,7 @@ class RuntimeRetrievalPlan(BaseModel):
     graph_hits: list[RuntimeRetrievalHit] = Field(default_factory=list)
     chronicle_hits: list[RuntimeRetrievalHit] = Field(default_factory=list)
     graph_adapter: LocalGraphRetrievalAdapterResult | None = None
+    composition: RuntimeRetrievalComposition | None = None
     notes: list[str] = Field(default_factory=list)
     primary_record_authoritative: bool = True
     requires_review: bool = True
@@ -195,6 +221,7 @@ class RuntimeRetrievalHandoff(BaseModel):
     graph_hit_count: int = 0
     chronicle_hit_count: int = 0
     referenced_record_ids: list[str] = Field(default_factory=list)
+    composition: RuntimeRetrievalComposition | None = None
     downstream_commands: list[str] = Field(default_factory=list)
     package_review_required: bool = True
     primary_record_authoritative: bool = True

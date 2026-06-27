@@ -991,6 +991,9 @@ def test_runtime_retrieve_plan_json(tmp_path: Path) -> None:
     assert payload["query"] == "GraphRAG planning"
     assert payload["graph_adapter"]["contract_version"] == "1.0"
     assert payload["graph_adapter"]["incremental_mode"] == "event-driven_rebuildable"
+    assert payload["composition"]["total_hit_count"] >= 2
+    assert payload["composition"]["unique_identifier_count"] >= 1
+    assert payload["composition"]["source_summaries"][0]["source"] == "vector_index"
     assert payload["vector_hits"]
     assert payload["chronicle_hits"]
 
