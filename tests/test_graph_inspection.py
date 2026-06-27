@@ -38,6 +38,9 @@ def test_graph_summary_json(tmp_path):
 
     assert result.exit_code == 0
     assert payload["chronicle_id"].startswith("chr_")
+    assert payload["contract_version"] == "1.0"
+    assert payload["incremental_mode"] == "event-driven_rebuildable"
+    assert payload["incremental_expectations"]
     assert payload["node_count"] >= 1
     assert payload["edge_count"] >= 1
     assert "chronicle" in payload["node_types"]

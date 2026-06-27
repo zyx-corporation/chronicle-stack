@@ -51,6 +51,11 @@ Current state:
 - define incremental export expectations from Chronicle events
 - add a local retrieval adapter that consumes derived export data without turning Chronicle into a GraphRAG runtime
 
+Current state:
+
+- graph export now carries a versioned machine-readable export contract
+- incremental expectations are stated against Chronicle events, `event_id`, and full rebuild compatibility
+
 ### 5. External GraphRAG integration and query engine
 
 - keep graph/vector/embedding/query runtime outside Chronicle Stack core

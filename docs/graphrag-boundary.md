@@ -16,6 +16,7 @@ v0.3 Phase 3 の目的は、Chronicle Stack の記録群を graph-ready な node
 - graph export は deterministic である
 - graph export は graph database や vector database に依存しない
 - graph export は embedding 生成や LLM API 呼び出しを必要としない
+- graph export contract は versioned であり、incremental expectation は Chronicle event ordering を基準に明示される
 
 ## GraphRAG 側の期待（将来）
 

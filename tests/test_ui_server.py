@@ -1119,6 +1119,9 @@ def test_ui_data_service_read_endpoints(tmp_path):
     assert service.graph_summary()["message_key"] == "ui.graph_summary.message.available"
     assert service.graph_summary()["counts_summary_key"] == "ui.template.graph_summary.counts"
     assert service.graph_summary()["boundary_note_key"] == "ui.graph_summary.note.read_only_derived"
+    assert service.graph_summary()["contract_version"] == "1.0"
+    assert service.graph_summary()["incremental_mode"] == "event-driven_rebuildable"
+    assert service.graph_summary()["incremental_expectations"]
     assert service.overview()["graph_summary"]["message_key"] == "ui.graph_summary.message.available"
     assert service.ai_index_status()["ai_index_status"]["message_key"] == (
         "ui.ai_index_status.message.available"

@@ -26,11 +26,20 @@ def graph_summary_cmd(
     edge_counts = Counter(edge.edge_type for edge in graph.edges)
     payload = {
         "schema_version": graph.schema_version,
+        "contract_version": (
+            graph.export_contract.contract_version if graph.export_contract is not None else None
+        ),
         "chronicle_id": graph.chronicle_id,
         "node_count": len(graph.nodes),
         "edge_count": len(graph.edges),
         "node_types": dict(sorted(node_counts.items())),
         "edge_types": dict(sorted(edge_counts.items())),
+        "incremental_mode": (
+            graph.export_contract.incremental_mode if graph.export_contract is not None else None
+        ),
+        "incremental_expectations": (
+            graph.export_contract.incremental_expectations if graph.export_contract is not None else []
+        ),
     }
     if json_output:
         _dump_json(payload)
@@ -38,6 +47,8 @@ def graph_summary_cmd(
 
     typer.echo("Graph Summary")
     typer.echo(f"Chronicle ID: {graph.chronicle_id}")
+    if graph.export_contract is not None:
+        typer.echo(f"Contract: {graph.export_contract.contract_version} ({graph.export_contract.export_family})")
     typer.echo(f"Nodes: {len(graph.nodes)}")
     typer.echo(f"Edges: {len(graph.edges)}")
     typer.echo("")

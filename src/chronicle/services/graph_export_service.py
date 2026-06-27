@@ -16,7 +16,7 @@ from chronicle.lifecycle.derived_output_policy import (
     lifecycle_seal_metadata,
     lifecycle_state_by_target,
 )
-from chronicle.models.graph import GraphEdge, GraphExport, GraphNode
+from chronicle.models.graph import GraphEdge, GraphExport, GraphExportContract, GraphNode
 from chronicle.services.chronicle_service import ChronicleService
 from chronicle.services.export_manifest_service import ExportManifestService
 from chronicle.services.lifecycle_service import LifecycleService
@@ -292,6 +292,18 @@ class GraphExportService:
             generated_at=datetime.now(timezone.utc).astimezone(),
             chronicle_id=cid,
             export_manifest=manifest,
+            export_contract=self._export_contract(),
             nodes=nodes,
             edges=edges,
+        )
+
+    @staticmethod
+    def _export_contract() -> GraphExportContract:
+        return GraphExportContract(
+            incremental_expectations=[
+                "new Chronicle events may add or supersede derived nodes and edges",
+                "consumers may checkpoint by event_id while preserving Chronicle event ordering",
+                "full graph state must remain rebuildable from the primary JSONL without external storage",
+                "tombstone and seal lifecycle markers may remove or annotate derived graph entities on rebuild",
+            ]
         )

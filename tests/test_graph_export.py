@@ -51,8 +51,21 @@ def test_graph_export_is_parseable_json(populated_chronicle):
 def test_graph_export_has_required_top_level_keys(populated_chronicle):
     """Graph export must have schema_version, generated_at, chronicle_id, nodes, edges."""
     data = populated_chronicle.export_graph().model_dump(mode="json")
-    for key in ["schema_version", "generated_at", "chronicle_id", "nodes", "edges"]:
+    for key in ["schema_version", "generated_at", "chronicle_id", "export_contract", "nodes", "edges"]:
         assert key in data, f"Missing key '{key}' in graph export"
+
+
+def test_graph_export_contract_is_versioned_and_incremental(populated_chronicle):
+    data = populated_chronicle.export_graph().model_dump(mode="json")
+    contract = data["export_contract"]
+
+    assert contract["contract_version"] == "1.0"
+    assert contract["export_family"] == "graph-json"
+    assert contract["incremental_source"] == "chronicle_events"
+    assert contract["incremental_mode"] == "event-driven_rebuildable"
+    assert contract["incremental_checkpoint_field"] == "event_id"
+    assert contract["incremental_ordering_field"] == "timestamp"
+    assert len(contract["incremental_expectations"]) >= 3
 
 
 def test_graph_export_generates_context_node(populated_chronicle):

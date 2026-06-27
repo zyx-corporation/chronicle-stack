@@ -3065,6 +3065,17 @@ class ChronicleUIDataService:
                 "status": "available",
                 "nodes": node_count,
                 "edges": edge_count,
+                "contract_version": (
+                    graph.export_contract.contract_version if graph.export_contract is not None else ""
+                ),
+                "incremental_mode": (
+                    graph.export_contract.incremental_mode if graph.export_contract is not None else ""
+                ),
+                "incremental_expectations": (
+                    graph.export_contract.incremental_expectations
+                    if graph.export_contract is not None
+                    else []
+                ),
                 "message": "Graph summary is available as a local derived read model.",
                 "message_key": _graph_summary_message_key("available"),
                 "counts_summary_key": counts_key,
@@ -3083,6 +3094,9 @@ class ChronicleUIDataService:
                 "status": "unavailable",
                 "nodes": 0,
                 "edges": 0,
+                "contract_version": "",
+                "incremental_mode": "",
+                "incremental_expectations": [],
                 "error": str(exc),
                 "message": "Graph summary is unavailable; keep using primary Chronicle records for authority.",
                 "message_key": _graph_summary_message_key("unavailable"),
