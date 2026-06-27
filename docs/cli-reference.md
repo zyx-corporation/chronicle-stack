@@ -702,6 +702,7 @@ chronicle package context --purpose "Sayane review" --target local
 chronicle package context --purpose "External review" --target external --persist
 chronicle package query-engine-adapter --query "release planning context"
 chronicle package query-engine-adapter --query "graph context" -o adapter-skeleton.json
+chronicle package query-engine-bundle --query "release planning context" --output-dir handoff-bundle
 chronicle package list
 chronicle package show --package pkg_xxx
 chronicle package records --package pkg_xxx --json
@@ -711,6 +712,7 @@ Controlled integration package を生成・永続化・検査します。`chroni
 
 Package は transport contract であり、外部送信、許可付与、アクセス制御ではありません。
 `query-engine-adapter` は downstream import adapter の descriptive skeleton を現在の retrieval dry-run handoff から再生成するだけで、import 実行・hosted query engine・外部 runtime は含みません。
+`query-engine-bundle` は handoff / adapter skeleton / graph-json export / bundle manifest をローカル directory に書き出すだけで、downstream import 実行や hosted runtime は含みません。
 
 ## chronicle context
 

@@ -43,3 +43,23 @@ def test_package_query_engine_adapter_can_write_output_file(tmp_path: Path) -> N
     payload = json.loads(output.read_text(encoding="utf-8"))
     assert payload["required_inputs"] == ["query_engine_handoff.json", ".chronicle/chronicle.jsonl", "graph.json"]
     assert "Adapter skeleton written to" in result.stdout
+
+
+def test_package_query_engine_bundle_writes_bundle_files(tmp_path: Path) -> None:
+    os.chdir(str(tmp_path))
+    runner.invoke(app, ["init", "--title", "Bundle CLI"])
+    output_dir = tmp_path / "handoff-bundle"
+
+    result = runner.invoke(
+        app,
+        ["package", "query-engine-bundle", "--query", "graph context", "--output-dir", str(output_dir)],
+    )
+
+    assert result.exit_code == 0
+    assert (output_dir / "bundle_manifest.json").exists()
+    assert (output_dir / "query_engine_handoff.json").exists()
+    assert (output_dir / "query_engine_adapter_skeleton.json").exists()
+    assert (output_dir / "graph.json").exists()
+    manifest = json.loads((output_dir / "bundle_manifest.json").read_text(encoding="utf-8"))
+    assert manifest["bundle_kind"] == "query_engine_handoff_bundle"
+    assert "Query-engine handoff bundle written to" in result.stdout

@@ -185,6 +185,35 @@ def test_package_query_engine_adapter_json_shape(tmp_path):
         assert key in payload, f"Missing key '{key}' in package query-engine-adapter"
 
 
+def test_package_query_engine_bundle_manifest_json_shape(tmp_path):
+    """chronicle package query-engine-bundle must write stable bundle manifest keys."""
+    runner = _setup_cli(tmp_path)
+    runner.invoke(app, ["init", "--title", "Bundle Shape"])
+    output_dir = tmp_path / "bundle"
+
+    result = runner.invoke(
+        app,
+        ["package", "query-engine-bundle", "--query", "shape", "--output-dir", str(output_dir)],
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads((output_dir / "bundle_manifest.json").read_text(encoding="utf-8"))
+    for key in [
+        "contract_version",
+        "bundle_kind",
+        "handoff_contract_version",
+        "graph_export_contract_version",
+        "adapter_skeleton_contract_version",
+        "files",
+        "referenced_record_count",
+        "eligible_context_count",
+        "import_validation_status",
+        "import_ready",
+        "notes",
+    ]:
+        assert key in payload, f"Missing key '{key}' in package query-engine-bundle manifest"
+
+
 def test_runtime_invoke_plan_json_shape(tmp_path):
     """chronicle runtime invoke-plan --json must expose stable invocation-plan keys."""
     runner = _setup_cli(tmp_path)

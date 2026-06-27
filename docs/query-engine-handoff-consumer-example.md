@@ -41,4 +41,4 @@ It does not certify semantic correctness, ranking quality, security, or query-ru
 
 ## Next step
 
-When the checked-in fixture is sufficient, use `docs/query-engine-import-adapter-skeleton.md` as the non-executable starting point for a downstream adapter.
+When the checked-in fixture is sufficient, use `docs/query-engine-import-adapter-skeleton.md` as the non-executable starting point for a downstream adapter, or generate a local bundle with `docs/downstream-query-engine-handoff-bundle.md`.

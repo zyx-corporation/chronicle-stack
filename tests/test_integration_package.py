@@ -6,8 +6,10 @@ from chronicle.models.classification import AllowedOperation, ClassificationLaye
 from chronicle.models.context import Context, ContextScope
 from chronicle.models.event import Actor, ChronicleEvent, EventType
 from chronicle.models.integration_package import IntegrationTargetEnvironment, PackageRecordBoundary
+from chronicle.services.graph_export_service import GraphExportService
 from chronicle.services.chronicle_service import ChronicleService
 from chronicle.services.integration_package_service import IntegrationPackageService
+from chronicle.services.runtime_service import RuntimeService
 
 
 def _append_context(root, context: Context) -> None:
@@ -159,3 +161,31 @@ def test_context_package_can_filter_selected_contexts(tmp_path):
     assert package.manifest.referenced_records == ["ctx_keep"]
     assert len(package.records) == 1
     assert package.records[0].record_id == "ctx_keep"
+
+
+def test_query_engine_handoff_bundle_manifest_summarizes_bundle(tmp_path):
+    ChronicleService(tmp_path).init("Bundle Manifest Test")
+    _append_context(
+        tmp_path,
+        Context(
+            context_id="ctx_bundle",
+            title="Bundle Context",
+            summary="Bundle summary",
+            scope=ContextScope.TASK,
+            created_at=datetime(2026, 6, 14, tzinfo=timezone.utc),
+        ),
+    )
+
+    runtime_plan = RuntimeService(tmp_path).retrieve_plan(query="Bundle", limit=5, record=False)
+    handoff = runtime_plan.query_engine_handoff
+    assert handoff is not None
+
+    manifest = IntegrationPackageService(tmp_path).build_query_engine_handoff_bundle_manifest(
+        handoff,
+        GraphExportService(tmp_path).export_graph(),
+    )
+
+    assert manifest.bundle_kind == "query_engine_handoff_bundle"
+    assert "bundle_manifest.json" in manifest.files
+    assert "graph.json" in manifest.files
+    assert manifest.referenced_record_count >= 1

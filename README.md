@@ -150,6 +150,7 @@ chronicle export --format yaml
 chronicle export profile --format yaml --profile public-review
 chronicle package context --purpose "Sayane review" --target local
 chronicle package query-engine-adapter --query "What context should a downstream query engine inspect?"
+chronicle package query-engine-bundle --query "What context should a downstream query engine inspect?" --output-dir handoff-bundle
 chronicle export --format graph-json -o graph.json
 chronicle export --format html -o chronicle-review-console.html
 chronicle ai-index status
@@ -223,6 +224,7 @@ v1.2 以降では、`/api/events/<id>`, `/api/contexts/<id>`, `/api/artifacts/<i
 - [GraphRAG 接続境界](docs/graphrag-boundary.md)
 - [Query-Engine Handoff Consumer Example](docs/query-engine-handoff-consumer-example.md)
 - [Query-Engine Import Adapter Skeleton](docs/query-engine-import-adapter-skeleton.md)
+- [Downstream Query-Engine Handoff Bundle](docs/downstream-query-engine-handoff-bundle.md)
 - [Local AI Index Placeholder](docs/local-ai-index-placeholder.md)
 - [v1.7 Phase D/E Progress](docs/v1.7-phase-d-e-progress.md)
 - [v1.7 Phase D/E Smoke Profile](docs/smoke-test-v1.7-phase-d-e.md)

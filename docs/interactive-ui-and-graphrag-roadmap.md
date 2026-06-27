@@ -70,6 +70,7 @@ Current state:
 - runtime detail view now surfaces the handoff as a non-authoritative preview for derived consumers
 - import validation now checks the handoff against the current derived graph export without performing any downstream import
 - package CLI can now regenerate a descriptive downstream query-engine adapter skeleton from the current handoff
+- package CLI can now emit a local downstream handoff bundle directory for consumer repos
 
 ## Completion criteria by lane
 

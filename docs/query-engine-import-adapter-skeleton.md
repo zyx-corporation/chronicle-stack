@@ -7,6 +7,7 @@ You can regenerate the same skeleton shape from the current repository state wit
 ```bash
 chronicle package query-engine-adapter --query "release planning context"
 chronicle package query-engine-adapter --query "graph context" -o adapter-skeleton.json
+chronicle package query-engine-bundle --query "graph context" --output-dir handoff-bundle
 ```
 
 ## Example artifact

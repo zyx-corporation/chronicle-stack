@@ -23,3 +23,18 @@ class QueryEngineAdapterSkeleton(BaseModel):
     prohibited_capabilities: list[str] = Field(default_factory=list)
     non_goals: list[str] = Field(default_factory=list)
     notes: list[str] = Field(default_factory=list)
+
+
+class QueryEngineHandoffBundleManifest(BaseModel):
+    contract_version: str = "1.0"
+    bundle_kind: str = "query_engine_handoff_bundle"
+    handoff_contract_version: str = "1.0"
+    graph_export_contract_version: str = "1.0"
+    adapter_skeleton_contract_version: str = "1.0"
+    primary_record_path: str = ".chronicle/chronicle.jsonl"
+    files: list[str] = Field(default_factory=list)
+    referenced_record_count: int = 0
+    eligible_context_count: int = 0
+    import_validation_status: str = "advisory_only"
+    import_ready: bool = False
+    notes: list[str] = Field(default_factory=list)

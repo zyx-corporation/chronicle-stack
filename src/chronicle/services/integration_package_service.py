@@ -5,6 +5,8 @@ from pathlib import Path
 
 from chronicle.ids import generate_id
 from chronicle.integration.query_engine_adapter_skeleton import QueryEngineAdapterSkeletonBuilder
+from chronicle.models.graph import GraphExport
+from chronicle.models.integration_adapter import QueryEngineHandoffBundleManifest
 from chronicle.models.runtime import RuntimeQueryEngineHandoff
 from chronicle.integration.context_package_builder import (
     ContextPackageRecordBuilder,
@@ -90,6 +92,40 @@ class IntegrationPackageService:
     ):
         """Build a descriptive downstream adapter skeleton without executing it."""
         return self.query_engine_adapter_skeleton.build(handoff)
+
+    def build_query_engine_handoff_bundle_manifest(
+        self,
+        handoff: RuntimeQueryEngineHandoff,
+        graph_export: GraphExport,
+    ) -> QueryEngineHandoffBundleManifest:
+        """Build a descriptive manifest for a local downstream handoff bundle."""
+        skeleton = self.query_engine_adapter_skeleton.build(handoff)
+        import_validation = handoff.import_validation
+        return QueryEngineHandoffBundleManifest(
+            handoff_contract_version=handoff.contract_version,
+            graph_export_contract_version=handoff.graph_export_contract_version,
+            adapter_skeleton_contract_version=skeleton.contract_version,
+            primary_record_path=handoff.primary_record_path,
+            files=[
+                "bundle_manifest.json",
+                "query_engine_handoff.json",
+                "query_engine_adapter_skeleton.json",
+                "graph.json",
+            ],
+            referenced_record_count=len(handoff.referenced_record_ids),
+            eligible_context_count=len(handoff.eligible_context_ids),
+            import_validation_status=(
+                import_validation.status if import_validation is not None else "advisory_only"
+            ),
+            import_ready=bool(import_validation.import_ready) if import_validation is not None else False,
+            notes=[
+                "bundle remains local, read-only, and descriptive",
+                "Chronicle primary records remain authoritative over derived bundle files",
+                (
+                    f"graph export contains {len(graph_export.nodes)} nodes and {len(graph_export.edges)} edges"
+                ),
+            ],
+        )
 
     def save_package(self, package: IntegrationPackage) -> Path:
         """Persist a controlled integration package through the package store."""

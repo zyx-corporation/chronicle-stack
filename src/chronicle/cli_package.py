@@ -10,6 +10,7 @@ from chronicle.errors import ChronicleError
 from chronicle.interfaces.cli.common import handle_error
 from chronicle.models.integration_package import IntegrationPackageRecord, IntegrationTargetEnvironment
 from chronicle.models.package_review import PackageReviewStatus
+from chronicle.services.graph_export_service import GraphExportService
 from chronicle.services.integration_package_service import IntegrationPackageService
 from chronicle.services.package_review_service import PackageReviewService
 from chronicle.services.runtime_service import RuntimeService
@@ -97,6 +98,52 @@ def query_engine_adapter_cmd(
             typer.echo(f"Adapter skeleton written to {output}")
             return
         typer.echo(payload)
+    except ChronicleError as exc:
+        handle_error(exc, json_output=True)
+
+
+@package_app.command("query-engine-bundle")
+def query_engine_bundle_cmd(
+    query: Annotated[str, typer.Option("--query", help="Query to assemble a local downstream handoff bundle for.")],
+    output_dir: Annotated[Path, typer.Option("--output-dir", help="Directory to write the downstream handoff bundle into.")],
+    limit: Annotated[int, typer.Option("--limit", min=1, help="Maximum hits per retrieval surface.")] = 5,
+) -> None:
+    """Write a local downstream handoff bundle.
+
+    The bundle is descriptive only: handoff JSON, adapter skeleton, graph export,
+    and a small bundle manifest. It does not execute imports or hosted runtimes.
+    """
+    try:
+        plan = RuntimeService().retrieve_plan(query=query, limit=limit, record=False)
+        handoff = plan.query_engine_handoff
+        if handoff is None:
+            raise ChronicleError(
+                code="QUERY_ENGINE_HANDOFF_UNAVAILABLE",
+                message="Query-engine handoff is unavailable for this retrieval plan.",
+                hint="Run `chronicle runtime retrieve-plan --query ... --json` to inspect the current dry-run handoff surface.",
+            )
+        service = IntegrationPackageService()
+        graph_export = GraphExportService().export_graph()
+        skeleton = service.build_query_engine_adapter_skeleton(handoff)
+        manifest = service.build_query_engine_handoff_bundle_manifest(handoff, graph_export)
+        output_dir.mkdir(parents=True, exist_ok=True)
+        (output_dir / "query_engine_handoff.json").write_text(
+            json.dumps(handoff.model_dump(mode="json"), ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+        (output_dir / "query_engine_adapter_skeleton.json").write_text(
+            json.dumps(skeleton.model_dump(mode="json"), ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+        (output_dir / "graph.json").write_text(
+            json.dumps(graph_export.model_dump(mode="json"), ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+        (output_dir / "bundle_manifest.json").write_text(
+            json.dumps(manifest.model_dump(mode="json"), ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+        typer.echo(f"Query-engine handoff bundle written to {output_dir}")
     except ChronicleError as exc:
         handle_error(exc, json_output=True)
 
