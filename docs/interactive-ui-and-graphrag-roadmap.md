@@ -75,6 +75,7 @@ Current state:
 - handoff bundles now include a trial report template so real downstream evaluations can be recorded before escalation
 - downstream trial outcomes can now be written back into Chronicle as review-oriented assistant-output records
 - recorded downstream trial outcomes can now be inspected through dedicated read-only CLI list/detail commands
+- runtime-record API and interactive UI read models now present recorded downstream trial outcomes as a distinct read-only runtime record kind
 
 ## Completion criteria by lane
 

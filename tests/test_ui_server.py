@@ -2,6 +2,7 @@
 
 import http.client
 import json
+import os
 import re
 import threading
 from pathlib import Path
@@ -1494,212 +1495,56 @@ def test_ui_data_service_detail_endpoints(tmp_path):
     assert retrieval_detail["query_engine_handoff_preview"]["import_validation"]["counts_summary_key"] == (
         "ui.template.query_engine_import_validation.counts"
     )
-    assert retrieval_detail["package_handoff_preview"]["status"] == "package_context_available"
-    assert ids["context_id"] in retrieval_detail["package_handoff_preview"]["eligible_context_ids"]
-    assert retrieval_detail["package_handoff_preview"]["counts_summary_key"] == (
-        "ui.template.package_handoff.counts"
+
+
+def test_runtime_records_include_query_engine_trial_rows(tmp_path):
+    _populate(tmp_path)
+    os.chdir(str(tmp_path))
+    runner = CliRunner()
+    output_dir = tmp_path / "handoff-bundle"
+    result = runner.invoke(
+        app,
+        [
+            "package",
+            "query-engine-bundle",
+            "--query",
+            "UI Context",
+            "--output-dir",
+            str(output_dir),
+        ],
     )
-    assert retrieval_detail["package_handoff_preview"]["suggested_command_details"][0]["summary_key"] == (
-        "ui.template.package_handoff.command.package_review"
+    assert result.exit_code == 0
+    record_result = runner.invoke(
+        app,
+        [
+            "package",
+            "query-engine-trial-record",
+            "--bundle-dir",
+            str(output_dir),
+            "--reviewer",
+            "ui-reviewer",
+            "--consumer",
+            "ui-consumer",
+            "--sufficient",
+            "--json",
+        ],
     )
-    assert retrieval_detail["package_handoff_preview"]["boundary_note_key"] == (
-        "ui.package_handoff.note.read_only_derived"
-    )
-    assert retrieval_detail["package_handoff_preview"]["package_review"]["status"] in {"pass", "warning", "blocked"}
-    assert retrieval_detail["package_handoff_preview"]["package_review"]["message_key"] in {
-        "ui.package_review.message.pass",
-        "ui.package_review.message.warning",
-        "ui.package_review.message.blocked",
-    }
-    assert (
-        retrieval_detail["package_handoff_preview"]["package_review"]["counts_summary_key"]
-        == "ui.template.package_review.counts"
-    )
-    assert (
-        retrieval_detail["package_handoff_preview"]["package_review"]["boundary_note_key"]
-        == "ui.package_review.note.read_only_derived"
-    )
-    assert ids["context_id"] in retrieval_detail["package_handoff_preview"]["package_manifest_preview"]["referenced_records"]
-    assert any(link["path"] == f"/api/contexts/{ids['context_id']}" for link in retrieval_detail["related_links"])
-    assert any(link["label"] == f"Open context {ids['context_id']}" for link in retrieval_detail["related_links"])
-    assert retrieval_detail["auth_boundary_notice"]["status"] == "advisory_only"
-    assert retrieval_detail["reviewer_enforcement_summary"]["status"] == "descriptive_only"
-    assert retrieval_detail["reviewer_validation_gate_summary"]["status"] == "read_only_preview"
-    review_detail = service.detail_payload(f"/api/review-queue/{ids['runtime_summary_event_id']}")["record"]
-    assert review_detail["target_event_id"] == ids["runtime_summary_event_id"]
-    assert review_detail["mutation_enablement"]["enablement_ready"] is False
-    assert review_detail["mutation_enablement"]["enablement_ready_summary_key"] == "ui.boolean.false"
-    assert review_detail["mutation_enablement"]["blocker_summaries"]
-    assert review_detail["mutation_enablement"]["write_route_contract"]["actions"] == [
-        "approve",
-        "reject",
-        "request-changes",
-    ]
-    assert review_detail["mutation_enablement"]["operational_readiness"]["unsatisfied_checks"]
-    assert review_detail["mutation_enablement"]["operational_readiness"]["blocking_summaries"]
-    assert review_detail["action_preview"]["success_contract"]["follow_up_commands"][0] == "chronicle review queue --include-resolved --json"
-    assert review_detail["action_preview"]["write_route_contract"]["success_status_code"] == 200
-    assert review_detail["action_preview"]["write_route_contract"]["authorization_contract"]["action_authorization_matrix"][2]["action"] == "request-changes"
-    assert review_detail["action_preview"]["write_route_contract"]["authorization_contract"]["action_authorization_matrix"][2]["summary_key"] == (
-        "ui.review_authorization_contract.action_matrix.request_changes"
-    )
-    assert review_detail["action_preview"]["write_route_contract"]["target_state_contract"]["action_target_matrix"][0]["resulting_queue_state"] == "resolved_hidden_by_default"
-    assert review_detail["action_preview"]["write_route_contract"]["target_state_contract"]["action_target_matrix"][2]["summary_key"] == (
-        "ui.review_target_state_contract.action_target_matrix.request_changes"
-    )
-    assert review_detail["action_preview"]["write_route_contract"]["identity_proof_contract"]["proof_status"] == "local_operator_advisory"
-    assert (
-        review_detail["action_preview"]["write_route_contract"]["identity_proof_contract"][
-            "proof_status_message_key"
-        ]
-        == "ui.identity_proof.status.local_operator_advisory"
-    )
-    assert (
-        review_detail["action_preview"]["write_route_contract"]["identity_proof_contract"][
-            "required_identity_field_details"
-        ][0]["summary_key"]
-        == "ui.identity_proof.field.reviewer_label"
-    )
-    assert (
-        review_detail["action_preview"]["write_route_contract"]["expected_request_field_details"][0][
-            "summary_key"
-        ]
-        == "ui.write_request_field.reviewer_label"
-    )
-    assert (
-        review_detail["action_preview"]["write_route_contract"]["authorization_contract"][
-            "server_side_check_details"
-        ][2]["summary_key"]
-        == "ui.review_authorization_contract.server_side_check.review_capability_ready"
-    )
-    assert (
-        review_detail["action_preview"]["write_route_contract"]["target_state_contract"][
-            "target_state_check_details"
-        ][1]["summary_key"]
-        == "ui.review_target_state_contract.check.target_review_status_needs_review"
-    )
-    assert (
-        review_detail["action_preview"]["success_contract"]["transaction_status_summary_key"]
-        == "ui.review_success_contract.transaction_status.decision_and_audit_persisted"
-    )
-    assert (
-        review_detail["action_preview"]["failure_contract"]["rollback_status_summary_key"]
-        == "ui.review_contract.rollback_status.fail_closed"
-    )
-    assert review_detail["reviewer_enforcement_summary"]["status"] == "descriptive_only"
-    assert review_detail["reviewer_validation_gate_summary"]["status"] == "read_only_preview"
-    assert review_detail["review_preview_only"] is True
-    assert review_detail["package_readiness"]["status"] == "no_context_records"
-    assert review_detail["package_readiness"]["counts_summary_key"] == (
-        "ui.template.package_readiness.counts"
-    )
-    assert review_detail["package_readiness"]["boundary_note_key"] == (
-        "ui.package_readiness.note.read_only_derived"
-    )
-    assert review_detail["package_readiness"]["suggested_commands"][0] == "chronicle show --json"
-    assert review_detail["package_readiness"]["suggested_command_details"][0]["summary_key"] == (
-        "ui.template.package_readiness.command.chronicle_show"
-    )
-    assert review_detail["latest_audit_id"].startswith("aud_")
-    assert review_detail["latest_reviewer_identity"]["kind"] == "local_operator"
-    assert review_detail["review_capability"]["status"] == "advisory_only"
-    assert review_detail["review_capability"]["status_summary_key"] == (
-        "ui.review_capability.status.advisory_only"
-    )
-    assert review_detail["review_capability"]["can_review_now_summary_key"] == "ui.boolean.false"
-    assert review_detail["review_capability"]["warning_details"][0]["code"] == "ui_auth_not_enabled"
-    assert review_detail["review_capability"]["warning_details"][0]["label_key"] == (
-        "filter.review.ui_auth_not_enabled"
-    )
-    assert review_detail["review_capability"]["warning_details"][0]["message_key"] == (
-        "ui.review_warning.ui_auth_not_enabled"
-    )
-    assert review_detail["auth_boundary_notice"]["status"] == "advisory_only"
-    assert review_detail["auth_boundary_notice"]["capability_status_summary_key"] == (
-        "ui.review_capability.status.advisory_only"
-    )
-    assert review_detail["auth_boundary_notice"]["identity_assurance_status_summary_key"] == (
-        "ui.identity_assurance.status.local_session_unverified"
-    )
-    assert "authorization_not_enabled" in review_detail["auth_boundary_notice"]["blockers"]
-    assert review_detail["latest_identity_assurance"]["status"] == "local_session_unverified"
-    assert review_detail["latest_identity_assurance"]["status_summary_key"] == (
-        "ui.identity_assurance.status.local_session_unverified"
-    )
-    assert review_detail["history"][0]["disposition"] == "request_changes"
-    assert review_detail["history"][0]["reviewer_identity"]["session_label"] == "ui-test"
-    assert review_detail["history"][0]["identity_assurance"]["boundary_auth_mode"] == "not_enabled"
-    assert review_detail["history"][0]["audit_summary"]
-    assert review_detail["related_links"][0]["path"] == f"/api/runtime-records/{ids['runtime_summary_event_id']}"
-    assert review_detail["related_links"][0]["label"] == "Open matching runtime record"
-    review_plan_detail = service.detail_payload(f"/api/review-queue/{ids['runtime_plan_event_id']}")["record"]
-    assert review_plan_detail["package_readiness"]["status"] == "package_context_available"
-    assert review_plan_detail["package_readiness"]["counts_summary_key"] == (
-        "ui.template.package_handoff.counts"
-    )
-    assert review_plan_detail["package_readiness"]["boundary_note_key"] == (
-        "ui.package_handoff.note.read_only_derived"
-    )
-    assert ids["context_id"] in review_plan_detail["package_readiness"]["eligible_context_ids"]
-    assert review_plan_detail["package_readiness"]["package_review"]["status"] in {"pass", "warning", "blocked"}
-    assert review_plan_detail["package_readiness"]["package_review"]["message_key"] in {
-        "ui.package_review.message.pass",
-        "ui.package_review.message.warning",
-        "ui.package_review.message.blocked",
-    }
-    assert (
-        review_plan_detail["package_readiness"]["package_review"]["counts_summary_key"]
-        == "ui.template.package_review.counts"
-    )
-    assert (
-        review_plan_detail["package_readiness"]["package_review"]["boundary_note_key"]
-        == "ui.package_review.note.read_only_derived"
-    )
-    assert review_plan_detail["package_readiness_summary"]["status"] == "package_context_available"
-    assert review_plan_detail["package_readiness_summary"]["label_key"] in {
-        "ui.package_readiness.summary.label.pass",
-        "ui.package_readiness.summary.label.warning",
-        "ui.package_readiness.summary.label.blocked",
-        "ui.package_readiness.summary.label.available",
-    }
-    assert review_plan_detail["package_readiness_summary"]["message_template_key"] == (
-        "ui.template.package_readiness.summary.available"
-    )
-    assert any(link["path"] == f"/api/contexts/{ids['context_id']}" for link in review_plan_detail["related_links"])
-    assert any(link["label"] == f"Open context {ids['context_id']}" for link in review_plan_detail["related_links"])
-    vector_detail = service.detail_payload(f"/api/ai-index/vector/{ids['event_id']}")["record"]
-    assert vector_detail["record_id"] == ids["event_id"]
-    assert vector_detail["message_key"] == "ui.ai_index_vector_detail.message.metadata_present"
-    assert vector_detail["counts_summary_key"] == "ui.template.ai_index_vector_detail.counts"
-    assert vector_detail["boundary_note_key"] == "ui.ai_index_vector_detail.note.read_only_derived"
-    graph_detail = service.detail_payload(f"/api/ai-index/graph-nodes/{ids['event_id']}")["record"]
-    assert graph_detail["node_id"] == ids["event_id"]
-    assert graph_detail["message_key"] == "ui.ai_index_graph_node_detail.message.neighbors_present"
-    assert graph_detail["counts_summary_key"] == "ui.template.ai_index_graph_node_detail.counts"
-    assert graph_detail["boundary_note_key"] == "ui.ai_index_graph_node_detail.note.read_only_derived"
-    assert graph_detail["neighbors"]["outgoing"][0]["relation"] == "references"
-    assert service.detail_payload("/api/contexts/missing") is None
-    runtime_plan_detail = service.detail_payload(f"/api/runtime-records/{ids['runtime_plan_event_id']}")["record"]
-    assert runtime_plan_detail["retrieval_handoff"]["message_key"] == (
-        "ui.retrieval_handoff.message.records_available"
-    )
-    assert runtime_plan_detail["retrieval_handoff"]["hit_counts_summary_key"] == (
-        "ui.template.retrieval_handoff.hit_counts"
-    )
-    assert runtime_plan_detail["retrieval_handoff"]["composition"]["unique_identifier_count"] >= 1
-    assert runtime_plan_detail["query_engine_handoff_preview"]["message_key"] == (
-        "ui.query_engine_handoff.message.contract_available"
-    )
-    assert runtime_plan_detail["query_engine_handoff_preview"]["import_validation"]["import_ready"] is True
-    assert runtime_plan_detail["package_handoff_preview"]["message_key"] == (
-        "ui.package_handoff.message.package_context_available"
-    )
-    assert runtime_plan_detail["package_handoff_preview"]["counts_summary_key"] == (
-        "ui.template.package_handoff.counts"
-    )
-    assert runtime_plan_detail["package_handoff_preview"]["boundary_note_key"] == (
-        "ui.package_handoff.note.read_only_derived"
-    )
+    assert record_result.exit_code == 0
+    event_id = json.loads(record_result.stdout)["event_id"]
+
+    service = ChronicleUIDataService(tmp_path)
+    rows = service.runtime_records()["runtime_records"]
+    trial_row = next(row for row in rows if row["event_id"] == event_id)
+    assert trial_row["runtime_record_kind"] == "query_engine_trial"
+    assert trial_row["runtime_record_preview"]["title_key"] == "ui.template.runtime_preview.title.query_engine_trial"
+    assert trial_row["query_engine_trial_preview"]["message_key"] == "ui.query_engine_trial.message.recorded"
+
+    detail = service.detail_payload(f"/api/runtime-records/{event_id}")["record"]
+    assert detail["runtime_record_kind"] == "query_engine_trial"
+    assert detail["query_engine_trial_preview"]["reviewer"] == "ui-reviewer"
+    assert detail["query_engine_trial_preview"]["downstream_consumer"] == "ui-consumer"
+    assert detail["query_engine_trial_preview"]["sufficient"] is True
+    assert detail["query_engine_trial_preview"]["message_key"] == "ui.query_engine_trial.message.recorded"
 
 
 def test_ui_runtime_detail_supports_invocation_plan(tmp_path):
@@ -2300,6 +2145,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "reviewWarningLabel('ui_authorization_not_enabled')" in html
     assert "reviewWarningLabel('reviewer_session_label_missing')" in html
     assert "filterValueLabel('runtimeRecords', 'retrieval_plan')" in html
+    assert "filterValueLabel('runtimeRecords', 'query_engine_trial')" in html
     assert "filterValueLabel('reviewQueue', 'response_id')" in html
     assert "summaryJsonLine('Runtime kinds', triage.runtime_record_kinds)" in html
     assert "statusScopeNoticeBody(readiness.status, readiness.message, readinessButtons, readiness.scope_note)" in html

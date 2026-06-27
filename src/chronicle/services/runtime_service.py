@@ -528,6 +528,30 @@ class RuntimeService:
 
     def record_preview(self, event: object) -> RuntimeRecordPreview:
         payload = getattr(event, "payload", {})
+        if "query_engine_trial_record" in payload:
+            trial = payload["query_engine_trial_record"]
+            query = str(trial.get("query", ""))
+            reviewer = str(trial.get("reviewer", ""))
+            downstream_consumer = str(trial.get("downstream_consumer", ""))
+            sufficient = bool(trial.get("sufficient", False))
+            return RuntimeRecordPreview(
+                record_kind="query_engine_trial",
+                title=f"Query-engine trial: {query}",
+                preview_text=(
+                    f"{downstream_consumer} / reviewer={reviewer} / sufficient={sufficient}"
+                ).strip(),
+                source_counts={
+                    "files_reviewed": len(trial.get("files_reviewed", [])),
+                    "notes": len(trial.get("notes", [])),
+                },
+                referenced_record_ids=[],
+                suggested_cli_family="chronicle package query-engine-trial-record",
+                boundary_notes=[
+                    "recorded downstream trial outcome only",
+                    "no downstream import execution happened inside Chronicle core",
+                    "primary Chronicle records remain authoritative",
+                ],
+            )
         if "runtime_summary" in payload:
             summary = payload["runtime_summary"]
             generated_text = str(summary.get("generated_text", ""))

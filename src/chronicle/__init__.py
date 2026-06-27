@@ -1,3 +1,3 @@
 """Chronicle Stack — local-first record of context, artifacts, decisions, and diffs."""
 
-__version__ = "1.77.0"
+__version__ = "1.78.0"

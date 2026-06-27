@@ -818,6 +818,10 @@ def _review_action_authorization_matrix() -> list[dict[str, Any]]:
 def _runtime_preview_title_contract(preview: dict[str, Any]) -> tuple[str | None, dict[str, Any]]:
     record_kind = str(preview.get("record_kind", ""))
     title = str(preview.get("title", ""))
+    if record_kind == "query_engine_trial":
+        return "ui.template.runtime_preview.title.query_engine_trial", {
+            "query": title.split(": ", 1)[1] if ": " in title else "",
+        }
     if record_kind == "summary":
         return "ui.runtime_preview.title.summary", {}
     if record_kind == "execution":
@@ -2705,7 +2709,8 @@ class ChronicleUIDataService:
             for event in self.chronicle.jsonl.read_all()
             if event.event_type.value == "assistant_output"
             and (
-                "runtime_summary" in event.payload
+                "query_engine_trial_record" in event.payload
+                or "runtime_summary" in event.payload
                 or "runtime_execution" in event.payload
                 or "runtime_retrieval_plan" in event.payload
                 or "runtime_invocation_plan" in event.payload
@@ -2723,6 +2728,16 @@ class ChronicleUIDataService:
                 preview_payload["title_params"] = title_params
             data["runtime_record_kind"] = preview.record_kind
             data["runtime_record_preview"] = preview_payload
+            if "query_engine_trial_record" in data["payload"]:
+                trial_payload = data["payload"]["query_engine_trial_record"]
+                data["query_engine_trial_preview"] = {
+                    "message": "Recorded downstream query-engine trial outcome is available for review.",
+                    "message_key": "ui.query_engine_trial.message.recorded",
+                    "reviewer": str(trial_payload.get("reviewer", "")),
+                    "downstream_consumer": str(trial_payload.get("downstream_consumer", "")),
+                    "sufficient": bool(trial_payload.get("sufficient", False)),
+                    "missing_behavior": str(trial_payload.get("missing_behavior", "")),
+                }
             review_row = self._review_queue_row(event.event_id)
             if review_row is not None:
                 mutation_enablement = self.mutation_readiness_summary()
@@ -4409,7 +4424,8 @@ class ChronicleUIDataService:
             record = _dump_model(event)
             payload = record["payload"]
             if (
-                "runtime_summary" not in payload
+                "query_engine_trial_record" not in payload
+                and "runtime_summary" not in payload
                 and "runtime_execution" not in payload
                 and "runtime_retrieval_plan" not in payload
                 and "runtime_invocation_plan" not in payload
@@ -4424,6 +4440,16 @@ class ChronicleUIDataService:
                 preview_payload["title_params"] = title_params
             record["runtime_record_kind"] = preview.record_kind
             record["runtime_record_preview"] = preview_payload
+            if "query_engine_trial_record" in payload:
+                trial_payload = payload["query_engine_trial_record"]
+                record["query_engine_trial_preview"] = {
+                    "message": "Recorded downstream query-engine trial outcome is available for review.",
+                    "message_key": "ui.query_engine_trial.message.recorded",
+                    "reviewer": str(trial_payload.get("reviewer", "")),
+                    "downstream_consumer": str(trial_payload.get("downstream_consumer", "")),
+                    "sufficient": bool(trial_payload.get("sufficient", False)),
+                    "missing_behavior": str(trial_payload.get("missing_behavior", "")),
+                }
             record["suggested_cli_family"] = preview.suggested_cli_family
             record["related_links"] = self.runtime_related_links(parts[2], payload)
             record["response_metadata_summary"] = self._runtime_response_metadata_summary(payload=payload)
@@ -6909,6 +6935,7 @@ function filterValueLabel(target, value) {{
     if (normalizedValue === 'preview_only') return label('filter.runtime.preview_only', 'Runtime mutation preview');
     if (normalizedValue === 'advisory_only') return label('filter.runtime.advisory_only', 'Runtime auth advisory');
     if (normalizedValue === 'boundary_aligned') return label('filter.runtime.boundary_aligned', 'Runtime identity aligned');
+    if (normalizedValue === 'query_engine_trial') return label('filter.runtime.query_engine_trial', 'Query-engine trial records');
     if (normalizedValue === 'retrieval_plan') return label('filter.runtime.retrieval_plan', 'Runtime retrieval plans');
     if (normalizedValue === 'response_id') return label('filter.runtime.response_id', 'Runtime provider response');
   }}
@@ -7048,6 +7075,7 @@ function runtimeRecordsSliceButtons() {{
     listJumpButton(filterValueLabel('runtimeRecords', 'preview_only'), '/api/runtime-records', 'runtimeRecords', 'preview_only'),
     listJumpButton(filterValueLabel('runtimeRecords', 'advisory_only'), '/api/runtime-records', 'runtimeRecords', 'advisory_only'),
     listJumpButton(filterValueLabel('runtimeRecords', 'boundary_aligned'), '/api/runtime-records', 'runtimeRecords', 'boundary_aligned'),
+    listJumpButton(filterValueLabel('runtimeRecords', 'query_engine_trial'), '/api/runtime-records', 'runtimeRecords', 'query_engine_trial'),
     listJumpButton(filterValueLabel('runtimeRecords', 'retrieval_plan'), '/api/runtime-records', 'runtimeRecords', 'retrieval_plan'),
     listJumpButton(filterValueLabel('runtimeRecords', 'response_id'), '/api/runtime-records', 'runtimeRecords', 'response_id'),
   ];
