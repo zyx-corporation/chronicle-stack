@@ -791,6 +791,8 @@ def test_ui_overview_data(tmp_path):
     assert overview["runtime_records_summary"]["provider_response_present_count"] == 0
     assert overview["runtime_records_summary"]["provider_response_absent_count"] == 2
     assert overview["runtime_records_summary"]["latest_provider_response_detail_path"] is None
+    assert overview["runtime_records_summary"]["query_engine_trial_summary"]["total_count"] == 0
+    assert overview["runtime_records_summary"]["query_engine_trial_summary"]["insufficient_count"] == 0
     assert overview["summary_jobs_summary"]["status_counts"]["pending_review"] == 1
     assert overview["summary_jobs_summary"]["review_capability_counts"]["advisory_only"] == 1
     assert overview["summary_jobs_summary"]["auth_readiness_counts"]["advisory_only"] == 1
@@ -1313,6 +1315,7 @@ def test_ui_html_filtering_includes_provider_response_metadata_fields(tmp_path, 
     assert "summaryJsonLine('Provider finish reasons', authBoundaryOverview.provider_response_finish_reason_counts)" in html
     assert "summaryJsonLine('Provider statuses', authBoundaryOverview.provider_response_status_counts)" in html
     assert "summaryJsonLine('Provider finish reasons', runtimeRecords.provider_response_finish_reason_counts)" in html
+    assert "summaryJsonLine('Query-engine trial summary', runtimeRecords.query_engine_trial_summary)" in html
     assert "summaryJsonLine('Provider statuses', summaryJobs.provider_response_status_counts)" in html
     assert "summaryJsonLine('Mutation readiness counts', runtimeRecords.mutation_readiness_counts)" in html
     assert "summaryJsonLine('Mutation operational counts', runtimeRecords.mutation_operational_counts)" in html
@@ -1566,6 +1569,69 @@ def test_runtime_records_include_query_engine_trial_rows(tmp_path):
         "ui.query_engine_trial.note.read_only_derived"
     )
     assert detail["query_engine_trial_preview"]["message_key"] == "ui.query_engine_trial.message.recorded"
+
+
+def test_overview_runtime_records_summarize_query_engine_trials(tmp_path):
+    _populate(tmp_path)
+    os.chdir(str(tmp_path))
+    runner = CliRunner()
+    first_output_dir = tmp_path / "handoff-bundle-a"
+    second_output_dir = tmp_path / "handoff-bundle-b"
+    first_bundle = runner.invoke(
+        app,
+        ["package", "query-engine-bundle", "--query", "UI Context", "--output-dir", str(first_output_dir)],
+    )
+    assert first_bundle.exit_code == 0
+    second_bundle = runner.invoke(
+        app,
+        ["package", "query-engine-bundle", "--query", "Gap Context", "--output-dir", str(second_output_dir)],
+    )
+    assert second_bundle.exit_code == 0
+    sufficient_record = runner.invoke(
+        app,
+        [
+            "package",
+            "query-engine-trial-record",
+            "--bundle-dir",
+            str(first_output_dir),
+            "--reviewer",
+            "ui-reviewer",
+            "--consumer",
+            "ui-consumer",
+            "--sufficient",
+            "--json",
+        ],
+    )
+    assert sufficient_record.exit_code == 0
+    insufficient_record = runner.invoke(
+        app,
+        [
+            "package",
+            "query-engine-trial-record",
+            "--bundle-dir",
+            str(second_output_dir),
+            "--reviewer",
+            "ui-reviewer",
+            "--consumer",
+            "ui-consumer-b",
+            "--insufficient",
+            "--missing-behavior",
+            "needs hosted runtime",
+            "--json",
+        ],
+    )
+    assert insufficient_record.exit_code == 0
+    insufficient_event_id = json.loads(insufficient_record.stdout)["event_id"]
+
+    overview = ChronicleUIDataService(tmp_path).overview()
+    summary = overview["runtime_records_summary"]["query_engine_trial_summary"]
+    assert summary["total_count"] == 2
+    assert summary["sufficient_count"] == 1
+    assert summary["insufficient_count"] == 1
+    assert summary["import_ready_count"] >= 1
+    assert summary["consumer_counts"]["ui-consumer"] == 1
+    assert summary["consumer_counts"]["ui-consumer-b"] == 1
+    assert summary["latest_trial_detail_path"] == f"/api/runtime-records/{insufficient_event_id}"
 
 
 def test_ui_runtime_detail_supports_invocation_plan(tmp_path):
@@ -2133,6 +2199,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert '"Source": "ソース"' in html
     assert '"Provider kind": "プロバイダ種別"' in html
     assert '"Runtime records": "ランタイム記録"' in html
+    assert "label('overview.query_engine_trial_insufficient', 'Insufficient trials')" in html
     assert '"Audit ID": "監査ID"' in html
     assert "payload.failure_summary_key" in html
     assert "payload && payload.message_key" in html

@@ -2170,6 +2170,15 @@ class ChronicleUIDataService:
         mutation_operational_counts: dict[str, int] = {}
         finish_reason_counts: dict[str, int] = {}
         provider_status_counts: dict[str, int] = {}
+        query_engine_trial_summary = {
+            "total_count": 0,
+            "sufficient_count": 0,
+            "insufficient_count": 0,
+            "import_ready_count": 0,
+            "advisory_import_count": 0,
+            "consumer_counts": {},
+            "latest_trial_detail_path": None,
+        }
         response_present_count = 0
         latest_provider_response_detail_path: str | None = None
         for row in rows:
@@ -2187,6 +2196,26 @@ class ChronicleUIDataService:
             mutation_operational_counts[mutation_operational_status] = (
                 mutation_operational_counts.get(mutation_operational_status, 0) + 1
             )
+            if kind == "query_engine_trial":
+                trial_preview = row.get("query_engine_trial_preview", {})
+                query_engine_trial_summary["total_count"] += 1
+                if bool(trial_preview.get("sufficient")):
+                    query_engine_trial_summary["sufficient_count"] += 1
+                else:
+                    query_engine_trial_summary["insufficient_count"] += 1
+                if bool(trial_preview.get("import_ready")):
+                    query_engine_trial_summary["import_ready_count"] += 1
+                else:
+                    query_engine_trial_summary["advisory_import_count"] += 1
+                consumer = str(trial_preview.get("downstream_consumer", "") or "unknown")
+                consumer_counts = query_engine_trial_summary["consumer_counts"]
+                consumer_counts[consumer] = int(consumer_counts.get(consumer, 0)) + 1
+                if query_engine_trial_summary["latest_trial_detail_path"] is None:
+                    event_id = str(row.get("event_id", ""))
+                    if event_id.startswith("evt_"):
+                        query_engine_trial_summary["latest_trial_detail_path"] = (
+                            f"/api/runtime-records/{event_id}"
+                        )
             if isinstance(response_summary, dict) and response_summary.get("present") is True:
                 response_present_count += 1
                 if latest_provider_response_detail_path is None:
@@ -2207,6 +2236,7 @@ class ChronicleUIDataService:
             "provider_response_finish_reason_counts": finish_reason_counts,
             "provider_response_status_counts": provider_status_counts,
             "latest_provider_response_detail_path": latest_provider_response_detail_path,
+            "query_engine_trial_summary": query_engine_trial_summary,
         }
 
     def auth_boundary_overview(self, review_queue: list[dict[str, Any]] | None = None) -> dict[str, Any]:
@@ -8385,8 +8415,11 @@ function renderOverviewAiIndexPanel(aiIndex, counts) {{
   );
 }}
 function overviewRuntimeRecordCountButtons(counts, runtimeRecords) {{
+  const trialSummary = runtimeRecords.query_engine_trial_summary || {{}};
   return buttonRow([
     overviewCountButton(label('section.runtime_records', 'Runtime Records'), counts.runtime_records, 'badge-neutral', '/api/runtime-records'),
+    overviewCountButton(filterValueLabel('runtimeRecords', 'query_engine_trial'), trialSummary.total_count ?? 0, 'badge-neutral', '/api/runtime-records', 'runtimeRecords', 'query_engine_trial'),
+    overviewCountButton(label('overview.query_engine_trial_insufficient', 'Insufficient trials'), trialSummary.insufficient_count ?? 0, 'badge-warning', '/api/runtime-records', 'runtimeRecords', 'query_engine_trial'),
     overviewCountButton(filterValueLabel('runtimeRecords', 'response_id'), runtimeRecords.provider_response_present_count, 'badge-ready', '/api/runtime-records', 'runtimeRecords', 'response_id'),
     overviewCountButton(filterValueLabel('runtimeRecords', 'advisory_only'), (runtimeRecords.auth_readiness_counts && runtimeRecords.auth_readiness_counts.advisory_only) ?? 0, 'badge-warning', '/api/runtime-records', 'runtimeRecords', 'advisory_only'),
     overviewCountButton(filterValueLabel('runtimeRecords', 'preview_only'), (runtimeRecords.mutation_readiness_counts && runtimeRecords.mutation_readiness_counts.preview_only) ?? 0, 'badge-warning', '/api/runtime-records', 'runtimeRecords', 'preview_only'),
@@ -8395,6 +8428,7 @@ function overviewRuntimeRecordCountButtons(counts, runtimeRecords) {{
 function renderOverviewRuntimeRecordsPanel(counts, runtimeRecords) {{
   const metricsBody =
     summaryJsonLine('Runtime kinds', runtimeRecords.kind_counts)
+      + summaryJsonLine('Query-engine trial summary', runtimeRecords.query_engine_trial_summary)
       + summaryJsonLine('Auth readiness counts', runtimeRecords.auth_readiness_counts)
       + summaryJsonLine('Mutation readiness counts', runtimeRecords.mutation_readiness_counts)
       + summaryJsonLine('Mutation operational counts', runtimeRecords.mutation_operational_counts)
