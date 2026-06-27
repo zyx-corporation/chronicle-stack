@@ -21,3 +21,5 @@ Use this checklist to decide whether the local handoff bundle is sufficient or w
 - the descriptive bundle is repeatedly insufficient in real downstream trials
 - the missing behavior clearly belongs outside Chronicle Stack core
 - the proposed repo can keep Chronicle Stack as a read-only record layer
+
+Use `docs/downstream-query-engine-trial-report-template.md` to record each real trial before escalating.

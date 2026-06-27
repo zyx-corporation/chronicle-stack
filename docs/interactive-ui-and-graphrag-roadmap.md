@@ -72,6 +72,7 @@ Current state:
 - package CLI can now regenerate a descriptive downstream query-engine adapter skeleton from the current handoff
 - package CLI can now emit a local downstream handoff bundle directory for consumer repos
 - handoff bundles now include a descriptive acceptance checklist before any downstream implementation-repo escalation
+- handoff bundles now include a trial report template so real downstream evaluations can be recorded before escalation
 
 ## Completion criteria by lane
 

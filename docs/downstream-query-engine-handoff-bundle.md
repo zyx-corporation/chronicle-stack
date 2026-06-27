@@ -15,6 +15,7 @@ chronicle package query-engine-bundle --query "release planning context" --outpu
 - `query_engine_adapter_skeleton.json`
 - `graph.json`
 - `ACCEPTANCE_CHECKLIST.md`
+- `TRIAL_REPORT_TEMPLATE.md`
 
 ## Intended use
 
@@ -22,6 +23,7 @@ chronicle package query-engine-bundle --query "release planning context" --outpu
 - inspect the non-executable adapter skeleton
 - inspect the derived `graph-json` export
 - review the bundled acceptance checklist before asking for a separate implementation repo
+- record the real downstream trial outcome with the bundled trial report template
 - hand the bundle to a downstream consumer repo without making Chronicle Stack itself executable as a query engine
 
 ## Boundary

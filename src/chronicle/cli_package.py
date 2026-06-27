@@ -61,6 +61,46 @@ def _query_engine_bundle_acceptance_checklist(*, query: str) -> str:
     )
 
 
+def _query_engine_bundle_trial_report_template(*, query: str) -> str:
+    return "\n".join(
+        [
+            "# Query-Engine Handoff Bundle Trial Report",
+            "",
+            f"- Query: `{query}`",
+            "- Trial date:",
+            "- Reviewer:",
+            "- Downstream consumer or repo:",
+            "",
+            "## Files reviewed",
+            "",
+            "- [ ] `query_engine_handoff.json`",
+            "- [ ] `query_engine_adapter_skeleton.json`",
+            "- [ ] `graph.json`",
+            "- [ ] `bundle_manifest.json`",
+            "- [ ] `ACCEPTANCE_CHECKLIST.md`",
+            "",
+            "## Structural findings",
+            "",
+            "- Import-validation status observed:",
+            "- Contract/version mismatches:",
+            "- Missing files or parse errors:",
+            "",
+            "## Sufficiency decision",
+            "",
+            "- [ ] Bundle was sufficient for downstream trial",
+            "- [ ] Bundle was insufficient for downstream trial",
+            "- If insufficient, describe the missing behavior:",
+            "",
+            "## Boundary confirmation",
+            "",
+            "- [ ] Chronicle primary records remained authoritative",
+            "- [ ] No hosted query execution was expected from Chronicle Stack",
+            "- [ ] No downstream import execution was expected inside Chronicle Stack",
+            "- [ ] Any requested next step stays outside Chronicle Stack core",
+        ]
+    )
+
+
 @package_app.command("context")
 def context_package_cmd(
     purpose: Annotated[str, typer.Option("--purpose", help="Purpose for building the package.")],
@@ -168,6 +208,10 @@ def query_engine_bundle_cmd(
         )
         (output_dir / "ACCEPTANCE_CHECKLIST.md").write_text(
             _query_engine_bundle_acceptance_checklist(query=query),
+            encoding="utf-8",
+        )
+        (output_dir / "TRIAL_REPORT_TEMPLATE.md").write_text(
+            _query_engine_bundle_trial_report_template(query=query),
             encoding="utf-8",
         )
         typer.echo(f"Query-engine handoff bundle written to {output_dir}")

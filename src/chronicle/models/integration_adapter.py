@@ -34,6 +34,7 @@ class QueryEngineHandoffBundleManifest(BaseModel):
     primary_record_path: str = ".chronicle/chronicle.jsonl"
     files: list[str] = Field(default_factory=list)
     acceptance_checklist_included: bool = True
+    trial_report_template_included: bool = True
     referenced_record_count: int = 0
     eligible_context_count: int = 0
     import_validation_status: str = "advisory_only"
