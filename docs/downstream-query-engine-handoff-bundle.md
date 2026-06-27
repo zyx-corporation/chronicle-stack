@@ -14,12 +14,14 @@ chronicle package query-engine-bundle --query "release planning context" --outpu
 - `query_engine_handoff.json`
 - `query_engine_adapter_skeleton.json`
 - `graph.json`
+- `ACCEPTANCE_CHECKLIST.md`
 
 ## Intended use
 
 - inspect the current handoff contract
 - inspect the non-executable adapter skeleton
 - inspect the derived `graph-json` export
+- review the bundled acceptance checklist before asking for a separate implementation repo
 - hand the bundle to a downstream consumer repo without making Chronicle Stack itself executable as a query engine
 
 ## Boundary

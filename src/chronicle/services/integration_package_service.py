@@ -111,6 +111,7 @@ class IntegrationPackageService:
                 "query_engine_handoff.json",
                 "query_engine_adapter_skeleton.json",
                 "graph.json",
+                "ACCEPTANCE_CHECKLIST.md",
             ],
             referenced_record_count=len(handoff.referenced_record_ids),
             eligible_context_count=len(handoff.eligible_context_ids),

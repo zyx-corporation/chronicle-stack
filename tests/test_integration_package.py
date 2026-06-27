@@ -188,4 +188,6 @@ def test_query_engine_handoff_bundle_manifest_summarizes_bundle(tmp_path):
     assert manifest.bundle_kind == "query_engine_handoff_bundle"
     assert "bundle_manifest.json" in manifest.files
     assert "graph.json" in manifest.files
+    assert "ACCEPTANCE_CHECKLIST.md" in manifest.files
+    assert manifest.acceptance_checklist_included is True
     assert manifest.referenced_record_count >= 1

@@ -33,6 +33,7 @@ class QueryEngineHandoffBundleManifest(BaseModel):
     adapter_skeleton_contract_version: str = "1.0"
     primary_record_path: str = ".chronicle/chronicle.jsonl"
     files: list[str] = Field(default_factory=list)
+    acceptance_checklist_included: bool = True
     referenced_record_count: int = 0
     eligible_context_count: int = 0
     import_validation_status: str = "advisory_only"

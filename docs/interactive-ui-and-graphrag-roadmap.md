@@ -71,6 +71,7 @@ Current state:
 - import validation now checks the handoff against the current derived graph export without performing any downstream import
 - package CLI can now regenerate a descriptive downstream query-engine adapter skeleton from the current handoff
 - package CLI can now emit a local downstream handoff bundle directory for consumer repos
+- handoff bundles now include a descriptive acceptance checklist before any downstream implementation-repo escalation
 
 ## Completion criteria by lane
 

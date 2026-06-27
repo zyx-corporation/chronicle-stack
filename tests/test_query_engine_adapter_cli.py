@@ -60,6 +60,11 @@ def test_package_query_engine_bundle_writes_bundle_files(tmp_path: Path) -> None
     assert (output_dir / "query_engine_handoff.json").exists()
     assert (output_dir / "query_engine_adapter_skeleton.json").exists()
     assert (output_dir / "graph.json").exists()
+    assert (output_dir / "ACCEPTANCE_CHECKLIST.md").exists()
     manifest = json.loads((output_dir / "bundle_manifest.json").read_text(encoding="utf-8"))
     assert manifest["bundle_kind"] == "query_engine_handoff_bundle"
+    assert manifest["acceptance_checklist_included"] is True
+    assert "downstream implementation repo is requested only if this bundle is insufficient" in (
+        output_dir / "ACCEPTANCE_CHECKLIST.md"
+    ).read_text(encoding="utf-8")
     assert "Query-engine handoff bundle written to" in result.stdout

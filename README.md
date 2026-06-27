@@ -225,6 +225,7 @@ v1.2 以降では、`/api/events/<id>`, `/api/contexts/<id>`, `/api/artifacts/<i
 - [Query-Engine Handoff Consumer Example](docs/query-engine-handoff-consumer-example.md)
 - [Query-Engine Import Adapter Skeleton](docs/query-engine-import-adapter-skeleton.md)
 - [Downstream Query-Engine Handoff Bundle](docs/downstream-query-engine-handoff-bundle.md)
+- [Downstream Query-Engine Acceptance Checklist](docs/downstream-query-engine-acceptance-checklist.md)
 - [Local AI Index Placeholder](docs/local-ai-index-placeholder.md)
 - [v1.7 Phase D/E Progress](docs/v1.7-phase-d-e-progress.md)
 - [v1.7 Phase D/E Smoke Profile](docs/smoke-test-v1.7-phase-d-e.md)

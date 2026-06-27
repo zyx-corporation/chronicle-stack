@@ -205,6 +205,7 @@ def test_package_query_engine_bundle_manifest_json_shape(tmp_path):
         "graph_export_contract_version",
         "adapter_skeleton_contract_version",
         "files",
+        "acceptance_checklist_included",
         "referenced_record_count",
         "eligible_context_count",
         "import_validation_status",
