@@ -1478,6 +1478,16 @@ def test_ui_data_service_detail_endpoints(tmp_path):
     assert retrieval_detail["retrieval_handoff"]["downstream_command_details"][0]["summary_key"] == (
         "ui.template.retrieval_handoff.command.package_review"
     )
+    assert retrieval_detail["query_engine_handoff_preview"]["status"] == "contract_available"
+    assert retrieval_detail["query_engine_handoff_preview"]["counts_summary_key"] == (
+        "ui.template.query_engine_handoff.counts"
+    )
+    assert retrieval_detail["query_engine_handoff_preview"]["suggested_command_details"][0]["summary_key"] == (
+        "ui.template.query_engine_handoff.command.graph_summary"
+    )
+    assert retrieval_detail["query_engine_handoff_preview"]["boundary_note_key"] == (
+        "ui.query_engine_handoff.note.read_only_derived"
+    )
     assert retrieval_detail["package_handoff_preview"]["status"] == "package_context_available"
     assert ids["context_id"] in retrieval_detail["package_handoff_preview"]["eligible_context_ids"]
     assert retrieval_detail["package_handoff_preview"]["counts_summary_key"] == (
@@ -1671,6 +1681,9 @@ def test_ui_data_service_detail_endpoints(tmp_path):
         "ui.template.retrieval_handoff.hit_counts"
     )
     assert runtime_plan_detail["retrieval_handoff"]["composition"]["unique_identifier_count"] >= 1
+    assert runtime_plan_detail["query_engine_handoff_preview"]["message_key"] == (
+        "ui.query_engine_handoff.message.contract_available"
+    )
     assert runtime_plan_detail["package_handoff_preview"]["message_key"] == (
         "ui.package_handoff.message.package_context_available"
     )
@@ -1888,6 +1901,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "loadDetail" in html
     assert "label('notice.runtime_preview', 'Runtime Preview')" in html
     assert "label('notice.retrieval_handoff', 'Retrieval Handoff')" in html
+    assert "label('notice.query_engine_handoff_preview', 'Query-Engine Handoff Preview')" in html
     assert "detailListLine('Composed hits', composedHits)" in html
     assert "const localizedDownstreamCommands = (Array.isArray(handoff.downstream_command_details) ? handoff.downstream_command_details : []).map(item => (" in html
     assert "detailListLine('Downstream commands', localizedDownstreamCommands.length > 0 ? localizedDownstreamCommands : handoff.downstream_commands, ' | ')" in html

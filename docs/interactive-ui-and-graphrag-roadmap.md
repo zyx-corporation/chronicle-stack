@@ -64,6 +64,11 @@ Current state:
 - treat Chronicle as the record layer and GraphRAG as a downstream derived consumer
 - only after adapter and export stability should a query engine be considered release-ready
 
+Current state:
+
+- retrieval-plan payloads now include a read-only downstream query-engine handoff contract
+- runtime detail view now surfaces the handoff as a non-authoritative preview for derived consumers
+
 ## Completion criteria by lane
 
 ### Interactive UI completion

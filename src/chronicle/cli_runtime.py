@@ -132,6 +132,13 @@ def runtime_retrieve_plan_cmd(
                 f"unique={plan.composition.unique_identifier_count} "
                 f"overlap={plan.composition.overlap_identifier_count}"
             )
+        if plan.query_engine_handoff is not None:
+            typer.echo(
+                "Query-engine handoff: "
+                f"contract={plan.query_engine_handoff.contract_version} "
+                f"refs={len(plan.query_engine_handoff.referenced_record_ids)} "
+                f"contexts={len(plan.query_engine_handoff.eligible_context_ids)}"
+            )
         typer.echo(f"Recorded: {plan.recorded}")
         if plan.event_id:
             typer.echo(f"Event: {plan.event_id}")

@@ -544,6 +544,41 @@ def _package_readiness_counts_contract(
     }
 
 
+def _query_engine_handoff_message_key(status: str) -> str:
+    if status == "contract_available":
+        return "ui.query_engine_handoff.message.contract_available"
+    if status == "advisory_only":
+        return "ui.query_engine_handoff.message.advisory_only"
+    return "ui.query_engine_handoff.message.unavailable"
+
+
+def _query_engine_handoff_counts_contract(
+    *, referenced_record_count: int, eligible_context_count: int, overlap_identifier_count: int
+) -> tuple[str, dict[str, Any]]:
+    return "ui.template.query_engine_handoff.counts", {
+        "referenced_record_count": referenced_record_count,
+        "eligible_context_count": eligible_context_count,
+        "overlap_identifier_count": overlap_identifier_count,
+    }
+
+
+def _query_engine_handoff_command_detail(command: str) -> dict[str, Any]:
+    if command.startswith("chronicle graph summary"):
+        template_key = "ui.template.query_engine_handoff.command.graph_summary"
+    elif command.startswith("chronicle export --format graph-json"):
+        template_key = "ui.template.query_engine_handoff.command.graph_export"
+    elif command.startswith('chronicle package review --purpose "runtime query-engine handoff"'):
+        template_key = "ui.template.query_engine_handoff.command.package_review"
+    else:
+        template_key = "ui.template.query_engine_handoff.command.generic"
+    return {
+        "command": command,
+        "summary": command,
+        "summary_key": template_key,
+        "summary_params": {"command": command},
+    }
+
+
 def _response_metadata_counts_contract(
     *, metadata_count: int, response_key_count: int
 ) -> tuple[str, dict[str, Any]]:
@@ -3111,6 +3146,43 @@ class ChronicleUIDataService:
                 "correctness_proof": False,
             }
 
+    def runtime_query_engine_handoff(self, plan: RuntimeRetrievalPlan) -> dict[str, Any]:
+        handoff = plan.query_engine_handoff.model_dump(mode="json") if plan.query_engine_handoff is not None else {
+            "status": "unavailable",
+            "query": plan.query,
+            "referenced_record_ids": [],
+            "eligible_context_ids": [],
+            "skipped_record_ids": [],
+            "source_summaries": [],
+            "overlap_identifier_count": 0,
+            "suggested_commands": [],
+            "prohibited_assumptions": [],
+            "notes": [],
+        }
+        counts_key, counts_params = _query_engine_handoff_counts_contract(
+            referenced_record_count=len(handoff.get("referenced_record_ids", [])),
+            eligible_context_count=len(handoff.get("eligible_context_ids", [])),
+            overlap_identifier_count=int(handoff.get("overlap_identifier_count", 0)),
+        )
+        handoff["message_key"] = _query_engine_handoff_message_key(str(handoff.get("status", "unavailable")))
+        handoff["counts_summary_key"] = counts_key
+        handoff["counts_summary_params"] = counts_params
+        handoff["boundary_note"] = (
+            "Query-engine handoff preview remains derived, read-only, and non-authoritative over primary Chronicle records."
+        )
+        handoff["boundary_note_key"] = "ui.query_engine_handoff.note.read_only_derived"
+        handoff["suggested_command_details"] = [
+            _query_engine_handoff_command_detail(command)
+            for command in handoff.get("suggested_commands", [])
+            if isinstance(command, str) and command
+        ]
+        handoff["message"] = (
+            "Read-only query-engine handoff contract is available for downstream derived consumers."
+            if handoff.get("referenced_record_ids")
+            else "No referenced records are available for a downstream query-engine handoff; the contract remains advisory only."
+        )
+        return handoff
+
     def runtime_package_handoff(self, plan: RuntimeRetrievalPlan) -> dict[str, Any]:
         context_ids = [record_id for record_id in _unique_list(plan) if record_id.startswith("ctx_")]
         skipped_ids = [record_id for record_id in _unique_list(plan) if not record_id.startswith("ctx_")]
@@ -4367,6 +4439,7 @@ class ChronicleUIDataService:
                     if isinstance(command, str) and command
                 ]
                 record["retrieval_handoff"] = handoff_payload
+                record["query_engine_handoff_preview"] = self.runtime_query_engine_handoff(plan)
                 record["package_handoff_preview"] = self.runtime_package_handoff(plan)
             if "runtime_invocation_plan" in payload:
                 plan = RuntimeInvocationPlan.model_validate(payload["runtime_invocation_plan"])
@@ -7421,6 +7494,39 @@ function blockerSummaryDetailLines(blockerDetails, blockers, blockerSummaries = 
     )), ' | ')
     + detailListLine('Next steps', nextSteps, ' | ');
 }}
+function renderQueryEngineHandoffPreviewNotice(record) {{
+  if (!record.query_engine_handoff_preview) return '';
+  const preview = record.query_engine_handoff_preview;
+  const localizedSuggestedCommands = (Array.isArray(preview.suggested_command_details) ? preview.suggested_command_details : []).map(item => (
+    item && item.summary_key
+      ? formatLabel(item.summary_key, item.summary_params || {{}}, item.summary || item.command || '')
+      : (item.summary || item.command || '')
+  ));
+  const localizedCounts = preview.counts_summary_key
+    ? formatLabel(preview.counts_summary_key, preview.counts_summary_params || {{}}, '')
+    : '';
+  const localizedBoundaryNote = preview.boundary_note_key
+    ? formatLabel(preview.boundary_note_key, {{}}, preview.boundary_note || '')
+    : (preview.boundary_note || '');
+  return renderNotice(
+    label('notice.query_engine_handoff_preview', 'Query-Engine Handoff Preview'),
+    statusMessageBody(preview.status, localizedPayloadText(preview))
+      + detailLine('Query', preview.query || '')
+      + detailLine('Contract', preview.contract_version || '')
+      + detailLine('Primary record', preview.primary_record_path || '')
+      + detailLine('Graph export', (preview.graph_export_format || '') + ' / ' + (preview.graph_export_contract_version || ''))
+      + detailLine('Incremental mode', preview.graph_incremental_mode || '')
+      + detailLine('Hit counts', localizedCounts)
+      + detailListLine('Derived surfaces', preview.derived_surfaces)
+      + detailListLine('Referenced IDs', preview.referenced_record_ids)
+      + detailListLine('Eligible contexts', preview.eligible_context_ids)
+      + detailListLine('Skipped records', preview.skipped_record_ids)
+      + detailListLine('Suggested commands', localizedSuggestedCommands.length > 0 ? localizedSuggestedCommands : preview.suggested_commands, ' | ')
+      + detailListLine('Prohibited assumptions', preview.prohibited_assumptions, ' | ')
+      + detailListLine('Notes', preview.notes, ' | ')
+      + detailLine('Scope note', localizedBoundaryNote)
+  );
+}}
 function renderPackageHandoffPreviewNotice(record) {{
   if (!record.package_handoff_preview) return '';
   const preview = record.package_handoff_preview;
@@ -8393,6 +8499,7 @@ const detailNoticeRenderers = [
   renderRuntimePreviewNotice,
   renderResponseMetadataNotice,
   renderRetrievalHandoffNotice,
+  renderQueryEngineHandoffPreviewNotice,
   renderPackageHandoffPreviewNotice,
   renderInvocationPlanNotice,
   renderPackageReadinessNotice,

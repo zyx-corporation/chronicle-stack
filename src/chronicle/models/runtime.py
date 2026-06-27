@@ -168,6 +168,29 @@ class RuntimeRetrievalComposition(BaseModel):
     notes: list[str] = Field(default_factory=list)
 
 
+class RuntimeQueryEngineHandoff(BaseModel):
+    contract_version: str = "1.0"
+    status: str = "contract_available"
+    query: str
+    primary_record_path: str = ".chronicle/chronicle.jsonl"
+    graph_export_format: str = "graph-json"
+    graph_export_contract_version: str = "1.0"
+    graph_incremental_mode: str = "event-driven_rebuildable"
+    derived_surfaces: list[str] = Field(default_factory=list)
+    referenced_record_ids: list[str] = Field(default_factory=list)
+    eligible_context_ids: list[str] = Field(default_factory=list)
+    skipped_record_ids: list[str] = Field(default_factory=list)
+    source_summaries: list[RuntimeRetrievalSourceSummary] = Field(default_factory=list)
+    overlap_identifier_count: int = 0
+    package_review_required: bool = True
+    primary_record_authoritative: bool = True
+    graph_runtime_included: bool = False
+    external_query_runtime_included: bool = False
+    suggested_commands: list[str] = Field(default_factory=list)
+    prohibited_assumptions: list[str] = Field(default_factory=list)
+    notes: list[str] = Field(default_factory=list)
+
+
 class RuntimeRetrievalPlan(BaseModel):
     provider_kind: RuntimeProviderKind = RuntimeProviderKind.LOCAL
     invocation_mode: str = "explicit-manual-dry-run"
@@ -178,6 +201,7 @@ class RuntimeRetrievalPlan(BaseModel):
     chronicle_hits: list[RuntimeRetrievalHit] = Field(default_factory=list)
     graph_adapter: LocalGraphRetrievalAdapterResult | None = None
     composition: RuntimeRetrievalComposition | None = None
+    query_engine_handoff: RuntimeQueryEngineHandoff | None = None
     notes: list[str] = Field(default_factory=list)
     primary_record_authoritative: bool = True
     requires_review: bool = True

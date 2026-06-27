@@ -25,6 +25,7 @@ from chronicle.models.runtime import (
     RuntimeExecutionResult,
     RuntimeInvocationPlan,
     RuntimeProviderKind,
+    RuntimeQueryEngineHandoff,
     RuntimeRecordPreview,
     RuntimeRetrievalComposition,
     RuntimeRetrievalHandoff,
@@ -284,6 +285,12 @@ class RuntimeService:
             "primary Chronicle record remains authoritative",
         ]
         composition = _compose_retrieval_hits(vector_hits, graph_hits, chronicle_hits)
+        query_engine_handoff = _build_query_engine_handoff(
+            query=query,
+            graph_adapter=graph_adapter,
+            composition=composition,
+            referenced_record_ids=_unique_identifiers_from_hits(vector_hits, graph_hits, chronicle_hits),
+        )
         plan = RuntimeRetrievalPlan(
             query=query,
             vector_hits=vector_hits,
@@ -291,6 +298,7 @@ class RuntimeService:
             chronicle_hits=chronicle_hits,
             graph_adapter=graph_adapter,
             composition=composition,
+            query_engine_handoff=query_engine_handoff,
             notes=notes,
         )
         if not record:
@@ -856,9 +864,17 @@ def _sentence_count(text: str) -> int:
 
 
 def _unique_identifiers(plan: RuntimeRetrievalPlan) -> list[str]:
+    return _unique_identifiers_from_hits(plan.vector_hits, plan.graph_hits, plan.chronicle_hits)
+
+
+def _unique_identifiers_from_hits(
+    vector_hits: list[RuntimeRetrievalHit],
+    graph_hits: list[RuntimeRetrievalHit],
+    chronicle_hits: list[RuntimeRetrievalHit],
+) -> list[str]:
     seen: set[str] = set()
     identifiers: list[str] = []
-    for hit in [*plan.vector_hits, *plan.graph_hits, *plan.chronicle_hits]:
+    for hit in [*vector_hits, *graph_hits, *chronicle_hits]:
         if hit.identifier and hit.identifier not in seen:
             identifiers.append(hit.identifier)
             seen.add(hit.identifier)
@@ -938,4 +954,48 @@ def _compose_retrieval_hits(
         source_summaries=source_summaries,
         composed_hits=composed_hits,
         notes=notes,
+    )
+
+
+
+def _build_query_engine_handoff(
+    *,
+    query: str,
+    graph_adapter,
+    composition: RuntimeRetrievalComposition,
+    referenced_record_ids: list[str],
+) -> RuntimeQueryEngineHandoff:
+    context_ids = [record_id for record_id in referenced_record_ids if record_id.startswith("ctx_")]
+    skipped_ids = [record_id for record_id in referenced_record_ids if not record_id.startswith("ctx_")]
+    status = "contract_available" if referenced_record_ids else "advisory_only"
+    derived_surfaces = [summary.source for summary in composition.source_summaries if summary.hit_count > 0]
+    if not derived_surfaces:
+        derived_surfaces = [summary.source for summary in composition.source_summaries]
+    return RuntimeQueryEngineHandoff(
+        status=status,
+        query=query,
+        graph_export_contract_version=(graph_adapter.export_contract_version if graph_adapter is not None else "unknown"),
+        graph_incremental_mode=(graph_adapter.incremental_mode if graph_adapter is not None else "event-driven_rebuildable"),
+        derived_surfaces=derived_surfaces,
+        referenced_record_ids=referenced_record_ids,
+        eligible_context_ids=context_ids,
+        skipped_record_ids=skipped_ids,
+        source_summaries=composition.source_summaries,
+        overlap_identifier_count=composition.overlap_identifier_count,
+        suggested_commands=[
+            "chronicle graph summary --json",
+            'chronicle export --format graph-json -o graph.json',
+            'chronicle package review --purpose "runtime query-engine handoff"',
+        ],
+        prohibited_assumptions=[
+            "no hosted query engine is included",
+            "no graph runtime or vector runtime is included",
+            "no external query execution is implied",
+            "primary Chronicle records remain authoritative",
+        ],
+        notes=[
+            "downstream query-engine handoff stays derived and read-only",
+            "graph-json export remains rebuildable from Chronicle events",
+            "handoff is advisory until a downstream consumer explicitly imports it",
+        ],
     )

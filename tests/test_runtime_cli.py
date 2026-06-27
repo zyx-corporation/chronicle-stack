@@ -994,6 +994,9 @@ def test_runtime_retrieve_plan_json(tmp_path: Path) -> None:
     assert payload["composition"]["total_hit_count"] >= 2
     assert payload["composition"]["unique_identifier_count"] >= 1
     assert payload["composition"]["source_summaries"][0]["source"] == "vector_index"
+    assert payload["query_engine_handoff"]["contract_version"] == "1.0"
+    assert payload["query_engine_handoff"]["graph_export_format"] == "graph-json"
+    assert payload["query_engine_handoff"]["suggested_commands"][0] == "chronicle graph summary --json"
     assert payload["vector_hits"]
     assert payload["chronicle_hits"]
 
