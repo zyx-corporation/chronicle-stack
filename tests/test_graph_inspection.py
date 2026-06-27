@@ -68,6 +68,18 @@ def test_graph_edges_json_filter(tmp_path):
     assert all(edge["edge_type"] == "chronicle_has_event" for edge in payload)
 
 
+def test_graph_retrieve_json(tmp_path):
+    _setup_graph(tmp_path)
+
+    result = _run(tmp_path, "retrieve", "--query", "graph context", "--json")
+    payload = json.loads(result.stdout)
+
+    assert result.exit_code == 0
+    assert payload["contract_version"] == "1.0"
+    assert payload["incremental_mode"] == "event-driven_rebuildable"
+    assert payload["hits"]
+
+
 def test_graph_inspection_does_not_mutate_jsonl(tmp_path):
     _setup_graph(tmp_path)
     events_file = tmp_path / ".chronicle" / "chronicle.jsonl"

@@ -131,6 +131,18 @@ class RuntimeRetrievalHit(BaseModel):
     score: float | None = None
 
 
+class LocalGraphRetrievalAdapterResult(BaseModel):
+    contract_version: str = "1.0"
+    export_contract_version: str = "1.0"
+    query: str
+    incremental_mode: str = "event-driven_rebuildable"
+    candidate_node_count: int = 0
+    matched_node_count: int = 0
+    expanded_edge_count: int = 0
+    hits: list[RuntimeRetrievalHit] = Field(default_factory=list)
+    notes: list[str] = Field(default_factory=list)
+
+
 class RuntimeRetrievalPlan(BaseModel):
     provider_kind: RuntimeProviderKind = RuntimeProviderKind.LOCAL
     invocation_mode: str = "explicit-manual-dry-run"
@@ -139,6 +151,7 @@ class RuntimeRetrievalPlan(BaseModel):
     vector_hits: list[RuntimeRetrievalHit] = Field(default_factory=list)
     graph_hits: list[RuntimeRetrievalHit] = Field(default_factory=list)
     chronicle_hits: list[RuntimeRetrievalHit] = Field(default_factory=list)
+    graph_adapter: LocalGraphRetrievalAdapterResult | None = None
     notes: list[str] = Field(default_factory=list)
     primary_record_authoritative: bool = True
     requires_review: bool = True

@@ -1123,6 +1123,10 @@ def test_ui_data_service_read_endpoints(tmp_path):
     assert service.graph_summary()["incremental_mode"] == "event-driven_rebuildable"
     assert service.graph_summary()["incremental_expectations"]
     assert service.overview()["graph_summary"]["message_key"] == "ui.graph_summary.message.available"
+    retrieval_result = RuntimeService(tmp_path).retrieve_plan(query="UI Context")
+    assert retrieval_result.graph_adapter is not None
+    assert retrieval_result.graph_adapter.contract_version == "1.0"
+    assert retrieval_result.graph_adapter.incremental_mode == "event-driven_rebuildable"
     assert service.ai_index_status()["ai_index_status"]["message_key"] == (
         "ui.ai_index_status.message.available"
     )

@@ -36,6 +36,7 @@ from chronicle.models.source import SourceProvenance
 from chronicle.services.chronicle_service import ChronicleService
 from chronicle.services.artifact_service import ArtifactService
 from chronicle.services.graph_export_service import GraphExportService
+from chronicle.services.local_graph_retrieval_adapter import LocalGraphRetrievalAdapter
 from chronicle.services.runtime_config_service import RuntimeConfigService
 from chronicle.services.search_service import SearchService
 from chronicle.services.summary_job_service import SummaryJobService
@@ -49,6 +50,7 @@ class RuntimeService:
         self.chronicle = ChronicleService(root)
         self.vector_index = VectorIndexService(root)
         self.graph_export = GraphExportService(root)
+        self.graph_adapter = LocalGraphRetrievalAdapter(root)
         self.search = SearchService(root)
         self.summary_jobs = SummaryJobService(root)
         self.runtime_config = RuntimeConfigService(root)
@@ -259,21 +261,8 @@ class RuntimeService:
             for result in self.vector_index.search(query=query, limit=limit)
         ]
 
-        graph = self.graph_export.export_graph()
-        query_lower = query.lower()
-        graph_hits: list[RuntimeRetrievalHit] = []
-        for node in graph.nodes:
-            haystack = f"{node.title} {node.summary} {node.node_type} {node.metadata}".lower()
-            if query_lower in haystack:
-                graph_hits.append(
-                    RuntimeRetrievalHit(
-                        source="graph_export",
-                        identifier=node.source_id,
-                        summary=node.title or node.summary or node.node_type,
-                        detail=node.node_type,
-                    )
-                )
-        graph_hits = graph_hits[:limit]
+        graph_adapter = self.graph_adapter.retrieve(query=query, limit=limit)
+        graph_hits = graph_adapter.hits
 
         chronicle_hits = [
             RuntimeRetrievalHit(
@@ -296,6 +285,7 @@ class RuntimeService:
             vector_hits=vector_hits,
             graph_hits=graph_hits,
             chronicle_hits=chronicle_hits,
+            graph_adapter=graph_adapter,
             notes=notes,
         )
         if not record:

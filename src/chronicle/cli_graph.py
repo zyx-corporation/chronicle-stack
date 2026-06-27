@@ -7,6 +7,7 @@ from typing import Annotated
 import typer
 
 from chronicle.services.graph_export_service import GraphExportService
+from chronicle.services.local_graph_retrieval_adapter import LocalGraphRetrievalAdapter
 
 
 graph_app = typer.Typer(help="Read-only graph export inspection commands.")
@@ -98,3 +99,24 @@ def graph_edges_cmd(
         return
     for edge in edges:
         typer.echo(f"{edge.edge_id}  {edge.edge_type}  {edge.from_node_id} -> {edge.to_node_id}")
+
+
+@graph_app.command("retrieve")
+def graph_retrieve_cmd(
+    query: Annotated[str, typer.Option("--query", help="Local graph retrieval query.")] ,
+    limit: Annotated[int, typer.Option("--limit", help="Maximum hits to return.")] = 5,
+    json_output: Annotated[bool, typer.Option("--json")] = False,
+) -> None:
+    """Run the local graph retrieval adapter over the derived graph export."""
+    result = LocalGraphRetrievalAdapter().retrieve(query=query, limit=limit)
+    payload = result.model_dump(mode="json")
+    if json_output:
+        _dump_json(payload)
+        return
+
+    typer.echo("Local Graph Retrieval")
+    typer.echo(f"Query: {result.query}")
+    typer.echo(f"Contract: {result.contract_version}")
+    typer.echo(f"Matched nodes: {result.matched_node_count}")
+    for hit in result.hits:
+        typer.echo(f"- {hit.identifier} [{hit.detail}] {hit.summary}")

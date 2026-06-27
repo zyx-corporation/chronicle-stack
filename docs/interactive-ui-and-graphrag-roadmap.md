@@ -55,6 +55,7 @@ Current state:
 
 - graph export now carries a versioned machine-readable export contract
 - incremental expectations are stated against Chronicle events, `event_id`, and full rebuild compatibility
+- a local graph retrieval adapter now consumes the derived export without turning Chronicle into a GraphRAG runtime
 
 ### 5. External GraphRAG integration and query engine
 
