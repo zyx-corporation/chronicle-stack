@@ -63,6 +63,24 @@ class ArtifactContentMissingError(ChronicleError):
         )
 
 
+class ContextNotFoundError(ChronicleError):
+    def __init__(self, context_id: str) -> None:
+        super().__init__(
+            code="CONTEXT_NOT_FOUND",
+            message=f"Context not found: {context_id}",
+            hint="Run `chronicle show --json` or inspect `/api/contexts` to see available contexts.",
+        )
+
+
+class ProposalChangeMissingError(ChronicleError):
+    def __init__(self, target_kind: str) -> None:
+        super().__init__(
+            code="PROPOSAL_CHANGE_MISSING",
+            message=f"{target_kind} proposal requires at least one proposed change.",
+            hint="Pass at least one editable field such as --summary, --title, --file, --content, --scope, or --tag.",
+        )
+
+
 class VersionNotFoundError(ChronicleError):
     def __init__(self, version_id: str) -> None:
         super().__init__(

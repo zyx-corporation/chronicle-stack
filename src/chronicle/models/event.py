@@ -27,6 +27,7 @@ class EventType(StrEnum):
     INJECTION_PLAN_RECORDED = "injection_plan_recorded"
     SUMMARY_JOB_CREATED = "summary_job_created"
     REVIEW_DECISION_RECORDED = "review_decision_recorded"
+    PROPOSAL_RECORDED = "proposal_recorded"
 
 
 class Actor(StrEnum):

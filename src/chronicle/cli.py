@@ -9,6 +9,7 @@ from typing import Annotated
 
 import typer
 
+from chronicle import __version__
 from chronicle.cli_audit import audit_app
 from chronicle.cli_ai_index import ai_index_app
 from chronicle.cli_context import context_app
@@ -47,7 +48,9 @@ def _version_callback(value: bool) -> None:
         try:
             package_version = _package_version("chronicle-stack")
         except PackageNotFoundError:
-            package_version = "0.0.0+unknown"
+            package_version = __version__
+        if package_version != __version__:
+            package_version = __version__
         typer.echo(f"chronicle {package_version}")
         raise typer.Exit()
 

@@ -4,6 +4,7 @@ import hashlib
 from datetime import datetime, timezone
 from pathlib import Path
 
+from chronicle.errors import ContextNotFoundError
 from chronicle.ids import generate_id
 from chronicle.models.classification import ClassificationLayer, ClassificationMetadata, Sensitivity
 from chronicle.models.context import Confidence, Context, ContextScope, ScopeHint
@@ -74,7 +75,7 @@ class ContextService:
         self.chronicle.rebuild_indexes()
         contexts = self.chronicle.index.load_contexts()
         if context_id not in contexts:
-            raise ValueError(f"Context not found: {context_id}")
+            raise ContextNotFoundError(context_id)
 
         context = contexts[context_id].model_copy(deep=True)
         now = datetime.now(timezone.utc).astimezone()
@@ -119,5 +120,5 @@ class ContextService:
         self.chronicle.rebuild_indexes()
         contexts = self.chronicle.index.load_contexts()
         if context_id not in contexts:
-            raise ValueError(f"Context not found: {context_id}")
+            raise ContextNotFoundError(context_id)
         return contexts[context_id]

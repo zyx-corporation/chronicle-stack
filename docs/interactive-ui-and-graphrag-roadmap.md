@@ -39,6 +39,12 @@ Current state:
 - require review/apply rather than direct in-place editing
 - keep proposal records reconstructable from Chronicle events
 
+Current state:
+
+- append-only proposal records are available for artifact/context update intent
+- proposal records surface in local UI artifact/context read models and `/api/proposals`
+- approval remains separate from CLI apply so accepted proposals do not mutate targets implicitly
+
 ### 4. Graph export hardening and local retrieval adapter
 
 - version graph-ready node/edge export contracts

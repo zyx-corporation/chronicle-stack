@@ -24,6 +24,7 @@ from chronicle.services.context_service import ContextService
 from chronicle.services.decision_service import DecisionService
 from chronicle.services.graph_index_service import GraphIndexService
 from chronicle.services.lifecycle_service import LifecycleService
+from chronicle.services.proposal_service import ProposalService
 from chronicle.services.review_service import ReviewService
 from chronicle.services.runtime_config_service import RuntimeConfigService
 from chronicle.services.runtime_service import RuntimeService
@@ -812,10 +813,23 @@ def test_ui_overview_data(tmp_path):
 def test_ui_data_service_read_endpoints(tmp_path):
     ids = _populate(tmp_path)
     RuntimeConfigService(tmp_path).set_local(model_name="ui-local-model", provider_name="ui-local")
+    ProposalService(tmp_path).propose_context_update(
+        context_id=ids["context_id"],
+        summary="UI context proposal",
+        proposed_summary="UI context proposal body",
+    )
+    ProposalService(tmp_path).propose_artifact_update(
+        artifact_id=ids["artifact_id"],
+        summary="UI artifact proposal",
+        content="UI artifact proposal body",
+    )
     service = ChronicleUIDataService(tmp_path)
 
     assert service.contexts()["contexts"][0]["title"] == "UI Context"
+    assert service.contexts()["contexts"][0]["proposal_count"] == 1
     assert service.artifacts()["artifacts"][0]["title"] == "UI Artifact"
+    assert service.artifacts()["artifacts"][0]["proposal_count"] == 1
+    assert len(service.proposal_records()["proposals"]) == 2
     assert service.decisions()["decisions"][0]["reason"] == "UI decision"
     assert service.boundary_rules()["boundary_rules"][0]["reason"] == "UI boundary"
     assert service.audit_events()["audit_events"][0]["summary"] == "UI audit event"
@@ -884,7 +898,11 @@ def test_ui_data_service_read_endpoints(tmp_path):
     assert "This read-only drilldown row appears in runtime records because reviewer enforcement is descriptive only" in (
         runtime_summary_row["reviewer_boundary_drilldown_summary"]["fact_line"]
     )
-    assert len(service.review_queue()["review_queue"]) == 3
+    review_queue = service.review_queue()["review_queue"]
+    assert len(review_queue) == 5
+    assert {"artifact_update", "context_update"} <= {
+        row["review_kind"] for row in review_queue
+    }
     assert len(service.summary_jobs_list()["summary_jobs"]) == 1
     assert service.summary_jobs_list()["summary_jobs"][0]["summary_job_id"].startswith("sum_")
     assert service.summary_jobs_list()["summary_jobs"][0]["review_target_event_id"].startswith("evt_")
@@ -941,28 +959,28 @@ def test_ui_data_service_read_endpoints(tmp_path):
     assert service.runtime_config_state()["runtime_config"]["config"]["provider_kind_summary_key"] == (
         "ui.runtime_config.provider_kind.local"
     )
-    assert service.review_queue()["review_queue"][0]["review_preview_only"] is True
-    assert service.review_queue()["review_queue"][0]["target_event_id"].startswith("evt_")
-    assert service.review_queue()["review_queue"][0]["review_capability"]["status"] == "advisory_only"
-    assert service.review_queue()["review_queue"][0]["auth_boundary_notice"]["status"] == "advisory_only"
-    assert service.review_queue()["review_queue"][0]["reviewer_enforcement_status"] == "descriptive_only"
-    assert service.review_queue()["review_queue"][0]["reviewer_validation_gate_status"] == "read_only_preview"
-    assert service.review_queue()["review_queue"][0]["reviewer_boundary_drilldown_summary"]["dataset_key"] == (
+    assert review_queue[0]["review_preview_only"] is True
+    assert review_queue[0]["target_event_id"].startswith("evt_")
+    assert review_queue[0]["review_capability"]["status"] == "advisory_only"
+    assert review_queue[0]["auth_boundary_notice"]["status"] == "advisory_only"
+    assert review_queue[0]["reviewer_enforcement_status"] == "descriptive_only"
+    assert review_queue[0]["reviewer_validation_gate_status"] == "read_only_preview"
+    assert review_queue[0]["reviewer_boundary_drilldown_summary"]["dataset_key"] == (
         "review_queue"
     )
-    assert service.review_queue()["review_queue"][0]["response_metadata_summary"]["message_key"] == (
+    assert review_queue[0]["response_metadata_summary"]["message_key"] == (
         "ui.provider_response.message.unavailable"
     )
-    assert service.review_queue()["review_queue"][0]["package_readiness_summary"]["label"].startswith("package:")
-    assert service.review_queue()["review_queue"][0]["package_readiness_summary"]["label_key"] == (
+    assert review_queue[0]["package_readiness_summary"]["label"].startswith("package:")
+    assert review_queue[0]["package_readiness_summary"]["label_key"] == (
         "ui.package_readiness.summary.label.advisory"
     )
-    assert service.review_queue()["review_queue"][0]["package_readiness_summary"]["message"]
+    assert review_queue[0]["package_readiness_summary"]["message"]
     assert (
-        service.review_queue()["review_queue"][0]["package_readiness_summary"]["message_key"]
+        review_queue[0]["package_readiness_summary"]["message_key"]
         == "ui.package_readiness.message.no_context_records"
     )
-    assert service.review_queue()["review_queue"][0]["package_readiness_summary"]["message_template_key"] == (
+    assert review_queue[0]["package_readiness_summary"]["message_template_key"] == (
         "ui.package_readiness.summary.message.advisory"
     )
     assert service.review_queue()["review_queue"][0]["action_preview_summary"]["status"] == "preview_only"
@@ -1023,13 +1041,13 @@ def test_ui_data_service_read_endpoints(tmp_path):
         "request_changes",
     ]
     overview = service.overview()
-    assert overview["triage"]["cli_parity_aligned_reviews"] == 3
+    assert overview["triage"]["cli_parity_aligned_reviews"] == 5
     assert overview["triage"]["cli_parity_drift_reviews"] == 0
-    assert overview["triage"]["cli_parity_counts"]["aligned"] == 3
-    assert overview["triage"]["identity_assurance_counts"]["unknown"] == 3
-    assert overview["triage"]["reviewer_kind_counts"]["unknown"] == 3
-    assert overview["triage"]["warning_counts"]["ui_auth_not_enabled"] == 3
-    assert overview["triage"]["warning_counts"]["ui_authorization_not_enabled"] == 3
+    assert overview["triage"]["cli_parity_counts"]["aligned"] == 5
+    assert overview["triage"]["identity_assurance_counts"]["unknown"] == 5
+    assert overview["triage"]["reviewer_kind_counts"]["unknown"] == 5
+    assert overview["triage"]["warning_counts"]["ui_auth_not_enabled"] == 5
+    assert overview["triage"]["warning_counts"]["ui_authorization_not_enabled"] == 5
     assert overview["triage"]["warning_summaries"][0]["code"] == "ui_auth_not_enabled"
     assert overview["triage"]["warning_summaries"][1]["code"] == "ui_authorization_not_enabled"
     assert overview["triage"]["warning_summaries"][0]["label_key"] == "filter.review.ui_auth_not_enabled"

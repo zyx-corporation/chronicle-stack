@@ -329,6 +329,12 @@ class ReviewService:
 
     @staticmethod
     def _review_kind(payload: dict[str, object]) -> str:
+        proposal = payload.get("proposal")
+        if isinstance(proposal, dict):
+            proposal_kind = proposal.get("proposal_kind")
+            if isinstance(proposal_kind, str) and proposal_kind:
+                return proposal_kind
+            return "proposal"
         if "runtime_summary" in payload:
             return "runtime_summary"
         if "runtime_retrieval_plan" in payload:

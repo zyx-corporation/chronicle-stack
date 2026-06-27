@@ -31,6 +31,7 @@ from chronicle.services.graph_export_service import GraphExportService
 from chronicle.services.integration_package_service import IntegrationPackageService
 from chronicle.services.lifecycle_service import LifecycleService
 from chronicle.services.package_review_service import PackageReviewService
+from chronicle.services.proposal_service import ProposalService
 from chronicle.services.review_service import (
     ReviewAuditInsertionError,
     ReviewDecisionPersistenceError,
@@ -2004,6 +2005,7 @@ class ChronicleUIDataService:
         self.packages = IntegrationPackageService(self.root)
         self.package_review = PackageReviewService(self.root)
         self.review = ReviewService(self.root)
+        self.proposals = ProposalService(self.root)
         self.runtime = RuntimeService(self.root)
         self.runtime_config = RuntimeConfigService(self.root)
         self.summary_jobs = SummaryJobService(self.root)
@@ -2576,7 +2578,17 @@ class ChronicleUIDataService:
     def contexts(self) -> dict[str, Any]:
         self.chronicle.require_initialized()
         contexts = sorted(self.chronicle.index.load_contexts().values(), key=lambda ctx: ctx.created_at)
-        return {"contexts": [_dump_model(context) for context in contexts]}
+        rows = []
+        for context in contexts:
+            data = _dump_model(context)
+            proposals = self.proposals.proposals_for_target(target_kind="context", target_id=context.context_id)
+            data["proposal_count"] = len(proposals)
+            data["pending_proposal_count"] = sum(
+                1 for proposal in proposals if proposal.get("review_status") == "needs_review"
+            )
+            data["latest_proposal_event_id"] = proposals[-1]["event_id"] if proposals else None
+            rows.append(data)
+        return {"contexts": rows}
 
     def artifacts(self) -> dict[str, Any]:
         self.chronicle.require_initialized()
@@ -2585,8 +2597,20 @@ class ChronicleUIDataService:
         for artifact in sorted(artifacts.values(), key=lambda item: item.created_at):
             data = _dump_model(artifact)
             data["version_count"] = len(versions.get(artifact.artifact_id, []))
+            proposals = self.proposals.proposals_for_target(
+                target_kind="artifact", target_id=artifact.artifact_id
+            )
+            data["proposal_count"] = len(proposals)
+            data["pending_proposal_count"] = sum(
+                1 for proposal in proposals if proposal.get("review_status") == "needs_review"
+            )
+            data["latest_proposal_event_id"] = proposals[-1]["event_id"] if proposals else None
             rows.append(data)
         return {"artifacts": rows}
+
+    def proposal_records(self) -> dict[str, Any]:
+        self.chronicle.require_initialized()
+        return {"proposals": self.proposals.list_proposals()}
 
     def decisions(self) -> dict[str, Any]:
         self.chronicle.require_initialized()
@@ -3585,6 +3609,10 @@ class ChronicleUIDataService:
 
     @staticmethod
     def _suggested_cli_family_from_kind(review_kind: str) -> str:
+        if review_kind == "artifact_update":
+            return "chronicle artifact propose-update"
+        if review_kind == "context_update":
+            return "chronicle context propose-update"
         if review_kind == "runtime_summary":
             return "chronicle runtime summarize --record"
         if review_kind == "runtime_retrieval_plan":
@@ -4480,11 +4508,30 @@ class ChronicleUIDataService:
         elif resource == "contexts":
             contexts = self.chronicle.index.load_contexts()
             record = _dump_model(contexts[record_id]) if record_id in contexts else None
+            if record is not None:
+                proposals = self.proposals.proposals_for_target(target_kind="context", target_id=record_id)
+                record["proposals"] = proposals
+                record["proposal_summary"] = {
+                    "count": len(proposals),
+                    "pending_count": sum(
+                        1 for proposal in proposals if proposal.get("review_status") == "needs_review"
+                    ),
+                    "boundary_note": "Proposal records are append-only and reviewable; direct in-place UI editing remains unavailable.",
+                }
         elif resource == "artifacts":
             artifacts, versions = self.chronicle.index.load_artifacts()
             record = _dump_model(artifacts[record_id]) if record_id in artifacts else None
             if record is not None:
                 record["versions"] = [_dump_model(version) for version in versions.get(record_id, [])]
+                proposals = self.proposals.proposals_for_target(target_kind="artifact", target_id=record_id)
+                record["proposals"] = proposals
+                record["proposal_summary"] = {
+                    "count": len(proposals),
+                    "pending_count": sum(
+                        1 for proposal in proposals if proposal.get("review_status") == "needs_review"
+                    ),
+                    "boundary_note": "Proposal records are append-only and reviewable; direct in-place UI editing remains unavailable.",
+                }
         elif resource == "decisions":
             decisions = self.chronicle.index.load_decisions()
             record = _dump_model(decisions[record_id]) if record_id in decisions else None
@@ -4516,6 +4563,7 @@ class ChronicleUIDataService:
             "/api/runtime-records": self.runtime_records,
             "/api/review-queue": self.review_queue,
             "/api/summary-jobs": self.summary_jobs_list,
+            "/api/proposals": self.proposal_records,
             "/api/ui-boundary": self.ui_boundary,
             "/api/runtime-config": self.runtime_config_state,
             "/api/package-review": lambda: {"package_review": self.package_review_snapshot()},
@@ -5001,6 +5049,7 @@ th {{ position: sticky; top: 0; background: #ffffff; }}
   <button data-endpoint="/api/runtime-records">Runtime Records</button>
   <button data-endpoint="/api/review-queue">Review Queue</button>
   <button data-endpoint="/api/summary-jobs">Summary Jobs</button>
+  <button data-endpoint="/api/proposals">Proposals</button>
   <button data-endpoint="/api/ui-boundary">UI Boundary</button>
   <button data-endpoint="/api/runtime-config">Runtime Config</button>
   <button data-endpoint="/api/package-review">Package Review</button>

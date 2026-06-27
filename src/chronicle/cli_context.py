@@ -5,10 +5,14 @@ from typing import Annotated
 
 import typer
 
+from chronicle.errors import ChronicleError
+from chronicle.interfaces.cli.common import handle_error
 from chronicle.models.classification import ClassificationLayer, Sensitivity
+from chronicle.models.context import ContextScope
 from chronicle.models.context_use import ContextUseSeverity, ContextUseTarget
 from chronicle.services.context_service import ContextService
 from chronicle.services.context_use_service import ContextUseService
+from chronicle.services.proposal_service import ProposalService
 
 context_app = typer.Typer(
     name="chronicle-context",
@@ -139,6 +143,38 @@ def classification_set_cmd(
 
 
 context_app.add_typer(classification_app, name="classification")
+
+
+@context_app.command("propose-update")
+def context_propose_update_cmd(
+    context_id: Annotated[str, typer.Option("--context", help="Context ID to propose changes for.")],
+    summary: Annotated[str, typer.Option("--summary", help="Proposal summary for review.")] = "",
+    title: Annotated[str, typer.Option("--title", help="Proposed replacement title.")] = "",
+    body: Annotated[str, typer.Option("--body", help="Proposed replacement summary/body.")] = "",
+    scope: Annotated[
+        str | None,
+        typer.Option("--scope", help="Optional proposed scope: global, project, session, task, artifact, temporary."),
+    ] = None,
+    tag: Annotated[list[str] | None, typer.Option("--tag", help="Proposed tag set additions. Repeatable.")] = None,
+    json_output: Annotated[bool, typer.Option("--json")] = False,
+) -> None:
+    """Record an append-only context update proposal."""
+    try:
+        event = ProposalService().propose_context_update(
+            context_id=context_id,
+            summary=summary,
+            proposed_title=title,
+            proposed_summary=body,
+            proposed_scope=ContextScope(scope) if scope else None,
+            proposed_tags=tag,
+        )
+        if json_output:
+            typer.echo(json.dumps(event.model_dump(mode="json"), ensure_ascii=False, indent=2))
+        else:
+            typer.echo(f"Context proposal recorded: {event.event_id}")
+            typer.echo("  Review queue target created with needs_review status")
+    except ChronicleError as exc:
+        handle_error(exc, json_output)
 
 
 if __name__ == "__main__":

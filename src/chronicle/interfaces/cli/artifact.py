@@ -11,6 +11,7 @@ from chronicle.interfaces.cli.common import handle_error, source_from_options
 from chronicle.models.artifact import ArtifactType
 from chronicle.models.visibility import VisibilityHint
 from chronicle.services.artifact_service import ArtifactService
+from chronicle.services.proposal_service import ProposalService
 
 artifact_app = typer.Typer(help="Artifact operations.")
 
@@ -118,6 +119,33 @@ def artifact_history_cmd(
             for ver in versions:
                 ts = ver.created_at.strftime("%Y-%m-%d %H:%M")
                 typer.echo(f"{ver.version_id}  {ts}  {ver.change_summary}")
+    except ChronicleError as exc:
+        handle_error(exc, json_output)
+
+
+@artifact_app.command("propose-update")
+def artifact_propose_update_cmd(
+    artifact: Annotated[str, typer.Option("--artifact")],
+    summary: Annotated[str, typer.Option("--summary")] = "",
+    file: Annotated[Path | None, typer.Option("--file")] = None,
+    content: Annotated[str | None, typer.Option("--content")] = None,
+    title: Annotated[str, typer.Option("--title")] = "",
+    json_output: Annotated[bool, typer.Option("--json")] = False,
+) -> None:
+    """Record an append-only artifact update proposal."""
+    try:
+        event = ProposalService().propose_artifact_update(
+            artifact_id=artifact,
+            summary=summary,
+            source_file=file,
+            content=content,
+            proposed_title=title,
+        )
+        if json_output:
+            typer.echo(json.dumps(event.model_dump(mode="json"), ensure_ascii=False, indent=2))
+        else:
+            typer.echo(f"Artifact proposal recorded: {event.event_id}")
+            typer.echo("  Review queue target created with needs_review status")
     except ChronicleError as exc:
         handle_error(exc, json_output)
 
