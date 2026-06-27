@@ -871,6 +871,62 @@ def _query_engine_trial_preview_payload(payload: dict[str, Any]) -> dict[str, An
     }
 
 
+def _query_engine_trial_escalation_summary(
+    trial_summary: dict[str, Any],
+) -> dict[str, Any]:
+    total_count = int(trial_summary.get("total_count", 0) or 0)
+    insufficient_count = int(trial_summary.get("insufficient_count", 0) or 0)
+    advisory_import_count = int(trial_summary.get("advisory_import_count", 0) or 0)
+    insufficient_consumer_counts = dict(trial_summary.get("insufficient_consumer_counts", {}) or {})
+    missing_behavior_counts = dict(trial_summary.get("missing_behavior_counts", {}) or {})
+    repeated_insufficient_consumers = sorted(
+        consumer
+        for consumer, count in insufficient_consumer_counts.items()
+        if int(count) >= 2 and consumer != "unknown"
+    )
+    top_missing_behaviors = [
+        behavior
+        for behavior, _count in sorted(
+            missing_behavior_counts.items(),
+            key=lambda item: (-int(item[1]), item[0]),
+        )
+        if behavior
+    ][:3]
+    reasons: list[str] = []
+    if insufficient_count == 1:
+        reasons.append("single_insufficient_trial")
+    if insufficient_count >= 2:
+        reasons.append("repeated_insufficient_trials")
+    if repeated_insufficient_consumers:
+        reasons.append("repeated_consumer_insufficient")
+    if total_count > 0 and advisory_import_count == total_count:
+        reasons.append("import_readiness_advisory_only")
+    if total_count == 0:
+        status = "no_trial_records"
+        message = "No recorded downstream query-engine trials yet."
+    elif insufficient_count == 0:
+        status = "stable"
+        message = "Recorded downstream trials are currently sufficient."
+    elif insufficient_count == 1 and not repeated_insufficient_consumers:
+        status = "watch"
+        message = "One recorded downstream trial was insufficient; review missing behavior before escalation."
+    else:
+        status = "escalate"
+        message = "Repeated insufficient downstream trials suggest an external implementation concern."
+    return {
+        "status": status,
+        "message": message,
+        "message_key": f"ui.query_engine_trial.escalation.{status}",
+        "active_count": 0 if status in {"no_trial_records", "stable"} else insufficient_count,
+        "insufficient_trial_count": insufficient_count,
+        "repeated_insufficient_consumers": repeated_insufficient_consumers,
+        "top_missing_behaviors": top_missing_behaviors,
+        "advisory_import_trial_count": advisory_import_count,
+        "latest_trial_detail_path": trial_summary.get("latest_trial_detail_path"),
+        "reasons": reasons,
+    }
+
+
 def _provider_response_message_key(summary: dict[str, Any]) -> str:
     return (
         "ui.provider_response.message.present"
@@ -2177,6 +2233,8 @@ class ChronicleUIDataService:
             "import_ready_count": 0,
             "advisory_import_count": 0,
             "consumer_counts": {},
+            "insufficient_consumer_counts": {},
+            "missing_behavior_counts": {},
             "latest_trial_detail_path": None,
         }
         response_present_count = 0
@@ -2203,6 +2261,23 @@ class ChronicleUIDataService:
                     query_engine_trial_summary["sufficient_count"] += 1
                 else:
                     query_engine_trial_summary["insufficient_count"] += 1
+                    insufficient_consumer = str(
+                        trial_preview.get("downstream_consumer", "") or "unknown"
+                    )
+                    insufficient_consumer_counts = query_engine_trial_summary[
+                        "insufficient_consumer_counts"
+                    ]
+                    insufficient_consumer_counts[insufficient_consumer] = int(
+                        insufficient_consumer_counts.get(insufficient_consumer, 0)
+                    ) + 1
+                    missing_behavior = str(trial_preview.get("missing_behavior", "")).strip()
+                    if missing_behavior:
+                        missing_behavior_counts = query_engine_trial_summary[
+                            "missing_behavior_counts"
+                        ]
+                        missing_behavior_counts[missing_behavior] = int(
+                            missing_behavior_counts.get(missing_behavior, 0)
+                        ) + 1
                 if bool(trial_preview.get("import_ready")):
                     query_engine_trial_summary["import_ready_count"] += 1
                 else:
@@ -2226,6 +2301,7 @@ class ChronicleUIDataService:
                 provider_status = str(response_summary.get("provider_status") or "unknown")
                 finish_reason_counts[finish_reason] = finish_reason_counts.get(finish_reason, 0) + 1
                 provider_status_counts[provider_status] = provider_status_counts.get(provider_status, 0) + 1
+        escalation_summary = _query_engine_trial_escalation_summary(query_engine_trial_summary)
         return {
             "kind_counts": kind_counts,
             "auth_readiness_counts": auth_counts,
@@ -2237,6 +2313,7 @@ class ChronicleUIDataService:
             "provider_response_status_counts": provider_status_counts,
             "latest_provider_response_detail_path": latest_provider_response_detail_path,
             "query_engine_trial_summary": query_engine_trial_summary,
+            "query_engine_trial_escalation_summary": escalation_summary,
         }
 
     def auth_boundary_overview(self, review_queue: list[dict[str, Any]] | None = None) -> dict[str, Any]:
@@ -2580,6 +2657,7 @@ class ChronicleUIDataService:
         runtime_records: list[dict[str, Any]],
         review_queue: list[dict[str, Any]],
     ) -> dict[str, Any]:
+        runtime_summary = self.runtime_records_overview(runtime_records)
         runtime_by_kind: dict[str, int] = {}
         for row in runtime_records:
             kind = str(row.get("runtime_record_kind", "unknown"))
@@ -2646,6 +2724,10 @@ class ChronicleUIDataService:
 
         return {
             "runtime_record_kinds": runtime_by_kind,
+            "query_engine_trial_summary": runtime_summary.get("query_engine_trial_summary", {}),
+            "query_engine_trial_escalation_summary": runtime_summary.get(
+                "query_engine_trial_escalation_summary", {}
+            ),
             "review_capability_counts": review_capability_counts,
             "package_readiness_counts": readiness_counts,
             "cli_parity_counts": cli_parity_counts,
@@ -8416,10 +8498,12 @@ function renderOverviewAiIndexPanel(aiIndex, counts) {{
 }}
 function overviewRuntimeRecordCountButtons(counts, runtimeRecords) {{
   const trialSummary = runtimeRecords.query_engine_trial_summary || {{}};
+  const escalationSummary = runtimeRecords.query_engine_trial_escalation_summary || {{}};
   return buttonRow([
     overviewCountButton(label('section.runtime_records', 'Runtime Records'), counts.runtime_records, 'badge-neutral', '/api/runtime-records'),
     overviewCountButton(filterValueLabel('runtimeRecords', 'query_engine_trial'), trialSummary.total_count ?? 0, 'badge-neutral', '/api/runtime-records', 'runtimeRecords', 'query_engine_trial'),
     overviewCountButton(label('overview.query_engine_trial_insufficient', 'Insufficient trials'), trialSummary.insufficient_count ?? 0, 'badge-warning', '/api/runtime-records', 'runtimeRecords', 'query_engine_trial'),
+    overviewCountButton(label('overview.query_engine_trial_escalation', 'Trial escalation cues'), escalationSummary.active_count ?? 0, 'badge-warning', '/api/runtime-records', 'runtimeRecords', 'query_engine_trial'),
     overviewCountButton(filterValueLabel('runtimeRecords', 'response_id'), runtimeRecords.provider_response_present_count, 'badge-ready', '/api/runtime-records', 'runtimeRecords', 'response_id'),
     overviewCountButton(filterValueLabel('runtimeRecords', 'advisory_only'), (runtimeRecords.auth_readiness_counts && runtimeRecords.auth_readiness_counts.advisory_only) ?? 0, 'badge-warning', '/api/runtime-records', 'runtimeRecords', 'advisory_only'),
     overviewCountButton(filterValueLabel('runtimeRecords', 'preview_only'), (runtimeRecords.mutation_readiness_counts && runtimeRecords.mutation_readiness_counts.preview_only) ?? 0, 'badge-warning', '/api/runtime-records', 'runtimeRecords', 'preview_only'),
@@ -8429,6 +8513,7 @@ function renderOverviewRuntimeRecordsPanel(counts, runtimeRecords) {{
   const metricsBody =
     summaryJsonLine('Runtime kinds', runtimeRecords.kind_counts)
       + summaryJsonLine('Query-engine trial summary', runtimeRecords.query_engine_trial_summary)
+      + summaryJsonLine('Trial escalation', runtimeRecords.query_engine_trial_escalation_summary)
       + summaryJsonLine('Auth readiness counts', runtimeRecords.auth_readiness_counts)
       + summaryJsonLine('Mutation readiness counts', runtimeRecords.mutation_readiness_counts)
       + summaryJsonLine('Mutation operational counts', runtimeRecords.mutation_operational_counts)
@@ -8476,6 +8561,7 @@ function renderOverviewSummaryJobsPanel(counts, summaryJobs) {{
   );
 }}
 function overviewTriageCountRows(triage) {{
+  const trialEscalation = triage.query_engine_trial_escalation_summary || {{}};
   return buttonRow([
     overviewCountButton(filterValueLabel('reviewQueue', 'review_requested'), triage.needs_attention_reviews, 'badge-warning', '/api/review-queue', 'reviewQueue', 'review_requested'),
   ])
@@ -8496,11 +8582,14 @@ function overviewTriageCountRows(triage) {{
     ])
     + buttonRow([
       overviewCountButton(filterValueLabel('reviewQueue', 'response_id'), triage.provider_response_present_reviews, 'badge-ready', '/api/review-queue', 'reviewQueue', 'response_id'),
+      overviewCountButton(label('overview.query_engine_trial_escalation', 'Trial escalation cues'), trialEscalation.active_count ?? 0, 'badge-warning', '/api/runtime-records', 'runtimeRecords', 'query_engine_trial'),
     ]);
 }}
 function renderOverviewTriagePanel(triage, warningButtons, warningSummaries) {{
   const metricsBody =
     summaryJsonLine('Runtime kinds', triage.runtime_record_kinds)
+      + summaryJsonLine('Query-engine trial summary', triage.query_engine_trial_summary)
+      + summaryJsonLine('Trial escalation', triage.query_engine_trial_escalation_summary)
       + summaryJsonLine('Review capability counts', triage.review_capability_counts)
       + summaryJsonLine('Package readiness counts', triage.package_readiness_counts)
       + summaryJsonLine('CLI parity counts', triage.cli_parity_counts)

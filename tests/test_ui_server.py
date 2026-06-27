@@ -793,6 +793,10 @@ def test_ui_overview_data(tmp_path):
     assert overview["runtime_records_summary"]["latest_provider_response_detail_path"] is None
     assert overview["runtime_records_summary"]["query_engine_trial_summary"]["total_count"] == 0
     assert overview["runtime_records_summary"]["query_engine_trial_summary"]["insufficient_count"] == 0
+    assert overview["runtime_records_summary"]["query_engine_trial_escalation_summary"]["status"] == (
+        "no_trial_records"
+    )
+    assert overview["runtime_records_summary"]["query_engine_trial_escalation_summary"]["active_count"] == 0
     assert overview["summary_jobs_summary"]["status_counts"]["pending_review"] == 1
     assert overview["summary_jobs_summary"]["review_capability_counts"]["advisory_only"] == 1
     assert overview["summary_jobs_summary"]["auth_readiness_counts"]["advisory_only"] == 1
@@ -1316,6 +1320,7 @@ def test_ui_html_filtering_includes_provider_response_metadata_fields(tmp_path, 
     assert "summaryJsonLine('Provider statuses', authBoundaryOverview.provider_response_status_counts)" in html
     assert "summaryJsonLine('Provider finish reasons', runtimeRecords.provider_response_finish_reason_counts)" in html
     assert "summaryJsonLine('Query-engine trial summary', runtimeRecords.query_engine_trial_summary)" in html
+    assert "summaryJsonLine('Trial escalation', runtimeRecords.query_engine_trial_escalation_summary)" in html
     assert "summaryJsonLine('Provider statuses', summaryJobs.provider_response_status_counts)" in html
     assert "summaryJsonLine('Mutation readiness counts', runtimeRecords.mutation_readiness_counts)" in html
     assert "summaryJsonLine('Mutation operational counts', runtimeRecords.mutation_operational_counts)" in html
@@ -1632,6 +1637,79 @@ def test_overview_runtime_records_summarize_query_engine_trials(tmp_path):
     assert summary["consumer_counts"]["ui-consumer"] == 1
     assert summary["consumer_counts"]["ui-consumer-b"] == 1
     assert summary["latest_trial_detail_path"] == f"/api/runtime-records/{insufficient_event_id}"
+    escalation = overview["runtime_records_summary"]["query_engine_trial_escalation_summary"]
+    assert escalation["status"] == "watch"
+    assert escalation["active_count"] == 1
+    assert escalation["insufficient_trial_count"] == 1
+    assert "single_insufficient_trial" in escalation["reasons"]
+    assert "needs hosted runtime" in escalation["top_missing_behaviors"]
+    assert overview["triage"]["query_engine_trial_escalation_summary"]["status"] == "watch"
+
+
+def test_overview_runtime_records_escalate_repeated_query_engine_trials(tmp_path):
+    _populate(tmp_path)
+    os.chdir(str(tmp_path))
+    runner = CliRunner()
+    first_output_dir = tmp_path / "handoff-bundle-a"
+    second_output_dir = tmp_path / "handoff-bundle-b"
+    assert runner.invoke(
+        app,
+        ["package", "query-engine-bundle", "--query", "Gap A", "--output-dir", str(first_output_dir)],
+    ).exit_code == 0
+    assert runner.invoke(
+        app,
+        ["package", "query-engine-bundle", "--query", "Gap B", "--output-dir", str(second_output_dir)],
+    ).exit_code == 0
+    assert runner.invoke(
+        app,
+        [
+            "package",
+            "query-engine-trial-record",
+            "--bundle-dir",
+            str(first_output_dir),
+            "--reviewer",
+            "ui-reviewer",
+            "--consumer",
+            "shared-consumer",
+            "--insufficient",
+            "--missing-behavior",
+            "needs hosted runtime",
+            "--json",
+        ],
+    ).exit_code == 0
+    second_record = runner.invoke(
+        app,
+        [
+            "package",
+            "query-engine-trial-record",
+            "--bundle-dir",
+            str(second_output_dir),
+            "--reviewer",
+            "ui-reviewer",
+            "--consumer",
+            "shared-consumer",
+            "--insufficient",
+            "--missing-behavior",
+            "needs hosted runtime",
+            "--json",
+        ],
+    )
+    assert second_record.exit_code == 0
+    second_event_id = json.loads(second_record.stdout)["event_id"]
+
+    overview = ChronicleUIDataService(tmp_path).overview()
+    escalation = overview["runtime_records_summary"]["query_engine_trial_escalation_summary"]
+    assert escalation["status"] == "escalate"
+    assert escalation["active_count"] == 2
+    assert escalation["insufficient_trial_count"] == 2
+    assert escalation["repeated_insufficient_consumers"] == ["shared-consumer"]
+    assert escalation["top_missing_behaviors"] == ["needs hosted runtime"]
+    assert escalation["latest_trial_detail_path"] == f"/api/runtime-records/{second_event_id}"
+    assert "repeated_insufficient_trials" in escalation["reasons"]
+    assert "repeated_consumer_insufficient" in escalation["reasons"]
+    triage_escalation = overview["triage"]["query_engine_trial_escalation_summary"]
+    assert triage_escalation["status"] == "escalate"
+    assert triage_escalation["active_count"] == 2
 
 
 def test_ui_runtime_detail_supports_invocation_plan(tmp_path):
@@ -2121,6 +2199,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "t('sort.review.reviewer')" in html
     assert "t('sort.summary.title')" in html
     assert "summaryJsonLine('CLI parity counts', triage.cli_parity_counts)" in html
+    assert "summaryJsonLine('Trial escalation', triage.query_engine_trial_escalation_summary)" in html
     assert "summaryJsonLine('Identity assurance counts', triage.identity_assurance_counts)" in html
     assert "summaryJsonLine('Reviewer kind counts', triage.reviewer_kind_counts)" in html
     assert "summaryJsonLine('Warning counts', triage.warning_counts)" in html
@@ -2200,6 +2279,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert '"Provider kind": "プロバイダ種別"' in html
     assert '"Runtime records": "ランタイム記録"' in html
     assert "label('overview.query_engine_trial_insufficient', 'Insufficient trials')" in html
+    assert "label('overview.query_engine_trial_escalation', 'Trial escalation cues')" in html
     assert '"Audit ID": "監査ID"' in html
     assert "payload.failure_summary_key" in html
     assert "payload && payload.message_key" in html
