@@ -3454,6 +3454,10 @@ class ChronicleUIDataService:
 
         return {
             "status": status,
+            "capability_status_summary_key": f"ui.review_capability.status.{capability_status}",
+            "capability_status_summary": capability_status.replace("_", " "),
+            "identity_assurance_status_summary_key": f"ui.identity_assurance.status.{assurance_status}",
+            "identity_assurance_status_summary": assurance_status.replace("_", " "),
             "message": message,
             "message_key": _auth_readiness_message_key(
                 capability_status=capability_status,
@@ -3561,6 +3565,8 @@ class ChronicleUIDataService:
         )
         return {
             "status": status,
+            "status_summary_key": f"ui.identity_assurance.status.{status}",
+            "status_summary": status.replace("_", " "),
             "reviewer_auth_mode": identity.auth_mode.value,
             "boundary_auth_mode": boundary_auth_mode,
             "session_gating": session_gating,
@@ -3581,7 +3587,11 @@ class ChronicleUIDataService:
         if not pending:
             return {
                 "status": "resolved",
+                "status_summary_key": "ui.review_capability.status.resolved",
+                "status_summary": "resolved",
                 "can_review_now": False,
+                "can_review_now_summary_key": _boolean_summary_payload(False)[0],
+                "can_review_now_summary": _boolean_summary_payload(False)[1],
                 "warnings": [],
                 "message": "Review target is already resolved in the current derived queue view.",
                 "message_key": "ui.review_capability.message.resolved",
@@ -3607,7 +3617,11 @@ class ChronicleUIDataService:
         message = _review_capability_message(can_review_now)
         return {
             "status": "ready" if can_review_now else "advisory_only",
+            "status_summary_key": f"ui.review_capability.status.{'ready' if can_review_now else 'advisory_only'}",
+            "status_summary": ("ready" if can_review_now else "advisory only"),
             "can_review_now": can_review_now,
+            "can_review_now_summary_key": _boolean_summary_payload(bool(can_review_now))[0],
+            "can_review_now_summary": _boolean_summary_payload(bool(can_review_now))[1],
             "warnings": warnings,
             "warning_details": _serialize_review_warning_details(warnings),
             "message": message,
@@ -3711,9 +3725,13 @@ class ChronicleUIDataService:
         if error_code == "review_not_pending":
             return {
                 "status": "resolved_queue_check_required",
+                "status_summary_key": "ui.review_action_target_state_recovery.status.resolved_queue_check_required",
+                "status_summary": "resolved queue check required",
                 "summary_key": "ui.review_action_target_state_recovery.summary.review_not_pending",
                 "summary": "The target is no longer pending in the default queue view; inspect the resolved queue before retrying any follow-up action.",
                 "pending_queue_sufficient": False,
+                "pending_queue_sufficient_summary_key": _boolean_summary_payload(False)[0],
+                "pending_queue_sufficient_summary": _boolean_summary_payload(False)[1],
                 "resolved_queue_reason_key": "ui.review_action_target_state_recovery.reason.review_not_pending",
                 "resolved_queue_reason": "A later review decision already resolved the pending target in the current derived queue view.",
                 "resolved_queue_command": "chronicle review queue --include-resolved --json",
@@ -3721,9 +3739,13 @@ class ChronicleUIDataService:
         if error_code == "review_target_not_found":
             return {
                 "status": "chronicle_state_recheck_required",
+                "status_summary_key": "ui.review_action_target_state_recovery.status.chronicle_state_recheck_required",
+                "status_summary": "chronicle state recheck required",
                 "summary_key": "ui.review_action_target_state_recovery.summary.review_target_not_found",
                 "summary": "The target is missing from the current Chronicle state; inspect the resolved queue and current derived state before retrying.",
                 "pending_queue_sufficient": False,
+                "pending_queue_sufficient_summary_key": _boolean_summary_payload(False)[0],
+                "pending_queue_sufficient_summary": _boolean_summary_payload(False)[1],
                 "resolved_queue_reason_key": "ui.review_action_target_state_recovery.reason.review_target_not_found",
                 "resolved_queue_reason": "The review queue alone may be stale relative to the operator's expectation for this target.",
                 "resolved_queue_command": "chronicle review queue --include-resolved --json",
@@ -5328,6 +5350,16 @@ function contractDetailLines(successContract, failureContract, targetId) {{
   const localizedTargetStateSummary = targetStateRecovery.summary_key
     ? formatLabel(targetStateRecovery.summary_key, targetStateRecovery.summary_params || {{}}, targetStateRecovery.summary || '')
     : (targetStateRecovery.summary || '');
+  const localizedTargetStateStatus = targetStateRecovery.status_summary_key
+    ? formatLabel(targetStateRecovery.status_summary_key, targetStateRecovery.status_summary_params || {{}}, targetStateRecovery.status_summary || targetStateRecovery.status || '')
+    : (targetStateRecovery.status_summary || targetStateRecovery.status || '');
+  const localizedPendingQueueSufficient = typeof targetStateRecovery.pending_queue_sufficient === 'boolean'
+    ? (
+      targetStateRecovery.pending_queue_sufficient_summary_key
+        ? formatLabel(targetStateRecovery.pending_queue_sufficient_summary_key, targetStateRecovery.pending_queue_sufficient_summary_params || {{}}, targetStateRecovery.pending_queue_sufficient_summary || String(targetStateRecovery.pending_queue_sufficient))
+        : (targetStateRecovery.pending_queue_sufficient_summary || String(targetStateRecovery.pending_queue_sufficient))
+    )
+    : '';
   const localizedResolvedQueueReason = targetStateRecovery.resolved_queue_reason_key
     ? formatLabel(targetStateRecovery.resolved_queue_reason_key, targetStateRecovery.resolved_queue_reason_params || {{}}, targetStateRecovery.resolved_queue_reason || '')
     : (targetStateRecovery.resolved_queue_reason || '');
@@ -5365,9 +5397,9 @@ function contractDetailLines(successContract, failureContract, targetId) {{
     + detailLine('Transaction status', localizedTransactionStatus)
     + detailListLine('Durable success requirements', (successContract || {{}}).durable_success_requirements, ' | ')
     + detailLine('Durable mutation on failure', localizedDurableOnFailure)
-    + detailLine('Target-state recovery status', targetStateRecovery.status || '')
+    + detailLine('Target-state recovery status', localizedTargetStateStatus)
     + detailLine('Target-state recovery summary', localizedTargetStateSummary)
-    + detailLine('Pending queue sufficient', targetStateRecovery.pending_queue_sufficient)
+    + detailLine('Pending queue sufficient', localizedPendingQueueSufficient)
     + detailLine('Resolved queue reason', localizedResolvedQueueReason)
     + detailLine('Resolved queue command', targetStateRecovery.resolved_queue_command || '')
     + detailLine('Chronicle state command', targetStateRecovery.chronicle_state_command || '')
@@ -7413,11 +7445,17 @@ function renderAuthReadinessNotice(record) {{
   const localizedScopeNote = notice.scope_note_key
     ? formatLabel(notice.scope_note_key, notice.scope_note_params || {{}}, notice.scope_note || '')
     : (notice.scope_note || '');
+  const localizedCapabilityStatus = notice.capability_status_summary_key
+    ? formatLabel(notice.capability_status_summary_key, notice.capability_status_summary_params || {{}}, notice.capability_status_summary || notice.capability_status || '')
+    : (notice.capability_status_summary || notice.capability_status || '');
+  const localizedIdentityAssuranceStatus = notice.identity_assurance_status_summary_key
+    ? formatLabel(notice.identity_assurance_status_summary_key, notice.identity_assurance_status_summary_params || {{}}, notice.identity_assurance_status_summary || notice.identity_assurance_status || '')
+    : (notice.identity_assurance_status_summary || notice.identity_assurance_status || '');
   return renderNotice(
     label('notice.auth_readiness', 'Auth Readiness'),
     statusScopeNoticeBody(notice.status, localizedMessage, noticeButtons, localizedScopeNote)
-      + detailLine('Review capability', notice.capability_status || '')
-      + detailLine('Identity assurance', notice.identity_assurance_status || '')
+      + detailLine('Review capability', localizedCapabilityStatus)
+      + detailLine('Identity assurance', localizedIdentityAssuranceStatus)
       + blockerSummaryDetailLines(blockerDetails, notice.blockers, blockerSummaries, notice.next_steps)
   );
 }}
@@ -7427,9 +7465,17 @@ function renderReviewCapabilityNotice(record) {{
   const warnList = Array.isArray(capability.warnings) ? capability.warnings : [];
   const warnDetails = Array.isArray(capability.warning_details) ? capability.warning_details : [];
   const warnBadges = reviewWarningBadges(warnList);
+  const localizedCapabilityStatus = capability.status_summary_key
+    ? formatLabel(capability.status_summary_key, capability.status_summary_params || {{}}, capability.status_summary || capability.status || '')
+    : (capability.status_summary || capability.status || '');
+  const localizedCanReviewNow = capability.can_review_now_summary_key
+    ? formatLabel(capability.can_review_now_summary_key, capability.can_review_now_summary_params || {{}}, capability.can_review_now_summary || String(capability.can_review_now))
+    : (capability.can_review_now_summary || String(capability.can_review_now));
   return renderNotice(
     label('notice.review_capability', 'Review Capability'),
     statusMessageBody(capability.status, localizedPayloadText(capability))
+      + detailLine('Status', localizedCapabilityStatus)
+      + detailLine('Can review now', localizedCanReviewNow)
       + (warnBadges ? '<p>' + warnBadges + '</p>' : '')
       + detailLine('Warnings', detailMessages(warnDetails, warnList) || '(none)')
   );

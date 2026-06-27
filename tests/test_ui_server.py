@@ -1498,6 +1498,10 @@ def test_ui_data_service_detail_endpoints(tmp_path):
     assert review_detail["latest_audit_id"].startswith("aud_")
     assert review_detail["latest_reviewer_identity"]["kind"] == "local_operator"
     assert review_detail["review_capability"]["status"] == "advisory_only"
+    assert review_detail["review_capability"]["status_summary_key"] == (
+        "ui.review_capability.status.advisory_only"
+    )
+    assert review_detail["review_capability"]["can_review_now_summary_key"] == "ui.boolean.false"
     assert review_detail["review_capability"]["warning_details"][0]["code"] == "ui_auth_not_enabled"
     assert review_detail["review_capability"]["warning_details"][0]["label_key"] == (
         "filter.review.ui_auth_not_enabled"
@@ -1506,8 +1510,17 @@ def test_ui_data_service_detail_endpoints(tmp_path):
         "ui.review_warning.ui_auth_not_enabled"
     )
     assert review_detail["auth_boundary_notice"]["status"] == "advisory_only"
+    assert review_detail["auth_boundary_notice"]["capability_status_summary_key"] == (
+        "ui.review_capability.status.advisory_only"
+    )
+    assert review_detail["auth_boundary_notice"]["identity_assurance_status_summary_key"] == (
+        "ui.identity_assurance.status.local_session_unverified"
+    )
     assert "authorization_not_enabled" in review_detail["auth_boundary_notice"]["blockers"]
     assert review_detail["latest_identity_assurance"]["status"] == "local_session_unverified"
+    assert review_detail["latest_identity_assurance"]["status_summary_key"] == (
+        "ui.identity_assurance.status.local_session_unverified"
+    )
     assert review_detail["history"][0]["disposition"] == "request_changes"
     assert review_detail["history"][0]["reviewer_identity"]["session_label"] == "ui-test"
     assert review_detail["history"][0]["identity_assurance"]["boundary_auth_mode"] == "not_enabled"
@@ -1640,7 +1653,9 @@ def test_ui_detail_assurance_can_align_with_configured_boundary(tmp_path):
     review_detail = service.detail_payload(f"/api/review-queue/{ids['runtime_summary_event_id']}")["record"]
 
     assert review_detail["review_capability"]["status"] == "ready"
+    assert review_detail["review_capability"]["status_summary_key"] == "ui.review_capability.status.ready"
     assert review_detail["review_capability"]["can_review_now"] is True
+    assert review_detail["review_capability"]["can_review_now_summary_key"] == "ui.boolean.true"
     assert review_detail["action_preview"]["status"] == "preview_only"
     assert review_detail["action_preview"]["ui_mutation_enabled"] is False
     assert "chronicle review approve --event" in review_detail["action_preview"]["actions"][0]["command"]
@@ -1673,8 +1688,17 @@ def test_ui_detail_assurance_can_align_with_configured_boundary(tmp_path):
     assert review_detail["cli_parity"]["missing_queue_commands"] == []
     assert review_detail["review_capability"]["warning_details"] == []
     assert review_detail["auth_boundary_notice"]["status"] == "boundary_aligned"
+    assert review_detail["auth_boundary_notice"]["capability_status_summary_key"] == (
+        "ui.review_capability.status.ready"
+    )
+    assert review_detail["auth_boundary_notice"]["identity_assurance_status_summary_key"] == (
+        "ui.identity_assurance.status.boundary_aligned"
+    )
     assert review_detail["auth_boundary_notice"]["blockers"] == []
     assert review_detail["latest_identity_assurance"]["status"] == "boundary_aligned"
+    assert review_detail["latest_identity_assurance"]["status_summary_key"] == (
+        "ui.identity_assurance.status.boundary_aligned"
+    )
     assert review_detail["history"][0]["identity_assurance"]["boundary_auth_mode"] == "loopback_local"
     overview = service.overview()
     assert overview["identity_boundary_summary"]["status"] == "partially_aligned"
@@ -2087,7 +2111,10 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "const localizedResolvedBehaviorNote = targetStateContract.resolved_behavior_note_key" in html
     assert "detailLine('Resolved behavior note', localizedResolvedBehaviorNote)" in html
     assert "detailListLine('Failure families', localizedFailureFamilies, ' | ')" in html
-    assert "detailLine('Target-state recovery status', targetStateRecovery.status || '')" in html
+    assert "const localizedTargetStateStatus = targetStateRecovery.status_summary_key" in html
+    assert "const localizedPendingQueueSufficient = typeof targetStateRecovery.pending_queue_sufficient === 'boolean'" in html
+    assert "detailLine('Target-state recovery status', localizedTargetStateStatus)" in html
+    assert "detailLine('Pending queue sufficient', localizedPendingQueueSufficient)" in html
     assert "const localizedTargetStateSummary = targetStateRecovery.summary_key" in html
     assert "detailLine('Target-state recovery summary', localizedTargetStateSummary)" in html
     assert "const localizedResolvedQueueReason = targetStateRecovery.resolved_queue_reason_key" in html
@@ -2103,6 +2130,12 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "detailLine('Response ID', summary.response_id || '')" in html
     assert "const localizedFinishReason = summary.finish_reason_summary_key" in html
     assert "const localizedProviderStatus = summary.provider_status_summary_key" in html
+    assert "const localizedCapabilityStatus = notice.capability_status_summary_key" in html
+    assert "const localizedIdentityAssuranceStatus = notice.identity_assurance_status_summary_key" in html
+    assert "const localizedCapabilityStatus = capability.status_summary_key" in html
+    assert "const localizedCanReviewNow = capability.can_review_now_summary_key" in html
+    assert "detailLine('Status', localizedCapabilityStatus)" in html
+    assert "detailLine('Can review now', localizedCanReviewNow)" in html
     assert "detailLine('Usage total tokens', summary.usage_total_tokens ?? '')" in html
     assert "responseMetadataDetailLines(summary)" in html
     assert "messageParagraph(localizedPayloadText(summary))" in html
@@ -2807,10 +2840,16 @@ def test_review_action_reports_resolved_queue_recovery_when_target_not_pending(t
     assert payload["message_key"] == "ui.review_action_failure.message.review_not_pending"
     assert payload["failure_summary_key"] == "ui.review_action_failure.summary.review_not_pending"
     assert payload["failure_contract"]["target_state_recovery"]["status"] == "resolved_queue_check_required"
+    assert payload["failure_contract"]["target_state_recovery"]["status_summary_key"] == (
+        "ui.review_action_target_state_recovery.status.resolved_queue_check_required"
+    )
     assert payload["failure_contract"]["target_state_recovery"]["summary_key"] == (
         "ui.review_action_target_state_recovery.summary.review_not_pending"
     )
     assert payload["failure_contract"]["target_state_recovery"]["pending_queue_sufficient"] is False
+    assert payload["failure_contract"]["target_state_recovery"]["pending_queue_sufficient_summary_key"] == (
+        "ui.boolean.false"
+    )
     assert payload["failure_contract"]["target_state_recovery"]["resolved_queue_reason_key"] == (
         "ui.review_action_target_state_recovery.reason.review_not_pending"
     )
@@ -2847,10 +2886,16 @@ def test_review_action_reports_chronicle_state_recheck_when_target_missing(tmp_p
     assert status == 404
     assert payload["error_code"] == "review_target_not_found"
     assert payload["failure_contract"]["target_state_recovery"]["status"] == "chronicle_state_recheck_required"
+    assert payload["failure_contract"]["target_state_recovery"]["status_summary_key"] == (
+        "ui.review_action_target_state_recovery.status.chronicle_state_recheck_required"
+    )
     assert payload["failure_contract"]["target_state_recovery"]["summary_key"] == (
         "ui.review_action_target_state_recovery.summary.review_target_not_found"
     )
     assert payload["failure_contract"]["target_state_recovery"]["pending_queue_sufficient"] is False
+    assert payload["failure_contract"]["target_state_recovery"]["pending_queue_sufficient_summary_key"] == (
+        "ui.boolean.false"
+    )
     assert payload["failure_contract"]["target_state_recovery"]["resolved_queue_reason_key"] == (
         "ui.review_action_target_state_recovery.reason.review_target_not_found"
     )
