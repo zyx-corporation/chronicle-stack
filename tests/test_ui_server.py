@@ -2445,6 +2445,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "function renderOverviewHeaderPanel(chronicle)" in html
     assert "function renderOverviewCountsPanel(counts)" in html
     assert "function renderOverviewRuntimeBoundaryPanel(runtime)" in html
+    assert "function renderOverviewFederationPanel(federationSummary, federationPreflight, federationOverlap)" in html
     assert "function renderOverviewAuthBoundaryPanel(authBoundary, authBoundaryOverview)" in html
     assert "function renderOverviewIdentityBoundaryPanel(identityBoundary)" in html
     assert "localizedPayloadText(authBoundary)" in html
@@ -2478,7 +2479,13 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "function overviewTriageNavigationCluster(triage)" in html
     assert "function overviewTriageJumpButtons()" in html
     assert "const overviewPanelRenderers = [" in html
+    assert "data => renderOverviewFederationPanel(data.federationSummary, data.federationPreflight, data.federationOverlap)," in html
     assert "label('overview.reviewer_runtime_enforcement_counts', 'Runtime enforcement counts')" in html
+    assert "sectionTitle(label('section.federation', 'Federation'))" in html
+    assert "detailJumpButton(federationOverlap.latest_matching_detail_path || '', label('button.open_detail', 'Open Detail'))" in html
+    assert "openEndpointButton('/api/federation-inbox')" in html
+    assert "openEndpointButton('/api/federation-outbox')" in html
+    assert "openEndpointButton('/api/audit')" in html
     assert "label('ui.label.validation_gate_status', 'Validation gate status')" in html
     assert "label('ui.label.drilldown_datasets', 'Drilldown datasets')" in html
     assert "label('ui.label.drilldown_summary', 'Drilldown summary')" in html
