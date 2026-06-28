@@ -75,6 +75,7 @@ _COLLECTION_CHECKS: tuple[tuple[str, str], ...] = (
     ("/api/ui-boundary", "ui_boundary"),
     ("/api/runtime-config", "runtime_config"),
     ("/api/package-review", "package_review"),
+    ("/api/federation-package-preview", "federation_package_preview"),
     ("/api/graph-summary", "graph_summary"),
     ("/api/ai-index-status", "ai_index_status"),
     ("/api/ai-index-vector", "vector_entries"),
@@ -170,6 +171,29 @@ def run_ui_smoke(root: Path | None = None) -> UISmokeReport:
                     "ok" if expected_key in payload else f"missing key: {expected_key}",
                 )
             )
+            if endpoint == "/api/federation-package-preview":
+                preview = payload.get("federation_package_preview", {})
+                checks.append(
+                    UISmokeCheck(
+                        "/api/federation-package-preview#contract",
+                        isinstance(preview, dict)
+                        and preview.get("status") == "parameter_required"
+                        and bool(preview.get("message_key"))
+                        and bool(preview.get("boundary_note_key"))
+                        and isinstance(preview.get("findings"), list)
+                        and isinstance(preview.get("warnings"), list),
+                        (
+                            "ok"
+                            if isinstance(preview, dict)
+                            and preview.get("status") == "parameter_required"
+                            and bool(preview.get("message_key"))
+                            and bool(preview.get("boundary_note_key"))
+                            and isinstance(preview.get("findings"), list)
+                            and isinstance(preview.get("warnings"), list)
+                            else "federation package preview missing parameter-required contract fields"
+                        ),
+                    )
+                )
             if endpoint == "/api/ui-boundary":
                 ui_boundary = payload.get("ui_boundary", {})
                 write_route_contract = ui_boundary.get("write_route_contract", {})

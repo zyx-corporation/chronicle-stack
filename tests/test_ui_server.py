@@ -24,6 +24,7 @@ from chronicle.services.chronicle_service import ChronicleService
 from chronicle.services.chronicle_object_service import ChronicleObjectService
 from chronicle.services.context_service import ContextService
 from chronicle.services.decision_service import DecisionService
+from chronicle.services.federation_package_service import FederationPackageService
 from chronicle.services.federation_message_service import FederationMessageService
 from chronicle.services.graph_index_service import GraphIndexService
 from chronicle.services.lifecycle_service import LifecycleService
@@ -1172,6 +1173,18 @@ def test_ui_data_service_read_endpoints(tmp_path):
     assert package_review["counts_summary_key"] == "ui.template.package_review.counts"
     assert package_review["boundary_note_key"] == "ui.package_review.note.read_only_derived"
     assert package_review["counts_summary_params"]["record_count"] >= 0
+    federation_preview = service.api_payload("/api/federation-package-preview")
+    assert federation_preview is not None
+    assert federation_preview["federation_package_preview"]["status"] == "parameter_required"
+    assert (
+        federation_preview["federation_package_preview"]["message_key"]
+        == "ui.federation_package_preview.message.parameter_required"
+    )
+    assert (
+        federation_preview["federation_package_preview"]["boundary_note_key"]
+        == "ui.federation_package_preview.note.read_only_derived"
+    )
+    assert federation_preview["federation_package_preview"]["suggested_query"]
     assert service.graph_summary()["status"] == "available"
     assert service.graph_summary()["message_key"] == "ui.graph_summary.message.available"
     assert service.graph_summary()["counts_summary_key"] == "ui.template.graph_summary.counts"
@@ -1196,6 +1209,55 @@ def test_ui_data_service_read_endpoints(tmp_path):
     assert service.ai_index_status()["ai_index_status"]["graph"]["counts_summary_key"] == (
         "ui.template.ai_index_status.graph_counts"
     )
+
+
+def test_ui_data_service_federation_package_preview_query_surfaces(tmp_path):
+    _populate(tmp_path)
+    package_dir = tmp_path / "federation-package-ui-preview"
+    FederationPackageService(tmp_path).create_package(
+        purpose="ui preview review",
+        target_node="node:partner:beta",
+        output_dir=package_dir,
+    )
+    service = ChronicleUIDataService(tmp_path)
+
+    preview_payload = service.api_payload(
+        "/api/federation-package-preview",
+        {"package_dir": [str(package_dir)]},
+    )
+    assert preview_payload is not None
+    preview = preview_payload["federation_package_preview"]
+    assert preview["package_path"] == str(package_dir)
+    assert preview["mode"] == "preview"
+    assert preview["status"] in {"pass", "warning", "blocked"}
+    assert preview["message_key"] in {
+        "ui.federation_package_preview.message.pass",
+        "ui.federation_package_preview.message.warning",
+        "ui.federation_package_preview.message.blocked",
+    }
+    assert preview["boundary_note_key"] == "ui.federation_package_preview.note.read_only_derived"
+    assert preview["manifest"]["target_node"] == "node:partner:beta"
+    assert preview["verification"]["valid"] is True
+    assert isinstance(preview["findings"], list)
+    assert isinstance(preview["warnings"], list)
+
+    import_preview_payload = service.api_payload(
+        "/api/federation-package-preview",
+        {"package_dir": [str(package_dir)], "mode": ["import-preview"]},
+    )
+    assert import_preview_payload is not None
+    import_preview = import_preview_payload["federation_package_preview"]
+    assert import_preview["package_path"] == str(package_dir)
+    assert import_preview["mode"] == "import-preview"
+    assert import_preview["status"] in {"pass", "warning", "blocked"}
+    assert import_preview["message_key"] in {
+        "ui.federation_package_preview.message.pass",
+        "ui.federation_package_preview.message.warning",
+        "ui.federation_package_preview.message.blocked",
+    }
+    assert import_preview["boundary_note_key"] == "ui.federation_package_preview.note.read_only_derived"
+    assert isinstance(import_preview["findings"], list)
+    assert isinstance(import_preview["warnings"], list)
     assert service.ai_index_status()["ai_index_status"]["vector"]["entry_count"] == 1
     assert service.ai_index_vector_entries()["vector_entries"][0]["record_id"] == service.events()["events"][-1]["event_id"]
     assert service.ai_index_graph_nodes()["graph_nodes"]
@@ -2714,6 +2776,7 @@ def test_http_root_and_read_only_endpoints(tmp_path):
             "/api/ui-boundary": "ui_boundary",
             "/api/runtime-config": "runtime_config",
             "/api/package-review": "package_review",
+            "/api/federation-package-preview": "federation_package_preview",
             "/api/graph-summary": "graph_summary",
             "/api/ai-index-status": "ai_index_status",
             "/api/ai-index-vector": "vector_entries",
@@ -2725,6 +2788,22 @@ def test_http_root_and_read_only_endpoints(tmp_path):
             assert status == 200, endpoint
             payload = json.loads(body)
             assert key in payload, endpoint
+
+        package_dir = tmp_path / "http-federation-package-preview"
+        FederationPackageService(tmp_path).create_package(
+            purpose="http ui preview review",
+            target_node="node:partner:beta",
+            output_dir=package_dir,
+        )
+        status, body = _http_get(
+            host,
+            port,
+            f"/api/federation-package-preview?package_dir={package_dir}",
+        )
+        assert status == 200
+        payload = json.loads(body)
+        assert payload["federation_package_preview"]["package_path"] == str(package_dir)
+        assert payload["federation_package_preview"]["mode"] == "preview"
 
         detail_paths = [
             f"/api/events/{ids['event_id']}",

@@ -18,7 +18,7 @@ from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
-from urllib.parse import quote, unquote, urlparse
+from urllib.parse import parse_qs, quote, unquote, urlparse
 
 from chronicle.errors import ChronicleError, UIHostNotLoopbackError
 from chronicle.exporters.html_exporter import HtmlDashboardExporter
@@ -30,6 +30,7 @@ from chronicle.models.review import ReviewerIdentity, ReviewerIdentityKind
 from chronicle.services.audit_service import AuditService
 from chronicle.services.chronicle_service import ChronicleService
 from chronicle.services.chronicle_object_service import ChronicleObjectService
+from chronicle.services.federation_package_service import FederationPackageService
 from chronicle.services.federation_message_service import FederationMessageService
 from chronicle.services.graph_index_service import GraphIndexService
 from chronicle.services.graph_export_service import GraphExportService
@@ -2210,6 +2211,7 @@ class ChronicleUIDataService:
         self.mutation_session_id = mutation_session_id
         self.chronicle = ChronicleService(self.root)
         self.chronicle_objects = ChronicleObjectService(self.root)
+        self.federation_packages = FederationPackageService(self.root)
         self.federation_messages = FederationMessageService(self.root)
         self.audit = AuditService(self.root)
         self.lifecycle = LifecycleService(self.root)
@@ -3629,6 +3631,63 @@ class ChronicleUIDataService:
                 "error": str(exc),
                 }
             )
+
+    def federation_package_preview_snapshot(
+        self,
+        *,
+        package_dir: str = "",
+        mode: str = "preview",
+    ) -> dict[str, Any]:
+        if not package_dir:
+            return {
+                "status": "parameter_required",
+                "mode": mode,
+                "package_dir": "",
+                "import_candidate": False,
+                "message": "Package dir is required to inspect a local federation package preview surface.",
+                "message_key": "ui.federation_package_preview.message.parameter_required",
+                "boundary_note": (
+                    "Federation package preview remains local, read-only, and only inspects an explicitly supplied bundle directory."
+                ),
+                "boundary_note_key": "ui.federation_package_preview.note.read_only_derived",
+                "suggested_query": "?package_dir=/absolute/path/to/federation-package",
+                "findings": [],
+                "warnings": [],
+            }
+        try:
+            if mode == "import-preview":
+                preview = self.federation_packages.import_preview_package(Path(package_dir))
+            else:
+                preview = self.federation_packages.preview_package(Path(package_dir))
+            payload = preview.model_dump(mode="json")
+            payload["message"] = (
+                "Federation package preview is available for the supplied local bundle directory."
+                if payload.get("status") != "blocked"
+                else "Federation package preview found blocked verification or import-readiness findings."
+            )
+            payload["message_key"] = {
+                "pass": "ui.federation_package_preview.message.pass",
+                "warning": "ui.federation_package_preview.message.warning",
+                "blocked": "ui.federation_package_preview.message.blocked",
+            }.get(str(payload.get("status", "")), "ui.federation_package_preview.message.unavailable")
+            payload["boundary_note_key"] = "ui.federation_package_preview.note.read_only_derived"
+            payload["mode"] = mode
+            return payload
+        except ChronicleError as exc:
+            return {
+                "status": "unavailable",
+                "mode": mode,
+                "package_dir": package_dir,
+                "import_candidate": False,
+                "message": str(exc),
+                "message_key": "ui.federation_package_preview.message.unavailable",
+                "boundary_note": (
+                    "Federation package preview remains local and read-only even when the supplied directory cannot be inspected."
+                ),
+                "boundary_note_key": "ui.federation_package_preview.note.read_only_derived",
+                "findings": [],
+                "warnings": [exc.code],
+            }
 
     def graph_summary(self) -> dict[str, Any]:
         try:
@@ -5236,7 +5295,8 @@ class ChronicleUIDataService:
             return None
         return {"record": record} if record is not None else None
 
-    def api_payload(self, path: str) -> dict[str, Any] | None:
+    def api_payload(self, path: str, query_params: dict[str, list[str]] | None = None) -> dict[str, Any] | None:
+        params = query_params or {}
         routes = {
             "/api/overview": self.overview,
             "/api/events": self.events,
@@ -5268,6 +5328,12 @@ class ChronicleUIDataService:
             "/api/ui-boundary": self.ui_boundary,
             "/api/runtime-config": self.runtime_config_state,
             "/api/package-review": lambda: {"package_review": self.package_review_snapshot()},
+            "/api/federation-package-preview": lambda: {
+                "federation_package_preview": self.federation_package_preview_snapshot(
+                    package_dir=(params.get("package_dir") or [""])[0],
+                    mode=(params.get("mode") or ["preview"])[0],
+                )
+            },
             "/api/graph-summary": lambda: {"graph_summary": self.graph_summary()},
             "/api/ai-index-status": self.ai_index_status,
             "/api/ai-index-vector": self.ai_index_vector_entries,
@@ -9432,7 +9498,7 @@ def create_handler(
             if parsed.path == "/review-console":
                 self._send_html(service.static_review_console())
                 return
-            payload = service.api_payload(parsed.path)
+            payload = service.api_payload(parsed.path, parse_qs(parsed.query, keep_blank_values=True))
             if payload is not None:
                 self._send_json(payload)
                 return
