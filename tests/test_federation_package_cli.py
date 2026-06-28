@@ -198,3 +198,64 @@ def test_federation_package_preview_and_import_preview_cli(tmp_path):
     import_preview_payload = json.loads(import_preview_result.stdout)
     assert import_preview_payload["status"] == "warning"
     assert import_preview_payload["boundary_note"].startswith("Import preview remains advisory")
+
+
+def test_federation_boundary_check_and_consent_record_cli(tmp_path):
+    assert _run(tmp_path, "init", "--title", "Federation Boundary CLI").exit_code == 0
+    context_result = _run(
+        tmp_path,
+        "add-context",
+        "--title",
+        "Federation Boundary CLI Context",
+        "--summary",
+        "Boundary preflight context",
+        "--json",
+    )
+    context_id = json.loads(context_result.stdout)["context_id"]
+
+    boundary_result = _run(
+        tmp_path,
+        "federation",
+        "boundary",
+        "check",
+        "--purpose",
+        "cli boundary review",
+        "--target-node",
+        "node:partner:beta",
+        "--context",
+        context_id,
+        "--visibility",
+        "public",
+        "--json",
+    )
+    assert boundary_result.exit_code == 0, boundary_result.stderr
+    boundary_payload = json.loads(boundary_result.stdout)
+    assert boundary_payload["requested_visibility"] == "public"
+    assert "consent_required_for_external_handoff" in boundary_payload["warning_codes"]
+
+    consent_result = _run(
+        tmp_path,
+        "federation",
+        "consent",
+        "record",
+        "--target-node",
+        "node:partner:beta",
+        "--purpose",
+        "cli boundary review",
+        "--scope",
+        "project-review",
+        "--granted-by",
+        "cli-reviewer",
+        "--context",
+        context_id,
+        "--recorded-at",
+        "2026-06-28T09:00:00+00:00",
+        "--no-third-party-sharing",
+        "--third-party-sharing-reason",
+        "partner-only",
+        "--json",
+    )
+    assert consent_result.exit_code == 0, consent_result.stderr
+    consent_payload = json.loads(consent_result.stdout)
+    assert consent_payload["status"] == "recorded"
+    assert consent_payload["third_party_sharing_allowed"] is False

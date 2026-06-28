@@ -91,6 +91,88 @@ def test_boundary_check_json_shape(tmp_path):
             assert key in data[0], f"Missing key '{key}' in boundary check result"
 
 
+def test_federation_boundary_check_json_shape(tmp_path):
+    """chronicle federation boundary check --json must expose stable advisory boundary keys."""
+    runner = _setup_cli(tmp_path)
+    runner.invoke(app, ["init", "--title", "Federation Boundary Shape"])
+    ctx_result = runner.invoke(
+        app,
+        ["add-context", "--title", "Federation Boundary", "--summary", "shape", "--json"],
+    )
+    ctx_id = json.loads(ctx_result.stdout)["context_id"]
+
+    result = runner.invoke(
+        app,
+        [
+            "federation",
+            "boundary",
+            "check",
+            "--purpose",
+            "shape review",
+            "--target-node",
+            "node:partner:beta",
+            "--context",
+            ctx_id,
+            "--json",
+        ],
+    )
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    for key in [
+        "status",
+        "purpose",
+        "target_node",
+        "requested_visibility",
+        "recommended_visibility",
+        "record_count",
+        "referenced_records",
+        "visibility_mappings",
+        "warning_codes",
+        "consent_required",
+        "boundary_note",
+    ]:
+        assert key in payload, f"Missing key '{key}' in federation boundary check result"
+
+
+def test_federation_consent_record_json_shape(tmp_path):
+    """chronicle federation consent record --json must expose stable consent audit keys."""
+    runner = _setup_cli(tmp_path)
+    runner.invoke(app, ["init", "--title", "Federation Consent Shape"])
+
+    result = runner.invoke(
+        app,
+        [
+            "federation",
+            "consent",
+            "record",
+            "--target-node",
+            "node:partner:beta",
+            "--purpose",
+            "shape review",
+            "--scope",
+            "project-review",
+            "--granted-by",
+            "shape-tester",
+            "--json",
+        ],
+    )
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    for key in [
+        "status",
+        "audit_id",
+        "target_node",
+        "purpose",
+        "scope",
+        "granted_by",
+        "recorded_at",
+        "third_party_sharing_allowed",
+        "referenced_records",
+        "boundary_note",
+    ]:
+        assert key in payload, f"Missing key '{key}' in federation consent record result"
+
+
 def test_injection_plan_json_shape(tmp_path):
     """chronicle injection plan --json must have plan_id, selected/warned/excluded."""
     runner = _setup_cli(tmp_path)

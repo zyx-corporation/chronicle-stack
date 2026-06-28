@@ -256,6 +256,8 @@ chronicle federation consent record \
 - federation package manifest は consent status / granted_by / recorded_at / scope / third-party sharing metadata を advisory に保持する。
 - redaction report は record ごとの federation visibility mapping を持ち、package visibility が推奨より広い場合は warning を出す。
 - package create は consent と sharing restriction の概要を append-only audit event に残す。
+- `chronicle federation boundary check` は package を生成せずに requested/recommended visibility と consent need を preflight できる。
+- `chronicle federation consent record` は append-only audit metadata を残すだけで、package create や import を暗黙に実行しない。
 
 ### 7.5 非対象
 
