@@ -39,11 +39,23 @@ def test_federation_package_create_inspect_and_verify_cli(tmp_path):
         context_id,
         "--output-dir",
         str(package_dir),
+        "--consent-granted-by",
+        "cli-owner",
+        "--consent-recorded-at",
+        "2026-06-28T08:00:00+00:00",
+        "--consent-scope",
+        "cli-review",
+        "--no-third-party-sharing",
+        "--third-party-sharing-reason",
+        "partner-only",
         "--json",
     )
     assert create_result.exit_code == 0, create_result.stderr
     manifest = json.loads(create_result.stdout)
     assert manifest["target_node"] == "node:partner:beta"
+    assert manifest["consent"]["status"] == "recorded"
+    assert manifest["consent"]["granted_by"] == "cli-owner"
+    assert manifest["consent"]["third_party_sharing_allowed"] is False
 
     inspect_result = _run(
         tmp_path,
@@ -58,6 +70,7 @@ def test_federation_package_create_inspect_and_verify_cli(tmp_path):
     inspect_payload = json.loads(inspect_result.stdout)
     assert inspect_payload["manifest"]["purpose"] == "cli review"
     assert inspect_payload["redaction_report"]["record_count"] == 1
+    assert inspect_payload["redaction_report"]["visibility_mappings"]
 
     verify_result = _run(
         tmp_path,

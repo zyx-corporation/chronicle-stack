@@ -250,6 +250,12 @@ chronicle federation consent record \
 - consent log が append-only event として記録される。
 - redaction report が package に含まれる。
 
+### 7.4.1 実装メモ
+
+- federation package manifest は consent status / granted_by / recorded_at / scope / third-party sharing metadata を advisory に保持する。
+- redaction report は record ごとの federation visibility mapping を持ち、package visibility が推奨より広い場合は warning を出す。
+- package create は consent と sharing restriction の概要を append-only audit event に残す。
+
 ### 7.5 非対象
 
 - 完全自動匿名化の保証。

@@ -6,9 +6,11 @@ from chronicle.models.context import Context, ContextScope
 from chronicle.models.decision import Decision
 from chronicle.models.event import ChronicleEvent
 from chronicle.models.federation_package import (
+    FederationPackageConsent,
     FederationPackageManifest,
     FederationPackageSignatureMode,
     FederationPackageSignatureStatus,
+    FederationPackageVisibilityMappingEntry,
     FederationPackageVerificationReport,
 )
 from chronicle.models.federation_message import FederationMessageEnvelope, FederationMessageRecord, FederationMessageType
@@ -34,9 +36,11 @@ __all__ = [
     "Context",
     "ContextScope",
     "Decision",
+    "FederationPackageConsent",
     "FederationPackageManifest",
     "FederationPackageSignatureMode",
     "FederationPackageSignatureStatus",
+    "FederationPackageVisibilityMappingEntry",
     "FederationPackageVerificationReport",
     "FederationMessageEnvelope",
     "FederationMessageRecord",

@@ -68,12 +68,22 @@ def federation_package_create_cmd(
     signature_expires_at: Annotated[str | None, typer.Option("--signature-expires-at")] = None,
     signature_revoked: Annotated[bool, typer.Option("--signature-revoked")] = False,
     signature_revocation_reason: Annotated[str | None, typer.Option("--signature-revocation-reason")] = None,
+    consent_granted_by: Annotated[str, typer.Option("--consent-granted-by")] = "",
+    consent_recorded_at: Annotated[str | None, typer.Option("--consent-recorded-at")] = None,
+    consent_scope: Annotated[str, typer.Option("--consent-scope")] = "",
+    third_party_sharing_allowed: Annotated[
+        bool, typer.Option("--third-party-sharing/--no-third-party-sharing")
+    ] = False,
+    third_party_sharing_reason: Annotated[str | None, typer.Option("--third-party-sharing-reason")] = None,
     json_output: Annotated[bool, typer.Option("--json")] = False,
 ) -> None:
     """Create a local-first federation package bundle."""
     try:
         parsed_signature_expires_at = (
             datetime.fromisoformat(signature_expires_at) if signature_expires_at else None
+        )
+        parsed_consent_recorded_at = (
+            datetime.fromisoformat(consent_recorded_at) if consent_recorded_at else None
         )
         manifest = FederationPackageService().create_package(
             purpose=purpose,
@@ -88,6 +98,11 @@ def federation_package_create_cmd(
             signature_expires_at=parsed_signature_expires_at,
             signature_revoked=signature_revoked,
             signature_revocation_reason=signature_revocation_reason,
+            consent_granted_by=consent_granted_by,
+            consent_recorded_at=parsed_consent_recorded_at,
+            consent_scope=consent_scope,
+            third_party_sharing_allowed=third_party_sharing_allowed,
+            third_party_sharing_reason=third_party_sharing_reason,
         )
         payload = manifest.model_dump(mode="json")
         if json_output:
@@ -96,13 +111,15 @@ def federation_package_create_cmd(
             typer.echo(f"Federation package created: {manifest.package_id}")
             typer.echo(f"  Target node: {manifest.target_node}")
             typer.echo(f"  Signature: {manifest.signature.status}")
+            typer.echo(f"  Consent: {manifest.consent.status}")
+            typer.echo(f"  Third-party sharing: {manifest.consent.third_party_sharing_allowed}")
             typer.echo(f"  Output: {output_dir}")
             typer.echo("  Boundary: preview-first local bundle only; no auto-apply or network sync")
     except ValueError as exc:
         handle_error(
             ChronicleError(
-                code="FEDERATION_PACKAGE_SIGNATURE_EXPIRES_AT_INVALID",
-                message="Invalid federation package signature expiration timestamp.",
+                code="FEDERATION_PACKAGE_TIMESTAMP_INVALID",
+                message="Invalid federation package timestamp option.",
                 hint=str(exc),
             ),
             json_output,
@@ -129,8 +146,13 @@ def federation_package_inspect_cmd(
         typer.echo(f"  Target node: {manifest['target_node']}")
         typer.echo(f"  Visibility: {manifest['visibility']}")
         typer.echo(f"  Signature: {manifest['signature']['status']}")
+        typer.echo(f"  Consent: {manifest['consent']['status']}")
+        typer.echo(
+            f"  Third-party sharing: {manifest['consent']['third_party_sharing_allowed']}"
+        )
         typer.echo(f"  Referenced records: {len(manifest['referenced_records'])}")
         typer.echo(f"  Reference-only records: {len(report['reference_only_record_ids'])}")
+        typer.echo(f"  Visibility mappings: {len(report['visibility_mappings'])}")
         if report["warning_codes"]:
             typer.echo(f"  Warnings: {', '.join(report['warning_codes'])}")
     except ChronicleError as exc:

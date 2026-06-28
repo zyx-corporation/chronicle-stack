@@ -9,19 +9,23 @@ from pathlib import Path
 
 from chronicle import __version__
 from chronicle.errors import ChronicleError
-from chronicle.security.integrity import canonical_json_bytes
+from chronicle.models.audit import AuditOperation, AuditSeverity, AuditTargetEnvironment
 from chronicle.models.federation_package import (
     FederationPackageFileEntry,
     FederationPackageManifest,
+    FederationPackageConsent,
     FederationPackageRedactionReport,
     FederationPackageSignature,
     FederationPackageSignatureMode,
     FederationPackageSignatureStatus,
+    FederationPackageVisibilityMappingEntry,
     FederationPackageVerificationEntry,
     FederationPackageVerificationReport,
     FederationPackageVisibility,
 )
 from chronicle.models.integration_package import IntegrationTargetEnvironment
+from chronicle.security.integrity import canonical_json_bytes
+from chronicle.services.audit_service import AuditService
 from chronicle.services.integration_package_service import IntegrationPackageService
 
 
@@ -34,6 +38,7 @@ class FederationPackageService:
     def __init__(self, root: Path | None = None) -> None:
         self.integration_packages = IntegrationPackageService(root)
         self.paths = self.integration_packages.chronicle.paths
+        self.audit = AuditService(root)
 
     def create_package(
         self,
@@ -50,6 +55,11 @@ class FederationPackageService:
         signature_expires_at: datetime | None = None,
         signature_revoked: bool = False,
         signature_revocation_reason: str | None = None,
+        consent_granted_by: str = "",
+        consent_recorded_at: datetime | None = None,
+        consent_scope: str = "",
+        third_party_sharing_allowed: bool = False,
+        third_party_sharing_reason: str | None = None,
     ) -> FederationPackageManifest:
         package = self.integration_packages.build_context_package(
             purpose=purpose,
@@ -65,6 +75,10 @@ class FederationPackageService:
         )
         (output_dir / "records.jsonl").write_text(records_jsonl + ("\n" if records_jsonl else ""), encoding="utf-8")
 
+        visibility_mappings = [
+            self._visibility_mapping_for_record(record)
+            for record in package.records
+        ]
         report = FederationPackageRedactionReport(
             record_count=len(package.records),
             reference_only_record_ids=[
@@ -72,16 +86,26 @@ class FederationPackageService:
                 for record in package.records
                 if record.content_boundary.value == "reference_only"
             ],
+            visibility_mappings=visibility_mappings,
             warning_codes=sorted(
                 {
                     *package.manifest.warnings,
                     *(warning for record in package.records for warning in record.warnings),
+                    *(
+                        {"package_visibility_broader_than_recommended"}
+                        if any(
+                            self._visibility_rank(visibility) > self._visibility_rank(mapping.recommended_visibility)
+                            for mapping in visibility_mappings
+                        )
+                        else set()
+                    ),
                 }
             ),
             notes=[
                 "Redaction report is advisory and derived from current package boundaries.",
                 "Reference-only records stay excluded from body export.",
                 "No received-side import or auto-apply behavior is implied by this package.",
+                "Visibility mappings are recommendations derived from Chronicle visibility and classification metadata.",
             ],
         )
         (output_dir / "redaction-report.json").write_text(
@@ -118,6 +142,15 @@ class FederationPackageService:
             tool_version=__version__,
             referenced_records=package.manifest.referenced_records,
             warnings=sorted(set(package.manifest.warnings)),
+            consent=FederationPackageConsent(
+                status="recorded" if consent_granted_by else "not_recorded",
+                granted_by=consent_granted_by,
+                recorded_at=consent_recorded_at,
+                purpose=purpose,
+                scope=consent_scope,
+                third_party_sharing_allowed=third_party_sharing_allowed,
+                third_party_sharing_reason=third_party_sharing_reason,
+            ),
             notes=[
                 "Package stays local-first and reviewable before any transport decision.",
                 "Signature is a placeholder until a later signed-manifest phase.",
@@ -145,6 +178,11 @@ class FederationPackageService:
         (output_dir / "manifest.json").write_text(
             json.dumps(manifest.model_dump(mode="json"), ensure_ascii=False, indent=2),
             encoding="utf-8",
+        )
+        self._record_package_audit(
+            manifest=manifest,
+            output_dir=output_dir,
+            visibility_mappings=visibility_mappings,
         )
         return manifest
 
@@ -221,6 +259,87 @@ class FederationPackageService:
             path=path.relative_to(root).as_posix(),
             sha256=self._sha256(path),
         )
+
+    def _visibility_mapping_for_record(
+        self, record
+    ) -> FederationPackageVisibilityMappingEntry:
+        source_visibility = record.metadata.get("visibility_hint", "unknown")
+        classification_layer = record.classification_layer
+        if classification_layer is not None and classification_layer >= 4:
+            return FederationPackageVisibilityMappingEntry(
+                record_id=record.record_id,
+                source_visibility=source_visibility,
+                classification_layer=classification_layer,
+                recommended_visibility=FederationPackageVisibility.PRIVATE,
+                rationale="restricted_secret_records_stay_private",
+            )
+        if classification_layer is not None and classification_layer >= 3:
+            return FederationPackageVisibilityMappingEntry(
+                record_id=record.record_id,
+                source_visibility=source_visibility,
+                classification_layer=classification_layer,
+                recommended_visibility=FederationPackageVisibility.TRUSTED,
+                rationale="sensitive_context_requires_trusted_sharing",
+            )
+        if classification_layer == 2:
+            return FederationPackageVisibilityMappingEntry(
+                record_id=record.record_id,
+                source_visibility=source_visibility,
+                classification_layer=classification_layer,
+                recommended_visibility=FederationPackageVisibility.ORGANIZATION,
+                rationale="internal_context_maps_to_organization_scope",
+            )
+        if classification_layer == 1:
+            return FederationPackageVisibilityMappingEntry(
+                record_id=record.record_id,
+                source_visibility=source_visibility,
+                classification_layer=classification_layer,
+                recommended_visibility=FederationPackageVisibility.FEDERATED,
+                rationale="shareable_context_maps_to_federated_scope",
+            )
+        if source_visibility == "private":
+            return FederationPackageVisibilityMappingEntry(
+                record_id=record.record_id,
+                source_visibility=source_visibility,
+                classification_layer=classification_layer,
+                recommended_visibility=FederationPackageVisibility.PRIVATE,
+                rationale="private_visibility_hint_stays_private",
+            )
+        if source_visibility == "sensitive":
+            return FederationPackageVisibilityMappingEntry(
+                record_id=record.record_id,
+                source_visibility=source_visibility,
+                classification_layer=classification_layer,
+                recommended_visibility=FederationPackageVisibility.TRUSTED,
+                rationale="sensitive_visibility_hint_limits_sharing",
+            )
+        if source_visibility == "public":
+            return FederationPackageVisibilityMappingEntry(
+                record_id=record.record_id,
+                source_visibility=source_visibility,
+                classification_layer=classification_layer,
+                recommended_visibility=FederationPackageVisibility.PUBLIC,
+                rationale="public_visibility_hint_can_remain_public",
+            )
+        return FederationPackageVisibilityMappingEntry(
+            record_id=record.record_id,
+            source_visibility=source_visibility,
+            classification_layer=classification_layer,
+            recommended_visibility=FederationPackageVisibility.FEDERATED,
+            rationale="default_unknown_visibility_maps_to_reviewable_federated_scope",
+        )
+
+    @staticmethod
+    def _visibility_rank(visibility: FederationPackageVisibility) -> int:
+        return {
+            FederationPackageVisibility.PRIVATE: 0,
+            FederationPackageVisibility.TRUSTED: 1,
+            FederationPackageVisibility.PROJECT: 2,
+            FederationPackageVisibility.ORGANIZATION: 3,
+            FederationPackageVisibility.COMMUNITY: 4,
+            FederationPackageVisibility.FEDERATED: 5,
+            FederationPackageVisibility.PUBLIC: 6,
+        }[visibility]
 
     def _build_signature(
         self,
@@ -325,6 +444,34 @@ class FederationPackageService:
         digest.update(signing_key.encode("utf-8"))
         digest.update(canonical_json_bytes(payload))
         return digest.hexdigest()
+
+    def _record_package_audit(
+        self,
+        *,
+        manifest: FederationPackageManifest,
+        output_dir: Path,
+        visibility_mappings: list[FederationPackageVisibilityMappingEntry],
+    ) -> None:
+        self.audit.record(
+            operation=AuditOperation.EXPORT,
+            actor="federation-package-service",
+            purpose=manifest.purpose,
+            target_environment=AuditTargetEnvironment.PACKAGE,
+            output_classification=manifest.metadata.get("output_classification", "unknown"),
+            referenced_records=manifest.referenced_records,
+            result=AuditSeverity.INFO,
+            summary=f"Created federation package {manifest.package_id}.",
+            metadata={
+                "package_id": manifest.package_id,
+                "package_path": str(output_dir),
+                "target_node": manifest.target_node,
+                "visibility": manifest.visibility.value,
+                "consent_status": manifest.consent.status,
+                "consent_scope": manifest.consent.scope,
+                "third_party_sharing_allowed": str(manifest.consent.third_party_sharing_allowed).lower(),
+                "visibility_mapping_count": str(len(visibility_mappings)),
+            },
+        )
 
     @staticmethod
     def _sha256(path: Path) -> str:
