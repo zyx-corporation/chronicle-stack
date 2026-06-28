@@ -16,7 +16,7 @@ Related records:
 - `docs/adr/0025-local-ui-i18n-presentation-boundary.md`
 - `docs/adr/0026-local-reviewer-session-proof-representation.md`
 - `docs/adr/0028-local-reviewer-session-enforcement-boundary.md`
-- `docs/release-status-v1.9.0.md`
+- `docs/releases/status/release-status-v1.9.0.md`
 
 ## Decision
 

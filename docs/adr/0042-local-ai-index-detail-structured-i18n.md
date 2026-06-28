@@ -19,8 +19,8 @@ Related records:
 
 - `docs/adr/0025-local-ui-i18n-presentation-boundary.md`
 - `docs/adr/0041-local-ai-index-status-structured-i18n.md`
-- `docs/release-status-v1.22.0.md`
-- `docs/v1.22-release-remaining-issues.md`
+- `docs/releases/status/release-status-v1.22.0.md`
+- `docs/releases/remaining/v1.22-release-remaining-issues.md`
 
 ## Decision
 

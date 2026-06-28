@@ -19,8 +19,8 @@ Related records:
 
 - `docs/adr/0025-local-ui-i18n-presentation-boundary.md`
 - `docs/adr/0037-local-package-parity-and-preview-structured-i18n.md`
-- `docs/release-status-v1.18.0.md`
-- `docs/v1.18-release-remaining-issues.md`
+- `docs/releases/status/release-status-v1.18.0.md`
+- `docs/releases/remaining/v1.18-release-remaining-issues.md`
 
 ## Decision
 
