@@ -81,6 +81,7 @@ Current state:
 - overview and triage surfaces now summarize repeated insufficiency signals as read-only escalation cues before any downstream implementation-repo decision
 - overview and triage surfaces now also expose dedicated read-only escalation drilldowns that reopen the related runtime-record list/detail context
 - escalation drilldowns now also expose local-only issue-template scaffolds so operators can carry the same derived summary into external tooling manually if needed
+- external runtime repo `zyx-corporation/chronicle-external-query` now has a local checkout at `/Users/tomyuk/Projects/Chronicle/chronicle-external-query` and can be designed against a concrete Chronicle-side contract set; see `docs/external-query-runtime-repo-design.md`
 
 ## Completion criteria by lane
 
