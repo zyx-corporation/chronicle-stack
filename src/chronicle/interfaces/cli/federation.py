@@ -182,6 +182,49 @@ def federation_package_verify_cmd(
         handle_error(exc, json_output)
 
 
+@package_app.command("preview")
+def federation_package_preview_cmd(
+    package_dir: Annotated[Path, typer.Option("--package-dir")],
+    json_output: Annotated[bool, typer.Option("--json")] = False,
+) -> None:
+    """Preview a federation package with embedded verification results."""
+    try:
+        report = FederationPackageService().preview_package(package_dir)
+        if json_output:
+            typer.echo(json.dumps(report.model_dump(mode="json"), ensure_ascii=False, indent=2))
+            return
+        typer.echo(f"Federation package preview: status={report.status}")
+        typer.echo(f"  Import candidate: {report.import_candidate}")
+        typer.echo(f"  Signature: {report.verification['signature_status']}")
+        typer.echo(f"  Findings: {len(report.findings)}")
+        if report.warnings:
+            typer.echo(f"  Warnings: {', '.join(report.warnings)}")
+        typer.echo(f"  Boundary: {report.boundary_note}")
+    except ChronicleError as exc:
+        handle_error(exc, json_output)
+
+
+@package_app.command("import-preview")
+def federation_package_import_preview_cmd(
+    package_dir: Annotated[Path, typer.Option("--package-dir")],
+    json_output: Annotated[bool, typer.Option("--json")] = False,
+) -> None:
+    """Preview manual import readiness for a federation package."""
+    try:
+        report = FederationPackageService().import_preview_package(package_dir)
+        if json_output:
+            typer.echo(json.dumps(report.model_dump(mode="json"), ensure_ascii=False, indent=2))
+            return
+        typer.echo(f"Federation import preview: status={report.status}")
+        typer.echo(f"  Import candidate: {report.import_candidate}")
+        typer.echo(f"  Signature: {report.verification['signature_status']}")
+        if report.warnings:
+            typer.echo(f"  Warnings: {', '.join(report.warnings)}")
+        typer.echo(f"  Boundary: {report.boundary_note}")
+    except ChronicleError as exc:
+        handle_error(exc, json_output)
+
+
 @message_app.command("create")
 def federation_message_create_cmd(
     type: Annotated[FederationMessageType, typer.Option("--type")],

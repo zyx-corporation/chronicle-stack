@@ -8,6 +8,7 @@ from chronicle.models.event import ChronicleEvent
 from chronicle.models.federation_package import (
     FederationPackageConsent,
     FederationPackageManifest,
+    FederationPackagePreviewReport,
     FederationPackageSignatureMode,
     FederationPackageSignatureStatus,
     FederationPackageVisibilityMappingEntry,
@@ -38,6 +39,7 @@ __all__ = [
     "Decision",
     "FederationPackageConsent",
     "FederationPackageManifest",
+    "FederationPackagePreviewReport",
     "FederationPackageSignatureMode",
     "FederationPackageSignatureStatus",
     "FederationPackageVisibilityMappingEntry",

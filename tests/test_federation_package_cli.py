@@ -137,3 +137,64 @@ def test_federation_package_create_and_verify_signed_cli(tmp_path):
     assert verify_payload["valid"] is True
     assert verify_payload["signature_status"] == "signed"
     assert verify_payload["warnings"] == []
+
+
+def test_federation_package_preview_and_import_preview_cli(tmp_path):
+    assert _run(tmp_path, "init", "--title", "Federation Package Preview CLI").exit_code == 0
+    context_result = _run(
+        tmp_path,
+        "add-context",
+        "--title",
+        "Federation Preview CLI Context",
+        "--summary",
+        "Preview shareable context",
+        "--json",
+    )
+    context_id = json.loads(context_result.stdout)["context_id"]
+    package_dir = tmp_path / "fed-bundle-preview"
+
+    create_result = _run(
+        tmp_path,
+        "federation",
+        "package",
+        "create",
+        "--purpose",
+        "cli preview review",
+        "--target-node",
+        "node:partner:beta",
+        "--context",
+        context_id,
+        "--output-dir",
+        str(package_dir),
+        "--json",
+    )
+    assert create_result.exit_code == 0, create_result.stderr
+
+    preview_result = _run(
+        tmp_path,
+        "federation",
+        "package",
+        "preview",
+        "--package-dir",
+        str(package_dir),
+        "--json",
+    )
+    assert preview_result.exit_code == 0, preview_result.stderr
+    preview_payload = json.loads(preview_result.stdout)
+    assert preview_payload["status"] == "warning"
+    assert preview_payload["import_candidate"] is True
+    assert preview_payload["verification"]["signature_status"] == "unsigned"
+
+    import_preview_result = _run(
+        tmp_path,
+        "federation",
+        "package",
+        "import-preview",
+        "--package-dir",
+        str(package_dir),
+        "--json",
+    )
+    assert import_preview_result.exit_code == 0, import_preview_result.stderr
+    import_preview_payload = json.loads(import_preview_result.stdout)
+    assert import_preview_payload["status"] == "warning"
+    assert import_preview_payload["boundary_note"].startswith("Import preview remains advisory")

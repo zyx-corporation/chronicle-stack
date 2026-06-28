@@ -115,3 +115,22 @@ class FederationPackageVerificationReport(BaseModel):
     valid: bool
     files_checked: list[FederationPackageVerificationEntry] = Field(default_factory=list)
     warnings: list[str] = Field(default_factory=list)
+
+
+class FederationPackagePreviewFinding(BaseModel):
+    severity: str
+    code: str
+    summary: str
+    recommendation: str = ""
+
+
+class FederationPackagePreviewReport(BaseModel):
+    package_path: str
+    status: str
+    import_candidate: bool
+    boundary_note: str
+    manifest: dict[str, object]
+    redaction_report: dict[str, object]
+    verification: dict[str, object]
+    findings: list[FederationPackagePreviewFinding] = Field(default_factory=list)
+    warnings: list[str] = Field(default_factory=list)
