@@ -203,6 +203,8 @@ chronicle-federation-package/
 
 - 現段階の manifest verify は `signature.status=unsigned` を warning として明示しつつ、bundle payload file の hash 検証を先に固定する。
 - manifest 自身は存在必須だが、自己参照 hash を避けるため payload file list からは分離する。
+- `chronicle federation package create --signature-mode local_dev` により、reviewable な local dev signed-manifest surface を生成できる。
+- `chronicle federation package verify` は `unsigned`, `signed`, `mismatch`, `expired`, `revoked` を区別するが、どれも trust certification や remote identity proof には昇格させない。
 
 ### 6.5 非対象
 
@@ -632,7 +634,7 @@ Timeline View は補助であり、中心UIではない。
 
 最優先は Phase 1 から Phase 3 である。理由は、分散連合を始める前に、共有パッケージ、Manifest、redaction、consent、boundary が必要だからである。
 
-Phase 1, Phase 6, Phase 7, Phase 8 の最小 slice が揃ったため、次は Phase 2 と Phase 3 を進める。signed manifest と context boundary enforcement がなければ federation package を安全に外へ持ち出せない。
+Phase 1, Phase 2, Phase 6, Phase 7, Phase 8 の最小 slice が揃ったため、次は Phase 3 を進める。context boundary enforcement がなければ federation package を安全に外へ持ち出せない。
 
 Phase 6 と Phase 7 は、実用化段階で重要になる。信頼とAI境界がなければ、Chronicle Stack は文脈主権を守れない。
 

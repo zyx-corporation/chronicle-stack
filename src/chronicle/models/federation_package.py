@@ -16,6 +16,19 @@ class FederationPackageVisibility(StrEnum):
     PUBLIC = "public"
 
 
+class FederationPackageSignatureMode(StrEnum):
+    UNSIGNED = "unsigned"
+    LOCAL_DEV = "local_dev"
+
+
+class FederationPackageSignatureStatus(StrEnum):
+    UNSIGNED = "unsigned"
+    SIGNED = "signed"
+    MISMATCH = "mismatch"
+    EXPIRED = "expired"
+    REVOKED = "revoked"
+
+
 class FederationPackageFileEntry(BaseModel):
     path: str
     sha256: str
@@ -25,7 +38,11 @@ class FederationPackageSignature(BaseModel):
     algorithm: str = "placeholder"
     key_id: str = "local-dev-key"
     value: str = ""
-    status: str = "unsigned"
+    status: FederationPackageSignatureStatus = FederationPackageSignatureStatus.UNSIGNED
+    signed_at: datetime | None = None
+    expires_at: datetime | None = None
+    revoked_at: datetime | None = None
+    revocation_reason: str | None = None
 
 
 class FederationPackageRetentionPolicy(BaseModel):
@@ -74,7 +91,7 @@ class FederationPackageVerificationEntry(BaseModel):
 class FederationPackageVerificationReport(BaseModel):
     package_path: str
     manifest_path: str
-    signature_status: str
+    signature_status: FederationPackageSignatureStatus
     valid: bool
     files_checked: list[FederationPackageVerificationEntry] = Field(default_factory=list)
     warnings: list[str] = Field(default_factory=list)

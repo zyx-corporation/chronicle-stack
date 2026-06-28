@@ -9,7 +9,7 @@ import typer
 
 from chronicle.errors import ChronicleError
 from chronicle.interfaces.cli.common import handle_error
-from chronicle.models.federation_package import FederationPackageVisibility
+from chronicle.models.federation_package import FederationPackageSignatureMode, FederationPackageVisibility
 from chronicle.models.federation_message import (
     FederationMessageBox,
     FederationMessageSignatureStatus,
@@ -60,10 +60,21 @@ def federation_package_create_cmd(
     ] = FederationPackageVisibility.FEDERATED,
     created_by_node: Annotated[str, typer.Option("--created-by-node")] = "node:local:default",
     trust_target_node: Annotated[str | None, typer.Option("--trust-target-node")] = None,
+    signature_mode: Annotated[
+        FederationPackageSignatureMode,
+        typer.Option("--signature-mode"),
+    ] = FederationPackageSignatureMode.UNSIGNED,
+    signature_key_id: Annotated[str, typer.Option("--signature-key-id")] = "local-dev-key",
+    signature_expires_at: Annotated[str | None, typer.Option("--signature-expires-at")] = None,
+    signature_revoked: Annotated[bool, typer.Option("--signature-revoked")] = False,
+    signature_revocation_reason: Annotated[str | None, typer.Option("--signature-revocation-reason")] = None,
     json_output: Annotated[bool, typer.Option("--json")] = False,
 ) -> None:
     """Create a local-first federation package bundle."""
     try:
+        parsed_signature_expires_at = (
+            datetime.fromisoformat(signature_expires_at) if signature_expires_at else None
+        )
         manifest = FederationPackageService().create_package(
             purpose=purpose,
             target_node=target_node,
@@ -72,6 +83,11 @@ def federation_package_create_cmd(
             visibility=visibility,
             context_ids=context_id,
             trust_target_node=trust_target_node,
+            signature_mode=signature_mode,
+            signature_key_id=signature_key_id,
+            signature_expires_at=parsed_signature_expires_at,
+            signature_revoked=signature_revoked,
+            signature_revocation_reason=signature_revocation_reason,
         )
         payload = manifest.model_dump(mode="json")
         if json_output:
@@ -79,8 +95,18 @@ def federation_package_create_cmd(
         else:
             typer.echo(f"Federation package created: {manifest.package_id}")
             typer.echo(f"  Target node: {manifest.target_node}")
+            typer.echo(f"  Signature: {manifest.signature.status}")
             typer.echo(f"  Output: {output_dir}")
             typer.echo("  Boundary: preview-first local bundle only; no auto-apply or network sync")
+    except ValueError as exc:
+        handle_error(
+            ChronicleError(
+                code="FEDERATION_PACKAGE_SIGNATURE_EXPIRES_AT_INVALID",
+                message="Invalid federation package signature expiration timestamp.",
+                hint=str(exc),
+            ),
+            json_output,
+        )
     except ChronicleError as exc:
         handle_error(exc, json_output)
 
@@ -102,6 +128,7 @@ def federation_package_inspect_cmd(
         typer.echo(f"  Purpose: {manifest['purpose']}")
         typer.echo(f"  Target node: {manifest['target_node']}")
         typer.echo(f"  Visibility: {manifest['visibility']}")
+        typer.echo(f"  Signature: {manifest['signature']['status']}")
         typer.echo(f"  Referenced records: {len(manifest['referenced_records'])}")
         typer.echo(f"  Reference-only records: {len(report['reference_only_record_ids'])}")
         if report["warning_codes"]:

@@ -9,10 +9,14 @@ from pathlib import Path
 
 from chronicle import __version__
 from chronicle.errors import ChronicleError
+from chronicle.security.integrity import canonical_json_bytes
 from chronicle.models.federation_package import (
     FederationPackageFileEntry,
     FederationPackageManifest,
     FederationPackageRedactionReport,
+    FederationPackageSignature,
+    FederationPackageSignatureMode,
+    FederationPackageSignatureStatus,
     FederationPackageVerificationEntry,
     FederationPackageVerificationReport,
     FederationPackageVisibility,
@@ -22,6 +26,11 @@ from chronicle.services.integration_package_service import IntegrationPackageSer
 
 
 class FederationPackageService:
+    _LOCAL_DEV_SIGNING_KEYS = {
+        "local-dev-key": "chronicle-local-dev-signing-key",
+        "local-dev-rotated": "chronicle-local-dev-signing-key-rotated",
+    }
+
     def __init__(self, root: Path | None = None) -> None:
         self.integration_packages = IntegrationPackageService(root)
         self.paths = self.integration_packages.chronicle.paths
@@ -36,6 +45,11 @@ class FederationPackageService:
         visibility: FederationPackageVisibility = FederationPackageVisibility.FEDERATED,
         context_ids: list[str] | None = None,
         trust_target_node: str | None = None,
+        signature_mode: FederationPackageSignatureMode = FederationPackageSignatureMode.UNSIGNED,
+        signature_key_id: str = "local-dev-key",
+        signature_expires_at: datetime | None = None,
+        signature_revoked: bool = False,
+        signature_revocation_reason: str | None = None,
     ) -> FederationPackageManifest:
         package = self.integration_packages.build_context_package(
             purpose=purpose,
@@ -120,6 +134,14 @@ class FederationPackageService:
             self._file_entry(output_dir / "redaction-report.json", output_dir),
             self._file_entry(output_dir / "README.md", output_dir),
         ]
+        manifest.signature = self._build_signature(
+            manifest=manifest,
+            signature_mode=signature_mode,
+            signature_key_id=signature_key_id,
+            signature_expires_at=signature_expires_at,
+            signature_revoked=signature_revoked,
+            signature_revocation_reason=signature_revocation_reason,
+        )
         (output_dir / "manifest.json").write_text(
             json.dumps(manifest.model_dump(mode="json"), ensure_ascii=False, indent=2),
             encoding="utf-8",
@@ -155,13 +177,16 @@ class FederationPackageService:
                     matches=matches,
                 )
             )
-        if manifest.signature.status != "signed":
-            warnings.append("signature_placeholder_only")
-        valid = all(entry.matches for entry in entries)
+        signature_status, signature_warnings = self._verify_signature(manifest)
+        warnings.extend(signature_warnings)
+        valid = all(entry.matches for entry in entries) and signature_status in {
+            FederationPackageSignatureStatus.UNSIGNED,
+            FederationPackageSignatureStatus.SIGNED,
+        }
         return FederationPackageVerificationReport(
             package_path=str(package_dir),
             manifest_path=str(package_dir / "manifest.json"),
-            signature_status=manifest.signature.status,
+            signature_status=signature_status,
             valid=valid,
             files_checked=entries,
             warnings=warnings,
@@ -196,6 +221,110 @@ class FederationPackageService:
             path=path.relative_to(root).as_posix(),
             sha256=self._sha256(path),
         )
+
+    def _build_signature(
+        self,
+        *,
+        manifest: FederationPackageManifest,
+        signature_mode: FederationPackageSignatureMode,
+        signature_key_id: str,
+        signature_expires_at: datetime | None,
+        signature_revoked: bool,
+        signature_revocation_reason: str | None,
+    ) -> FederationPackageSignature:
+        if signature_mode == FederationPackageSignatureMode.UNSIGNED:
+            return FederationPackageSignature(
+                algorithm="placeholder",
+                key_id=signature_key_id,
+                value="",
+                status=FederationPackageSignatureStatus.UNSIGNED,
+                expires_at=signature_expires_at,
+            )
+        if signature_mode != FederationPackageSignatureMode.LOCAL_DEV:
+            raise ChronicleError(
+                code="FEDERATION_PACKAGE_SIGNATURE_MODE_UNSUPPORTED",
+                message=f"Unsupported federation package signature mode: {signature_mode}",
+                hint="Use `unsigned` or `local_dev`.",
+            )
+        signing_key = self._LOCAL_DEV_SIGNING_KEYS.get(signature_key_id)
+        if signing_key is None:
+            raise ChronicleError(
+                code="FEDERATION_PACKAGE_SIGNATURE_KEY_UNKNOWN",
+                message=f"Unknown federation package signature key: {signature_key_id}",
+                hint="Use one of the documented local dev signing keys.",
+            )
+        signed_at = datetime.now(timezone.utc).astimezone()
+        status = FederationPackageSignatureStatus.REVOKED if signature_revoked else FederationPackageSignatureStatus.SIGNED
+        signature = FederationPackageSignature(
+            algorithm="local-dev-sha256",
+            key_id=signature_key_id,
+            value="",
+            status=status,
+            signed_at=signed_at,
+            expires_at=signature_expires_at,
+            revoked_at=signed_at if signature_revoked else None,
+            revocation_reason=signature_revocation_reason if signature_revoked else None,
+        )
+        signature.value = self._sign_manifest_payload(manifest, signature, signing_key)
+        return signature
+
+    def _verify_signature(
+        self, manifest: FederationPackageManifest
+    ) -> tuple[FederationPackageSignatureStatus, list[str]]:
+        signature = manifest.signature
+        if signature.status == FederationPackageSignatureStatus.UNSIGNED:
+            return signature.status, ["signature_unsigned"]
+        if signature.status == FederationPackageSignatureStatus.REVOKED:
+            return signature.status, ["signature_revoked"]
+        if signature.expires_at and signature.expires_at < datetime.now(timezone.utc).astimezone():
+            return FederationPackageSignatureStatus.EXPIRED, ["signature_expired"]
+        signing_key = self._LOCAL_DEV_SIGNING_KEYS.get(signature.key_id)
+        if signing_key is None:
+            return FederationPackageSignatureStatus.MISMATCH, ["signature_key_unknown"]
+        if signature.algorithm != "local-dev-sha256":
+            return FederationPackageSignatureStatus.MISMATCH, ["signature_algorithm_unsupported"]
+        expected = self._sign_manifest_payload(manifest, signature, signing_key)
+        if expected != signature.value:
+            return FederationPackageSignatureStatus.MISMATCH, ["signature_mismatch"]
+        return FederationPackageSignatureStatus.SIGNED, []
+
+    def _sign_manifest_payload(
+        self,
+        manifest: FederationPackageManifest,
+        signature: FederationPackageSignature,
+        signing_key: str,
+    ) -> str:
+        payload = {
+            "schema_version": manifest.schema_version,
+            "package_id": manifest.package_id,
+            "chronicle_id": manifest.chronicle_id,
+            "created_at": manifest.created_at.isoformat(),
+            "created_by_node": manifest.created_by_node,
+            "target_node": manifest.target_node,
+            "purpose": manifest.purpose,
+            "visibility": manifest.visibility.value,
+            "source_root": manifest.source_root,
+            "tool_version": manifest.tool_version,
+            "referenced_records": manifest.referenced_records,
+            "warnings": manifest.warnings,
+            "files": [item.model_dump(mode="json") for item in manifest.files],
+            "retention_policy": manifest.retention_policy.model_dump(mode="json"),
+            "notes": manifest.notes,
+            "metadata": manifest.metadata,
+            "signature_meta": {
+                "algorithm": signature.algorithm,
+                "key_id": signature.key_id,
+                "status": signature.status.value,
+                "signed_at": signature.signed_at.isoformat() if signature.signed_at else None,
+                "expires_at": signature.expires_at.isoformat() if signature.expires_at else None,
+                "revoked_at": signature.revoked_at.isoformat() if signature.revoked_at else None,
+                "revocation_reason": signature.revocation_reason,
+            },
+        }
+        digest = hashlib.sha256()
+        digest.update(signing_key.encode("utf-8"))
+        digest.update(canonical_json_bytes(payload))
+        return digest.hexdigest()
 
     @staticmethod
     def _sha256(path: Path) -> str:
