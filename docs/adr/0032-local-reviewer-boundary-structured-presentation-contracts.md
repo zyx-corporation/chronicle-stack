@@ -22,8 +22,8 @@ Related records:
 
 - `docs/adr/0025-local-ui-i18n-presentation-boundary.md`
 - `docs/adr/0031-local-reviewer-boundary-presentation-drilldown.md`
-- `docs/release-status-v1.12.0.md`
-- `docs/v1.12-release-remaining-issues.md`
+- `docs/releases/status/release-status-v1.12.0.md`
+- `docs/releases/remaining/v1.12-release-remaining-issues.md`
 
 ## Decision
 

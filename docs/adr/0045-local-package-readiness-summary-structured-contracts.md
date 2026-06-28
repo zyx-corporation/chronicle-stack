@@ -17,8 +17,8 @@ Related records:
 
 - `docs/adr/0043-local-package-review-structured-i18n.md`
 - `docs/adr/0044-local-embedded-package-review-structured-contracts.md`
-- `docs/release-status-v1.25.0.md`
-- `docs/v1.25-release-remaining-issues.md`
+- `docs/releases/status/release-status-v1.25.0.md`
+- `docs/releases/remaining/v1.25-release-remaining-issues.md`
 
 ## Decision
 

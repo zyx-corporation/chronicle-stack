@@ -21,8 +21,8 @@ Related records:
 - `docs/adr/0023-browser-triggered-review-write-semantics.md`
 - `docs/adr/0026-local-reviewer-session-proof-representation.md`
 - `docs/adr/0027-local-gui-review-route-contract.md`
-- `docs/release-status-v1.8.0.md`
-- `docs/v1.8-release-remaining-issues.md`
+- `docs/releases/status/release-status-v1.8.0.md`
+- `docs/releases/remaining/v1.8-release-remaining-issues.md`
 
 ## Decision
 

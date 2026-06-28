@@ -17,8 +17,8 @@ Related records:
 
 - `docs/adr/0037-local-package-parity-and-preview-structured-i18n.md`
 - `docs/adr/0043-local-package-review-structured-i18n.md`
-- `docs/release-status-v1.24.0.md`
-- `docs/v1.24-release-remaining-issues.md`
+- `docs/releases/status/release-status-v1.24.0.md`
+- `docs/releases/remaining/v1.24-release-remaining-issues.md`
 
 ## Decision
 

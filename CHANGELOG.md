@@ -8,11 +8,11 @@
 
 ### Added
 - `v1.14.0` release-track documents:
-  - `docs/release-status-v1.14.0.md`
-  - `docs/release-readiness-v1.14.md`
-  - `docs/release-notes-v1.14.0.md`
-  - `docs/smoke-test-v1.14.md`
-  - `docs/v1.14-release-remaining-issues.md`
+  - `docs/releases/status/release-status-v1.14.0.md`
+  - `docs/releases/readiness/release-readiness-v1.14.md`
+  - `docs/releases/notes/release-notes-v1.14.0.md`
+  - `docs/releases/smoke/smoke-test-v1.14.md`
+  - `docs/releases/remaining/v1.14-release-remaining-issues.md`
 - Dedicated `v1.14.0` release-lane framing for local reviewer-boundary derived fallback copy.
 - Explicit drilldown variants for row-detail versus overview-dominant reviewer-boundary summaries.
 - Deterministic fallback message and fact-line copy derived from structured reviewer-boundary contracts.
@@ -33,11 +33,11 @@
 
 ### Added
 - `v1.13.0` release-track documents:
-  - `docs/release-status-v1.13.0.md`
-  - `docs/release-readiness-v1.13.md`
-  - `docs/release-notes-v1.13.0.md`
-  - `docs/smoke-test-v1.13.md`
-  - `docs/v1.13-release-remaining-issues.md`
+  - `docs/releases/status/release-status-v1.13.0.md`
+  - `docs/releases/readiness/release-readiness-v1.13.md`
+  - `docs/releases/notes/release-notes-v1.13.0.md`
+  - `docs/releases/smoke/smoke-test-v1.13.md`
+  - `docs/releases/remaining/v1.13-release-remaining-issues.md`
 - Dedicated `v1.13.0` release-lane framing for local reviewer-boundary structured presentation contracts.
 - Shared drilldown message-template keys and message params across overview, list, and detail reviewer-boundary summaries.
 - `ui-smoke` coverage for explicit reviewer-boundary drilldown message-template fields.
@@ -57,11 +57,11 @@
 
 ### Added
 - `v1.12.0` release-track documents:
-  - `docs/release-status-v1.12.0.md`
-  - `docs/release-readiness-v1.12.md`
-  - `docs/release-notes-v1.12.0.md`
-  - `docs/smoke-test-v1.12.md`
-  - `docs/v1.12-release-remaining-issues.md`
+  - `docs/releases/status/release-status-v1.12.0.md`
+  - `docs/releases/readiness/release-readiness-v1.12.md`
+  - `docs/releases/notes/release-notes-v1.12.0.md`
+  - `docs/releases/smoke/smoke-test-v1.12.md`
+  - `docs/releases/remaining/v1.12-release-remaining-issues.md`
 - Dedicated `v1.12.0` release-lane framing for local reviewer-boundary presentation/read-model drilldown.
 - Read-only reviewer-boundary drilldown summaries across overview, runtime, review, and summary payloads.
 - HTML-shell visibility for reviewer-boundary drilldown summaries across overview, list, and detail surfaces.
@@ -84,11 +84,11 @@
 
 ### Added
 - `v1.11.0` release-track documents:
-  - `docs/release-status-v1.11.0.md`
-  - `docs/release-readiness-v1.11.md`
-  - `docs/release-notes-v1.11.0.md`
-  - `docs/smoke-test-v1.11.md`
-  - `docs/v1.11-release-remaining-issues.md`
+  - `docs/releases/status/release-status-v1.11.0.md`
+  - `docs/releases/readiness/release-readiness-v1.11.md`
+  - `docs/releases/notes/release-notes-v1.11.0.md`
+  - `docs/releases/smoke/smoke-test-v1.11.md`
+  - `docs/releases/remaining/v1.11-release-remaining-issues.md`
 - Dedicated `v1.11.0` release-lane framing for local reviewer-boundary smoke-contract hardening.
 - Reviewer-boundary smoke checks for overview summaries, list-row statuses, detail summaries, and HTML continuity markers.
 - Reviewer-boundary count-consistency smoke checks between overview aggregates and runtime, review, and summary list-row statuses.
@@ -107,11 +107,11 @@
 
 ### Added
 - `v1.10.0` release-track documents:
-  - `docs/release-status-v1.10.0.md`
-  - `docs/release-readiness-v1.10.md`
-  - `docs/release-notes-v1.10.0.md`
-  - `docs/smoke-test-v1.10.md`
-  - `docs/v1.10-release-remaining-issues.md`
+  - `docs/releases/status/release-status-v1.10.0.md`
+  - `docs/releases/readiness/release-readiness-v1.10.md`
+  - `docs/releases/notes/release-notes-v1.10.0.md`
+  - `docs/releases/smoke/smoke-test-v1.10.md`
+  - `docs/releases/remaining/v1.10-release-remaining-issues.md`
 - Dedicated `v1.10.0` release-lane framing for local reviewer-boundary observability and i18n-ready presentation alignment.
 - Reviewer-boundary overview aggregation across runtime records, review queue rows, and summary jobs.
 - Reviewer-boundary slice/filter navigation from overview counts into read-only list surfaces.
@@ -131,11 +131,11 @@
 
 ### Added
 - `v1.9.0` release-track documents:
-  - `docs/release-status-v1.9.0.md`
-  - `docs/release-readiness-v1.9.md`
-  - `docs/release-notes-v1.9.0.md`
-  - `docs/smoke-test-v1.9.md`
-  - `docs/v1.9-release-remaining-issues.md`
+  - `docs/releases/status/release-status-v1.9.0.md`
+  - `docs/releases/readiness/release-readiness-v1.9.md`
+  - `docs/releases/notes/release-notes-v1.9.0.md`
+  - `docs/releases/smoke/smoke-test-v1.9.md`
+  - `docs/releases/remaining/v1.9-release-remaining-issues.md`
 - Dedicated `v1.9.0` release-lane framing for local reviewer/session enforcement-boundary hardening.
 - Explicit `reviewer_enforcement_summary` visibility for route-enforced versus descriptive-only reviewer/session conditions.
 - Explicit `reviewer_validation_gate_summary` visibility for validation, authorization, target-state, and durable-write failure families.
@@ -154,11 +154,11 @@
 
 ### Added
 - `v1.8.0` release-track documents:
-  - `docs/release-status-v1.8.0.md`
-  - `docs/release-readiness-v1.8.md`
-  - `docs/release-notes-v1.8.0.md`
-  - `docs/smoke-test-v1.8.md`
-  - `docs/v1.8-release-remaining-issues.md`
+  - `docs/releases/status/release-status-v1.8.0.md`
+  - `docs/releases/readiness/release-readiness-v1.8.md`
+  - `docs/releases/notes/release-notes-v1.8.0.md`
+  - `docs/releases/smoke/smoke-test-v1.8.md`
+  - `docs/releases/remaining/v1.8-release-remaining-issues.md`
 - Dedicated `v1.8.0` release-lane framing for local GUI review-route contract hardening.
 - Explicit read-only local UI review-route visibility for:
   - per-action route-family semantics

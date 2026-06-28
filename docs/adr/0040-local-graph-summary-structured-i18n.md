@@ -19,8 +19,8 @@ Related records:
 
 - `docs/adr/0025-local-ui-i18n-presentation-boundary.md`
 - `docs/adr/0039-local-retrieval-handoff-and-invocation-plan-structured-i18n.md`
-- `docs/release-status-v1.20.0.md`
-- `docs/v1.20-release-remaining-issues.md`
+- `docs/releases/status/release-status-v1.20.0.md`
+- `docs/releases/remaining/v1.20-release-remaining-issues.md`
 
 ## Decision
 

@@ -23,7 +23,7 @@ Related records:
 - `docs/adr/0025-local-ui-i18n-presentation-boundary.md`
 - `docs/adr/0029-local-reviewer-boundary-observability.md`
 - `docs/adr/0030-local-reviewer-boundary-smoke-contract.md`
-- `docs/release-status-v1.11.0.md`
+- `docs/releases/status/release-status-v1.11.0.md`
 
 ## Decision
 
