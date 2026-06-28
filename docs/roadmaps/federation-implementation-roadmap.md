@@ -288,6 +288,12 @@ chronicle federation consent record \
 - read-only UI で object type ごとの一覧またはdetailを表示できる。
 - RDE Diff Record と Delta Chronicle の関係が明示される。
 
+### 8.4.1 実装メモ
+
+- `chronicle object record` / `list` / `show` が explicit Question / Objection / Hypothesis / Decay record を append-only event として扱う。
+- `/api/chronicle-objects` が explicit object records に加えて Conversation / Artifact / Decision / Delta の derived object view を read-only に表示する。
+- Delta Chronicle は linked `RDE Diff Record` を detail 上で明示し、Chronicle core 側で hosted runtime や書き込み GUI を追加しない。
+
 ### 8.5 非対象
 
 - 完全なGraphRAG query engine。
@@ -354,6 +360,12 @@ Trust Assertion と Trust Withdrawal は Phase 6 に送る。
 - 受信メッセージは自動適用されず、preview/review 経由になる。
 - revoke/decay は監査ログに残る。
 
+### 9.5.1 実装メモ
+
+- `chronicle federation message create` が preview-only の message envelope を local inbox/outbox queue に保存する。
+- `chronicle federation inbox inspect` / `outbox inspect` と `/api/federation-inbox` / `/api/federation-outbox` が read-only inspect surface を提供する。
+- `revoke_context` と `decay_notice` を inbox に保存した場合は、local primary record を触らず audit event だけを追記する。
+
 ### 9.6 非対象
 
 - HTTP配送。
@@ -395,6 +407,12 @@ Trust Assertion と Trust Withdrawal は Phase 6 に送る。
 - federation package/message 作成時に trust relation を参照できる。
 - 信頼が文脈別であり、単一スコアではないことがUI/API上で明示される。
 - 代理行為とAI代理生成が監査可能に記録される。
+
+### 10.4.1 実装メモ
+
+- `chronicle trust node add`, `chronicle trust assert`, `chronicle trust withdraw`, `chronicle trust list` が local trust registry を扱う。
+- `/api/trust-nodes` と `/api/trust-relations` が Node ID / Subject ID / trust level / domain / capability を read-only に表示する。
+- federation message envelope と context package metadata は target node 向け trust summary を advisory metadata として参照する。
 
 ### 10.5 非対象
 
@@ -602,7 +620,7 @@ Timeline View は補助であり、中心UIではない。
 
 最優先は Phase 1 から Phase 3 である。理由は、分散連合を始める前に、共有パッケージ、Manifest、redaction、consent、boundary が必要だからである。
 
-次に Phase 4 と Phase 5 を進める。意味単位としての Chronicle object と federation message がなければ、連合は単なるファイル共有または投稿配送に堕する。
+Phase 6 まで完了したため、次は Phase 7 を進める。AI adapter integration がなければ、外部AI利用時の境界と trust を一体で扱えない。
 
 Phase 6 と Phase 7 は、実用化段階で重要になる。信頼とAI境界がなければ、Chronicle Stack は文脈主権を守れない。
 

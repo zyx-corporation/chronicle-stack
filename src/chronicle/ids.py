@@ -18,6 +18,10 @@ PREFIXES = {
     "package": "pkg_",
     "summary_job": "sum_",
     "review": "rvw_",
+    "object": "obj_",
+    "reaction": "react_",
+    "message": "msg_",
+    "trust_relation": "tr_",
 }
 
 

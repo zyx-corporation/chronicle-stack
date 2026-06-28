@@ -24,6 +24,7 @@ from chronicle.models.integration_package import (
 )
 from chronicle.services.audit_service import AuditService
 from chronicle.services.chronicle_service import ChronicleService
+from chronicle.services.trust_service import TrustService
 from chronicle.store.integration_package_store import IntegrationPackageStore
 from chronicle.store.lifecycle_store import LifecycleStore
 
@@ -44,6 +45,7 @@ class IntegrationPackageService:
         self.store = IntegrationPackageStore(self.chronicle.paths)
         self.audit = AuditService(root)
         self.lifecycle_store = LifecycleStore(self.chronicle.paths.lifecycle_file)
+        self.trust = TrustService(root)
 
     def build_context_package(
         self,
@@ -51,6 +53,7 @@ class IntegrationPackageService:
         purpose: str,
         target_environment: IntegrationTargetEnvironment = IntegrationTargetEnvironment.LOCAL,
         context_ids: list[str] | None = None,
+        trust_target_node: str | None = None,
     ) -> IntegrationPackage:
         metadata = self.chronicle.require_initialized()
         contexts = self.chronicle.index.load_contexts()
@@ -83,6 +86,17 @@ class IntegrationPackageService:
                 "record_count": str(len(records)),
                 "runtime": "none",
                 "excluded_lifecycle_tombstone_count": str(len(excluded)),
+                **(
+                    {
+                        "trust_target_node": trust_target_node,
+                        "trust_preview": self.trust.summarize_for_target(
+                            target_node=trust_target_node,
+                            purpose=purpose,
+                        ).preview_message,
+                    }
+                    if trust_target_node
+                    else {}
+                ),
             },
         )
         return IntegrationPackage(manifest=manifest, records=records)

@@ -102,6 +102,11 @@ flowchart TD
 | Read-only UI visibility for placeholder AI index | v1.7 Phase E 相当 実装済み |
 | Explicit local runtime summarize MVP | v1.7 Phase F 実装済み |
 | Local retrieval dry-run plan MVP | v1.7 Phase G skeleton 実装済み |
+| Chronicle Object Expansion / Federation Phase 4 | v1.84.0実装済み |
+| Federation Message MVP / Federation Phase 5 | v1.85.0実装済み |
+| Node Trust Model / Federation Phase 6 | v1.86.0実装済み |
+| Sayane / AI Adapter Integration / Federation Phase 7 | v1.87.0実装済み |
+| Context SNS Surface / Federation Phase 8 | v1.88.0実装済み |
 | v1.8 local GUI review-route contract hardening release preparation | v1.8.0準備済み |
 | GraphRAG query engine | 将来構想 |
 | Full interactive editing UI | 将来構想 |
@@ -162,6 +167,15 @@ chronicle runtime status
 chronicle runtime summarize --text "Long source text to summarize locally" --record
 chronicle runtime retrieve-plan --query "What context should I use?"
 chronicle runtime retrieve-plan --query "What context should I use?" --record
+chronicle object record --type question --summary "Why does this policy exist?" --created-by user
+chronicle object list
+chronicle object show --id <OBJECT_ID>
+chronicle federation message create --type request_context --source-node node:local:alpha --target-node node:local:beta --purpose "project review"
+chronicle federation inbox inspect
+chronicle federation outbox inspect
+chronicle trust node add --node-id node:partner:beta --subject-id subject:beta
+chronicle trust assert --target-node node:partner:beta --domain technical_review --purpose "project review" --level trusted --capability review
+chronicle trust list
 chronicle review queue
 chronicle review approve --event <EVENT_ID> --reviewer <NAME>
 chronicle review reject --event <EVENT_ID> --reviewer <NAME>
@@ -180,7 +194,7 @@ chronicle show
 
 `chronicle ui-smoke` は、サーバーを起動せず、ブラウザも使わず、ローカル UI の read-only データ面を検証する smoke command です。`--json` を付けると機械可読の smoke report を出力します。
 
-`chronicle ui` は `/api/overview`, `/api/events`, `/api/contexts`, `/api/artifacts`, `/api/decisions`, `/api/rde`, `/api/boundary`, `/api/audit`, `/api/lifecycle`, `/api/runtime-records`, `/api/review-queue`, `/api/ui-boundary`, `/api/package-review`, `/api/graph-summary`, `/api/ai-index-status`, `/api/ai-index-vector`, `/api/ai-index-graph-nodes`, `/api/ai-index-graph-edges` を read-only endpoint として提供します。これらはすべてローカル Chronicle ファイル由来の派生ビューです。
+`chronicle ui` は `/api/overview`, `/api/events`, `/api/contexts`, `/api/chronicle-objects`, `/api/federation-inbox`, `/api/federation-outbox`, `/api/trust-nodes`, `/api/trust-relations`, `/api/artifacts`, `/api/decisions`, `/api/rde`, `/api/boundary`, `/api/audit`, `/api/lifecycle`, `/api/runtime-records`, `/api/review-queue`, `/api/ui-boundary`, `/api/package-review`, `/api/graph-summary`, `/api/ai-index-status`, `/api/ai-index-vector`, `/api/ai-index-graph-nodes`, `/api/ai-index-graph-edges` を read-only endpoint として提供します。これらはすべてローカル Chronicle ファイル由来の派生ビューです。
 
 v1.2 以降では、`/api/events/<id>`, `/api/contexts/<id>`, `/api/artifacts/<id>`, `/api/decisions/<id>`, `/api/rde/<id>`, `/api/boundary/<id>`, `/api/audit/<id>`, `/api/lifecycle/<id>`, `/api/runtime-records/<id>`, `/api/review-queue/<id>` のような read-only detail endpoint を提供します。これらも記録を変更しない閲覧用の派生ビューです。
 
@@ -214,6 +228,12 @@ v1.2 以降では、`/api/events/<id>`, `/api/contexts/<id>`, `/api/artifacts/<i
 - `chronicle runtime summarize` は明示実行型の local placeholder summarize であり、外部 LLM 呼び出しではありません。生成出力は review 前提です。
 - `chronicle runtime retrieve-plan` は dry-run の retrieval plan 表示であり、GraphRAG runtime や外部検索サービスではありません。
 - `chronicle runtime retrieve-plan --record` は retrieval dry-run 計画を review 前提の `assistant_output` event として記録します。
+- `chronicle object record` は Question / Objection / Hypothesis / Decay などの意味単位を append-only event として記録します。
+- `/api/chronicle-objects` は explicit object records と、Artifact / Decision / RDE / Context から派生した object view を read-only に表示します。
+- `chronicle federation message create` は preview-only の federation message envelope を local inbox/outbox queue に保存します。
+- `chronicle federation inbox inspect` と `/api/federation-inbox` は受信 message を preview/review 用に読むだけで、自動 import や local primary-record 変更は行いません。
+- `chronicle trust` は Node ID と Subject ID を分けた local trust registry を扱い、domain / purpose / capability 単位の trust relation を追加・撤回・一覧表示します。
+- federation message と package metadata は target node 向けの trust summary を advisory に参照します。
 
 ## ドキュメント
 
@@ -231,48 +251,69 @@ v1.2 以降では、`/api/events/<id>`, `/api/contexts/<id>`, `/api/artifacts/<i
 - [Downstream Query-Engine Trial Inspection](docs/downstream-query-engine-trial-inspection.md)
 - [Local AI Index Placeholder](docs/local-ai-index-placeholder.md)
 - [v1.7 Phase D/E Progress](docs/v1.7-phase-d-e-progress.md)
-- [v1.7 Phase D/E Smoke Profile](docs/smoke-test-v1.7-phase-d-e.md)
+- [v1.7 Phase D/E Smoke Profile](docs/releases/smoke/smoke-test-v1.7-phase-d-e.md)
 - [v1.7 Phase F/G/H Plan](docs/v1.7-phase-f-g-h-plan.md)
-- [v1.7 Release Status](docs/release-status-v1.7.0.md)
-- [v1.8 Release Status](docs/release-status-v1.8.0.md)
-- [v1.9 Release Status](docs/release-status-v1.9.0.md)
-- [v1.7 Release Readiness](docs/release-readiness-v1.7.md)
-- [v1.9 Release Readiness](docs/release-readiness-v1.9.md)
-- [v1.8 Release Readiness](docs/release-readiness-v1.8.md)
-- [v1.9 Release Notes](docs/release-notes-v1.9.0.md)
-- [v1.8 Release Notes](docs/release-notes-v1.8.0.md)
-- [v1.9 Release Remaining Issues](docs/v1.9-release-remaining-issues.md)
-- [v1.8 Release Remaining Issues](docs/v1.8-release-remaining-issues.md)
-- [v1.7 Release Notes](docs/release-notes-v1.7.0.md)
-- [v1.7 Smoke Test Profile](docs/smoke-test-v1.7.md)
-- [v1.9 Smoke Test Profile](docs/smoke-test-v1.9.md)
-- [v1.8 Smoke Test Profile](docs/smoke-test-v1.8.md)
+- [v1.7 Release Status](docs/releases/status/release-status-v1.7.0.md)
+- [v1.8 Release Status](docs/releases/status/release-status-v1.8.0.md)
+- [v1.9 Release Status](docs/releases/status/release-status-v1.9.0.md)
+- [v1.84 Release Status](docs/releases/status/release-status-v1.84.0.md)
+- [v1.85 Release Status](docs/releases/status/release-status-v1.85.0.md)
+- [v1.86 Release Status](docs/releases/status/release-status-v1.86.0.md)
+- [v1.87 Release Status](docs/releases/status/release-status-v1.87.0.md)
+- [v1.88 Release Status](docs/releases/status/release-status-v1.88.0.md)
+- [v1.7 Release Readiness](docs/releases/readiness/release-readiness-v1.7.md)
+- [v1.9 Release Readiness](docs/releases/readiness/release-readiness-v1.9.md)
+- [v1.84 Release Readiness](docs/releases/readiness/release-readiness-v1.84.md)
+- [v1.85 Release Readiness](docs/releases/readiness/release-readiness-v1.85.md)
+- [v1.86 Release Readiness](docs/releases/readiness/release-readiness-v1.86.md)
+- [v1.8 Release Readiness](docs/releases/readiness/release-readiness-v1.8.md)
+- [v1.9 Release Notes](docs/releases/notes/release-notes-v1.9.0.md)
+- [v1.84 Release Notes](docs/releases/notes/release-notes-v1.84.0.md)
+- [v1.85 Release Notes](docs/releases/notes/release-notes-v1.85.0.md)
+- [v1.86 Release Notes](docs/releases/notes/release-notes-v1.86.0.md)
+- [v1.87 Release Notes](docs/releases/notes/release-notes-v1.87.0.md)
+- [v1.88 Release Notes](docs/releases/notes/release-notes-v1.88.0.md)
+- [v1.8 Release Notes](docs/releases/notes/release-notes-v1.8.0.md)
+- [v1.9 Release Remaining Issues](docs/releases/remaining/v1.9-release-remaining-issues.md)
+- [v1.84 Release Remaining Issues](docs/releases/remaining/v1.84-release-remaining-issues.md)
+- [v1.85 Release Remaining Issues](docs/releases/remaining/v1.85-release-remaining-issues.md)
+- [v1.86 Release Remaining Issues](docs/releases/remaining/v1.86-release-remaining-issues.md)
+- [v1.87 Release Remaining Issues](docs/releases/remaining/v1.87-release-remaining-issues.md)
+- [v1.88 Release Remaining Issues](docs/releases/remaining/v1.88-release-remaining-issues.md)
+- [v1.8 Release Remaining Issues](docs/releases/remaining/v1.8-release-remaining-issues.md)
+- [v1.7 Release Notes](docs/releases/notes/release-notes-v1.7.0.md)
+- [v1.7 Smoke Test Profile](docs/releases/smoke/smoke-test-v1.7.md)
+- [v1.9 Smoke Test Profile](docs/releases/smoke/smoke-test-v1.9.md)
+- [v1.84 Smoke Test Profile](docs/releases/smoke/smoke-test-v1.84.md)
+- [v1.85 Smoke Test Profile](docs/releases/smoke/smoke-test-v1.85.md)
+- [v1.86 Smoke Test Profile](docs/releases/smoke/smoke-test-v1.86.md)
+- [v1.8 Smoke Test Profile](docs/releases/smoke/smoke-test-v1.8.md)
 - [v1.7 Phase H Auth and GUI Mutation Design](docs/v1.7-phase-h-auth-ui-design.md)
 - [CLI リファレンス](docs/cli-reference.md)
 - [curl-based Local Deployment](docs/local-deployment-curl.md)
 - [v1.0 Release Criteria and Compatibility Policy](docs/v1-release-criteria-and-compatibility.md)
-- [v1.0 Release Status](docs/release-status-v1.0.0.md)
-- [v1.0 Release Readiness](docs/release-readiness-v1.0.md)
-- [v1.0 Smoke Test Profile](docs/smoke-test-v1.0.md)
+- [v1.0 Release Status](docs/releases/status/release-status-v1.0.0.md)
+- [v1.0 Release Readiness](docs/releases/readiness/release-readiness-v1.0.md)
+- [v1.0 Smoke Test Profile](docs/releases/smoke/smoke-test-v1.0.md)
 - [v1.0 CLI Compatibility Audit](docs/v1-cli-compatibility-audit.md)
 - [v1.0 Sayane / CSG-RAG Integration Boundary](docs/v1-integration-boundary-sayane-csg-rag.md)
-- [v1.0 Release Execution Plan](docs/release-execution-v1.0.0.md)
-- [v1.0 Release Notes](docs/release-notes-v1.0.0.md)
+- [v1.0 Release Execution Plan](docs/releases/operations/release-execution-v1.0.0.md)
+- [v1.0 Release Notes](docs/releases/notes/release-notes-v1.0.0.md)
 - [v1.1 Review Console Plan](docs/v1.1-review-console-plan.md)
 - [v1.1 Local Web UI Design](docs/v1.1-local-web-ui-design.md)
-- [v1.1 Smoke Test Profile](docs/smoke-test-v1.1.md)
-- [v1.1 Release Readiness](docs/release-readiness-v1.1.md)
-- [v1.1 Release Notes](docs/release-notes-v1.1.0.md)
-- [v1.2 Smoke Test Profile](docs/smoke-test-v1.2.md)
-- [v1.2 Release Readiness](docs/release-readiness-v1.2.md)
-- [v1.2 Release Notes](docs/release-notes-v1.2.0.md)
-- [v1.3 Smoke Test Profile](docs/smoke-test-v1.3.md)
-- [v1.3 Release Readiness](docs/release-readiness-v1.3.md)
-- [v1.3 Release Notes](docs/release-notes-v1.3.0.md)
-- [v0.6 Release Deployment Procedure](docs/release-deployment-v0.6.md)
+- [v1.1 Smoke Test Profile](docs/releases/smoke/smoke-test-v1.1.md)
+- [v1.1 Release Readiness](docs/releases/readiness/release-readiness-v1.1.md)
+- [v1.1 Release Notes](docs/releases/notes/release-notes-v1.1.0.md)
+- [v1.2 Smoke Test Profile](docs/releases/smoke/smoke-test-v1.2.md)
+- [v1.2 Release Readiness](docs/releases/readiness/release-readiness-v1.2.md)
+- [v1.2 Release Notes](docs/releases/notes/release-notes-v1.2.0.md)
+- [v1.3 Smoke Test Profile](docs/releases/smoke/smoke-test-v1.3.md)
+- [v1.3 Release Readiness](docs/releases/readiness/release-readiness-v1.3.md)
+- [v1.3 Release Notes](docs/releases/notes/release-notes-v1.3.0.md)
+- [v0.6 Release Deployment Procedure](docs/releases/operations/release-deployment-v0.6.md)
 - [v0.7 Operational Hardening Plan](docs/v0.7-operational-hardening-plan.md)
 - [v0.8 Package Review Workflow](docs/v0.8-package-review-workflow.md)
-- [v0.9 Release Deployment Procedure](docs/release-deployment-v0.9.md)
+- [v0.9 Release Deployment Procedure](docs/releases/operations/release-deployment-v0.9.md)
 - [データモデル](docs/data-model.md)
 - [ストレージ形式](docs/storage-format.md)
 - [テスト戦略](docs/testing-strategy.md)
@@ -314,35 +355,35 @@ ruff check src/ tests/
 
 - Latest published release: **v1.11.0**
 - Current repository-side release target: **v1.12.0**
-- v1.7.0 release status: [docs/release-status-v1.7.0.md](docs/release-status-v1.7.0.md)
-- v1.8.0 release status: [docs/release-status-v1.8.0.md](docs/release-status-v1.8.0.md)
-- v1.9.0 release status: [docs/release-status-v1.9.0.md](docs/release-status-v1.9.0.md)
-- v1.10.0 release status: [docs/release-status-v1.10.0.md](docs/release-status-v1.10.0.md)
-- v1.11.0 release status: [docs/release-status-v1.11.0.md](docs/release-status-v1.11.0.md)
-- v1.12.0 release status: [docs/release-status-v1.12.0.md](docs/release-status-v1.12.0.md)
-- v1.7.0 release readiness: [docs/release-readiness-v1.7.md](docs/release-readiness-v1.7.md)
-- v1.11.0 release readiness: [docs/release-readiness-v1.11.md](docs/release-readiness-v1.11.md)
-- v1.12.0 release readiness: [docs/release-readiness-v1.12.md](docs/release-readiness-v1.12.md)
-- v1.10.0 release readiness: [docs/release-readiness-v1.10.md](docs/release-readiness-v1.10.md)
-- v1.9.0 release readiness: [docs/release-readiness-v1.9.md](docs/release-readiness-v1.9.md)
-- v1.8.0 release readiness: [docs/release-readiness-v1.8.md](docs/release-readiness-v1.8.md)
-- v1.11.0 release notes: [docs/release-notes-v1.11.0.md](docs/release-notes-v1.11.0.md)
-- v1.12.0 release notes: [docs/release-notes-v1.12.0.md](docs/release-notes-v1.12.0.md)
-- v1.10.0 release notes: [docs/release-notes-v1.10.0.md](docs/release-notes-v1.10.0.md)
-- v1.9.0 release notes: [docs/release-notes-v1.9.0.md](docs/release-notes-v1.9.0.md)
-- v1.8.0 release notes: [docs/release-notes-v1.8.0.md](docs/release-notes-v1.8.0.md)
-- v1.9.0 remaining issues: [docs/v1.9-release-remaining-issues.md](docs/v1.9-release-remaining-issues.md)
-- v1.10.0 remaining issues: [docs/v1.10-release-remaining-issues.md](docs/v1.10-release-remaining-issues.md)
-- v1.11.0 remaining issues: [docs/v1.11-release-remaining-issues.md](docs/v1.11-release-remaining-issues.md)
-- v1.12.0 remaining issues: [docs/v1.12-release-remaining-issues.md](docs/v1.12-release-remaining-issues.md)
-- v1.8.0 remaining issues: [docs/v1.8-release-remaining-issues.md](docs/v1.8-release-remaining-issues.md)
-- v1.11.0 smoke profile: [docs/smoke-test-v1.11.md](docs/smoke-test-v1.11.md)
-- v1.12.0 smoke profile: [docs/smoke-test-v1.12.md](docs/smoke-test-v1.12.md)
-- v1.10.0 smoke profile: [docs/smoke-test-v1.10.md](docs/smoke-test-v1.10.md)
-- v1.7.0 smoke profile: [docs/smoke-test-v1.7.md](docs/smoke-test-v1.7.md)
-- v1.9.0 smoke profile: [docs/smoke-test-v1.9.md](docs/smoke-test-v1.9.md)
-- v1.8.0 smoke profile: [docs/smoke-test-v1.8.md](docs/smoke-test-v1.8.md)
-- v1.7.0 release notes: [docs/release-notes-v1.7.0.md](docs/release-notes-v1.7.0.md)
+- v1.7.0 release status: [docs/releases/status/release-status-v1.7.0.md](docs/releases/status/release-status-v1.7.0.md)
+- v1.8.0 release status: [docs/releases/status/release-status-v1.8.0.md](docs/releases/status/release-status-v1.8.0.md)
+- v1.9.0 release status: [docs/releases/status/release-status-v1.9.0.md](docs/releases/status/release-status-v1.9.0.md)
+- v1.10.0 release status: [docs/releases/status/release-status-v1.10.0.md](docs/releases/status/release-status-v1.10.0.md)
+- v1.11.0 release status: [docs/releases/status/release-status-v1.11.0.md](docs/releases/status/release-status-v1.11.0.md)
+- v1.12.0 release status: [docs/releases/status/release-status-v1.12.0.md](docs/releases/status/release-status-v1.12.0.md)
+- v1.7.0 release readiness: [docs/releases/readiness/release-readiness-v1.7.md](docs/releases/readiness/release-readiness-v1.7.md)
+- v1.11.0 release readiness: [docs/releases/readiness/release-readiness-v1.11.md](docs/releases/readiness/release-readiness-v1.11.md)
+- v1.12.0 release readiness: [docs/releases/readiness/release-readiness-v1.12.md](docs/releases/readiness/release-readiness-v1.12.md)
+- v1.10.0 release readiness: [docs/releases/readiness/release-readiness-v1.10.md](docs/releases/readiness/release-readiness-v1.10.md)
+- v1.9.0 release readiness: [docs/releases/readiness/release-readiness-v1.9.md](docs/releases/readiness/release-readiness-v1.9.md)
+- v1.8.0 release readiness: [docs/releases/readiness/release-readiness-v1.8.md](docs/releases/readiness/release-readiness-v1.8.md)
+- v1.11.0 release notes: [docs/releases/notes/release-notes-v1.11.0.md](docs/releases/notes/release-notes-v1.11.0.md)
+- v1.12.0 release notes: [docs/releases/notes/release-notes-v1.12.0.md](docs/releases/notes/release-notes-v1.12.0.md)
+- v1.10.0 release notes: [docs/releases/notes/release-notes-v1.10.0.md](docs/releases/notes/release-notes-v1.10.0.md)
+- v1.9.0 release notes: [docs/releases/notes/release-notes-v1.9.0.md](docs/releases/notes/release-notes-v1.9.0.md)
+- v1.8.0 release notes: [docs/releases/notes/release-notes-v1.8.0.md](docs/releases/notes/release-notes-v1.8.0.md)
+- v1.9.0 remaining issues: [docs/releases/remaining/v1.9-release-remaining-issues.md](docs/releases/remaining/v1.9-release-remaining-issues.md)
+- v1.10.0 remaining issues: [docs/releases/remaining/v1.10-release-remaining-issues.md](docs/releases/remaining/v1.10-release-remaining-issues.md)
+- v1.11.0 remaining issues: [docs/releases/remaining/v1.11-release-remaining-issues.md](docs/releases/remaining/v1.11-release-remaining-issues.md)
+- v1.12.0 remaining issues: [docs/releases/remaining/v1.12-release-remaining-issues.md](docs/releases/remaining/v1.12-release-remaining-issues.md)
+- v1.8.0 remaining issues: [docs/releases/remaining/v1.8-release-remaining-issues.md](docs/releases/remaining/v1.8-release-remaining-issues.md)
+- v1.11.0 smoke profile: [docs/releases/smoke/smoke-test-v1.11.md](docs/releases/smoke/smoke-test-v1.11.md)
+- v1.12.0 smoke profile: [docs/releases/smoke/smoke-test-v1.12.md](docs/releases/smoke/smoke-test-v1.12.md)
+- v1.10.0 smoke profile: [docs/releases/smoke/smoke-test-v1.10.md](docs/releases/smoke/smoke-test-v1.10.md)
+- v1.7.0 smoke profile: [docs/releases/smoke/smoke-test-v1.7.md](docs/releases/smoke/smoke-test-v1.7.md)
+- v1.9.0 smoke profile: [docs/releases/smoke/smoke-test-v1.9.md](docs/releases/smoke/smoke-test-v1.9.md)
+- v1.8.0 smoke profile: [docs/releases/smoke/smoke-test-v1.8.md](docs/releases/smoke/smoke-test-v1.8.md)
+- v1.7.0 release notes: [docs/releases/notes/release-notes-v1.7.0.md](docs/releases/notes/release-notes-v1.7.0.md)
 - v1.11.0 publication is complete and now serves as the immediate historical baseline.
 - `v1.12.0` is the active repository-side reviewer-boundary presentation-drilldown release lane.
 

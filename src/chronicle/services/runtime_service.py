@@ -17,6 +17,7 @@ from chronicle.errors import (
     RuntimeProviderResponseError,
     RuntimeProviderTransportError,
 )
+from chronicle.models.ai_boundary import AiBoundaryPreview
 from chronicle.models.event import Actor, Confidence, ReviewStatus
 from chronicle.models.artifact import ArtifactType
 from chronicle.models.runtime import (
@@ -528,6 +529,21 @@ class RuntimeService:
 
     def record_preview(self, event: object) -> RuntimeRecordPreview:
         payload = getattr(event, "payload", {})
+        if "ai_boundary_preview" in payload:
+            preview = AiBoundaryPreview.model_validate(payload["ai_boundary_preview"])
+            return RuntimeRecordPreview(
+                record_kind="ai_boundary_preview",
+                title=f"AI boundary preview: {preview.task}",
+                preview_text=preview.model_id,
+                source_counts={
+                    "included_contexts": len(preview.included_context_ids),
+                    "excluded_contexts": len(preview.excluded_context_ids),
+                    "redaction_candidates": len(preview.redaction_candidates),
+                },
+                referenced_record_ids=preview.included_context_ids,
+                suggested_cli_family="chronicle ai-boundary preview --record",
+                boundary_notes=preview.notes,
+            )
         if "query_engine_trial_record" in payload:
             trial = payload["query_engine_trial_record"]
             query = str(trial.get("query", ""))

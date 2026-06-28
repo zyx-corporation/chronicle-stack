@@ -22,16 +22,22 @@ from urllib.parse import quote, unquote, urlparse
 
 from chronicle.errors import ChronicleError, UIHostNotLoopbackError
 from chronicle.exporters.html_exporter import HtmlDashboardExporter
+from chronicle.models.ai_boundary import AiBoundaryPreview
+from chronicle.models.federation_message import FederationMessageBox
+from chronicle.models.reaction import ChronicleReactionType
 from chronicle.models.runtime import RuntimeExecutionResult, RuntimeInvocationPlan, RuntimeRetrievalPlan
 from chronicle.models.review import ReviewerIdentity, ReviewerIdentityKind
 from chronicle.services.audit_service import AuditService
 from chronicle.services.chronicle_service import ChronicleService
+from chronicle.services.chronicle_object_service import ChronicleObjectService
+from chronicle.services.federation_message_service import FederationMessageService
 from chronicle.services.graph_index_service import GraphIndexService
 from chronicle.services.graph_export_service import GraphExportService
 from chronicle.services.integration_package_service import IntegrationPackageService
 from chronicle.services.lifecycle_service import LifecycleService
 from chronicle.services.package_review_service import PackageReviewService
 from chronicle.services.proposal_service import ProposalService
+from chronicle.services.reaction_service import ReactionService
 from chronicle.services.review_service import (
     ReviewAuditInsertionError,
     ReviewDecisionPersistenceError,
@@ -41,6 +47,7 @@ from chronicle.services.review_service import (
 from chronicle.services.runtime_config_service import RuntimeConfigService
 from chronicle.services.runtime_service import RuntimeService
 from chronicle.services.summary_job_service import SummaryJobService
+from chronicle.services.trust_service import TrustService
 from chronicle.ui_i18n import (
     AUTH_BOUNDARY_BLOCKER_TEXT,
     AUTH_BOUNDARY_WARNING_TO_BLOCKER,
@@ -836,6 +843,10 @@ def _runtime_preview_title_contract(preview: dict[str, Any]) -> tuple[str | None
         suffix = title.split(": ", 1)[1] if ": " in title else ""
         return "ui.template.runtime_preview.title.invocation_plan", {
             "descriptor": suffix,
+        }
+    if record_kind == "ai_boundary_preview":
+        return "ui.template.runtime_preview.title.ai_boundary_preview", {
+            "task": title.split(": ", 1)[1] if ": " in title else "",
         }
     if record_kind == "unknown":
         return "ui.runtime_preview.title.unknown", {}
@@ -2198,15 +2209,19 @@ class ChronicleUIDataService:
         self.mutation_session_token = mutation_session_token
         self.mutation_session_id = mutation_session_id
         self.chronicle = ChronicleService(self.root)
+        self.chronicle_objects = ChronicleObjectService(self.root)
+        self.federation_messages = FederationMessageService(self.root)
         self.audit = AuditService(self.root)
         self.lifecycle = LifecycleService(self.root)
         self.packages = IntegrationPackageService(self.root)
         self.package_review = PackageReviewService(self.root)
         self.review = ReviewService(self.root)
         self.proposals = ProposalService(self.root)
+        self.reactions = ReactionService(self.root)
         self.runtime = RuntimeService(self.root)
         self.runtime_config = RuntimeConfigService(self.root)
         self.summary_jobs = SummaryJobService(self.root)
+        self.trust = TrustService(self.root)
         self.vector_index = VectorIndexService(self.root)
         self.graph_index = GraphIndexService(self.root)
 
@@ -2223,6 +2238,12 @@ class ChronicleUIDataService:
         runtime_records = self.runtime_records()["runtime_records"]
         review_queue = self.review_queue()["review_queue"]
         summary_jobs = self.summary_jobs_list()["summary_jobs"]
+        chronicle_objects = self.chronicle_object_records()["chronicle_objects"]
+        federation_inbox = self.federation_inbox()["federation_messages"]
+        federation_outbox = self.federation_outbox()["federation_messages"]
+        reactions = self.reaction_records()["reactions"]
+        trust_nodes = self.trust_nodes()["trust_nodes"]
+        trust_relations = self.trust_relations()["trust_relations"]
         ai_index_status = self.ai_index_status()["ai_index_status"]
         runtime_config = self.runtime_config_state()["runtime_config"]
         triage = self.overview_triage(runtime_records, review_queue)
@@ -2251,6 +2272,12 @@ class ChronicleUIDataService:
                 "boundary_rules": len(boundary_rules),
                 "audit_events": len(audit_events),
                 "lifecycle_markers": len(lifecycle_events),
+                "chronicle_objects": len(chronicle_objects),
+                "federation_inbox": len(federation_inbox),
+                "federation_outbox": len(federation_outbox),
+                "reactions": len(reactions),
+                "trust_nodes": len(trust_nodes),
+                "trust_relations": len(trust_relations),
                 "runtime_records": len(runtime_records),
                 "review_queue": len(review_queue),
                 "summary_jobs": len(summary_jobs),
@@ -2271,7 +2298,34 @@ class ChronicleUIDataService:
             "reviewer_boundary_overview": reviewer_boundary_overview,
             "runtime_records_summary": runtime_records_summary,
             "summary_jobs_summary": summary_jobs_summary,
+            "chronicle_object_summary": self.chronicle_object_summary(chronicle_objects),
+            "federation_summary": self.federation_summary(federation_inbox, federation_outbox),
+            "reaction_summary": self.reaction_summary(reactions),
+            "trust_summary": self.trust_overview(trust_nodes, trust_relations),
             "mutation_readiness": self.mutation_readiness_summary(review_queue),
+        }
+
+    def chronicle_object_summary(
+        self,
+        chronicle_objects: list[dict[str, Any]] | None = None,
+    ) -> dict[str, Any]:
+        rows = (
+            chronicle_objects
+            if chronicle_objects is not None
+            else self.chronicle_object_records()["chronicle_objects"]
+        )
+        type_counts: dict[str, int] = {}
+        derived_counts = {"derived": 0, "explicit": 0}
+        for row in rows:
+            object_type = str(row.get("object_type", "unknown"))
+            type_counts[object_type] = type_counts.get(object_type, 0) + 1
+            if bool(row.get("derived")):
+                derived_counts["derived"] += 1
+            else:
+                derived_counts["explicit"] += 1
+        return {
+            "type_counts": type_counts,
+            "derived_counts": derived_counts,
         }
 
     def runtime_records_overview(self, runtime_records: list[dict[str, Any]] | None = None) -> dict[str, Any]:
@@ -2850,6 +2904,261 @@ class ChronicleUIDataService:
             rows.append(data)
         return {"contexts": rows}
 
+    def chronicle_object_records(self) -> dict[str, Any]:
+        self.chronicle.require_initialized()
+        rows = []
+        for record in self.chronicle_objects.list_objects():
+            data = _dump_model(record)
+            data["related_resource_paths"] = self._chronicle_object_related_resource_paths(data)
+            rows.append(data)
+        return {"chronicle_objects": rows}
+
+    def federation_inbox(self) -> dict[str, Any]:
+        self.chronicle.require_initialized()
+        rows = [
+            self._federation_message_row(record)
+            for record in self.federation_messages.inspect_box(FederationMessageBox.INBOX)
+        ]
+        return {"federation_messages": rows}
+
+    def federation_outbox(self) -> dict[str, Any]:
+        self.chronicle.require_initialized()
+        rows = [
+            self._federation_message_row(record)
+            for record in self.federation_messages.inspect_box(FederationMessageBox.OUTBOX)
+        ]
+        return {"federation_messages": rows}
+
+    def federation_summary(
+        self,
+        inbox_rows: list[dict[str, Any]] | None = None,
+        outbox_rows: list[dict[str, Any]] | None = None,
+    ) -> dict[str, Any]:
+        inbox = inbox_rows if inbox_rows is not None else self.federation_inbox()["federation_messages"]
+        outbox = outbox_rows if outbox_rows is not None else self.federation_outbox()["federation_messages"]
+        inbox_type_counts = _count_values(inbox, "message_type")
+        outbox_type_counts = _count_values(outbox, "message_type")
+        inbox_preview_only_count = sum(1 for row in inbox if bool(row.get("preview_only")))
+        outbox_preview_only_count = sum(1 for row in outbox if bool(row.get("preview_only")))
+        audit_recorded_count = sum(1 for row in inbox if bool(row.get("audit_recorded")))
+        return {
+            "inbox_type_counts": inbox_type_counts,
+            "outbox_type_counts": outbox_type_counts,
+            "inbox_preview_only_count": inbox_preview_only_count,
+            "outbox_preview_only_count": outbox_preview_only_count,
+            "inbox_audit_recorded_count": audit_recorded_count,
+        }
+
+    def reaction_records(self) -> dict[str, Any]:
+        self.chronicle.require_initialized()
+        rows = []
+        for reaction in self.reactions.list_reactions():
+            data = _dump_model(reaction)
+            data["related_resource_paths"] = self._reaction_related_resource_paths(data)
+            rows.append(data)
+        return {"reactions": rows}
+
+    def reaction_summary(self, reactions: list[dict[str, Any]] | None = None) -> dict[str, Any]:
+        rows = reactions if reactions is not None else self.reaction_records()["reactions"]
+        type_counts = _count_values(rows, "reaction_type")
+        target_counts: dict[str, int] = {}
+        for row in rows:
+            target = str(row.get("target_object_id", "") or "unknown")
+            target_counts[target] = target_counts.get(target, 0) + 1
+        return {
+            "type_counts": type_counts,
+            "target_counts": target_counts,
+        }
+
+    def lineage_view(self) -> dict[str, Any]:
+        rows = []
+        reaction_index: dict[str, list[str]] = {}
+        for reaction in self.reaction_records()["reactions"]:
+            target = str(reaction.get("target_object_id", ""))
+            reaction_index.setdefault(target, []).append(str(reaction.get("reaction_id", "")))
+        for record in self.chronicle_object_records()["chronicle_objects"]:
+            rows.append(
+                {
+                    "lineage_id": record["object_id"],
+                    "object_type": record["object_type"],
+                    "summary": record["summary"],
+                    "artifact_id": record.get("artifact_id"),
+                    "context_id": record.get("context_id"),
+                    "decision_id": record.get("decision_id"),
+                    "rde_record_id": record.get("rde_record_id"),
+                    "related_object_ids": record.get("related_object_ids", []),
+                    "related_resource_paths": record.get("related_resource_paths", []),
+                    "reaction_ids": reaction_index.get(record["object_id"], []),
+                    "reaction_count": len(reaction_index.get(record["object_id"], [])),
+                    "derived": bool(record.get("derived")),
+                }
+            )
+        return {"lineage_view": rows}
+
+    def delta_view(self) -> dict[str, Any]:
+        rows = []
+        for record in self.chronicle_object_records()["chronicle_objects"]:
+            if record.get("object_type") != "delta":
+                continue
+            rows.append(
+                {
+                    "object_id": record["object_id"],
+                    "summary": record["summary"],
+                    "rde_record_id": record.get("rde_record_id"),
+                    "artifact_id": record.get("artifact_id"),
+                    "detail": record.get("detail", ""),
+                    "delta_relation_summary": {
+                        "status": "linked_rde_record" if record.get("rde_record_id") else "no_rde_record",
+                        "detail_path": f"/api/rde/{record['rde_record_id']}" if record.get("rde_record_id") else None,
+                    },
+                }
+            )
+        return {"delta_view": rows}
+
+    def context_boundary_view(self) -> dict[str, Any]:
+        rows = []
+        for context in self.contexts()["contexts"]:
+            rows.append(
+                {
+                    "context_id": context["context_id"],
+                    "title": context["title"],
+                    "scope": context["scope"],
+                    "visibility_hint": context.get("visibility_hint"),
+                    "proposal_count": context.get("proposal_count", 0),
+                    "pending_proposal_count": context.get("pending_proposal_count", 0),
+                    "allowed_operations": (
+                        (context.get("classification") or {}).get("allowed_operations", [])
+                    ),
+                    "llm_policy": ((context.get("classification") or {}).get("llm_policy", {})),
+                    "boundary_note": "Context boundary view is descriptive and local; export/import remains preview-first.",
+                }
+            )
+        return {"context_boundary_view": rows}
+
+    def objection_view(self) -> dict[str, Any]:
+        rows = [
+            record
+            for record in self.chronicle_object_records()["chronicle_objects"]
+            if record.get("object_type") == "objection"
+        ]
+        return {"objection_view": rows}
+
+    def decay_view(self) -> dict[str, Any]:
+        rows = [
+            record
+            for record in self.chronicle_object_records()["chronicle_objects"]
+            if record.get("object_type") == "decay"
+        ]
+        notices = [
+            row for row in self.federation_inbox()["federation_messages"] if row.get("message_type") == "decay_notice"
+        ]
+        return {"decay_view": {"objects": rows, "notices": notices}}
+
+    def ai_involvement_view(self) -> dict[str, Any]:
+        object_rows = [
+            record
+            for record in self.chronicle_object_records()["chronicle_objects"]
+            if bool((record.get("ai_involvement") or {}).get("involved"))
+        ]
+        runtime_rows = [
+            row
+            for row in self.runtime_records()["runtime_records"]
+            if row.get("runtime_record_kind") == "ai_boundary_preview"
+        ]
+        return {"ai_involvement_view": {"objects": object_rows, "runtime_records": runtime_rows}}
+
+    def timeline_view(self) -> dict[str, Any]:
+        rows: list[dict[str, Any]] = []
+        for record in self.chronicle_object_records()["chronicle_objects"]:
+            rows.append(
+                {
+                    "timeline_id": record["object_id"],
+                    "kind": f"object:{record['object_type']}",
+                    "created_at": record["created_at"],
+                    "summary": record["summary"],
+                    "detail_path": f"/api/chronicle-objects/{record['object_id']}",
+                }
+            )
+        for reaction in self.reaction_records()["reactions"]:
+            rows.append(
+                {
+                    "timeline_id": reaction["reaction_id"],
+                    "kind": f"reaction:{reaction['reaction_type']}",
+                    "created_at": reaction["created_at"],
+                    "summary": reaction["summary"],
+                    "detail_path": f"/api/reactions/{reaction['reaction_id']}",
+                }
+            )
+        rows.sort(key=lambda item: (str(item.get("created_at", "")), str(item.get("timeline_id", ""))))
+        return {"timeline_view": rows}
+
+    def context_sns_contract(self) -> dict[str, Any]:
+        return {
+            "context_sns_contract": {
+                "question_follow_design": {
+                    "status": "design_only",
+                    "cli_preview": "chronicle reaction record --type reference --target-object <QUESTION_OBJECT_ID> --summary \"follow question\"",
+                    "notes": [
+                        "Question follow remains an explicit meaning relation, not an attention feed.",
+                        "No automatic push delivery or ranking is introduced.",
+                    ],
+                },
+                "chronicle_subscription_design": {
+                    "status": "design_only",
+                    "cli_preview": "chronicle federation message create --type publish_chronicle --object-ref <OBJECT_ID> --purpose \"subscription preview\" --box outbox",
+                    "notes": [
+                        "Subscription remains preview-first and queue-based.",
+                        "Import requires review and never auto-applies to primary records.",
+                    ],
+                },
+                "reaction_types": [reaction.value for reaction in ChronicleReactionType],
+            }
+        }
+
+    def _reaction_related_resource_paths(self, record: dict[str, Any]) -> list[str]:
+        paths = [f"/api/chronicle-objects/{record['target_object_id']}"]
+        if record.get("source_object_id"):
+            paths.append(f"/api/chronicle-objects/{record['source_object_id']}")
+        if record.get("target_context_id"):
+            paths.append(f"/api/contexts/{record['target_context_id']}")
+        if record.get("target_artifact_id"):
+            paths.append(f"/api/artifacts/{record['target_artifact_id']}")
+        if record.get("target_decision_id"):
+            paths.append(f"/api/decisions/{record['target_decision_id']}")
+        return paths
+
+    def trust_nodes(self) -> dict[str, Any]:
+        self.chronicle.require_initialized()
+        return {"trust_nodes": [_dump_model(row) for row in self.trust.list_node_profiles()]}
+
+    def trust_relations(self) -> dict[str, Any]:
+        self.chronicle.require_initialized()
+        return {"trust_relations": [_dump_model(row) for row in self.trust.list_relations()]}
+
+    def trust_overview(
+        self,
+        trust_nodes: list[dict[str, Any]] | None = None,
+        trust_relations: list[dict[str, Any]] | None = None,
+    ) -> dict[str, Any]:
+        nodes = trust_nodes if trust_nodes is not None else self.trust_nodes()["trust_nodes"]
+        relations = (
+            trust_relations if trust_relations is not None else self.trust_relations()["trust_relations"]
+        )
+        level_counts = _count_values(relations, "level")
+        status_counts = _count_values(relations, "status")
+        domain_counts = _count_values(relations, "domain")
+        ai_proxy_count = sum(1 for row in relations if bool(row.get("ai_proxy_generation_metadata")))
+        delegated_actor_count = sum(1 for row in relations if bool(row.get("delegated_actor_metadata")))
+        return {
+            "node_count": len(nodes),
+            "relation_count": len(relations),
+            "level_counts": level_counts,
+            "status_counts": status_counts,
+            "domain_counts": domain_counts,
+            "delegated_actor_count": delegated_actor_count,
+            "ai_proxy_generation_count": ai_proxy_count,
+        }
+
     def artifacts(self) -> dict[str, Any]:
         self.chronicle.require_initialized()
         artifacts, versions = self.chronicle.index.load_artifacts()
@@ -2912,7 +3221,8 @@ class ChronicleUIDataService:
             for event in self.chronicle.jsonl.read_all()
             if event.event_type.value == "assistant_output"
             and (
-                "query_engine_trial_record" in event.payload
+                "ai_boundary_preview" in event.payload
+                or "query_engine_trial_record" in event.payload
                 or "runtime_summary" in event.payload
                 or "runtime_execution" in event.payload
                 or "runtime_retrieval_plan" in event.payload
@@ -3530,6 +3840,17 @@ class ChronicleUIDataService:
                             label_params={"record_id": record_id},
                         )
                     )
+        if "ai_boundary_preview" in payload:
+            preview = AiBoundaryPreview.model_validate(payload["ai_boundary_preview"])
+            for context_id in preview.included_context_ids:
+                links.append(
+                    _related_link(
+                        f"/api/contexts/{context_id}",
+                        _open_detail_label("contexts", context_id),
+                        label_key=_open_detail_label_key("contexts"),
+                        label_params={"record_id": context_id},
+                    )
+                )
         return links
 
     def review_package_readiness(self, target_event_id: str) -> dict[str, Any]:
@@ -4621,7 +4942,8 @@ class ChronicleUIDataService:
             record = _dump_model(event)
             payload = record["payload"]
             if (
-                "query_engine_trial_record" not in payload
+                "ai_boundary_preview" not in payload
+                and "query_engine_trial_record" not in payload
                 and "runtime_summary" not in payload
                 and "runtime_execution" not in payload
                 and "runtime_retrieval_plan" not in payload
@@ -4886,6 +5208,30 @@ class ChronicleUIDataService:
             record = _find_by_attr(self.audit.list_events(), "audit_id", record_id)
         elif resource == "lifecycle":
             record = _find_by_attr(self.lifecycle.list_events(), "lifecycle_id", record_id)
+        elif resource == "chronicle-objects":
+            object_record = self.chronicle_objects.get(record_id)
+            record = _dump_model(object_record)
+            record["related_resource_paths"] = self._chronicle_object_related_resource_paths(record)
+            if record.get("rde_record_id"):
+                record["delta_relation_summary"] = {
+                    "status": "linked_rde_record",
+                    "detail_path": f"/api/rde/{record['rde_record_id']}",
+                    "message": "Delta Chronicle remains derived from the linked RDE Diff Record.",
+                }
+        elif resource == "reactions":
+            reaction = self.reactions.get(record_id)
+            record = _dump_model(reaction)
+            record["related_resource_paths"] = self._reaction_related_resource_paths(record)
+        elif resource == "federation-inbox":
+            message_record = self.federation_messages.get_message(FederationMessageBox.INBOX, record_id)
+            record = self._federation_message_row(message_record)
+        elif resource == "federation-outbox":
+            message_record = self.federation_messages.get_message(FederationMessageBox.OUTBOX, record_id)
+            record = self._federation_message_row(message_record)
+        elif resource == "trust-nodes":
+            record = _dump_model(next(item for item in self.trust.list_node_profiles() if item.node_id == record_id))
+        elif resource == "trust-relations":
+            record = _dump_model(next(item for item in self.trust.list_relations() if item.relation_id == record_id))
         else:
             return None
         return {"record": record} if record is not None else None
@@ -4895,6 +5241,20 @@ class ChronicleUIDataService:
             "/api/overview": self.overview,
             "/api/events": self.events,
             "/api/contexts": self.contexts,
+            "/api/chronicle-objects": self.chronicle_object_records,
+            "/api/reactions": self.reaction_records,
+            "/api/federation-inbox": self.federation_inbox,
+            "/api/federation-outbox": self.federation_outbox,
+            "/api/lineage-view": self.lineage_view,
+            "/api/delta-view": self.delta_view,
+            "/api/context-boundary-view": self.context_boundary_view,
+            "/api/objection-view": self.objection_view,
+            "/api/decay-view": self.decay_view,
+            "/api/ai-involvement-view": self.ai_involvement_view,
+            "/api/timeline-view": self.timeline_view,
+            "/api/context-sns-contract": self.context_sns_contract,
+            "/api/trust-nodes": self.trust_nodes,
+            "/api/trust-relations": self.trust_relations,
             "/api/artifacts": self.artifacts,
             "/api/decisions": self.decisions,
             "/api/rde": self.rde_records,
@@ -4918,6 +5278,46 @@ class ChronicleUIDataService:
         if handler:
             return handler()
         return self.detail_payload(path)
+
+    def _chronicle_object_related_resource_paths(self, record: dict[str, Any]) -> list[str]:
+        paths: list[str] = []
+        if record.get("context_id"):
+            paths.append(f"/api/contexts/{record['context_id']}")
+        if record.get("artifact_id"):
+            paths.append(f"/api/artifacts/{record['artifact_id']}")
+        if record.get("decision_id"):
+            paths.append(f"/api/decisions/{record['decision_id']}")
+        if record.get("rde_record_id"):
+            paths.append(f"/api/rde/{record['rde_record_id']}")
+        if record.get("source_event_id"):
+            paths.append(f"/api/events/{record['source_event_id']}")
+        return paths
+
+    def _federation_message_row(self, record) -> dict[str, Any]:
+        envelope = record.envelope.model_dump(mode="json")
+        return {
+            "message_id": envelope["message_id"],
+            "message_type": envelope["message_type"],
+            "source_node": envelope["source_node"],
+            "target_node": envelope["target_node"],
+            "created_at": envelope["created_at"],
+            "purpose": envelope["purpose"],
+            "object_refs": envelope["object_refs"],
+            "expires_at": envelope["expires_at"],
+            "signature_status": envelope["signature_status"],
+            "retention": envelope["policy"]["retention"],
+            "reshare": envelope["policy"]["reshare"],
+            "preview_only": envelope["preview_only"],
+            "auto_apply": envelope["auto_apply"],
+            "review_required": envelope["review_required"],
+            "box": record.box.value,
+            "stored_at": record.stored_at.isoformat(),
+            "preview_summary": record.preview_summary,
+            "audit_recorded": record.audit_recorded,
+            "related_resource_paths": [
+                f"/api/chronicle-objects/{ref}" for ref in envelope["object_refs"] if str(ref).startswith("obj_")
+            ],
+        }
 
     def review_action_blocked_response(self, path: str) -> tuple[HTTPStatus, dict[str, Any]] | None:
         parts = [unquote(part) for part in path.strip("/").split("/")]
@@ -5381,6 +5781,20 @@ th {{ position: sticky; top: 0; background: #ffffff; }}
   <button data-endpoint="/api/overview">概要</button>
   <button data-endpoint="/api/events">イベント</button>
   <button data-endpoint="/api/contexts">コンテキスト</button>
+  <button data-endpoint="/api/chronicle-objects">Chronicle Objects</button>
+  <button data-endpoint="/api/reactions">Reactions</button>
+  <button data-endpoint="/api/federation-inbox">Federation Inbox</button>
+  <button data-endpoint="/api/federation-outbox">Federation Outbox</button>
+  <button data-endpoint="/api/lineage-view">Lineage View</button>
+  <button data-endpoint="/api/delta-view">Delta View</button>
+  <button data-endpoint="/api/context-boundary-view">Context Boundary View</button>
+  <button data-endpoint="/api/objection-view">Objection View</button>
+  <button data-endpoint="/api/decay-view">Decay View</button>
+  <button data-endpoint="/api/ai-involvement-view">AI Involvement View</button>
+  <button data-endpoint="/api/timeline-view">Timeline View</button>
+  <button data-endpoint="/api/context-sns-contract">Context SNS Contract</button>
+  <button data-endpoint="/api/trust-nodes">Trust Nodes</button>
+  <button data-endpoint="/api/trust-relations">Trust Relations</button>
   <button data-endpoint="/api/artifacts">成果物</button>
   <button data-endpoint="/api/decisions">判断</button>
   <button data-endpoint="/api/rde">RDE</button>
@@ -5405,7 +5819,7 @@ th {{ position: sticky; top: 0; background: #ffffff; }}
   <section id="detail" class="panel"><p id="shell-select-json">テーブル行の JSON を選択して単一レコードを確認します。</p></section>
 </div>
 <script>
-const idFields = ['event_id', 'context_id', 'artifact_id', 'decision_id', 'rde_record_id', 'rule_id', 'audit_id', 'lifecycle_id', 'record_id', 'node_id', 'summary_job_id'];
+const idFields = ['event_id', 'context_id', 'artifact_id', 'decision_id', 'rde_record_id', 'rule_id', 'audit_id', 'lifecycle_id', 'record_id', 'node_id', 'summary_job_id', 'reaction_id'];
 const reviewWarningLabels = {review_warning_labels_json};
 const uiLabelKeys = {{
   'Action': 'ui.label.action',
@@ -8808,6 +9222,12 @@ const detailPathResolvers = {{
   '/api/ai-index-graph-edges': () => null,
   '/api/ai-index-vector': row => row.record_id ? '/api/ai-index/vector/' + encodeURIComponent(row.record_id) : null,
   '/api/ai-index-graph-nodes': row => row.node_id ? '/api/ai-index/graph-nodes/' + encodeURIComponent(row.node_id) : null,
+  '/api/chronicle-objects': row => row.object_id ? '/api/chronicle-objects/' + encodeURIComponent(row.object_id) : null,
+  '/api/reactions': row => row.reaction_id ? '/api/reactions/' + encodeURIComponent(row.reaction_id) : null,
+  '/api/federation-inbox': row => row.message_id ? '/api/federation-inbox/' + encodeURIComponent(row.message_id) : null,
+  '/api/federation-outbox': row => row.message_id ? '/api/federation-outbox/' + encodeURIComponent(row.message_id) : null,
+  '/api/trust-nodes': row => row.node_id ? '/api/trust-nodes/' + encodeURIComponent(row.node_id) : null,
+  '/api/trust-relations': row => row.relation_id ? '/api/trust-relations/' + encodeURIComponent(row.relation_id) : null,
   '/api/runtime-records': row => row.event_id ? '/api/runtime-records/' + encodeURIComponent(row.event_id) : null,
   '/api/review-queue': row => row.event_id ? '/api/review-queue/' + encodeURIComponent(row.event_id) : null,
 }};
@@ -9263,3 +9683,11 @@ def _is_loopback_host(host: str) -> bool:
         return ipaddress.ip_address(normalized).is_loopback
     except ValueError:
         return False
+
+
+def _count_values(rows: list[dict[str, Any]], key: str) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for row in rows:
+        value = str(row.get(key, "unknown") or "unknown")
+        counts[value] = counts.get(value, 0) + 1
+    return counts

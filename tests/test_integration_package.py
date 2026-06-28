@@ -193,3 +193,36 @@ def test_query_engine_handoff_bundle_manifest_summarizes_bundle(tmp_path):
     assert manifest.acceptance_checklist_included is True
     assert manifest.trial_report_template_included is True
     assert manifest.referenced_record_count >= 1
+
+
+def test_context_package_can_include_trust_preview_metadata(tmp_path):
+    ChronicleService(tmp_path).init("Package Trust Test")
+    _append_context(
+        tmp_path,
+        Context(
+            context_id="ctx_pkg_trust",
+            title="Trust Package Context",
+            summary="Context for trust preview",
+            scope=ContextScope.TASK,
+            created_at=datetime(2026, 6, 14, tzinfo=timezone.utc),
+        ),
+    )
+    from chronicle.models.trust import TrustLevel
+    from chronicle.services.trust_service import TrustService
+
+    TrustService(tmp_path).assert_relation(
+        target_node="node:partner:beta",
+        target_subject_id="subject:beta",
+        domain="review",
+        purpose="external review",
+        level=TrustLevel.LIMITED,
+        capabilities=["reference"],
+    )
+
+    package = IntegrationPackageService(tmp_path).build_context_package(
+        purpose="External review",
+        trust_target_node="node:partner:beta",
+    )
+
+    assert package.manifest.metadata["trust_target_node"] == "node:partner:beta"
+    assert "active trust relation" in package.manifest.metadata["trust_preview"]
