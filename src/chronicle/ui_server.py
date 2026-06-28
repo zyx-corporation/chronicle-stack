@@ -9339,6 +9339,43 @@ function renderOverviewAiIndexPanel(aiIndex, counts) {{
     + detailLine('Needs-review records', counts.review_queue ?? 0)
   );
 }}
+function renderOverviewFederationPanel(federationSummary, federationPreflight, federationOverlap) {{
+  const overlapButtons = buttonRow([
+    overviewCountButton('Runtime overlaps', federationOverlap.runtime_overlap_count ?? 0, 'badge-warning', '/api/runtime-records', 'runtimeRecords', 'matching_federation_consent_summary'),
+    overviewCountButton('Review overlaps', federationOverlap.review_overlap_count ?? 0, 'badge-warning', '/api/review-queue', 'reviewQueue', 'matching_federation_consent_summary'),
+    overviewCountButton('Consent audits', federationOverlap.consent_audit_count ?? 0, 'badge-neutral', '/api/audit'),
+  ]);
+  const preflightButtons = buttonRow([
+    overviewCountButton('Consent records', federationPreflight.consent_record_count ?? 0, 'badge-neutral', '/api/audit'),
+    overviewCountButton('Inbox audited', federationSummary.inbox_audit_recorded_count ?? 0, 'badge-ready', '/api/federation-inbox'),
+  ]);
+  return renderPanel(
+    sectionTitle(label('section.federation', 'Federation'))
+    + statusMessageBody(federationPreflight.status, localizedPayloadText(federationPreflight), [
+      detailJumpButton(federationPreflight.latest_consent_detail_path || '', label('button.open_detail', 'Open Detail')),
+    ])
+    + detailLine('Boundary check mode', federationPreflight.boundary_check_mode || '')
+    + detailLine('Boundary check note', federationPreflight.boundary_check_message_key ? formatLabel(federationPreflight.boundary_check_message_key, federationPreflight.boundary_check_message_params || {{}}, federationPreflight.boundary_check_message || '') : (federationPreflight.boundary_check_message || ''))
+    + detailLine('Preflight counts', federationPreflight.counts_summary_key ? formatLabel(federationPreflight.counts_summary_key, federationPreflight.counts_summary_params || {{}}, '') : '')
+    + preflightButtons
+    + statusMessageBody(federationOverlap.status, localizedPayloadText(federationOverlap), [
+      detailJumpButton(federationOverlap.latest_matching_detail_path || '', label('button.open_detail', 'Open Detail')),
+    ])
+    + detailLine('Overlap counts', federationOverlap.counts_summary_key ? formatLabel(federationOverlap.counts_summary_key, federationOverlap.counts_summary_params || {{}}, '') : '')
+    + detailLine('Latest target node', federationOverlap.latest_target_node || '')
+    + detailLine('Latest scope', federationOverlap.latest_scope || '')
+    + overlapButtons
+    + detailLine('Inbox preview-only', federationSummary.inbox_preview_only_count ?? 0)
+    + detailLine('Outbox preview-only', federationSummary.outbox_preview_only_count ?? 0)
+    + summaryJsonLine('Inbox type counts', federationSummary.inbox_type_counts)
+    + summaryJsonLine('Outbox type counts', federationSummary.outbox_type_counts)
+    + navigationCluster([
+      openEndpointButton('/api/federation-inbox'),
+      openEndpointButton('/api/federation-outbox'),
+      openEndpointButton('/api/audit'),
+    ])
+  );
+}}
 function overviewRuntimeRecordCountButtons(counts, runtimeRecords) {{
   const trialSummary = runtimeRecords.query_engine_trial_summary || {{}};
   const escalationSummary = runtimeRecords.query_engine_trial_escalation_summary || {{}};
@@ -9508,6 +9545,7 @@ const overviewPanelRenderers = [
   data => renderOverviewReviewerBoundaryPanel(data.reviewerBoundary),
   data => renderOverviewMutationReadinessPanel(data.mutationReadiness),
   data => renderOverviewAiIndexPanel(data.aiIndex, data.counts),
+  data => renderOverviewFederationPanel(data.federationSummary, data.federationPreflight, data.federationOverlap),
   data => renderOverviewRuntimeRecordsPanel(data.counts, data.runtimeRecords),
   data => renderOverviewSummaryJobsPanel(data.counts, data.summaryJobs),
   data => renderOverviewTriagePanel(data.triage, data.warningButtons, data.warningSummaries),
@@ -9525,6 +9563,9 @@ function renderOverview(payload) {{
   const identityBoundary = payload.identity_boundary_summary || {{}};
   const reviewerBoundary = payload.reviewer_boundary_overview || {{}};
   const aiIndex = payload.ai_index || {{}};
+  const federationSummary = payload.federation_summary || {{}};
+  const federationPreflight = payload.federation_preflight_summary || {{}};
+  const federationOverlap = payload.federation_overlap_summary || {{}};
   const triage = payload.triage || {{}};
   const mutationReadiness = payload.mutation_readiness || {{}};
   const runtimeConfig = payload.runtime_config || {{}};
@@ -9539,6 +9580,9 @@ function renderOverview(payload) {{
     authBoundaryOverview,
     chronicle,
     counts,
+    federationOverlap,
+    federationPreflight,
+    federationSummary,
     identityBoundary,
     reviewerBoundary,
     mutationReadiness,
