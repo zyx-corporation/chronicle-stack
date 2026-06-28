@@ -2499,10 +2499,9 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "sectionTitle(label('section.federation', 'Federation'))" in html
     assert "detailJumpButton(federationOverlap.latest_matching_detail_path || '', label('button.open_detail', 'Open Detail'))" in html
     assert "detailLine('Boundary check CLI', federationPreflight.suggested_boundary_check_cli || '')" in html
-    assert "detailLine('Package preview CLI', federationPreflight.suggested_package_preview_cli || '')" in html
-    assert "detailLine('Package inspect CLI', federationPreflight.suggested_package_inspect_cli || '')" in html
-    assert "detailLine('Package verify CLI', federationPreflight.suggested_package_verify_cli || '')" in html
-    assert "detailLine('Import preview CLI', federationPreflight.suggested_import_preview_cli || '')" in html
+    assert "const packageReviewCliCommands = [" in html
+    assert "detailListLine('Package review CLIs', packageReviewCliCommands, ' | ')" in html
+    assert "detailLine('Import review CLI', federationPreflight.suggested_import_preview_cli || '')" in html
     assert "openEndpointButton('/api/federation-inbox')" in html
     assert "openEndpointButton('/api/federation-outbox')" in html
     assert "openEndpointButton('/api/audit')" in html
