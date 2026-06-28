@@ -1,18 +1,26 @@
 """Tests for CLI UX improvements (v0.3)."""
 
 import os
+import re
 import subprocess
-from pathlib import Path
+import sys
 
 from typer.testing import CliRunner
 
 from chronicle.cli import app
 
 
+ANSI_ESCAPE_RE = re.compile(r"\x1b\[[0-9;]*m")
+
+
 def _run(tmp_path, *args):
     os.chdir(str(tmp_path))
     runner = CliRunner()
     return runner.invoke(app, list(args))
+
+
+def _plain(text: str) -> str:
+    return ANSI_ESCAPE_RE.sub("", text)
 
 
 def test_version_flag(tmp_path):
@@ -89,19 +97,18 @@ def test_ui_help_mentions_auth_mode_options(tmp_path):
     """ui --help must mention auth boundary placeholder options."""
     result = _run(tmp_path, "ui", "--help")
     assert result.exit_code == 0
-    assert "auth-mode" in result.stdout
-    assert "authorization-mode" in result.stdout
-    assert "mutation-capability-flag" in result.stdout
-    assert "enable-ui-mutation" in result.stdout
+    plain = _plain(result.stdout)
+    assert "auth-mode" in plain
+    assert "authorization-mode" in plain
+    assert "mutation-capability-flag" in plain
+    assert "enable-ui-mutation" in plain
 
 
 def test_ui_json_outputs_metadata_and_exits(tmp_path):
     """ui --json should emit startup metadata and exit without starting the server."""
     _run(tmp_path, "init", "--title", "UI JSON Flush Test")
-    python_bin = Path(__file__).resolve().parents[1] / ".venv" / "bin" / "python"
-    chronicle_bin = Path(__file__).resolve().parents[1] / ".venv" / "bin" / "chronicle"
     proc = subprocess.run(
-        [str(python_bin), str(chronicle_bin), "ui", "--json", "--root", str(tmp_path)],
+        [sys.executable, "-m", "chronicle.cli", "ui", "--json", "--root", str(tmp_path)],
         cwd=str(tmp_path),
         capture_output=True,
         text=True,

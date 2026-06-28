@@ -44,6 +44,13 @@ from chronicle.ui_server import (
 )
 
 
+ANSI_ESCAPE_RE = re.compile(r"\x1b\[[0-9;]*m")
+
+
+def _plain(text: str) -> str:
+    return ANSI_ESCAPE_RE.sub("", text)
+
+
 def test_ui_server_avoids_new_inline_localize_text_value_literals():
     source = (Path(__file__).resolve().parents[1] / "src/chronicle/ui_server.py").read_text(
         encoding="utf-8"
@@ -3581,5 +3588,6 @@ def test_chronicle_ui_help():
     runner = CliRunner()
     result = runner.invoke(app, ["ui", "--help"])
     assert result.exit_code == 0
+    plain = _plain(result.stdout).lower()
     for option in ("host", "port", "open", "root", "json", "enable-ui-mutation"):
-        assert option in result.stdout.lower()
+        assert option in plain
