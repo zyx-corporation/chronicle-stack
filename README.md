@@ -113,6 +113,7 @@ flowchart TD
 | Federation Preview and Import-Review Surface | v1.92.0実装済み |
 | Federation Boundary and Consent Preflight CLI | v1.93.0実装済み |
 | Read-only Federation Package Preview UI Surface | v1.94.0実装済み |
+| Federation Preflight Audit Summary Surface | v1.95.0実装済み |
 | v1.8 local GUI review-route contract hardening release preparation | v1.8.0準備済み |
 | GraphRAG query engine | 将来構想 |
 | Full interactive editing UI | 将来構想 |
@@ -253,6 +254,7 @@ v1.2 以降では、`/api/events/<id>`, `/api/contexts/<id>`, `/api/artifacts/<i
 - `chronicle federation package verify` は bundle file hash と signed-manifest surface を検証しますが、署名済み trust や真正性証明そのものではありません。
 - `chronicle federation package preview` と `import-preview` は verify 結果を読み取り専用の advisory review として束ねますが、Chronicle primary records を上書きしたり import を自動実行したりしません。
 - `/api/federation-package-preview` は `package_dir` query parameter で明示指定されたローカル bundle directory だけを preview / import-preview 表示し、package 作成や persistence を暗黙に行いません。
+- `/api/audit` と overview の `federation_preflight_summary` は consent-record audit metadata を read-only に要約し、boundary check は引き続き CLI-only preflight であることを明示します。
 - `chronicle federation boundary check` と `consent record` は package 作成前の preflight / audit surface であり、transport、package persistence、import 実行は行いません。
 - `chronicle trust` は Node ID と Subject ID を分けた local trust registry を扱い、domain / purpose / capability 単位の trust relation を追加・撤回・一覧表示します。
 - federation message と package metadata は target node 向けの trust summary を advisory に参照します。
@@ -311,6 +313,7 @@ v1.2 以降では、`/api/events/<id>`, `/api/contexts/<id>`, `/api/artifacts/<i
 - [v1.92 Release Remaining Issues](docs/releases/remaining/v1.92-release-remaining-issues.md)
 - [v1.93 Release Remaining Issues](docs/releases/remaining/v1.93-release-remaining-issues.md)
 - [v1.94 Release Remaining Issues](docs/releases/remaining/v1.94-release-remaining-issues.md)
+- [v1.95 Release Remaining Issues](docs/releases/remaining/v1.95-release-remaining-issues.md)
 - [v1.8 Release Remaining Issues](docs/releases/remaining/v1.8-release-remaining-issues.md)
 - [v1.7 Release Notes](docs/releases/notes/release-notes-v1.7.0.md)
 - [v1.7 Smoke Test Profile](docs/releases/smoke/smoke-test-v1.7.md)

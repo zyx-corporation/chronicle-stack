@@ -194,6 +194,27 @@ def run_ui_smoke(root: Path | None = None) -> UISmokeReport:
                         ),
                     )
                 )
+            if endpoint == "/api/audit":
+                preflight = payload.get("federation_preflight_summary", {})
+                checks.append(
+                    UISmokeCheck(
+                        "/api/audit#federation-preflight-summary",
+                        isinstance(preflight, dict)
+                        and bool(preflight.get("message_key"))
+                        and bool(preflight.get("boundary_check_message_key"))
+                        and bool(preflight.get("boundary_note_key"))
+                        and bool(preflight.get("counts_summary_key")),
+                        (
+                            "ok"
+                            if isinstance(preflight, dict)
+                            and bool(preflight.get("message_key"))
+                            and bool(preflight.get("boundary_check_message_key"))
+                            and bool(preflight.get("boundary_note_key"))
+                            and bool(preflight.get("counts_summary_key"))
+                            else "audit payload missing federation preflight summary contract"
+                        ),
+                    )
+                )
             if endpoint == "/api/ui-boundary":
                 ui_boundary = payload.get("ui_boundary", {})
                 write_route_contract = ui_boundary.get("write_route_contract", {})

@@ -906,6 +906,37 @@ def test_ui_data_service_read_endpoints(tmp_path):
         event["summary"] == "UI audit event"
         for event in service.audit_events()["audit_events"]
     )
+    consent_payload = FederationPackageService(tmp_path).record_consent(
+        target_node="node:partner:beta",
+        purpose="ui consent review",
+        scope="partner-review",
+        granted_by="review-owner",
+        third_party_sharing_allowed=False,
+        context_ids=[ids["context_id"]],
+    )
+    audit_payload = service.audit_events()
+    assert audit_payload["federation_preflight_summary"]["message_key"] == (
+        "ui.federation_preflight.message.consent_recorded"
+    )
+    assert audit_payload["federation_preflight_summary"]["boundary_check_message_key"] == (
+        "ui.federation_preflight.boundary_check.cli_only_preview"
+    )
+    assert audit_payload["federation_preflight_summary"]["counts_summary_key"] == (
+        "ui.template.federation_preflight.counts"
+    )
+    consent_row = next(
+        event
+        for event in audit_payload["audit_events"]
+        if event["audit_id"] == consent_payload["audit_id"]
+    )
+    assert consent_row["federation_consent_summary"]["message_key"] == (
+        "ui.federation_consent_audit.message.recorded"
+    )
+    assert consent_row["federation_consent_summary"]["target_node"] == "node:partner:beta"
+    assert consent_row["federation_consent_summary"]["scope"] == "partner-review"
+    assert consent_row["federation_consent_summary"]["boundary_note_key"] == (
+        "ui.federation_consent_audit.note.read_only_derived"
+    )
     assert service.lifecycle_markers()["lifecycle_markers"][0]["reason"] == "UI lifecycle marker"
     assert len(service.runtime_records()["runtime_records"]) == 2
     assert service.runtime_records()["runtime_records"][0]["runtime_record_preview"]["title"]
@@ -1173,6 +1204,9 @@ def test_ui_data_service_read_endpoints(tmp_path):
     assert package_review["counts_summary_key"] == "ui.template.package_review.counts"
     assert package_review["boundary_note_key"] == "ui.package_review.note.read_only_derived"
     assert package_review["counts_summary_params"]["record_count"] >= 0
+    assert service.overview()["federation_preflight_summary"]["boundary_note_key"] == (
+        "ui.federation_preflight.note.read_only_derived"
+    )
     federation_preview = service.api_payload("/api/federation-package-preview")
     assert federation_preview is not None
     assert federation_preview["federation_package_preview"]["status"] == "parameter_required"
@@ -1525,6 +1559,15 @@ def test_ui_html_filtering_includes_provider_response_metadata_fields(tmp_path, 
 
 def test_ui_data_service_detail_endpoints(tmp_path):
     ids = _populate(tmp_path)
+    consent_payload = FederationPackageService(tmp_path).record_consent(
+        target_node="node:partner:beta",
+        purpose="ui consent detail review",
+        scope="detail-review",
+        granted_by="detail-owner",
+        third_party_sharing_allowed=True,
+        third_party_sharing_reason="approved research partner",
+        context_ids=[ids["context_id"]],
+    )
     ReviewService(tmp_path).request_changes(
         event_id=ids["runtime_summary_event_id"],
         reviewer="alice",
@@ -1557,6 +1600,15 @@ def test_ui_data_service_detail_endpoints(tmp_path):
     assert service.detail_payload(f"/api/decisions/{ids['decision_id']}")["record"]["reason"] == "UI decision"
     assert service.detail_payload(f"/api/boundary/{ids['rule_id']}")["record"]["reason"] == "UI boundary"
     assert service.detail_payload(f"/api/audit/{ids['audit_id']}")["record"]["summary"] == "UI audit event"
+    consent_detail = service.detail_payload(f"/api/audit/{consent_payload['audit_id']}")["record"]
+    assert consent_detail["federation_consent_summary"]["message_key"] == (
+        "ui.federation_consent_audit.message.recorded"
+    )
+    assert consent_detail["federation_consent_summary"]["scope"] == "detail-review"
+    assert consent_detail["federation_consent_summary"]["third_party_sharing_allowed"] is True
+    assert consent_detail["federation_consent_summary"]["third_party_sharing_allowed_summary_key"] == (
+        "ui.boolean.true"
+    )
     assert service.detail_payload(f"/api/lifecycle/{ids['lifecycle_id']}")["record"]["reason"] == "UI lifecycle marker"
     summary_detail = service.detail_payload(f"/api/summary-jobs/{ids['summary_job_id']}")["record"]
     assert summary_detail["title"] == "UI Summary Draft"
