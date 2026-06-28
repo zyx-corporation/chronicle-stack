@@ -12,7 +12,7 @@ Chronicle Core v0.1 を正式な初期リリース候補として凍結できる
 - RDE Diff Record による簡易意味変化監査
 - CLI による操作
 - YAML / Markdown エクスポート
-- GitHub Actions CI
+- Local act CI
 
 ## 非目的（v0.1 スコープ外）
 
@@ -49,7 +49,7 @@ Chronicle Core v0.1 を正式な初期リリース候補として凍結できる
 | `RDE → ArtifactVersion` 派生リンク | ✅ |
 | Artifact 空更新ガード | ✅ |
 | CLI 統合テスト | ✅ |
-| GitHub Actions CI | ✅ |
+| Local act CI | ✅ |
 
 ## CLI 確認結果
 
@@ -74,11 +74,15 @@ ruff: All checks passed
 
 ## CI 設定
 
-`.github/workflows/ci.yml`:
-- push / pull_request on main
-- Python 3.11
-- `ruff check src/ tests/`
-- `pytest -v`
+Hosted GitHub Actions は使用しない。CI相当の検証は、ローカル環境の `act` で明示的に実行する。
+
+```bash
+bash scripts/act-ci.sh
+```
+
+Local act CI の workflow は `.act/workflows/ci.yml` に置く。`.github/workflows/` 配下には置かないため、GitHub hosted Actions の push / pull_request trigger としては実行されない。
+
+Local act CI の詳細は [Local act CI](local-act-ci.md) を参照する。
 
 ## 既知の制約
 
@@ -89,6 +93,7 @@ ruff: All checks passed
 - 同一 Version への複数 RDE は、v0.1 では JSONL 上で最後に現れた RDE が派生 Index 上で優先される
 - 外部 LLM 連携は未実装
 - `chronicle.jsonl` の schema versioning / migration は未実装
+- Local act CI は明示的なローカル実行であり、PR上のhosted checkを自動作成しない
 
 ## v0.2 へ送る課題
 
@@ -117,19 +122,24 @@ ruff: All checks passed
 ### 変換された要素
 - 仕様上の抽象モデルを Python 実装へ変換
 - Typer CLI、Pydantic モデル、JSONL Store、IndexStore、ArtifactStore として実装
+- CIの実行主体を hosted GitHub Actions から local act へ移行
 
 ### 補完された要素
 - `artifact list` や `index rebuild` など、基本仕様に対して実用上便利な CLI を追加
+- Local act CI workflow と実行scriptを追加
 
 ### 未解決の要素
 - Context Scope / Boundary Rule の未実装
 - JSONL schema migration 方針の未定義
+- local act 実行結果のPRテンプレート記録欄
 
 ### 逸脱リスク
 - 現状のまま機能追加を優先すると、一次記録内の参照整合性が後回しになるリスク → v0.1 で修正済み
+- hosted CI廃止により、ローカル実行を忘れると品質ゲートが弱くなるリスク
 
 ### 次回更新方針
 - v0.1 は機能追加より先に、Event・Version・Decision・RDE の参照整合性を固める → 達成
+- local act CI の実行結果を release readiness / PR body に残す運用を検討する
 
 ## リリース判定
 
@@ -137,5 +147,5 @@ v0.1.0 としての初期リリースは **可能** と判断する。
 
 条件:
 1. この PR が main にマージされること
-2. CI が pass すること
+2. Local act CI が pass すること
 3. v0.1.0 tag を作成すること

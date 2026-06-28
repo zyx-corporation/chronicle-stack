@@ -1,10 +1,7 @@
-name: CI
+name: Local act CI
 
 on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
+  workflow_dispatch:
 
 jobs:
   test:
@@ -57,12 +54,12 @@ jobs:
           from chronicle.services.lifecycle_service import LifecycleService
 
           root = Path(os.environ["CHRONICLE_UI_SMOKE_ROOT"])
-          ChronicleService(root).init("CI UI Smoke")
-          context = ContextService(root).add_context(title="CI Smoke Context", visibility_hint=VisibilityHint.PUBLIC)
+          ChronicleService(root).init("Local act UI Smoke")
+          context = ContextService(root).add_context(title="Local act Smoke Context", visibility_hint=VisibilityHint.PUBLIC)
           artifact_file = root / "artifact.md"
-          artifact_file.write_text("ci smoke artifact body\n", encoding="utf-8")
+          artifact_file.write_text("local act smoke artifact body\n", encoding="utf-8")
           ArtifactService(root).create(
-              title="CI Smoke Artifact",
+              title="Local act Smoke Artifact",
               artifact_type=ArtifactType.DOCUMENT,
               source_file=artifact_file,
               visibility_hint=VisibilityHint.PRIVATE,
@@ -72,23 +69,23 @@ jobs:
               field=BoundaryConditionField.VISIBILITY,
               operator=BoundaryOperator.EQUALS,
               value="private",
-              reason="CI smoke private visibility warning",
+              reason="Local act smoke private visibility warning",
           )
           AuditService(root).record(
               operation=AuditOperation.EXPORT,
-              actor="ci",
-              purpose="CI ui-smoke",
+              actor="local-act",
+              purpose="Local act ui-smoke",
               target_environment=AuditTargetEnvironment.LOCAL,
               result=AuditSeverity.INFO,
-              summary="CI smoke audit",
+              summary="Local act smoke audit",
           )
           LifecycleService(root).record(
               action=LifecycleAction.SEAL,
               target_id=context.context_id,
               target_kind="context",
-              actor="ci",
+              actor="local-act",
               reason_class=LifecycleReasonClass.PRIVACY,
-              reason="CI smoke marker",
+              reason="Local act smoke marker",
           )
           PY
 

@@ -48,9 +48,20 @@ pytest
 ruff check src/ tests/
 ```
 
-## CI
+## Local act CI
 
-GitHub Actions (`.github/workflows/ci.yml`) で push / pull_request 時に以下を実行:
+Chronicle Stack は hosted GitHub Actions をCI実行基盤として使いません。CI相当の検証は、ローカル環境の `act` で明示的に実行します。
+
+```bash
+bash scripts/act-ci.sh
+```
+
+ローカル act CI では、次を実行します。
 
 - `ruff check src/ tests/`
 - `pytest -v`
+- isolated temporary root を使った `chronicle ui-smoke`
+
+workflow 定義は `.act/workflows/ci.yml` に置きます。このファイルは `.github/workflows/` 配下ではないため、GitHub hosted Actions の push / pull_request trigger として実行されません。
+
+詳細は [Local act CI](local-act-ci.md) を参照してください。
