@@ -135,6 +135,13 @@ chronicle-federation-package/
 - package verify でManifest整合性を確認できる。
 - 受信側が import 前に preview できる。
 
+### 5.5.1 実装メモ
+
+- `chronicle federation package create` が `manifest.json`, `records.jsonl`, `redaction-report.json`, `README.md` を持つ local bundle directory を生成する。
+- package create は既存の context package boundary と warning classification を再利用しつつ、target node 向け trust preview を metadata に残す。
+- `chronicle federation package inspect` は manifest と redaction report を read-only に確認するだけで、import や transport は行わない。
+- `chronicle federation package verify` は file hash を再計算する構造確認に留まり、署名 placeholder を明示する。
+
 ### 5.6 非対象
 
 - 自動送信。
@@ -191,6 +198,11 @@ chronicle-federation-package/
 - 署名あり、署名なし、署名不一致を区別できる。
 - package review または import preview で検証結果を表示できる。
 - 署名方式は将来 DID/PoP/ZKP に差し替え可能な抽象層になっている。
+
+### 6.4.1 実装メモ
+
+- 現段階の manifest verify は `signature.status=unsigned` を warning として明示しつつ、bundle payload file の hash 検証を先に固定する。
+- manifest 自身は存在必須だが、自己参照 hash を避けるため payload file list からは分離する。
 
 ### 6.5 非対象
 
@@ -620,7 +632,7 @@ Timeline View は補助であり、中心UIではない。
 
 最優先は Phase 1 から Phase 3 である。理由は、分散連合を始める前に、共有パッケージ、Manifest、redaction、consent、boundary が必要だからである。
 
-Phase 6 まで完了したため、次は Phase 7 を進める。AI adapter integration がなければ、外部AI利用時の境界と trust を一体で扱えない。
+Phase 1, Phase 6, Phase 7, Phase 8 の最小 slice が揃ったため、次は Phase 2 と Phase 3 を進める。signed manifest と context boundary enforcement がなければ federation package を安全に外へ持ち出せない。
 
 Phase 6 と Phase 7 は、実用化段階で重要になる。信頼とAI境界がなければ、Chronicle Stack は文脈主権を守れない。
 

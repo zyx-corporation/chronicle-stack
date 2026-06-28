@@ -2,20 +2,24 @@
 
 import json
 from datetime import datetime
+from pathlib import Path
 from typing import Annotated
 
 import typer
 
 from chronicle.errors import ChronicleError
 from chronicle.interfaces.cli.common import handle_error
+from chronicle.models.federation_package import FederationPackageVisibility
 from chronicle.models.federation_message import (
     FederationMessageBox,
     FederationMessageSignatureStatus,
     FederationMessageType,
 )
+from chronicle.services.federation_package_service import FederationPackageService
 from chronicle.services.federation_message_service import FederationMessageService
 
 federation_app = typer.Typer(help="Federation package/message operations.")
+package_app = typer.Typer(help="Federation package creation and verification.")
 message_app = typer.Typer(help="Federation message creation.")
 inbox_app = typer.Typer(help="Federation inbox inspection.")
 outbox_app = typer.Typer(help="Federation outbox inspection.")
@@ -42,6 +46,91 @@ def _dump_record_summary(record) -> dict:
         "preview_summary": record.preview_summary,
         "audit_recorded": record.audit_recorded,
     }
+
+
+@package_app.command("create")
+def federation_package_create_cmd(
+    purpose: Annotated[str, typer.Option("--purpose")],
+    target_node: Annotated[str, typer.Option("--target-node")],
+    output_dir: Annotated[Path, typer.Option("--output-dir")],
+    context_id: Annotated[list[str] | None, typer.Option("--context")] = None,
+    visibility: Annotated[
+        FederationPackageVisibility,
+        typer.Option("--visibility"),
+    ] = FederationPackageVisibility.FEDERATED,
+    created_by_node: Annotated[str, typer.Option("--created-by-node")] = "node:local:default",
+    trust_target_node: Annotated[str | None, typer.Option("--trust-target-node")] = None,
+    json_output: Annotated[bool, typer.Option("--json")] = False,
+) -> None:
+    """Create a local-first federation package bundle."""
+    try:
+        manifest = FederationPackageService().create_package(
+            purpose=purpose,
+            target_node=target_node,
+            output_dir=output_dir,
+            created_by_node=created_by_node,
+            visibility=visibility,
+            context_ids=context_id,
+            trust_target_node=trust_target_node,
+        )
+        payload = manifest.model_dump(mode="json")
+        if json_output:
+            typer.echo(json.dumps(payload, ensure_ascii=False, indent=2))
+        else:
+            typer.echo(f"Federation package created: {manifest.package_id}")
+            typer.echo(f"  Target node: {manifest.target_node}")
+            typer.echo(f"  Output: {output_dir}")
+            typer.echo("  Boundary: preview-first local bundle only; no auto-apply or network sync")
+    except ChronicleError as exc:
+        handle_error(exc, json_output)
+
+
+@package_app.command("inspect")
+def federation_package_inspect_cmd(
+    package_dir: Annotated[Path, typer.Option("--package-dir")],
+    json_output: Annotated[bool, typer.Option("--json")] = False,
+) -> None:
+    """Inspect a created federation package."""
+    try:
+        payload = FederationPackageService().inspect_package(package_dir)
+        if json_output:
+            typer.echo(json.dumps(payload, ensure_ascii=False, indent=2))
+            return
+        manifest = payload["manifest"]
+        report = payload["redaction_report"]
+        typer.echo(f"Federation package: {manifest['package_id']}")
+        typer.echo(f"  Purpose: {manifest['purpose']}")
+        typer.echo(f"  Target node: {manifest['target_node']}")
+        typer.echo(f"  Visibility: {manifest['visibility']}")
+        typer.echo(f"  Referenced records: {len(manifest['referenced_records'])}")
+        typer.echo(f"  Reference-only records: {len(report['reference_only_record_ids'])}")
+        if report["warning_codes"]:
+            typer.echo(f"  Warnings: {', '.join(report['warning_codes'])}")
+    except ChronicleError as exc:
+        handle_error(exc, json_output)
+
+
+@package_app.command("verify")
+def federation_package_verify_cmd(
+    package_dir: Annotated[Path, typer.Option("--package-dir")],
+    json_output: Annotated[bool, typer.Option("--json")] = False,
+) -> None:
+    """Verify file hashes in a created federation package."""
+    try:
+        report = FederationPackageService().verify_package(package_dir)
+        if json_output:
+            typer.echo(json.dumps(report.model_dump(mode="json"), ensure_ascii=False, indent=2))
+        else:
+            typer.echo(f"Federation package verification: valid={report.valid}")
+            typer.echo(f"  Signature: {report.signature_status}")
+            for entry in report.files_checked:
+                typer.echo(f"  {entry.path}: exists={entry.exists} matches={entry.matches}")
+            if report.warnings:
+                typer.echo(f"  Warnings: {', '.join(report.warnings)}")
+        if not report.valid:
+            raise typer.Exit(code=1)
+    except ChronicleError as exc:
+        handle_error(exc, json_output)
 
 
 @message_app.command("create")
@@ -157,6 +246,7 @@ def federation_outbox_inspect_cmd(
         handle_error(exc, json_output)
 
 
+federation_app.add_typer(package_app, name="package")
 federation_app.add_typer(message_app, name="message")
 federation_app.add_typer(inbox_app, name="inbox")
 federation_app.add_typer(outbox_app, name="outbox")
