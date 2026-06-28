@@ -3044,6 +3044,9 @@ class ChronicleUIDataService:
             "suggested_package_preview_cli": (
                 "chronicle federation package preview --package-dir <package_dir> --json"
             ),
+            "suggested_package_inspect_cli": (
+                "chronicle federation package inspect --package-dir <package_dir> --json"
+            ),
             "suggested_import_preview_cli": (
                 "chronicle federation package import-preview --package-dir <package_dir> --json"
             ),
@@ -9364,6 +9367,7 @@ function renderOverviewFederationPanel(federationSummary, federationPreflight, f
     + detailLine('Boundary check note', federationPreflight.boundary_check_message_key ? formatLabel(federationPreflight.boundary_check_message_key, federationPreflight.boundary_check_message_params || {{}}, federationPreflight.boundary_check_message || '') : (federationPreflight.boundary_check_message || ''))
     + detailLine('Boundary check CLI', federationPreflight.suggested_boundary_check_cli || '')
     + detailLine('Package preview CLI', federationPreflight.suggested_package_preview_cli || '')
+    + detailLine('Package inspect CLI', federationPreflight.suggested_package_inspect_cli || '')
     + detailLine('Import preview CLI', federationPreflight.suggested_import_preview_cli || '')
     + detailLine('Preflight counts', federationPreflight.counts_summary_key ? formatLabel(federationPreflight.counts_summary_key, federationPreflight.counts_summary_params || {{}}, '') : '')
     + preflightButtons
