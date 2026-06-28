@@ -1185,6 +1185,16 @@ def _federation_consent_match_counts_contract(
     }
 
 
+def _federation_overlap_counts_contract(
+    *, runtime_overlap_count: int, review_overlap_count: int, consent_audit_count: int
+) -> tuple[str, dict[str, Any]]:
+    return "ui.template.federation_overlap.counts", {
+        "runtime_overlap_count": runtime_overlap_count,
+        "review_overlap_count": review_overlap_count,
+        "consent_audit_count": consent_audit_count,
+    }
+
+
 def _append_mutation_blocker(
     blockers: list[str],
     next_steps: list[str],
@@ -2315,6 +2325,10 @@ class ChronicleUIDataService:
             },
             "package_review": self.package_review_snapshot(),
             "federation_preflight_summary": self.federation_preflight_summary(),
+            "federation_overlap_summary": self.federation_overlap_summary(
+                runtime_records,
+                review_queue,
+            ),
             "graph_summary": self.graph_summary(),
             "ai_index": ai_index_status,
             "runtime_config": runtime_config,
@@ -3031,6 +3045,60 @@ class ChronicleUIDataService:
                 "Federation preflight summary remains derived, read-only, and non-authoritative over Chronicle primary records."
             ),
             "boundary_note_key": "ui.federation_preflight.note.read_only_derived",
+        }
+
+    def federation_overlap_summary(
+        self,
+        runtime_rows: list[dict[str, Any]] | None = None,
+        review_rows: list[dict[str, Any]] | None = None,
+    ) -> dict[str, Any]:
+        runtime_records = runtime_rows if runtime_rows is not None else self.runtime_records()["runtime_records"]
+        review_queue = review_rows if review_rows is not None else self.review_queue()["review_queue"]
+        runtime_matches = [
+            row.get("matching_federation_consent_summary", {})
+            for row in runtime_records
+            if isinstance(row.get("matching_federation_consent_summary"), dict)
+        ]
+        review_matches = [
+            row.get("matching_federation_consent_summary", {})
+            for row in review_queue
+            if isinstance(row.get("matching_federation_consent_summary"), dict)
+        ]
+        candidate_matches = [*runtime_matches, *review_matches]
+        audit_ids = [
+            str(match.get("audit_id", "") or "")
+            for match in candidate_matches
+            if str(match.get("audit_id", "") or "")
+        ]
+        unique_audit_ids = sorted(set(audit_ids))
+        latest_match = candidate_matches[0] if candidate_matches else {}
+        counts_key, counts_params = _federation_overlap_counts_contract(
+            runtime_overlap_count=len(runtime_matches),
+            review_overlap_count=len(review_matches),
+            consent_audit_count=len(unique_audit_ids),
+        )
+        status = "overlaps_present" if candidate_matches else "no_overlaps"
+        return {
+            "status": status,
+            "message": (
+                "Overview federation panels include advisory consent-overlap counts across runtime and review read models."
+                if candidate_matches
+                else "No advisory consent-overlap summaries are currently present in runtime or review read models."
+            ),
+            "message_key": f"ui.federation_overlap.message.{status}",
+            "counts_summary_key": counts_key,
+            "counts_summary_params": counts_params,
+            "runtime_overlap_count": len(runtime_matches),
+            "review_overlap_count": len(review_matches),
+            "consent_audit_count": len(unique_audit_ids),
+            "latest_matching_audit_id": latest_match.get("audit_id"),
+            "latest_matching_detail_path": latest_match.get("detail_path"),
+            "latest_target_node": latest_match.get("target_node"),
+            "latest_scope": latest_match.get("scope"),
+            "boundary_note": (
+                "Overview overlap summary remains derived and advisory; it does not imply consent enforcement or authorize package operations."
+            ),
+            "boundary_note_key": "ui.federation_overlap.note.read_only_derived",
         }
 
     def reaction_records(self) -> dict[str, Any]:

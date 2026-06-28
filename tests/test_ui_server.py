@@ -706,6 +706,19 @@ def test_ui_overview_data(tmp_path):
     assert overview["runtime_config"]["config"]["model_name"] == "manual-http-model"
     assert overview["runtime_config"]["config"]["allow_network"] is True
     assert overview["runtime_config"]["config"]["allow_network_summary_key"] == "ui.boolean.true"
+    assert overview["federation_overlap_summary"]["status"] == "no_overlaps"
+    assert overview["federation_overlap_summary"]["message_key"] == (
+        "ui.federation_overlap.message.no_overlaps"
+    )
+    assert overview["federation_overlap_summary"]["counts_summary_key"] == (
+        "ui.template.federation_overlap.counts"
+    )
+    assert overview["federation_overlap_summary"]["runtime_overlap_count"] == 0
+    assert overview["federation_overlap_summary"]["review_overlap_count"] == 0
+    assert overview["federation_overlap_summary"]["consent_audit_count"] == 0
+    assert overview["federation_overlap_summary"]["boundary_note_key"] == (
+        "ui.federation_overlap.note.read_only_derived"
+    )
     assert overview["ui_boundary"]["mutation_enabled"] is False
     assert overview["ui_boundary"]["mutation_capability_flag"] is False
     assert overview["ui_boundary"]["auth_mode"] == "not_enabled"
@@ -1748,6 +1761,26 @@ def test_ui_read_models_expose_matching_federation_consent_summary_on_overlap(tm
 
     review_detail = service.detail_payload(f"/api/review-queue/{event.event_id}")["record"]
     assert review_detail["matching_federation_consent_summary"]["audit_id"] == consent_payload["audit_id"]
+    overview = service.overview()
+    assert overview["federation_overlap_summary"]["status"] == "overlaps_present"
+    assert overview["federation_overlap_summary"]["message_key"] == (
+        "ui.federation_overlap.message.overlaps_present"
+    )
+    assert overview["federation_overlap_summary"]["counts_summary_key"] == (
+        "ui.template.federation_overlap.counts"
+    )
+    assert overview["federation_overlap_summary"]["runtime_overlap_count"] >= 1
+    assert overview["federation_overlap_summary"]["review_overlap_count"] >= 1
+    assert overview["federation_overlap_summary"]["consent_audit_count"] == 1
+    assert overview["federation_overlap_summary"]["latest_matching_audit_id"] == consent_payload["audit_id"]
+    assert overview["federation_overlap_summary"]["latest_matching_detail_path"] == (
+        f"/api/audit/{consent_payload['audit_id']}"
+    )
+    assert overview["federation_overlap_summary"]["latest_target_node"] == "node:partner:beta"
+    assert overview["federation_overlap_summary"]["latest_scope"] == "overlap-scope"
+    assert overview["federation_overlap_summary"]["boundary_note_key"] == (
+        "ui.federation_overlap.note.read_only_derived"
+    )
 
 
 def test_runtime_records_include_query_engine_trial_rows(tmp_path):
