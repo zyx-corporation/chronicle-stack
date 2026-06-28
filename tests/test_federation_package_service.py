@@ -1,8 +1,10 @@
 from datetime import datetime, timezone
 
+from chronicle.models.classification import ClassificationLayer, ClassificationMetadata, Sensitivity
 from chronicle.models.context import Context, ContextScope
 from chronicle.models.federation_package import FederationPackageSignatureMode, FederationPackageSignatureStatus
 from chronicle.models.event import Actor, ChronicleEvent, EventType
+from chronicle.services.audit_service import AuditService
 from chronicle.services.chronicle_service import ChronicleService
 from chronicle.services.federation_package_service import FederationPackageService
 
@@ -33,6 +35,10 @@ def test_federation_package_create_and_verify(tmp_path):
             summary="Shareable review context",
             scope=ContextScope.TASK,
             created_at=datetime(2026, 6, 28, tzinfo=timezone.utc),
+            classification=ClassificationMetadata(
+                layer=ClassificationLayer.INTERNAL,
+                sensitivity=Sensitivity.INTERNAL,
+            ),
         ),
     )
 
@@ -47,11 +53,23 @@ def test_federation_package_create_and_verify(tmp_path):
     assert (output_dir / "manifest.json").exists()
     assert (output_dir / "records.jsonl").exists()
     assert (output_dir / "redaction-report.json").exists()
+    assert manifest.consent.status == "not_recorded"
+    assert manifest.consent.third_party_sharing_allowed is False
 
     report = FederationPackageService(tmp_path).verify_package(output_dir)
     assert report.valid is True
     assert report.signature_status == FederationPackageSignatureStatus.UNSIGNED
     assert report.warnings == ["signature_unsigned"]
+    assert report.files_checked
+
+    payload = FederationPackageService(tmp_path).inspect_package(output_dir)
+    mapping = payload["redaction_report"]["visibility_mappings"][0]
+    assert mapping["recommended_visibility"] == "organization"
+    assert mapping["rationale"] == "internal_context_maps_to_organization_scope"
+
+    audits = AuditService(tmp_path).list_events()
+    assert audits[-1].metadata["consent_status"] == "not_recorded"
+    assert audits[-1].metadata["third_party_sharing_allowed"] == "false"
 
 
 def test_federation_package_create_with_local_dev_signature_verifies_signed(tmp_path):
@@ -224,5 +242,47 @@ def test_federation_package_inspect_returns_manifest_and_redaction_report(tmp_pa
     payload = FederationPackageService(tmp_path).inspect_package(output_dir)
     assert payload["manifest"]["target_node"] == "node:partner:beta"
     assert payload["manifest"]["signature"]["status"] == FederationPackageSignatureStatus.UNSIGNED
+    assert payload["manifest"]["consent"]["status"] == "not_recorded"
     assert payload["redaction_report"]["advisory_only"] is True
     assert payload["redaction_report"]["record_count"] == 1
+
+
+def test_federation_package_records_consent_and_third_party_restriction(tmp_path):
+    ChronicleService(tmp_path).init("Federation Package Consent Test")
+    _append_context(
+        tmp_path,
+        Context(
+            context_id="ctx_fed_consent",
+            title="Federation Consent Context",
+            summary="Consent-scoped content",
+            scope=ContextScope.TASK,
+            created_at=datetime(2026, 6, 28, tzinfo=timezone.utc),
+        ),
+    )
+
+    output_dir = tmp_path / "federation-package"
+    manifest = FederationPackageService(tmp_path).create_package(
+        purpose="partner review",
+        target_node="node:partner:beta",
+        output_dir=output_dir,
+        consent_granted_by="review-owner",
+        consent_recorded_at=datetime(2026, 6, 28, 8, 0, tzinfo=timezone.utc),
+        consent_scope="project-review",
+        third_party_sharing_allowed=False,
+        third_party_sharing_reason="partner-only review window",
+    )
+
+    assert manifest.consent.status == "recorded"
+    assert manifest.consent.granted_by == "review-owner"
+    assert manifest.consent.scope == "project-review"
+    assert manifest.consent.third_party_sharing_allowed is False
+    assert manifest.consent.third_party_sharing_reason == "partner-only review window"
+
+    payload = FederationPackageService(tmp_path).inspect_package(output_dir)
+    assert payload["manifest"]["consent"]["granted_by"] == "review-owner"
+    assert payload["manifest"]["consent"]["third_party_sharing_reason"] == "partner-only review window"
+
+    audits = AuditService(tmp_path).list_events()
+    assert audits[-1].metadata["consent_status"] == "recorded"
+    assert audits[-1].metadata["consent_scope"] == "project-review"
+    assert audits[-1].metadata["third_party_sharing_allowed"] == "false"

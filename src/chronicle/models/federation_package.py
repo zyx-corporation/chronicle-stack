@@ -16,6 +16,24 @@ class FederationPackageVisibility(StrEnum):
     PUBLIC = "public"
 
 
+class FederationPackageConsent(BaseModel):
+    status: str = "not_recorded"
+    granted_by: str = ""
+    recorded_at: datetime | None = None
+    purpose: str = ""
+    scope: str = ""
+    third_party_sharing_allowed: bool = False
+    third_party_sharing_reason: str | None = None
+
+
+class FederationPackageVisibilityMappingEntry(BaseModel):
+    record_id: str
+    source_visibility: str = "unknown"
+    classification_layer: int | None = None
+    recommended_visibility: FederationPackageVisibility
+    rationale: str
+
+
 class FederationPackageSignatureMode(StrEnum):
     UNSIGNED = "unsigned"
     LOCAL_DEV = "local_dev"
@@ -64,6 +82,7 @@ class FederationPackageManifest(BaseModel):
     referenced_records: list[str] = Field(default_factory=list)
     warnings: list[str] = Field(default_factory=list)
     files: list[FederationPackageFileEntry] = Field(default_factory=list)
+    consent: FederationPackageConsent = Field(default_factory=FederationPackageConsent)
     retention_policy: FederationPackageRetentionPolicy = Field(
         default_factory=FederationPackageRetentionPolicy
     )
@@ -76,6 +95,7 @@ class FederationPackageRedactionReport(BaseModel):
     advisory_only: bool = True
     record_count: int = 0
     reference_only_record_ids: list[str] = Field(default_factory=list)
+    visibility_mappings: list[FederationPackageVisibilityMappingEntry] = Field(default_factory=list)
     warning_codes: list[str] = Field(default_factory=list)
     notes: list[str] = Field(default_factory=list)
 

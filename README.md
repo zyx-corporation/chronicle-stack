@@ -109,6 +109,7 @@ flowchart TD
 | Context SNS Surface / Federation Phase 8 | v1.88.0実装済み |
 | Local Federation Package Foundation / Federation Phase 1 slice | v1.89.0実装済み |
 | Signed Manifest and Verification / Federation Phase 2 slice | v1.90.0実装済み |
+| Context Boundary and Consent / Federation Phase 3 slice | v1.91.0実装済み |
 | v1.8 local GUI review-route contract hardening release preparation | v1.8.0準備済み |
 | GraphRAG query engine | 将来構想 |
 | Full interactive editing UI | 将来構想 |
@@ -177,6 +178,7 @@ chronicle federation inbox inspect
 chronicle federation outbox inspect
 chronicle federation package create --purpose "project review" --target-node node:partner:beta --visibility federated --output-dir federation-package
 chronicle federation package create --purpose "project review" --target-node node:partner:beta --visibility federated --signature-mode local_dev --signature-expires-at 2026-12-31T00:00:00+00:00 --output-dir federation-package-signed
+chronicle federation package create --purpose "project review" --target-node node:partner:beta --consent-granted-by reviewer --consent-recorded-at 2026-06-28T08:00:00+00:00 --consent-scope project-review --no-third-party-sharing --third-party-sharing-reason "partner-only review" --output-dir federation-package-consent
 chronicle federation package inspect --package-dir federation-package
 chronicle federation package verify --package-dir federation-package
 chronicle trust node add --node-id node:partner:beta --subject-id subject:beta
@@ -240,6 +242,7 @@ v1.2 以降では、`/api/events/<id>`, `/api/contexts/<id>`, `/api/artifacts/<i
 - `chronicle federation inbox inspect` と `/api/federation-inbox` は受信 message を preview/review 用に読むだけで、自動 import や local primary-record 変更は行いません。
 - `chronicle federation package create` は local-first な handoff bundle を directory として生成しますが、network transport、auto-apply、hosted sync は追加しません。
 - `chronicle federation package create --signature-mode local_dev` は reviewable な local dev signed-manifest surface を追加できますが、trust certification や本人性証明を与えるものではありません。
+- `chronicle federation package create` は consent metadata、visibility mapping、third-party sharing restriction を advisory metadata と audit に残せますが、法的同意管理や access control を自動化するものではありません。
 - `chronicle federation package verify` は bundle file hash と signed-manifest surface を検証しますが、署名済み trust や真正性証明そのものではありません。
 - `chronicle trust` は Node ID と Subject ID を分けた local trust registry を扱い、domain / purpose / capability 単位の trust relation を追加・撤回・一覧表示します。
 - federation message と package metadata は target node 向けの trust summary を advisory に参照します。
@@ -294,6 +297,7 @@ v1.2 以降では、`/api/events/<id>`, `/api/contexts/<id>`, `/api/artifacts/<i
 - [v1.88 Release Remaining Issues](docs/releases/remaining/v1.88-release-remaining-issues.md)
 - [v1.89 Release Remaining Issues](docs/releases/remaining/v1.89-release-remaining-issues.md)
 - [v1.90 Release Remaining Issues](docs/releases/remaining/v1.90-release-remaining-issues.md)
+- [v1.91 Release Remaining Issues](docs/releases/remaining/v1.91-release-remaining-issues.md)
 - [v1.8 Release Remaining Issues](docs/releases/remaining/v1.8-release-remaining-issues.md)
 - [v1.7 Release Notes](docs/releases/notes/release-notes-v1.7.0.md)
 - [v1.7 Smoke Test Profile](docs/releases/smoke/smoke-test-v1.7.md)
