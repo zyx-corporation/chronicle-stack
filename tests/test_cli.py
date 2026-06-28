@@ -217,7 +217,7 @@ def test_search(tmp_path: Path) -> None:
     runner.invoke(
         app,
         [
-            "record",
+                "record",
             "--type", "user_input",
             "--actor", "user",
             "--summary", "UniqueQueryTerm",
@@ -420,3 +420,283 @@ def test_rde_record_links_to_version(tmp_path: Path) -> None:
     assert v2_entry.get("rde_record_id") == rde_id, (
         f"Expected rde_record_id={rde_id} but got {v2_entry.get('rde_record_id')}"
     )
+
+
+def test_ai_boundary_preview_and_rde_draft_cli(tmp_path: Path) -> None:
+    os.chdir(str(tmp_path))
+    runner.invoke(app, ["init", "--title", "CLI AI Boundary Test"])
+
+    context_result = runner.invoke(
+        app,
+        [
+            "add-context",
+            "--title",
+            "AI Boundary Context",
+            "--summary",
+            "Safe context for preview",
+            "--scope",
+            "task",
+        ],
+    )
+    ctx_id = _extract_id(context_result.stdout, "ctx_")
+    assert ctx_id is not None
+
+    preview_result = runner.invoke(
+        app,
+        [
+            "ai-boundary",
+            "preview",
+            "--task",
+            "summarize for external model",
+            "--context",
+            ctx_id,
+            "--model",
+            "external:test-model",
+            "--record",
+            "--json",
+        ],
+    )
+    assert preview_result.exit_code == 0, preview_result.stderr
+    preview = json.loads(preview_result.stdout)
+    assert preview["recorded"] is True
+    assert preview["included_context_ids"] == [ctx_id]
+    assert preview["sayane_contract"]["import_command"].startswith("chronicle rde draft")
+
+    source_v1 = tmp_path / "ai-v1.md"
+    source_v1.write_text("Original", encoding="utf-8")
+    create_result = runner.invoke(
+        app,
+        [
+            "artifact",
+            "create",
+            "--title",
+            "AI Draft Artifact",
+            "--type",
+            "specification",
+            "--file",
+            str(source_v1),
+        ],
+    )
+    art_id = _extract_id(create_result.stdout, "art_")
+    ver1_id = _extract_id(create_result.stdout, "ver_")
+    assert art_id is not None and ver1_id is not None
+
+    source_v2 = tmp_path / "ai-v2.md"
+    source_v2.write_text("Updated", encoding="utf-8")
+    update_result = runner.invoke(
+        app,
+        [
+            "artifact",
+            "update",
+            "--artifact",
+            art_id,
+            "--file",
+            str(source_v2),
+            "--summary",
+            "Updated",
+        ],
+    )
+    ver2_id = _extract_id(update_result.stdout, "ver_")
+    assert ver2_id is not None
+
+    draft_result = runner.invoke(
+        app,
+        [
+            "rde",
+            "draft",
+            "--artifact",
+            art_id,
+            "--from",
+            ver1_id,
+            "--to",
+            ver2_id,
+            "--summary",
+            "AI-assisted delta",
+            "--mode",
+            "ai-assisted",
+            "--ai-summary",
+            "Separated AI summary",
+            "--interpretation",
+            "Treat this as a hypothesis",
+            "--record",
+            "--json",
+        ],
+    )
+    assert draft_result.exit_code == 0, draft_result.stderr
+    memo = json.loads(draft_result.stdout)
+    assert memo["recorded_rde_id"].startswith("rde_")
+    assert memo["linked_delta_object_id"] == f"obj_delta_{memo['recorded_rde_id']}"
+    assert memo["linked_hypothesis_object_id"].startswith("obj_")
+
+
+def test_reaction_cli_records_meaningful_relation(tmp_path: Path) -> None:
+    os.chdir(str(tmp_path))
+    runner.invoke(app, ["init", "--title", "CLI Reaction Test"])
+
+    result = runner.invoke(
+        app,
+        [
+            "reaction",
+            "record",
+            "--type",
+            "reference",
+            "--target-object",
+            "obj_target",
+            "--source-object",
+            "obj_source",
+            "--summary",
+            "Reference this object",
+            "--json",
+        ],
+    )
+    assert result.exit_code == 0, result.stderr
+    payload = json.loads(result.stdout)
+    assert payload["reaction_id"].startswith("react_")
+    assert payload["reaction_type"] == "reference"
+
+
+def test_chronicle_object_record_and_show(tmp_path: Path) -> None:
+    os.chdir(str(tmp_path))
+    runner.invoke(app, ["init", "--title", "CLI Test"])
+
+    record_result = runner.invoke(
+        app,
+        [
+            "object",
+            "record",
+            "--type",
+            "question",
+            "--summary",
+            "Why is this boundary needed?",
+            "--created-by",
+            "tester",
+        ],
+    )
+    assert record_result.exit_code == 0
+    object_id = _extract_id(record_result.stdout, "obj_")
+    assert object_id is not None
+
+    show_result = runner.invoke(app, ["object", "show", "--id", object_id, "--json"])
+    assert show_result.exit_code == 0
+    payload = json.loads(show_result.stdout)
+    assert payload["object_id"] == object_id
+    assert payload["object_type"] == "question"
+
+    list_result = runner.invoke(app, ["object", "list", "--type", "question", "--json"])
+    assert list_result.exit_code == 0
+    rows = json.loads(list_result.stdout)
+    assert any(row["object_id"] == object_id for row in rows)
+
+
+def test_federation_message_create_and_inspect(tmp_path: Path) -> None:
+    os.chdir(str(tmp_path))
+    runner.invoke(app, ["init", "--title", "CLI Test"])
+
+    create_result = runner.invoke(
+        app,
+        [
+            "federation",
+            "message",
+            "create",
+            "--type",
+            "request_context",
+            "--source-node",
+            "node:local:alpha",
+            "--target-node",
+            "node:local:beta",
+            "--purpose",
+            "project review",
+            "--object-ref",
+            "ctx_1",
+            "--json",
+        ],
+    )
+    assert create_result.exit_code == 0
+    payload = json.loads(create_result.stdout)
+    assert payload["message"]["message_type"] == "request_context"
+    assert payload["message"]["preview_only"] is True
+
+    inbox_create_result = runner.invoke(
+        app,
+        [
+            "federation",
+            "message",
+            "create",
+            "--type",
+            "decay_notice",
+            "--source-node",
+            "node:local:alpha",
+            "--target-node",
+            "node:local:beta",
+            "--purpose",
+            "decay review",
+            "--box",
+            "inbox",
+            "--json",
+        ],
+    )
+    assert inbox_create_result.exit_code == 0
+    inbox_payload = json.loads(inbox_create_result.stdout)
+    message_id = inbox_payload["message"]["message_id"]
+    assert inbox_payload["audit_recorded"] is True
+
+    inspect_result = runner.invoke(app, ["federation", "inbox", "inspect", "--json"])
+    assert inspect_result.exit_code == 0
+    rows = json.loads(inspect_result.stdout)
+    assert any(row["message_id"] == message_id and row["audit_recorded"] is True for row in rows)
+
+
+def test_trust_node_assert_withdraw_and_list(tmp_path: Path) -> None:
+    os.chdir(str(tmp_path))
+    runner.invoke(app, ["init", "--title", "CLI Test"])
+
+    node_result = runner.invoke(
+        app,
+        [
+            "trust",
+            "node",
+            "add",
+            "--node-id",
+            "node:partner:beta",
+            "--subject-id",
+            "subject:beta",
+            "--json",
+        ],
+    )
+    assert node_result.exit_code == 0
+    assert json.loads(node_result.stdout)["node_id"] == "node:partner:beta"
+
+    assert_result = runner.invoke(
+        app,
+        [
+            "trust",
+            "assert",
+            "--target-node",
+            "node:partner:beta",
+            "--target-subject-id",
+            "subject:beta",
+            "--domain",
+            "technical_review",
+            "--purpose",
+            "project review",
+            "--level",
+            "trusted",
+            "--capability",
+            "review",
+            "--json",
+        ],
+    )
+    assert assert_result.exit_code == 0
+    relation_id = json.loads(assert_result.stdout)["relation_id"]
+
+    withdraw_result = runner.invoke(
+        app,
+        ["trust", "withdraw", "--relation", relation_id, "--reason", "expired", "--json"],
+    )
+    assert withdraw_result.exit_code == 0
+    assert json.loads(withdraw_result.stdout)["status"] == "withdrawn"
+
+    list_result = runner.invoke(app, ["trust", "list", "--json"])
+    assert list_result.exit_code == 0
+    rows = json.loads(list_result.stdout)
+    assert any(row["relation_id"] == relation_id for row in rows)

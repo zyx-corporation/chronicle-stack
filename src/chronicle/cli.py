@@ -20,6 +20,7 @@ from chronicle.cli_review import review_app
 from chronicle.cli_runtime import runtime_app
 from chronicle.cli_summary import summary_app
 from chronicle.errors import ChronicleError
+from chronicle.interfaces.cli.ai_boundary import ai_boundary_app
 from chronicle.interfaces.cli.artifact import artifact_app
 from chronicle.interfaces.cli.boundary import boundary_app
 from chronicle.interfaces.cli.common import handle_error
@@ -27,9 +28,13 @@ from chronicle.interfaces.cli.core import register_core_commands
 from chronicle.interfaces.cli.decision import decision_app
 from chronicle.interfaces.cli.doctor import register_doctor_command
 from chronicle.interfaces.cli.export import register_export_command
+from chronicle.interfaces.cli.federation import federation_app
 from chronicle.interfaces.cli.index import index_app
 from chronicle.interfaces.cli.injection import injection_app
+from chronicle.interfaces.cli.object import object_app
+from chronicle.interfaces.cli.reaction import reaction_app
 from chronicle.interfaces.cli.rde import rde_app
+from chronicle.interfaces.cli.trust import trust_app
 from chronicle.ui_server import (
     DEFAULT_UI_HOST,
     DEFAULT_UI_PORT,
@@ -206,6 +211,7 @@ register_doctor_command(app)
 register_export_command(app)
 
 app.add_typer(artifact_app, name="artifact")
+app.add_typer(ai_boundary_app, name="ai-boundary")
 app.add_typer(decision_app, name="decision")
 app.add_typer(rde_app, name="rde")
 app.add_typer(index_app, name="index")
@@ -220,6 +226,10 @@ app.add_typer(ai_index_app, name="ai-index")
 app.add_typer(runtime_app, name="runtime")
 app.add_typer(summary_app, name="summary")
 app.add_typer(review_app, name="review")
+app.add_typer(object_app, name="object")
+app.add_typer(reaction_app, name="reaction")
+app.add_typer(federation_app, name="federation")
+app.add_typer(trust_app, name="trust")
 
 
 def main() -> None:

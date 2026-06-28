@@ -21,8 +21,10 @@ from chronicle.services.artifact_service import ArtifactService
 from chronicle.services.audit_service import AuditService
 from chronicle.services.boundary_service import BoundaryService
 from chronicle.services.chronicle_service import ChronicleService
+from chronicle.services.chronicle_object_service import ChronicleObjectService
 from chronicle.services.context_service import ContextService
 from chronicle.services.decision_service import DecisionService
+from chronicle.services.federation_message_service import FederationMessageService
 from chronicle.services.graph_index_service import GraphIndexService
 from chronicle.services.lifecycle_service import LifecycleService
 from chronicle.services.proposal_service import ProposalService
@@ -30,6 +32,7 @@ from chronicle.services.review_service import ReviewService
 from chronicle.services.runtime_config_service import RuntimeConfigService
 from chronicle.services.runtime_service import RuntimeService
 from chronicle.services.summary_job_service import SummaryJobService
+from chronicle.services.trust_service import TrustService
 from chronicle.services.vector_index_service import VectorIndexService
 from chronicle.models.review import ReviewerIdentityKind
 from chronicle.ui_server import (
@@ -209,6 +212,33 @@ def _populate(root):
         query="UI Context",
         record=True,
     )
+    question_object = ChronicleObjectService(root).record(
+        object_type="question",
+        summary="Why does this UI boundary exist?",
+        created_by="tester",
+        context_id=context.context_id,
+    )
+    trust_node = TrustService(root).add_node_profile(
+        node_id="node:partner:beta",
+        subject_id="subject:beta",
+        display_name="Partner Beta",
+    )
+    trust_relation = TrustService(root).assert_relation(
+        target_node="node:partner:beta",
+        target_subject_id="subject:beta",
+        domain="technical_review",
+        purpose="ui inspect",
+        level="trusted",
+        capabilities=["review", "reference"],
+    )
+    inbox_message = FederationMessageService(root).create_message(
+        message_type="request_context",
+        source_node="node:local:alpha",
+        target_node="node:partner:beta",
+        purpose="ui inspect",
+        object_refs=[question_object.object_id],
+        box="inbox",
+    )
     summary_job = SummaryJobService(root).create_manual_draft(
         title="UI Summary Draft",
         summary_text="UI summary draft body.",
@@ -224,6 +254,10 @@ def _populate(root):
         "lifecycle_id": lifecycle_marker.lifecycle_id,
         "runtime_summary_event_id": runtime_summary.event_id,
         "runtime_plan_event_id": runtime_plan.event_id,
+        "question_object_id": question_object.object_id,
+        "federation_inbox_message_id": inbox_message.envelope.message_id,
+        "trust_node_id": trust_node.node_id,
+        "trust_relation_id": trust_relation.relation_id,
         "summary_job_id": summary_job.summary_job_id,
     }
 
@@ -643,7 +677,7 @@ def test_ui_overview_data(tmp_path):
     assert overview["counts"]["artifacts"] == 2
     assert overview["counts"]["decisions"] == 1
     assert overview["counts"]["boundary_rules"] == 1
-    assert overview["counts"]["audit_events"] == 1
+    assert overview["counts"]["audit_events"] == 2
     assert overview["counts"]["lifecycle_markers"] == 1
     assert overview["counts"]["summary_jobs"] == 1
     assert overview["runtime_boundary"]["read_only"] is True
@@ -1433,6 +1467,21 @@ def test_ui_data_service_detail_endpoints(tmp_path):
 
     assert service.detail_payload(f"/api/events/{ids['event_id']}")["record"]["event_id"] == ids["event_id"]
     assert service.detail_payload(f"/api/contexts/{ids['context_id']}")["record"]["title"] == "UI Context"
+    object_detail = service.detail_payload(f"/api/chronicle-objects/{ids['question_object_id']}")["record"]
+    assert object_detail["object_type"] == "question"
+    assert f"/api/contexts/{ids['context_id']}" in object_detail["related_resource_paths"]
+    federation_detail = service.detail_payload(
+        f"/api/federation-inbox/{ids['federation_inbox_message_id']}"
+    )["record"]
+    assert federation_detail["message_type"] == "request_context"
+    assert federation_detail["audit_recorded"] is False
+    assert federation_detail["related_resource_paths"] == [f"/api/chronicle-objects/{ids['question_object_id']}"]
+    trust_node_detail = service.detail_payload(f"/api/trust-nodes/{ids['trust_node_id']}")["record"]
+    trust_relation_detail = service.detail_payload(
+        f"/api/trust-relations/{ids['trust_relation_id']}"
+    )["record"]
+    assert trust_node_detail["subject_id"] == "subject:beta"
+    assert trust_relation_detail["level"] == "trusted"
     artifact_detail = service.detail_payload(f"/api/artifacts/{ids['artifact_id']}")["record"]
     assert artifact_detail["title"] == "UI Artifact"
     assert artifact_detail["versions"]
@@ -1585,6 +1634,95 @@ def test_runtime_records_include_query_engine_trial_rows(tmp_path):
         "ui.query_engine_trial.note.read_only_derived"
     )
     assert detail["query_engine_trial_preview"]["message_key"] == "ui.query_engine_trial.message.recorded"
+
+
+def test_runtime_records_include_ai_boundary_preview_rows(tmp_path):
+    from datetime import datetime, timezone
+
+    from chronicle.models.context import Context, ContextScope
+    from chronicle.models.event import Actor, ChronicleEvent, EventType
+    from chronicle.services.ai_boundary_service import AiBoundaryService
+
+    ChronicleService(tmp_path).init("UI AI Boundary")
+    metadata = ChronicleService(tmp_path).load_metadata()
+    ChronicleService(tmp_path).append_event(
+        ChronicleEvent(
+            event_id="evt_ui_ai_boundary",
+            chronicle_id=metadata.chronicle_id,
+            timestamp=datetime(2026, 6, 28, tzinfo=timezone.utc),
+            event_type=EventType.CONTEXT_ADDED,
+            actor=Actor.USER,
+            summary="Add UI AI Boundary Context",
+            payload={
+                "context": Context(
+                    context_id="ctx_ui_ai_boundary",
+                    title="UI AI Boundary Context",
+                    summary="Context for AI boundary preview UI",
+                    scope=ContextScope.TASK,
+                    created_at=datetime(2026, 6, 28, tzinfo=timezone.utc),
+                ).model_dump(mode="json")
+            },
+        )
+    )
+    ChronicleService(tmp_path).rebuild_indexes()
+    preview = AiBoundaryService(tmp_path).preview(
+        task="ui ai boundary review",
+        model_id="external:test-model",
+        context_ids=["ctx_ui_ai_boundary"],
+        record=True,
+    )
+
+    service = ChronicleUIDataService(tmp_path)
+    rows = service.runtime_records()["runtime_records"]
+    row = next(item for item in rows if item["event_id"] == preview.event_id)
+    assert row["runtime_record_kind"] == "ai_boundary_preview"
+    assert row["runtime_record_preview"]["suggested_cli_family"] == "chronicle ai-boundary preview --record"
+
+    detail = service.detail_payload(f"/api/runtime-records/{preview.event_id}")["record"]
+    assert detail["runtime_record_preview"]["record_kind"] == "ai_boundary_preview"
+    assert any(link["path"] == "/api/contexts/ctx_ui_ai_boundary" for link in detail["related_links"])
+
+
+def test_context_sns_views_include_reactions_and_lineage(tmp_path):
+    from chronicle.models.chronicle_object import ChronicleObjectType
+    from chronicle.models.reaction import ChronicleReactionType
+    from chronicle.services.chronicle_object_service import ChronicleObjectService
+    from chronicle.services.reaction_service import ReactionService
+
+    ids = _populate(tmp_path)
+    objection = ChronicleObjectService(tmp_path).record(
+        object_type=ChronicleObjectType.OBJECTION,
+        summary="Need stronger evidence",
+        created_by="reviewer",
+        detail="Current claim lacks support.",
+        artifact_id=ids["artifact_id"],
+        decision_id=ids["decision_id"],
+    )
+    ReactionService(tmp_path).record(
+        reaction_type=ChronicleReactionType.INSUFFICIENT_EVIDENCE,
+        created_by="reviewer",
+        target_object_id=objection.object_id,
+        summary="Evidence is insufficient",
+        detail="Requesting more support before adoption.",
+        target_artifact_id=ids["artifact_id"],
+        target_decision_id=ids["decision_id"],
+    )
+
+    service = ChronicleUIDataService(tmp_path)
+    reactions = service.reaction_records()["reactions"]
+    assert reactions[0]["reaction_type"] == "insufficient_evidence"
+    assert reactions[0]["related_resource_paths"][0] == f"/api/chronicle-objects/{objection.object_id}"
+
+    lineage_rows = service.lineage_view()["lineage_view"]
+    lineage_row = next(row for row in lineage_rows if row["lineage_id"] == objection.object_id)
+    assert lineage_row["reaction_count"] == 1
+
+    objection_rows = service.objection_view()["objection_view"]
+    assert any(row["object_id"] == objection.object_id for row in objection_rows)
+
+    contract = service.context_sns_contract()["context_sns_contract"]
+    assert contract["question_follow_design"]["status"] == "design_only"
+    assert "reference" in contract["reaction_types"]
 
 
 def test_overview_runtime_records_summarize_query_engine_trials(tmp_path):
@@ -2552,6 +2690,11 @@ def test_http_root_and_read_only_endpoints(tmp_path):
             "/api/overview": "counts",
             "/api/events": "events",
             "/api/contexts": "contexts",
+            "/api/chronicle-objects": "chronicle_objects",
+            "/api/federation-inbox": "federation_messages",
+            "/api/federation-outbox": "federation_messages",
+            "/api/trust-nodes": "trust_nodes",
+            "/api/trust-relations": "trust_relations",
             "/api/artifacts": "artifacts",
             "/api/decisions": "decisions",
             "/api/rde": "rde_records",
@@ -2579,6 +2722,10 @@ def test_http_root_and_read_only_endpoints(tmp_path):
         detail_paths = [
             f"/api/events/{ids['event_id']}",
             f"/api/contexts/{ids['context_id']}",
+            f"/api/chronicle-objects/{ids['question_object_id']}",
+            f"/api/federation-inbox/{ids['federation_inbox_message_id']}",
+            f"/api/trust-nodes/{ids['trust_node_id']}",
+            f"/api/trust-relations/{ids['trust_relation_id']}",
             f"/api/artifacts/{ids['artifact_id']}",
             f"/api/decisions/{ids['decision_id']}",
             f"/api/boundary/{ids['rule_id']}",
@@ -3422,7 +3569,7 @@ def test_http_review_action_enabled_route_handles_decision_persistence_failure(t
         )
         assert payload["failure_contract"]["recovery_commands"][0] == "chronicle review queue --include-resolved --json"
         assert payload["failure_contract"]["recovery_commands"][1] == f"chronicle audit show --id {payload['audit_id']} --json"
-        assert len(AuditService(tmp_path).list_events()) == 2
+        assert len(AuditService(tmp_path).list_events()) == 3
         assert ReviewService(tmp_path).history(event_id=ids["runtime_summary_event_id"]) == []
     finally:
         server.shutdown()

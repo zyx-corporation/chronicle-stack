@@ -165,6 +165,7 @@ def context_package_cmd(
     purpose: Annotated[str, typer.Option("--purpose", help="Purpose for building the package.")],
     target: Annotated[IntegrationTargetEnvironment, typer.Option("--target", help="Target environment: local or external.")] = IntegrationTargetEnvironment.LOCAL,
     context_id: Annotated[list[str] | None, typer.Option("--context", help="Context ID to include. Repeatable. If omitted, all contexts are included.")] = None,
+    trust_target_node: Annotated[str | None, typer.Option("--trust-target-node", help="Optional trust target node to summarize in package metadata.")] = None,
     output: Annotated[Path | None, typer.Option("--output", "-o")] = None,
     persist: Annotated[bool, typer.Option("--persist", help="Persist the package under .chronicle/packages.")] = False,
 ) -> None:
@@ -178,6 +179,7 @@ def context_package_cmd(
         purpose=purpose,
         target_environment=target,
         context_ids=context_id,
+        trust_target_node=trust_target_node,
     )
     if persist:
         package_dir = service.save_package(package)

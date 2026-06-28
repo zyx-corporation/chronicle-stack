@@ -171,3 +171,40 @@ def test_rde_record_is_searchable(rde_service, tmp_path):
     assert len(results) >= 1
     kinds = {r.kind for r in results}
     assert "rde" in kinds or "event" in kinds
+
+
+def test_rde_draft_can_record_ai_assisted_hypothesis(tmp_path):
+    ChronicleService(tmp_path).init("RDE Draft Test")
+    artifacts = ArtifactService(tmp_path)
+    source_v1 = tmp_path / "draft-v1.md"
+    source_v1.write_text("Original", encoding="utf-8")
+    artifact, v1 = artifacts.create(
+        title="AI Draft Target",
+        artifact_type=ArtifactType.SPECIFICATION,
+        source_file=source_v1,
+    )
+
+    source_v2 = tmp_path / "draft-v2.md"
+    source_v2.write_text("Updated with AI-assisted delta", encoding="utf-8")
+    _, v2 = artifacts.update(
+        artifact_id=artifact.artifact_id,
+        source_file=source_v2,
+        summary="Updated",
+    )
+
+    memo = RdeService(tmp_path).draft(
+        artifact_id=artifact.artifact_id,
+        from_version_id=v1.version_id,
+        to_version_id=v2.version_id,
+        summary="AI-assisted draft",
+        mode="ai-assisted",
+        ai_summary="AI summary separated from source.",
+        ai_response="AI raw response.",
+        ai_model="external:test-model",
+        interpretation="This AI interpretation should remain a hypothesis.",
+        record=True,
+    )
+
+    assert memo.recorded_rde_id is not None
+    assert memo.linked_delta_object_id == f"obj_delta_{memo.recorded_rde_id}"
+    assert memo.linked_hypothesis_object_id is not None

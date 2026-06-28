@@ -14,11 +14,14 @@ from chronicle.services.artifact_service import ArtifactService
 from chronicle.services.audit_service import AuditService
 from chronicle.services.boundary_service import BoundaryService
 from chronicle.services.chronicle_service import ChronicleService
+from chronicle.services.chronicle_object_service import ChronicleObjectService
 from chronicle.services.context_service import ContextService
+from chronicle.services.federation_message_service import FederationMessageService
 from chronicle.services.lifecycle_service import LifecycleService
 from chronicle.services.runtime_config_service import RuntimeConfigService
 from chronicle.services.runtime_service import RuntimeService
 from chronicle.services.summary_job_service import SummaryJobService
+from chronicle.services.trust_service import TrustService
 from chronicle.ui_smoke import run_ui_smoke
 
 
@@ -92,6 +95,33 @@ def _populate(root, monkeypatch=None):
     RuntimeService(root).retrieve_plan(
         query="Smoke Context",
         record=True,
+    )
+    ChronicleObjectService(root).record(
+        object_type="question",
+        summary="What boundary should this smoke test protect?",
+        created_by="tester",
+        context_id=context.context_id,
+    )
+    TrustService(root).add_node_profile(
+        node_id="node:partner:beta",
+        subject_id="subject:beta",
+        display_name="Partner Beta",
+    )
+    TrustService(root).assert_relation(
+        target_node="node:partner:beta",
+        target_subject_id="subject:beta",
+        domain="technical_review",
+        purpose="smoke review",
+        level="trusted",
+        capabilities=["review"],
+    )
+    FederationMessageService(root).create_message(
+        message_type="request_context",
+        source_node="node:local:alpha",
+        target_node="node:partner:beta",
+        purpose="smoke review",
+        object_refs=[context.context_id],
+        box="inbox",
     )
     SummaryJobService(root).create_manual_draft(
         title="Smoke Summary Draft",
@@ -167,6 +197,10 @@ def test_run_ui_smoke_success(tmp_path, monkeypatch):
     assert any(name.endswith("#reviewer-boundary") for name in check_names)
     assert any(name.endswith("#reviewer-boundary-drilldown") for name in check_names)
     assert any(name.startswith("/api/contexts/") for name in check_names)
+    assert any(name.startswith("/api/chronicle-objects/") for name in check_names)
+    assert any(name.startswith("/api/federation-inbox/") for name in check_names)
+    assert any(name.startswith("/api/trust-nodes/") for name in check_names)
+    assert any(name.startswith("/api/trust-relations/") for name in check_names)
     assert "/api/runtime-records/<id>#package-handoff-structured-contract" in check_names
     assert "/api/runtime-records/<id>#embedded-package-review-structured-contract" in check_names
     assert "/api/review-queue/<id>#package-readiness-structured-contract" in check_names

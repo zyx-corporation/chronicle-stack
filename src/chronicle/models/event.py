@@ -28,6 +28,8 @@ class EventType(StrEnum):
     SUMMARY_JOB_CREATED = "summary_job_created"
     REVIEW_DECISION_RECORDED = "review_decision_recorded"
     PROPOSAL_RECORDED = "proposal_recorded"
+    CHRONICLE_OBJECT_RECORDED = "chronicle_object_recorded"
+    CHRONICLE_REACTION_RECORDED = "chronicle_reaction_recorded"
 
 
 class Actor(StrEnum):

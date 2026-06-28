@@ -19,7 +19,6 @@
 ## 対象 repo
 
 - repository: `zyx-corporation/chronicle-external-query`
-- local checkout: `/Users/tomyuk/Projects/Chronicle/chronicle-external-query`
 - role: Chronicle Stack の downstream derived consumer
 - source boundary: Chronicle primary records を上書きせず、Chronicle から出力された derived contract を入力に使う
 
@@ -189,10 +188,10 @@ chronicle-external-query/
 - bundle と adapter skeleton がある
 - trial report と escalation cue がある
 
-ただし、Chronicle 側の issue-template scaffold は現時点で local-only であり、外部 repo 側で採用するかどうかは別判断とする。
+Chronicle 側の issue-template scaffold は local-only presentation にとどめ、Chronicle core の export contract には含めない。
+外部 repo 側で同等の issue 起票補助を採用する場合も、Chronicle からの直接 export や issue 作成は前提にしない。
 
 ## 次の判断点
 
-- issue-template scaffold を external repo に export するか
 - external repo の最初の runtime を graph-only にするか、最初から hybrid retrieval にするか
 - deployment を repo 初期スコープに含めるか
