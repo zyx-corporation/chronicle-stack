@@ -205,6 +205,7 @@ chronicle-federation-package/
 - manifest 自身は存在必須だが、自己参照 hash を避けるため payload file list からは分離する。
 - `chronicle federation package create --signature-mode local_dev` により、reviewable な local dev signed-manifest surface を生成できる。
 - `chronicle federation package verify` は `unsigned`, `signed`, `mismatch`, `expired`, `revoked` を区別するが、どれも trust certification や remote identity proof には昇格させない。
+- `chronicle federation package preview` と `chronicle federation package import-preview` は inspect/redaction/verify を advisory review surface として束ねるが、primary record authority は Chronicle JSONL 側に残す。
 
 ### 6.5 非対象
 

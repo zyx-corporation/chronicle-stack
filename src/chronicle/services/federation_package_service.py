@@ -14,6 +14,8 @@ from chronicle.models.federation_package import (
     FederationPackageFileEntry,
     FederationPackageManifest,
     FederationPackageConsent,
+    FederationPackagePreviewFinding,
+    FederationPackagePreviewReport,
     FederationPackageRedactionReport,
     FederationPackageSignature,
     FederationPackageSignatureMode,
@@ -230,6 +232,54 @@ class FederationPackageService:
             warnings=warnings,
         )
 
+    def preview_package(self, package_dir: Path) -> FederationPackagePreviewReport:
+        inspect_payload = self.inspect_package(package_dir)
+        verification = self.verify_package(package_dir)
+        manifest = FederationPackageManifest.model_validate(inspect_payload["manifest"])
+        redaction_report = FederationPackageRedactionReport.model_validate(inspect_payload["redaction_report"])
+        findings = self._preview_findings(manifest, redaction_report, verification)
+        status = self._preview_status(findings)
+        warning_codes = [finding.code for finding in findings if finding.severity != "pass"]
+        return FederationPackagePreviewReport(
+            package_path=str(package_dir),
+            status=status,
+            import_candidate=verification.valid and status != "blocked",
+            boundary_note=(
+                "Federation package preview remains derived, read-only, and non-authoritative over Chronicle primary records."
+            ),
+            manifest=manifest.model_dump(mode="json"),
+            redaction_report=redaction_report.model_dump(mode="json"),
+            verification=verification.model_dump(mode="json"),
+            findings=findings,
+            warnings=warning_codes,
+        )
+
+    def import_preview_package(self, package_dir: Path) -> FederationPackagePreviewReport:
+        preview = self.preview_package(package_dir)
+        import_findings = list(preview.findings)
+        if not preview.import_candidate:
+            import_findings.append(
+                FederationPackagePreviewFinding(
+                    severity="blocked",
+                    code="import_candidate_not_ready",
+                    summary="Import preview remains blocked until structural verification and package review findings are resolved.",
+                    recommendation="Re-run `chronicle federation package verify` and inspect preview findings before any manual import decision.",
+                )
+            )
+        return FederationPackagePreviewReport(
+            package_path=preview.package_path,
+            status=self._preview_status(import_findings),
+            import_candidate=preview.import_candidate,
+            boundary_note=(
+                "Import preview remains advisory and manual-only; Chronicle primary records stay authoritative until a separate import step is explicitly reviewed."
+            ),
+            manifest=preview.manifest,
+            redaction_report=preview.redaction_report,
+            verification=preview.verification,
+            findings=import_findings,
+            warnings=[finding.code for finding in import_findings if finding.severity != "pass"],
+        )
+
     def _load_manifest(self, package_dir: Path) -> FederationPackageManifest:
         manifest_path = package_dir / "manifest.json"
         if not package_dir.exists():
@@ -328,6 +378,81 @@ class FederationPackageService:
             recommended_visibility=FederationPackageVisibility.FEDERATED,
             rationale="default_unknown_visibility_maps_to_reviewable_federated_scope",
         )
+
+    def _preview_findings(
+        self,
+        manifest: FederationPackageManifest,
+        redaction_report: FederationPackageRedactionReport,
+        verification: FederationPackageVerificationReport,
+    ) -> list[FederationPackagePreviewFinding]:
+        findings: list[FederationPackagePreviewFinding] = []
+        if verification.signature_status == FederationPackageSignatureStatus.UNSIGNED:
+            findings.append(
+                FederationPackagePreviewFinding(
+                    severity="warning",
+                    code="signature_unsigned",
+                    summary="Manifest signature is unsigned, so provenance remains reviewable but not signed.",
+                    recommendation="Use `--signature-mode local_dev` when you need a local signed-manifest review surface.",
+                )
+            )
+        if verification.signature_status in {
+            FederationPackageSignatureStatus.MISMATCH,
+            FederationPackageSignatureStatus.EXPIRED,
+            FederationPackageSignatureStatus.REVOKED,
+        }:
+            findings.append(
+                FederationPackagePreviewFinding(
+                    severity="blocked",
+                    code=f"signature_{verification.signature_status.value}",
+                    summary=f"Manifest signature status is `{verification.signature_status.value}`.",
+                    recommendation="Resolve signature verification issues before any downstream preview or manual import decision.",
+                )
+            )
+        if not verification.valid:
+            findings.append(
+                FederationPackagePreviewFinding(
+                    severity="blocked",
+                    code="payload_verification_failed",
+                    summary="At least one payload file failed structural verification.",
+                    recommendation="Recreate the federation package and rerun verification before sharing or import review.",
+                )
+            )
+        if manifest.consent.status != "recorded":
+            findings.append(
+                FederationPackagePreviewFinding(
+                    severity="warning",
+                    code="consent_not_recorded",
+                    summary="Consent metadata is not recorded for this federation package.",
+                    recommendation="Add consent metadata when the sharing workflow requires explicit review provenance.",
+                )
+            )
+        if not manifest.consent.third_party_sharing_allowed:
+            findings.append(
+                FederationPackagePreviewFinding(
+                    severity="warning",
+                    code="third_party_sharing_restricted",
+                    summary="Third-party sharing remains restricted for this package.",
+                    recommendation="Keep redistribution manual and limited to the declared target unless the restriction is updated.",
+                )
+            )
+        if "package_visibility_broader_than_recommended" in redaction_report.warning_codes:
+            findings.append(
+                FederationPackagePreviewFinding(
+                    severity="warning",
+                    code="package_visibility_broader_than_recommended",
+                    summary="Requested package visibility is broader than at least one record's recommended federation visibility.",
+                    recommendation="Lower the package visibility or review the visibility mappings before external handoff.",
+                )
+            )
+        return findings
+
+    @staticmethod
+    def _preview_status(findings: list[FederationPackagePreviewFinding]) -> str:
+        if any(finding.severity == "blocked" for finding in findings):
+            return "blocked"
+        if any(finding.severity == "warning" for finding in findings):
+            return "warning"
+        return "pass"
 
     @staticmethod
     def _visibility_rank(visibility: FederationPackageVisibility) -> int:

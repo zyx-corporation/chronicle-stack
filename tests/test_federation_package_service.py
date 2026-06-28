@@ -286,3 +286,61 @@ def test_federation_package_records_consent_and_third_party_restriction(tmp_path
     assert audits[-1].metadata["consent_status"] == "recorded"
     assert audits[-1].metadata["consent_scope"] == "project-review"
     assert audits[-1].metadata["third_party_sharing_allowed"] == "false"
+
+
+def test_federation_package_preview_embeds_verification_and_findings(tmp_path):
+    ChronicleService(tmp_path).init("Federation Package Preview Test")
+    _append_context(
+        tmp_path,
+        Context(
+            context_id="ctx_fed_preview",
+            title="Federation Preview Context",
+            summary="Previewable content",
+            scope=ContextScope.TASK,
+            created_at=datetime(2026, 6, 28, tzinfo=timezone.utc),
+        ),
+    )
+
+    output_dir = tmp_path / "federation-package"
+    FederationPackageService(tmp_path).create_package(
+        purpose="preview review",
+        target_node="node:partner:beta",
+        output_dir=output_dir,
+    )
+
+    preview = FederationPackageService(tmp_path).preview_package(output_dir)
+    assert preview.status == "warning"
+    assert preview.import_candidate is True
+    assert preview.verification["signature_status"] == FederationPackageSignatureStatus.UNSIGNED
+    assert any(finding.code == "signature_unsigned" for finding in preview.findings)
+    assert any(finding.code == "consent_not_recorded" for finding in preview.findings)
+
+
+def test_federation_package_import_preview_blocks_invalid_package(tmp_path):
+    ChronicleService(tmp_path).init("Federation Package Import Preview Test")
+    _append_context(
+        tmp_path,
+        Context(
+            context_id="ctx_fed_import_preview",
+            title="Federation Import Preview Context",
+            summary="Import previewable content",
+            scope=ContextScope.TASK,
+            created_at=datetime(2026, 6, 28, tzinfo=timezone.utc),
+        ),
+    )
+
+    output_dir = tmp_path / "federation-package"
+    FederationPackageService(tmp_path).create_package(
+        purpose="import preview",
+        target_node="node:partner:beta",
+        output_dir=output_dir,
+        signature_mode=FederationPackageSignatureMode.LOCAL_DEV,
+        signature_revoked=True,
+        signature_revocation_reason="review window closed",
+    )
+
+    preview = FederationPackageService(tmp_path).import_preview_package(output_dir)
+    assert preview.status == "blocked"
+    assert preview.import_candidate is False
+    assert preview.verification["signature_status"] == FederationPackageSignatureStatus.REVOKED
+    assert any(finding.code == "import_candidate_not_ready" for finding in preview.findings)
