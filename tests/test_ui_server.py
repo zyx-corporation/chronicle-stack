@@ -728,6 +728,9 @@ def test_ui_overview_data(tmp_path):
     assert overview["federation_preflight_summary"]["suggested_package_inspect_cli"].startswith(
         "chronicle federation package inspect --package-dir"
     )
+    assert overview["federation_preflight_summary"]["suggested_package_verify_cli"].startswith(
+        "chronicle federation package verify --package-dir"
+    )
     assert overview["federation_preflight_summary"]["suggested_import_preview_cli"].startswith(
         "chronicle federation package import-preview --package-dir"
     )
@@ -2498,6 +2501,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "detailLine('Boundary check CLI', federationPreflight.suggested_boundary_check_cli || '')" in html
     assert "detailLine('Package preview CLI', federationPreflight.suggested_package_preview_cli || '')" in html
     assert "detailLine('Package inspect CLI', federationPreflight.suggested_package_inspect_cli || '')" in html
+    assert "detailLine('Package verify CLI', federationPreflight.suggested_package_verify_cli || '')" in html
     assert "detailLine('Import preview CLI', federationPreflight.suggested_import_preview_cli || '')" in html
     assert "openEndpointButton('/api/federation-inbox')" in html
     assert "openEndpointButton('/api/federation-outbox')" in html
