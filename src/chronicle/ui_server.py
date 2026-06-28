@@ -9361,6 +9361,11 @@ function renderOverviewFederationPanel(federationSummary, federationPreflight, f
     overviewCountButton('Consent records', federationPreflight.consent_record_count ?? 0, 'badge-neutral', '/api/audit'),
     overviewCountButton('Inbox audited', federationSummary.inbox_audit_recorded_count ?? 0, 'badge-ready', '/api/federation-inbox'),
   ]);
+  const packageReviewCliCommands = [
+    federationPreflight.suggested_package_inspect_cli || '',
+    federationPreflight.suggested_package_verify_cli || '',
+    federationPreflight.suggested_package_preview_cli || '',
+  ].filter(Boolean);
   return renderPanel(
     sectionTitle(label('section.federation', 'Federation'))
     + statusMessageBody(federationPreflight.status, localizedPayloadText(federationPreflight), [
@@ -9369,10 +9374,8 @@ function renderOverviewFederationPanel(federationSummary, federationPreflight, f
     + detailLine('Boundary check mode', federationPreflight.boundary_check_mode || '')
     + detailLine('Boundary check note', federationPreflight.boundary_check_message_key ? formatLabel(federationPreflight.boundary_check_message_key, federationPreflight.boundary_check_message_params || {{}}, federationPreflight.boundary_check_message || '') : (federationPreflight.boundary_check_message || ''))
     + detailLine('Boundary check CLI', federationPreflight.suggested_boundary_check_cli || '')
-    + detailLine('Package preview CLI', federationPreflight.suggested_package_preview_cli || '')
-    + detailLine('Package inspect CLI', federationPreflight.suggested_package_inspect_cli || '')
-    + detailLine('Package verify CLI', federationPreflight.suggested_package_verify_cli || '')
-    + detailLine('Import preview CLI', federationPreflight.suggested_import_preview_cli || '')
+    + detailListLine('Package review CLIs', packageReviewCliCommands, ' | ')
+    + detailLine('Import review CLI', federationPreflight.suggested_import_preview_cli || '')
     + detailLine('Preflight counts', federationPreflight.counts_summary_key ? formatLabel(federationPreflight.counts_summary_key, federationPreflight.counts_summary_params || {{}}, '') : '')
     + preflightButtons
     + statusMessageBody(federationOverlap.status, localizedPayloadText(federationOverlap), [
