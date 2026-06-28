@@ -280,6 +280,105 @@ class FederationPackageService:
             warnings=[finding.code for finding in import_findings if finding.severity != "pass"],
         )
 
+    def boundary_check(
+        self,
+        *,
+        purpose: str,
+        target_node: str,
+        visibility: FederationPackageVisibility = FederationPackageVisibility.FEDERATED,
+        context_ids: list[str] | None = None,
+        trust_target_node: str | None = None,
+    ) -> dict[str, object]:
+        package = self.integration_packages.build_context_package(
+            purpose=purpose,
+            target_environment=IntegrationTargetEnvironment.EXTERNAL,
+            context_ids=context_ids,
+            trust_target_node=trust_target_node or target_node,
+        )
+        visibility_mappings = [
+            self._visibility_mapping_for_record(record)
+            for record in package.records
+        ]
+        recommended_visibility = self._recommended_package_visibility(visibility_mappings)
+        warning_codes = sorted(
+            {
+                *package.manifest.warnings,
+                *(warning for record in package.records for warning in record.warnings),
+                *(
+                    {"package_visibility_broader_than_recommended"}
+                    if self._visibility_rank(visibility) > self._visibility_rank(recommended_visibility)
+                    else set()
+                ),
+                *(
+                    {"consent_required_for_external_handoff"}
+                    if package.records
+                    else set()
+                ),
+            }
+        )
+        return {
+            "status": "warning" if warning_codes else "pass",
+            "purpose": purpose,
+            "target_node": target_node,
+            "requested_visibility": visibility.value,
+            "recommended_visibility": recommended_visibility.value,
+            "record_count": len(package.records),
+            "referenced_records": package.manifest.referenced_records,
+            "visibility_mappings": [item.model_dump(mode="json") for item in visibility_mappings],
+            "warning_codes": warning_codes,
+            "trust_preview": package.manifest.metadata.get("trust_preview", ""),
+            "consent_required": bool(package.records),
+            "boundary_note": (
+                "Federation boundary check is a local preflight surface and does not create a package, transport data, or mutate Chronicle primary records."
+            ),
+        }
+
+    def record_consent(
+        self,
+        *,
+        target_node: str,
+        purpose: str,
+        scope: str,
+        granted_by: str,
+        third_party_sharing_allowed: bool,
+        third_party_sharing_reason: str | None = None,
+        context_ids: list[str] | None = None,
+        recorded_at: datetime | None = None,
+    ) -> dict[str, object]:
+        self.integration_packages.chronicle.require_initialized()
+        consent_recorded_at = recorded_at or datetime.now(timezone.utc).astimezone()
+        audit = self.audit.record(
+            operation=AuditOperation.CONSENT_RECORD,
+            actor=granted_by or "unknown",
+            purpose=purpose,
+            target_environment=AuditTargetEnvironment.PACKAGE,
+            referenced_records=context_ids or [],
+            result=AuditSeverity.INFO,
+            summary=f"Recorded federation consent for target node {target_node}.",
+            metadata={
+                "target_node": target_node,
+                "consent_scope": scope,
+                "third_party_sharing_allowed": str(third_party_sharing_allowed).lower(),
+                "third_party_sharing_reason": third_party_sharing_reason or "",
+                "recorded_at": consent_recorded_at.isoformat(),
+            },
+        )
+        return {
+            "status": "recorded",
+            "audit_id": audit.audit_id,
+            "target_node": target_node,
+            "purpose": purpose,
+            "scope": scope,
+            "granted_by": granted_by,
+            "recorded_at": consent_recorded_at.isoformat(),
+            "third_party_sharing_allowed": third_party_sharing_allowed,
+            "third_party_sharing_reason": third_party_sharing_reason,
+            "referenced_records": context_ids or [],
+            "boundary_note": (
+                "Consent record is append-only audit metadata and does not create or import a federation package by itself."
+            ),
+        }
+
     def _load_manifest(self, package_dir: Path) -> FederationPackageManifest:
         manifest_path = package_dir / "manifest.json"
         if not package_dir.exists():
@@ -445,6 +544,13 @@ class FederationPackageService:
                 )
             )
         return findings
+
+    def _recommended_package_visibility(
+        self, mappings: list[FederationPackageVisibilityMappingEntry]
+    ) -> FederationPackageVisibility:
+        if not mappings:
+            return FederationPackageVisibility.FEDERATED
+        return min(mappings, key=lambda item: self._visibility_rank(item.recommended_visibility)).recommended_visibility
 
     @staticmethod
     def _preview_status(findings: list[FederationPackagePreviewFinding]) -> str:

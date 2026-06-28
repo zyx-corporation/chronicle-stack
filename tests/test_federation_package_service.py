@@ -2,7 +2,11 @@ from datetime import datetime, timezone
 
 from chronicle.models.classification import ClassificationLayer, ClassificationMetadata, Sensitivity
 from chronicle.models.context import Context, ContextScope
-from chronicle.models.federation_package import FederationPackageSignatureMode, FederationPackageSignatureStatus
+from chronicle.models.federation_package import (
+    FederationPackageSignatureMode,
+    FederationPackageSignatureStatus,
+    FederationPackageVisibility,
+)
 from chronicle.models.event import Actor, ChronicleEvent, EventType
 from chronicle.services.audit_service import AuditService
 from chronicle.services.chronicle_service import ChronicleService
@@ -344,3 +348,56 @@ def test_federation_package_import_preview_blocks_invalid_package(tmp_path):
     assert preview.import_candidate is False
     assert preview.verification["signature_status"] == FederationPackageSignatureStatus.REVOKED
     assert any(finding.code == "import_candidate_not_ready" for finding in preview.findings)
+
+
+def test_federation_boundary_check_reports_recommended_visibility(tmp_path):
+    ChronicleService(tmp_path).init("Federation Boundary Check Test")
+    _append_context(
+        tmp_path,
+        Context(
+            context_id="ctx_fed_boundary_check",
+            title="Federation Boundary Context",
+            summary="Boundary check content",
+            scope=ContextScope.TASK,
+            created_at=datetime(2026, 6, 28, tzinfo=timezone.utc),
+            classification=ClassificationMetadata(
+                layer=ClassificationLayer.SENSITIVE_CONTEXT,
+                sensitivity=Sensitivity.SENSITIVE,
+            ),
+        ),
+    )
+
+    payload = FederationPackageService(tmp_path).boundary_check(
+        purpose="boundary review",
+        target_node="node:partner:beta",
+        visibility=FederationPackageVisibility.PUBLIC,
+        context_ids=["ctx_fed_boundary_check"],
+    )
+    assert payload["status"] == "warning"
+    assert payload["recommended_visibility"] == "trusted"
+    assert "package_visibility_broader_than_recommended" in payload["warning_codes"]
+    assert payload["consent_required"] is True
+
+
+def test_federation_consent_record_writes_append_only_audit(tmp_path):
+    ChronicleService(tmp_path).init("Federation Consent Record Test")
+
+    payload = FederationPackageService(tmp_path).record_consent(
+        target_node="node:partner:beta",
+        purpose="partner review",
+        scope="project-review",
+        granted_by="review-owner",
+        third_party_sharing_allowed=False,
+        third_party_sharing_reason="partner-only",
+        context_ids=["ctx_alpha"],
+        recorded_at=datetime(2026, 6, 28, 9, 0, tzinfo=timezone.utc),
+    )
+
+    assert payload["status"] == "recorded"
+    assert payload["scope"] == "project-review"
+    assert payload["third_party_sharing_allowed"] is False
+
+    audits = AuditService(tmp_path).list_events()
+    assert audits[-1].operation.value == "consent_record"
+    assert audits[-1].metadata["target_node"] == "node:partner:beta"
+    assert audits[-1].metadata["consent_scope"] == "project-review"

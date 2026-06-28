@@ -13,6 +13,7 @@ class AuditOperation(StrEnum):
     CONTEXT_USE = "context_use"
     REINTERPRET = "reinterpret"
     REVIEW_DECISION = "review_decision"
+    CONSENT_RECORD = "consent_record"
 
 
 class AuditTargetEnvironment(StrEnum):

@@ -20,6 +20,8 @@ from chronicle.services.federation_message_service import FederationMessageServi
 
 federation_app = typer.Typer(help="Federation package/message operations.")
 package_app = typer.Typer(help="Federation package creation and verification.")
+boundary_app = typer.Typer(help="Federation boundary preflight inspection.")
+consent_app = typer.Typer(help="Federation consent audit recording.")
 message_app = typer.Typer(help="Federation message creation.")
 inbox_app = typer.Typer(help="Federation inbox inspection.")
 outbox_app = typer.Typer(help="Federation outbox inspection.")
@@ -225,6 +227,88 @@ def federation_package_import_preview_cmd(
         handle_error(exc, json_output)
 
 
+@boundary_app.command("check")
+def federation_boundary_check_cmd(
+    purpose: Annotated[str, typer.Option("--purpose")],
+    target_node: Annotated[str, typer.Option("--target-node")],
+    context_id: Annotated[list[str] | None, typer.Option("--context")] = None,
+    visibility: Annotated[
+        FederationPackageVisibility,
+        typer.Option("--visibility"),
+    ] = FederationPackageVisibility.FEDERATED,
+    trust_target_node: Annotated[str | None, typer.Option("--trust-target-node")] = None,
+    json_output: Annotated[bool, typer.Option("--json")] = False,
+) -> None:
+    """Run a local preflight boundary check before creating a federation package."""
+    try:
+        payload = FederationPackageService().boundary_check(
+            purpose=purpose,
+            target_node=target_node,
+            visibility=visibility,
+            context_ids=context_id,
+            trust_target_node=trust_target_node,
+        )
+        if json_output:
+            typer.echo(json.dumps(payload, ensure_ascii=False, indent=2))
+            return
+        typer.echo(f"Federation boundary check: status={payload['status']}")
+        typer.echo(f"  Requested visibility: {payload['requested_visibility']}")
+        typer.echo(f"  Recommended visibility: {payload['recommended_visibility']}")
+        typer.echo(f"  Consent required: {payload['consent_required']}")
+        if payload["warning_codes"]:
+            typer.echo(f"  Warnings: {', '.join(payload['warning_codes'])}")
+        typer.echo(f"  Boundary: {payload['boundary_note']}")
+    except ChronicleError as exc:
+        handle_error(exc, json_output)
+
+
+@consent_app.command("record")
+def federation_consent_record_cmd(
+    target_node: Annotated[str, typer.Option("--target-node")],
+    purpose: Annotated[str, typer.Option("--purpose")],
+    scope: Annotated[str, typer.Option("--scope")],
+    granted_by: Annotated[str, typer.Option("--granted-by")],
+    context_id: Annotated[list[str] | None, typer.Option("--context")] = None,
+    recorded_at: Annotated[str | None, typer.Option("--recorded-at")] = None,
+    third_party_sharing_allowed: Annotated[
+        bool, typer.Option("--third-party-sharing/--no-third-party-sharing")
+    ] = False,
+    third_party_sharing_reason: Annotated[str | None, typer.Option("--third-party-sharing-reason")] = None,
+    json_output: Annotated[bool, typer.Option("--json")] = False,
+) -> None:
+    """Record append-only federation consent metadata without creating a package."""
+    try:
+        payload = FederationPackageService().record_consent(
+            target_node=target_node,
+            purpose=purpose,
+            scope=scope,
+            granted_by=granted_by,
+            third_party_sharing_allowed=third_party_sharing_allowed,
+            third_party_sharing_reason=third_party_sharing_reason,
+            context_ids=context_id,
+            recorded_at=datetime.fromisoformat(recorded_at) if recorded_at else None,
+        )
+        if json_output:
+            typer.echo(json.dumps(payload, ensure_ascii=False, indent=2))
+            return
+        typer.echo(f"Federation consent recorded: {payload['audit_id']}")
+        typer.echo(f"  Target node: {payload['target_node']}")
+        typer.echo(f"  Scope: {payload['scope']}")
+        typer.echo(f"  Third-party sharing: {payload['third_party_sharing_allowed']}")
+        typer.echo(f"  Boundary: {payload['boundary_note']}")
+    except ValueError as exc:
+        handle_error(
+            ChronicleError(
+                code="FEDERATION_CONSENT_TIMESTAMP_INVALID",
+                message="Invalid federation consent recorded-at timestamp.",
+                hint=str(exc),
+            ),
+            json_output,
+        )
+    except ChronicleError as exc:
+        handle_error(exc, json_output)
+
+
 @message_app.command("create")
 def federation_message_create_cmd(
     type: Annotated[FederationMessageType, typer.Option("--type")],
@@ -339,6 +423,8 @@ def federation_outbox_inspect_cmd(
 
 
 federation_app.add_typer(package_app, name="package")
+federation_app.add_typer(boundary_app, name="boundary")
+federation_app.add_typer(consent_app, name="consent")
 federation_app.add_typer(message_app, name="message")
 federation_app.add_typer(inbox_app, name="inbox")
 federation_app.add_typer(outbox_app, name="outbox")
