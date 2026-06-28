@@ -23,6 +23,7 @@ from urllib.parse import parse_qs, quote, unquote, urlparse
 from chronicle.errors import ChronicleError, UIHostNotLoopbackError
 from chronicle.exporters.html_exporter import HtmlDashboardExporter
 from chronicle.models.ai_boundary import AiBoundaryPreview
+from chronicle.models.audit import AuditOperation
 from chronicle.models.federation_message import FederationMessageBox
 from chronicle.models.reaction import ChronicleReactionType
 from chronicle.models.runtime import RuntimeExecutionResult, RuntimeInvocationPlan, RuntimeRetrievalPlan
@@ -1159,6 +1160,22 @@ def _decorate_package_review_payload(payload: dict[str, Any]) -> dict[str, Any]:
     return payload
 
 
+def _federation_preflight_counts_contract(
+    *, consent_record_count: int, latest_referenced_record_count: int
+) -> tuple[str, dict[str, Any]]:
+    return "ui.template.federation_preflight.counts", {
+        "consent_record_count": consent_record_count,
+        "latest_referenced_record_count": latest_referenced_record_count,
+    }
+
+
+def _federation_preflight_message_key(status: str) -> str:
+    return {
+        "consent_recorded": "ui.federation_preflight.message.consent_recorded",
+        "no_consent_records": "ui.federation_preflight.message.no_consent_records",
+    }.get(status, "ui.federation_preflight.message.no_consent_records")
+
+
 def _append_mutation_blocker(
     blockers: list[str],
     next_steps: list[str],
@@ -2288,6 +2305,7 @@ class ChronicleUIDataService:
                 "graph_index_edges": ai_index_status["graph"]["edge_count"],
             },
             "package_review": self.package_review_snapshot(),
+            "federation_preflight_summary": self.federation_preflight_summary(),
             "graph_summary": self.graph_summary(),
             "ai_index": ai_index_status,
             "runtime_config": runtime_config,
@@ -2951,6 +2969,61 @@ class ChronicleUIDataService:
             "inbox_audit_recorded_count": audit_recorded_count,
         }
 
+    def federation_preflight_summary(
+        self,
+        audit_rows: list[dict[str, Any]] | None = None,
+    ) -> dict[str, Any]:
+        rows = audit_rows if audit_rows is not None else self.audit_events()["audit_events"]
+        consent_rows = [
+            row
+            for row in rows
+            if str(row.get("operation", "")) == AuditOperation.CONSENT_RECORD.value
+        ]
+        latest = consent_rows[0] if consent_rows else {}
+        status = "consent_recorded" if consent_rows else "no_consent_records"
+        counts_key, counts_params = _federation_preflight_counts_contract(
+            consent_record_count=len(consent_rows),
+            latest_referenced_record_count=len(latest.get("referenced_records", [])),
+        )
+        return {
+            "status": status,
+            "message": (
+                "Federation preflight audit summary includes recorded consent metadata; boundary checks remain explicit CLI-only preview surfaces."
+                if consent_rows
+                else "No federation consent audit records are present yet; boundary checks remain explicit CLI-only preview surfaces."
+            ),
+            "message_key": _federation_preflight_message_key(status),
+            "counts_summary_key": counts_key,
+            "counts_summary_params": counts_params,
+            "consent_record_count": len(consent_rows),
+            "latest_consent_audit_id": latest.get("audit_id"),
+            "latest_consent_detail_path": (
+                f"/api/audit/{latest['audit_id']}" if latest.get("audit_id") else None
+            ),
+            "latest_target_node": (
+                latest.get("federation_consent_summary", {}).get("target_node")
+                if latest.get("federation_consent_summary")
+                else None
+            ),
+            "latest_scope": (
+                latest.get("federation_consent_summary", {}).get("scope")
+                if latest.get("federation_consent_summary")
+                else None
+            ),
+            "boundary_check_mode": "cli_only_preview",
+            "boundary_check_message": (
+                "Federation boundary check stays a local explicit CLI preflight and is not persisted automatically into Chronicle primary records."
+            ),
+            "boundary_check_message_key": "ui.federation_preflight.boundary_check.cli_only_preview",
+            "suggested_boundary_check_cli": (
+                "chronicle federation boundary check --purpose <purpose> --target-node <node_id> --visibility federated --json"
+            ),
+            "boundary_note": (
+                "Federation preflight summary remains derived, read-only, and non-authoritative over Chronicle primary records."
+            ),
+            "boundary_note_key": "ui.federation_preflight.note.read_only_derived",
+        }
+
     def reaction_records(self) -> dict[str, Any]:
         self.chronicle.require_initialized()
         rows = []
@@ -2970,6 +3043,29 @@ class ChronicleUIDataService:
         return {
             "type_counts": type_counts,
             "target_counts": target_counts,
+        }
+
+    def _federation_consent_audit_summary(self, audit_row: dict[str, Any]) -> dict[str, Any] | None:
+        if str(audit_row.get("operation", "")) != AuditOperation.CONSENT_RECORD.value:
+            return None
+        metadata = dict(audit_row.get("metadata", {}) or {})
+        third_party_allowed = str(metadata.get("third_party_sharing_allowed", "")).lower() == "true"
+        sharing_key, sharing_summary = _boolean_summary_payload(third_party_allowed)
+        return {
+            "status": "recorded",
+            "message": "Federation consent audit metadata was recorded for a local preflight workflow.",
+            "message_key": "ui.federation_consent_audit.message.recorded",
+            "target_node": metadata.get("target_node", ""),
+            "scope": metadata.get("consent_scope", ""),
+            "recorded_at": metadata.get("recorded_at", ""),
+            "third_party_sharing_allowed": third_party_allowed,
+            "third_party_sharing_allowed_summary_key": sharing_key,
+            "third_party_sharing_allowed_summary": sharing_summary,
+            "third_party_sharing_reason": metadata.get("third_party_sharing_reason", ""),
+            "boundary_note": (
+                "Consent audit metadata remains append-only and descriptive; it does not create or import a federation package."
+            ),
+            "boundary_note_key": "ui.federation_consent_audit.note.read_only_derived",
         }
 
     def lineage_view(self) -> dict[str, Any]:
@@ -3210,7 +3306,17 @@ class ChronicleUIDataService:
 
     def audit_events(self, *, limit: int = 100) -> dict[str, Any]:
         events = self.audit.list_events()
-        return {"audit_events": [_dump_model(event) for event in reversed(events[-limit:])]}
+        rows: list[dict[str, Any]] = []
+        for event in reversed(events[-limit:]):
+            data = _dump_model(event)
+            consent_summary = self._federation_consent_audit_summary(data)
+            if consent_summary is not None:
+                data["federation_consent_summary"] = consent_summary
+            rows.append(data)
+        return {
+            "audit_events": rows,
+            "federation_preflight_summary": self.federation_preflight_summary(rows),
+        }
 
     def lifecycle_markers(self, *, limit: int = 100) -> dict[str, Any]:
         events = self.lifecycle.list_events()
@@ -5265,6 +5371,10 @@ class ChronicleUIDataService:
             record = _dump_model(rules[record_id]) if record_id in rules else None
         elif resource == "audit":
             record = _find_by_attr(self.audit.list_events(), "audit_id", record_id)
+            if record is not None:
+                consent_summary = self._federation_consent_audit_summary(record)
+                if consent_summary is not None:
+                    record["federation_consent_summary"] = consent_summary
         elif resource == "lifecycle":
             record = _find_by_attr(self.lifecycle.list_events(), "lifecycle_id", record_id)
         elif resource == "chronicle-objects":
