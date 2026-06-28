@@ -1176,6 +1176,15 @@ def _federation_preflight_message_key(status: str) -> str:
     }.get(status, "ui.federation_preflight.message.no_consent_records")
 
 
+def _federation_consent_match_counts_contract(
+    *, matched_record_count: int, consent_record_count: int
+) -> tuple[str, dict[str, Any]]:
+    return "ui.template.federation_consent_match.counts", {
+        "matched_record_count": matched_record_count,
+        "consent_record_count": consent_record_count,
+    }
+
+
 def _append_mutation_blocker(
     blockers: list[str],
     next_steps: list[str],
@@ -3068,6 +3077,69 @@ class ChronicleUIDataService:
             "boundary_note_key": "ui.federation_consent_audit.note.read_only_derived",
         }
 
+    def _event_related_record_ids(self, event) -> list[str]:
+        record_ids: list[str] = []
+        event_id = str(getattr(event, "event_id", "") or "")
+        if event_id.startswith("evt_"):
+            record_ids.append(event_id)
+        for context_id in getattr(event, "context_ids", []) or []:
+            if isinstance(context_id, str) and context_id.startswith("ctx_") and context_id not in record_ids:
+                record_ids.append(context_id)
+        source_ref = str(getattr(getattr(event, "source", None), "source_ref", "") or "")
+        if source_ref and source_ref not in record_ids:
+            record_ids.append(source_ref)
+        for attribute_name, prefix in (
+            ("artifact_id", "art_"),
+            ("decision_id", "dec_"),
+            ("rde_record_id", "rde_"),
+        ):
+            value = str(getattr(event, attribute_name, "") or "")
+            if value.startswith(prefix) and value not in record_ids:
+                record_ids.append(value)
+        return record_ids
+
+    def _latest_matching_federation_consent_summary(self, record_ids: list[str]) -> dict[str, Any] | None:
+        normalized_ids = [record_id for record_id in record_ids if isinstance(record_id, str) and record_id]
+        if not normalized_ids:
+            return None
+        normalized_set = set(normalized_ids)
+        for audit_event in reversed(self.audit.list_events()):
+            audit_row = _dump_model(audit_event)
+            consent_summary = self._federation_consent_audit_summary(audit_row)
+            if consent_summary is None:
+                continue
+            referenced_records = [
+                record_id
+                for record_id in audit_row.get("referenced_records", [])
+                if isinstance(record_id, str) and record_id
+            ]
+            matched_record_ids = sorted(normalized_set.intersection(referenced_records))
+            if not matched_record_ids:
+                continue
+            counts_key, counts_params = _federation_consent_match_counts_contract(
+                matched_record_count=len(matched_record_ids),
+                consent_record_count=len(referenced_records),
+            )
+            return {
+                **consent_summary,
+                "audit_id": audit_row.get("audit_id"),
+                "detail_path": (
+                    f"/api/audit/{audit_row['audit_id']}" if audit_row.get("audit_id") else None
+                ),
+                "matched_record_ids": matched_record_ids,
+                "counts_summary_key": counts_key,
+                "counts_summary_params": counts_params,
+                "message": (
+                    "Latest federation consent audit overlaps with records referenced by this read-only surface."
+                ),
+                "message_key": "ui.federation_consent_match.message.overlap_found",
+                "boundary_note": (
+                    "Matching consent summary remains derived and advisory; it does not authorize package creation, transport, or import."
+                ),
+                "boundary_note_key": "ui.federation_consent_match.note.read_only_derived",
+            }
+        return None
+
     def lineage_view(self) -> dict[str, Any]:
         rows = []
         reaction_index: dict[str, list[str]] = {}
@@ -3340,8 +3412,14 @@ class ChronicleUIDataService:
         rows: list[dict[str, Any]] = []
         for event in reversed(events[-limit:]):
             data = _dump_model(event)
+            matching_consent_summary = self._latest_matching_federation_consent_summary(
+                self._event_related_record_ids(event)
+            )
             preview = self.runtime.record_preview(event)
             preview_payload = preview.model_dump(mode="json")
+            matching_consent_summary = self._latest_matching_federation_consent_summary(
+                self._event_related_record_ids(event)
+            )
             title_key, title_params = _runtime_preview_title_contract(preview_payload)
             if title_key:
                 preview_payload["title_key"] = title_key
@@ -3353,6 +3431,8 @@ class ChronicleUIDataService:
                 data["query_engine_trial_preview"] = _query_engine_trial_preview_payload(
                     data["payload"]
                 )
+            if matching_consent_summary is not None:
+                data["matching_federation_consent_summary"] = matching_consent_summary
             review_row = self._review_queue_row(event.event_id)
             if review_row is not None:
                 mutation_enablement = self.mutation_readiness_summary()
@@ -3398,6 +3478,16 @@ class ChronicleUIDataService:
         rows: list[dict[str, Any]] = []
         for entry in self.review.queue()[:limit]:
             data = entry.model_dump(mode="json")
+            target_event = next(
+                (item for item in self.chronicle.jsonl.read_all() if item.event_id == entry.target_event_id),
+                None,
+            )
+            if target_event is not None:
+                matching_consent_summary = self._latest_matching_federation_consent_summary(
+                    self._event_related_record_ids(target_event)
+                )
+                if matching_consent_summary is not None:
+                    data["matching_federation_consent_summary"] = matching_consent_summary
             data["suggested_cli_family"] = self._suggested_cli_family_from_kind(entry.review_kind)
             data["response_metadata_summary"] = self._review_target_response_metadata_summary(
                 entry.target_event_id
@@ -5117,6 +5207,9 @@ class ChronicleUIDataService:
                 return None
             preview = self.runtime.record_preview(event)
             preview_payload = preview.model_dump(mode="json")
+            matching_consent_summary = self._latest_matching_federation_consent_summary(
+                self._event_related_record_ids(event)
+            )
             title_key, title_params = _runtime_preview_title_contract(preview_payload)
             if title_key:
                 preview_payload["title_key"] = title_key
@@ -5124,6 +5217,8 @@ class ChronicleUIDataService:
                 preview_payload["title_params"] = title_params
             record["runtime_record_kind"] = preview.record_kind
             record["runtime_record_preview"] = preview_payload
+            if matching_consent_summary is not None:
+                record["matching_federation_consent_summary"] = matching_consent_summary
             if "query_engine_trial_record" in payload:
                 record["query_engine_trial_preview"] = _query_engine_trial_preview_payload(payload)
             record["suggested_cli_family"] = preview.suggested_cli_family

@@ -15,7 +15,9 @@ from chronicle.models.artifact import ArtifactType
 from chronicle.models.audit import AuditOperation, AuditSeverity, AuditTargetEnvironment
 from chronicle.models.boundary import BoundaryConditionField, BoundaryOperator, BoundaryRuleType
 from chronicle.models.decision import DecisionType
+from chronicle.models.event import Actor, Confidence, EventType, ReviewStatus
 from chronicle.models.lifecycle import LifecycleAction, LifecycleReasonClass
+from chronicle.models.source import SourceProvenance
 from chronicle.models.visibility import VisibilityHint
 from chronicle.services.artifact_service import ArtifactService
 from chronicle.services.audit_service import AuditService
@@ -1684,6 +1686,68 @@ def test_ui_data_service_detail_endpoints(tmp_path):
     assert retrieval_detail["query_engine_handoff_preview"]["import_validation"]["counts_summary_key"] == (
         "ui.template.query_engine_import_validation.counts"
     )
+
+
+def test_ui_read_models_expose_matching_federation_consent_summary_on_overlap(tmp_path):
+    ids = _populate(tmp_path)
+    consent_payload = FederationPackageService(tmp_path).record_consent(
+        target_node="node:partner:beta",
+        purpose="overlap review",
+        scope="overlap-scope",
+        granted_by="overlap-owner",
+        third_party_sharing_allowed=False,
+        context_ids=[ids["context_id"]],
+    )
+    summary_result = RuntimeService(tmp_path).summarize(
+        text="Linked runtime summary for consent overlap.",
+        record=False,
+    )
+    event = ChronicleService(tmp_path).record_event(
+        event_type=EventType.ASSISTANT_OUTPUT,
+        actor=Actor.ASSISTANT,
+        summary="Runtime summary generated: linked overlap summary",
+        payload={
+            "runtime_summary": summary_result.model_dump(mode="json"),
+            "runtime_provider": summary_result.provider_kind.value,
+        },
+        context_ids=[ids["context_id"]],
+        source=SourceProvenance(
+            source_type="runtime",
+            source_ref=ids["context_id"],
+            source_tool="chronicle-runtime",
+            source_model=summary_result.model_name,
+        ),
+        review_status=ReviewStatus.NEEDS_REVIEW,
+        confidence=Confidence.LOW,
+    )
+    service = ChronicleUIDataService(tmp_path)
+
+    runtime_row = next(
+        row for row in service.runtime_records()["runtime_records"] if row["event_id"] == event.event_id
+    )
+    assert runtime_row["matching_federation_consent_summary"]["audit_id"] == consent_payload["audit_id"]
+    assert runtime_row["matching_federation_consent_summary"]["message_key"] == (
+        "ui.federation_consent_match.message.overlap_found"
+    )
+    assert runtime_row["matching_federation_consent_summary"]["counts_summary_key"] == (
+        "ui.template.federation_consent_match.counts"
+    )
+    assert runtime_row["matching_federation_consent_summary"]["matched_record_ids"] == [ids["context_id"]]
+    assert runtime_row["matching_federation_consent_summary"]["boundary_note_key"] == (
+        "ui.federation_consent_match.note.read_only_derived"
+    )
+
+    review_row = next(
+        row for row in service.review_queue()["review_queue"] if row["target_event_id"] == event.event_id
+    )
+    assert review_row["matching_federation_consent_summary"]["audit_id"] == consent_payload["audit_id"]
+    assert review_row["matching_federation_consent_summary"]["matched_record_ids"] == [ids["context_id"]]
+
+    runtime_detail = service.detail_payload(f"/api/runtime-records/{event.event_id}")["record"]
+    assert runtime_detail["matching_federation_consent_summary"]["audit_id"] == consent_payload["audit_id"]
+
+    review_detail = service.detail_payload(f"/api/review-queue/{event.event_id}")["record"]
+    assert review_detail["matching_federation_consent_summary"]["audit_id"] == consent_payload["audit_id"]
 
 
 def test_runtime_records_include_query_engine_trial_rows(tmp_path):
