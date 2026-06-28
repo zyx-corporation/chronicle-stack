@@ -9356,6 +9356,7 @@ function renderOverviewFederationPanel(federationSummary, federationPreflight, f
     ])
     + detailLine('Boundary check mode', federationPreflight.boundary_check_mode || '')
     + detailLine('Boundary check note', federationPreflight.boundary_check_message_key ? formatLabel(federationPreflight.boundary_check_message_key, federationPreflight.boundary_check_message_params || {{}}, federationPreflight.boundary_check_message || '') : (federationPreflight.boundary_check_message || ''))
+    + detailLine('Boundary check CLI', federationPreflight.suggested_boundary_check_cli || '')
     + detailLine('Preflight counts', federationPreflight.counts_summary_key ? formatLabel(federationPreflight.counts_summary_key, federationPreflight.counts_summary_params || {{}}, '') : '')
     + preflightButtons
     + statusMessageBody(federationOverlap.status, localizedPayloadText(federationOverlap), [

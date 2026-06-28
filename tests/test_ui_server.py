@@ -719,6 +719,9 @@ def test_ui_overview_data(tmp_path):
     assert overview["federation_overlap_summary"]["boundary_note_key"] == (
         "ui.federation_overlap.note.read_only_derived"
     )
+    assert overview["federation_preflight_summary"]["suggested_boundary_check_cli"].startswith(
+        "chronicle federation boundary check --purpose"
+    )
     assert overview["ui_boundary"]["mutation_enabled"] is False
     assert overview["ui_boundary"]["mutation_capability_flag"] is False
     assert overview["ui_boundary"]["auth_mode"] == "not_enabled"
@@ -2483,6 +2486,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "label('overview.reviewer_runtime_enforcement_counts', 'Runtime enforcement counts')" in html
     assert "sectionTitle(label('section.federation', 'Federation'))" in html
     assert "detailJumpButton(federationOverlap.latest_matching_detail_path || '', label('button.open_detail', 'Open Detail'))" in html
+    assert "detailLine('Boundary check CLI', federationPreflight.suggested_boundary_check_cli || '')" in html
     assert "openEndpointButton('/api/federation-inbox')" in html
     assert "openEndpointButton('/api/federation-outbox')" in html
     assert "openEndpointButton('/api/audit')" in html
