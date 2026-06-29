@@ -8956,9 +8956,11 @@ function renderAuditTable(endpoint, rows) {{
   const payload = window.__chronicleRoutePayload || {{}};
   const governance = payload.governance_summary || {{}};
   const sorted = rows.slice().sort((a, b) => String(b.created_at || '').localeCompare(String(a.created_at || '')));
-  return renderAuditGovernanceSummary(governance)
-    + renderAuditTimelinePanel(endpoint, sorted)
-    + renderAuditInterpretationPanel(endpoint, sorted);
+  return renderMultiPanelRoute([
+    renderAuditGovernanceSummary(governance),
+    renderAuditTimelinePanel(endpoint, sorted),
+    renderAuditInterpretationPanel(endpoint, sorted),
+  ]);
 }}
 function renderBoundaryGovernanceSummary(rows) {{
   const enabledCount = rows.filter(row => row.enabled !== false).length;
@@ -8983,8 +8985,9 @@ function renderBoundaryGovernanceSummary(rows) {{
 }}
 function renderBoundaryTable(endpoint, rows) {{
   const sorted = rows.slice().sort((a, b) => String(b.created_at || '').localeCompare(String(a.created_at || '')));
-  return renderBoundaryGovernanceSummary(sorted)
-    + tableHtml([
+  return renderMultiPanelRoute([
+    renderBoundaryGovernanceSummary(sorted),
+    tableHtml([
       label('label.table_detail', 'Detail'),
       label('label.table_status', 'Status'),
       label('label.table_operation', 'Operation'),
@@ -9012,7 +9015,8 @@ function renderBoundaryTable(endpoint, rows) {{
           cellTitle(String(row.reason || '')),
         ]) + '</td>'
         + '</tr>';
-    }}).join(''));
+    }}).join('')),
+  ]);
 }}
 function renderLifecycleGovernanceSummary(rows) {{
   const latest = rows[0] || {{}};
@@ -9038,8 +9042,9 @@ function renderLifecycleGovernanceSummary(rows) {{
 }}
 function renderLifecycleTable(endpoint, rows) {{
   const sorted = rows.slice().sort((a, b) => String(b.created_at || '').localeCompare(String(a.created_at || '')));
-  return renderLifecycleGovernanceSummary(sorted)
-    + tableHtml([
+  return renderMultiPanelRoute([
+    renderLifecycleGovernanceSummary(sorted),
+    tableHtml([
       label('label.table_detail', 'Detail'),
       label('label.table_event', 'Event'),
       label('label.table_status', 'Status'),
@@ -9066,7 +9071,8 @@ function renderLifecycleTable(endpoint, rows) {{
           cellTitle(String(row.reason || '')),
         ]) + '</td>'
         + '</tr>';
-    }}).join(''));
+    }}).join('')),
+  ]);
 }}
 function renderGenericTable(endpoint, rows) {{
   const keys = Object.keys(rows[0]).slice(0, 8);
@@ -10880,6 +10886,12 @@ function handleViewChange(event) {{
 function renderPanel(body) {{
   return '<div class="panel">' + body + '</div>';
 }}
+function renderMultiPanelRoute(panels, payload = null, includeResponseJson = false) {{
+  const panelBodies = (panels || []).filter(Boolean).join('');
+  if (!includeResponseJson) return panelBodies;
+  return panelBodies
+    + collapsibleJsonBlock(label('label.response_json', 'Response JSON'), payload || {{}}, true);
+}}
 function renderOverviewHeaderPanel(chronicle) {{
   return renderPanel(
     '<p><strong>' + esc(chronicle.title || '') + '</strong></p>'
@@ -11486,59 +11498,60 @@ function renderFederationPackagePreview(payload) {{
     ? formatLabel(importSummary.boundary_note_key, {{}}, importSummary.boundary_note || '')
     : (importSummary.boundary_note || '');
   return routeHeading('/api/federation-package-preview')
-    + renderPanel(
-      sectionTitle(label('section.federation_package_preview', 'Federation Package Preview'))
-      + statusMessageBody(preview.status, localizedPayloadText(preview), [
-        openEndpointButton('/api/audit'),
-        trustSummary.detail_path ? detailNavButton(trustSummary.detail_path, label('button.open_trust_reference', 'Open trust reference')) : '',
-        consentSummary.latest_detail_path ? detailNavButton(consentSummary.latest_detail_path, label('button.open_latest_audit', 'Open latest audit')) : '',
-      ])
-      + detailLine('Mode', preview.mode || '')
-      + detailLine('Package path', preview.package_path || preview.package_dir || '')
-      + detailLine('Scope note', localizedBoundaryNote)
-    )
-    + renderPanel(
-      sectionTitle(label('section.package_route_summary', 'Package Route Summary'))
-      + detailLine('Target node', routeSummary.target_node || '')
-      + detailLine('Purpose', routeSummary.purpose || '')
-      + detailLine('Visibility', routeSummary.visibility || '')
-      + detailLine('Records', routeSummary.record_count ?? 0)
-      + detailLine('Files', routeSummary.file_count ?? 0)
-      + detailLine('Status', routeSummary.status || '')
-      + detailLine('Scope note', localizedRouteNote)
-    )
-    + renderPanel(
-      sectionTitle(label('section.trust_reference_summary', 'Trust Reference Summary'))
-      + detailLine('Target node', trustSummary.target_node || '')
-      + detailLine('Trust target', trustSummary.trust_target_node || '')
-      + detailLine('Active relations', trustSummary.active_relation_count ?? 0)
-      + detailLine('Dominant level', trustSummary.dominant_level || '')
-      + detailListLine('Domains', trustSummary.domains, ' | ')
-      + summaryJsonLine('Capabilities', trustSummary.capability_counts)
-      + detailLine('Preview', trustSummary.preview_message || '')
-      + detailLine('Scope note', localizedTrustNote)
-    )
-    + renderPanel(
-      sectionTitle(label('section.consent_summary', 'Consent Summary'))
-      + detailLine('Status', consentSummary.status || '')
-      + detailLine('Granted by', consentSummary.granted_by || '')
-      + detailLine('Scope', consentSummary.scope || '')
-      + detailLine('Purpose', consentSummary.purpose || '')
-      + detailLine('Third-party sharing', typeof consentSummary.third_party_sharing_allowed === 'boolean' ? String(consentSummary.third_party_sharing_allowed) : '')
-      + detailLine('Message', consentSummary.message || '')
-      + detailLine('Scope note', localizedConsentNote)
-    )
-    + renderPanel(
-      sectionTitle(label('section.import_implication_summary', 'Import Implication Summary'))
-      + detailLine('Status', importSummary.status || '')
-      + detailLine('Mode', importSummary.mode || '')
-      + detailLine('Import candidate', typeof importSummary.import_candidate === 'boolean' ? String(importSummary.import_candidate) : '')
-      + detailListLine('Blocked codes', importSummary.blocked_codes, ' | ')
-      + detailListLine('Warning codes', importSummary.warning_codes, ' | ')
-      + detailLine('Message', importSummary.message || '')
-      + detailLine('Scope note', localizedImportNote)
-    )
-    + collapsibleJsonBlock(label('label.response_json', 'Response JSON'), payload, true);
+    + renderMultiPanelRoute([
+      renderPanel(
+        sectionTitle(label('section.federation_package_preview', 'Federation Package Preview'))
+        + statusMessageBody(preview.status, localizedPayloadText(preview), [
+          openEndpointButton('/api/audit'),
+          trustSummary.detail_path ? detailNavButton(trustSummary.detail_path, label('button.open_trust_reference', 'Open trust reference')) : '',
+          consentSummary.latest_detail_path ? detailNavButton(consentSummary.latest_detail_path, label('button.open_latest_audit', 'Open latest audit')) : '',
+        ])
+        + detailLine('Mode', preview.mode || '')
+        + detailLine('Package path', preview.package_path || preview.package_dir || '')
+        + detailLine('Scope note', localizedBoundaryNote)
+      ),
+      renderPanel(
+        sectionTitle(label('section.package_route_summary', 'Package Route Summary'))
+        + detailLine('Target node', routeSummary.target_node || '')
+        + detailLine('Purpose', routeSummary.purpose || '')
+        + detailLine('Visibility', routeSummary.visibility || '')
+        + detailLine('Records', routeSummary.record_count ?? 0)
+        + detailLine('Files', routeSummary.file_count ?? 0)
+        + detailLine('Status', routeSummary.status || '')
+        + detailLine('Scope note', localizedRouteNote)
+      ),
+      renderPanel(
+        sectionTitle(label('section.trust_reference_summary', 'Trust Reference Summary'))
+        + detailLine('Target node', trustSummary.target_node || '')
+        + detailLine('Trust target', trustSummary.trust_target_node || '')
+        + detailLine('Active relations', trustSummary.active_relation_count ?? 0)
+        + detailLine('Dominant level', trustSummary.dominant_level || '')
+        + detailListLine('Domains', trustSummary.domains, ' | ')
+        + summaryJsonLine('Capabilities', trustSummary.capability_counts)
+        + detailLine('Preview', trustSummary.preview_message || '')
+        + detailLine('Scope note', localizedTrustNote)
+      ),
+      renderPanel(
+        sectionTitle(label('section.consent_summary', 'Consent Summary'))
+        + detailLine('Status', consentSummary.status || '')
+        + detailLine('Granted by', consentSummary.granted_by || '')
+        + detailLine('Scope', consentSummary.scope || '')
+        + detailLine('Purpose', consentSummary.purpose || '')
+        + detailLine('Third-party sharing', typeof consentSummary.third_party_sharing_allowed === 'boolean' ? String(consentSummary.third_party_sharing_allowed) : '')
+        + detailLine('Message', consentSummary.message || '')
+        + detailLine('Scope note', localizedConsentNote)
+      ),
+      renderPanel(
+        sectionTitle(label('section.import_implication_summary', 'Import Implication Summary'))
+        + detailLine('Status', importSummary.status || '')
+        + detailLine('Mode', importSummary.mode || '')
+        + detailLine('Import candidate', typeof importSummary.import_candidate === 'boolean' ? String(importSummary.import_candidate) : '')
+        + detailListLine('Blocked codes', importSummary.blocked_codes, ' | ')
+        + detailListLine('Warning codes', importSummary.warning_codes, ' | ')
+        + detailLine('Message', importSummary.message || '')
+        + detailLine('Scope note', localizedImportNote)
+      ),
+    ], payload, true);
 }}
 const detailPathResolvers = {{
   '/api/ai-index-graph-edges': () => null,
