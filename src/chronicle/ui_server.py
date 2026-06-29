@@ -11229,6 +11229,82 @@ function renderOverview(payload) {{
     + renderPanel(activeViewSummary('/api/overview', 'overview'))
     + renderOverviewPanels(overviewData);
 }}
+function renderFederationPackagePreview(payload) {{
+  const preview = payload.federation_package_preview || {{}};
+  const routeSummary = preview.package_route_summary || {{}};
+  const trustSummary = preview.trust_reference_summary || {{}};
+  const consentSummary = preview.consent_summary || {{}};
+  const importSummary = preview.import_implication_summary || {{}};
+  const localizedBoundaryNote = preview.boundary_note_key
+    ? formatLabel(preview.boundary_note_key, {{}}, preview.boundary_note || '')
+    : (preview.boundary_note || '');
+  const localizedRouteNote = routeSummary.boundary_note_key
+    ? formatLabel(routeSummary.boundary_note_key, {{}}, routeSummary.boundary_note || '')
+    : (routeSummary.boundary_note || '');
+  const localizedTrustNote = trustSummary.boundary_note_key
+    ? formatLabel(trustSummary.boundary_note_key, {{}}, trustSummary.boundary_note || '')
+    : (trustSummary.boundary_note || '');
+  const localizedConsentNote = consentSummary.boundary_note_key
+    ? formatLabel(consentSummary.boundary_note_key, {{}}, consentSummary.boundary_note || '')
+    : (consentSummary.boundary_note || '');
+  const localizedImportNote = importSummary.boundary_note_key
+    ? formatLabel(importSummary.boundary_note_key, {{}}, importSummary.boundary_note || '')
+    : (importSummary.boundary_note || '');
+  return routeHeading('/api/federation-package-preview')
+    + renderPanel(
+      sectionTitle(label('section.federation_package_preview', 'Federation Package Preview'))
+      + statusMessageBody(preview.status, localizedPayloadText(preview), [
+        openEndpointButton('/api/audit'),
+        trustSummary.detail_path ? detailNavButton(trustSummary.detail_path, label('button.open_trust_reference', 'Open trust reference')) : '',
+        consentSummary.latest_detail_path ? detailNavButton(consentSummary.latest_detail_path, label('button.open_latest_audit', 'Open latest audit')) : '',
+      ])
+      + detailLine('Mode', preview.mode || '')
+      + detailLine('Package path', preview.package_path || preview.package_dir || '')
+      + detailLine('Scope note', localizedBoundaryNote)
+    )
+    + renderPanel(
+      sectionTitle(label('section.package_route_summary', 'Package Route Summary'))
+      + detailLine('Target node', routeSummary.target_node || '')
+      + detailLine('Purpose', routeSummary.purpose || '')
+      + detailLine('Visibility', routeSummary.visibility || '')
+      + detailLine('Records', routeSummary.record_count ?? 0)
+      + detailLine('Files', routeSummary.file_count ?? 0)
+      + detailLine('Status', routeSummary.status || '')
+      + detailLine('Scope note', localizedRouteNote)
+    )
+    + renderPanel(
+      sectionTitle(label('section.trust_reference_summary', 'Trust Reference Summary'))
+      + detailLine('Target node', trustSummary.target_node || '')
+      + detailLine('Trust target', trustSummary.trust_target_node || '')
+      + detailLine('Active relations', trustSummary.active_relation_count ?? 0)
+      + detailLine('Dominant level', trustSummary.dominant_level || '')
+      + detailListLine('Domains', trustSummary.domains, ' | ')
+      + summaryJsonLine('Capabilities', trustSummary.capability_counts)
+      + detailLine('Preview', trustSummary.preview_message || '')
+      + detailLine('Scope note', localizedTrustNote)
+    )
+    + renderPanel(
+      sectionTitle(label('section.consent_summary', 'Consent Summary'))
+      + detailLine('Status', consentSummary.status || '')
+      + detailLine('Granted by', consentSummary.granted_by || '')
+      + detailLine('Scope', consentSummary.scope || '')
+      + detailLine('Purpose', consentSummary.purpose || '')
+      + detailLine('Third-party sharing', typeof consentSummary.third_party_sharing_allowed === 'boolean' ? String(consentSummary.third_party_sharing_allowed) : '')
+      + detailLine('Message', consentSummary.message || '')
+      + detailLine('Scope note', localizedConsentNote)
+    )
+    + renderPanel(
+      sectionTitle(label('section.import_implication_summary', 'Import Implication Summary'))
+      + detailLine('Status', importSummary.status || '')
+      + detailLine('Mode', importSummary.mode || '')
+      + detailLine('Import candidate', typeof importSummary.import_candidate === 'boolean' ? String(importSummary.import_candidate) : '')
+      + detailListLine('Blocked codes', importSummary.blocked_codes, ' | ')
+      + detailListLine('Warning codes', importSummary.warning_codes, ' | ')
+      + detailLine('Message', importSummary.message || '')
+      + detailLine('Scope note', localizedImportNote)
+    )
+    + collapsibleJsonBlock(label('label.response_json', 'Response JSON'), payload, true);
+}}
 const detailPathResolvers = {{
   '/api/ai-index-graph-edges': () => null,
   '/api/ai-index-vector': row => row.record_id ? '/api/ai-index/vector/' + encodeURIComponent(row.record_id) : null,
@@ -11255,6 +11331,7 @@ function renderTable(endpoint, rows) {{
 }}
 function endpointBody(endpoint, payload) {{
   if (endpoint === '/api/overview') return renderOverview(payload);
+  if (endpoint === '/api/federation-package-preview') return renderFederationPackagePreview(payload);
   const rows = firstArray(payload);
   return rows
     ? routeHeading(endpoint) + renderTable(endpoint, rows)
