@@ -673,7 +673,7 @@ def test_mutation_readiness_summary_can_reach_enablement_ready(tmp_path):
 
 
 def test_ui_overview_data(tmp_path):
-    _populate(tmp_path)
+    ids = _populate(tmp_path)
     RuntimeConfigService(tmp_path).set_http(
         base_url="https://runtime.example.invalid/v1",
         model_name="manual-http-model",
@@ -891,6 +891,19 @@ def test_ui_overview_data(tmp_path):
     assert overview["summary_jobs_summary"]["reviewer_kind_counts"]["unknown"] == 1
     assert overview["summary_jobs_summary"]["runtime_provider_counts"]["disabled"] == 1
     assert overview["summary_jobs_summary"]["summary_source_total"] == 0
+    assert overview["current_work_summary"]["question_count"] == 1
+    assert overview["current_work_summary"]["objection_count"] == 0
+    assert overview["current_work_summary"]["pending_proposal_count"] == 0
+    assert overview["current_work_summary"]["current_question"]["summary"] == "Why does this UI boundary exist?"
+    assert overview["current_work_summary"]["current_question"]["detail_path"] == (
+        f"/api/chronicle-objects/{ids['question_object_id']}"
+    )
+    assert overview["current_work_summary"]["current_artifact_candidate"]["detail_path"].startswith(
+        "/api/artifacts/"
+    )
+    assert overview["current_work_summary"]["boundary_note_key"] == (
+        "ui.current_work_summary.note.read_only_derived"
+    )
     assert overview["triage"]["needs_attention_reviews"] == 3
     assert overview["triage"]["runtime_record_kinds"]["summary"] == 1
     assert overview["triage"]["runtime_record_kinds"]["retrieval_plan"] == 1
@@ -1586,6 +1599,66 @@ def test_ui_html_filtering_includes_provider_response_metadata_fields(tmp_path, 
     assert "Review queue blocked-route preview stays read-only and returns the CLI fallback contract." in html
     assert "Runtime-record blocked-route preview stays read-only and returns the CLI fallback contract." in html
     assert "Local mutation is enabled for this runtime-record list view." in html
+    assert "function renderOverviewCurrentWorkPanel(currentWork)" in html
+    assert "sectionTitle(label('section.current_work', 'Current Work'))" in html
+    assert "label('overview.current_questions', 'Current questions')" in html
+    assert "label('overview.pending_proposals', 'Pending proposals')" in html
+    assert "label('overview.apply_ready_proposals', 'Apply-ready proposals')" in html
+    assert "label('overview.unresolved_objections', 'Unresolved objections')" in html
+    assert "label('overview.active_hypotheses', 'Active hypotheses')" in html
+    assert "detailLine('Artifact candidate', currentArtifact.title || '')" in html
+    assert "detailLine('Latest pending proposal', latestProposal.summary || '')" in html
+    assert "detailLine('Latest apply-ready proposal', latestApplyReady.summary || '')" in html
+    assert "detailLine('Latest objection', latestObjection.summary || '')" in html
+    assert "data => renderOverviewCurrentWorkPanel(data.currentWork)," in html
+
+
+def test_overview_current_work_summary_tracks_questions_proposals_and_objections(tmp_path):
+    ids = _populate(tmp_path)
+    objection = ChronicleObjectService(tmp_path).record(
+        object_type="objection",
+        summary="Need stronger provenance proof",
+        created_by="tester",
+        artifact_id=ids["artifact_id"],
+        origin_question_id=ids["question_object_id"],
+    )
+    ChronicleObjectService(tmp_path).record(
+        object_type="hypothesis",
+        summary="Artifact proposal may resolve the concern",
+        created_by="tester",
+        artifact_id=ids["artifact_id"],
+        origin_question_id=ids["question_object_id"],
+    )
+    pending_proposal = ProposalService(tmp_path).propose_artifact_update(
+        artifact_id=ids["artifact_id"],
+        summary="Pending UI artifact proposal",
+        content="pending proposal body",
+    )
+    approved_proposal = ProposalService(tmp_path).propose_context_update(
+        context_id=ids["context_id"],
+        summary="Approved UI context proposal",
+        proposed_summary="approved proposal body",
+    )
+    ReviewService(tmp_path).approve(event_id=approved_proposal.event_id, reviewer="alice")
+
+    summary = ChronicleUIDataService(tmp_path).overview()["current_work_summary"]
+
+    assert summary["question_count"] == 1
+    assert summary["objection_count"] == 1
+    assert summary["hypothesis_count"] == 1
+    assert summary["pending_proposal_count"] == 1
+    assert summary["apply_ready_proposal_count"] == 1
+    assert summary["current_question"]["detail_path"] == f"/api/chronicle-objects/{ids['question_object_id']}"
+    assert summary["latest_objection"]["object_id"] == objection.object_id
+    assert summary["latest_objection"]["detail_path"] == f"/api/chronicle-objects/{objection.object_id}"
+    assert summary["current_artifact_candidate"]["artifact_id"] == ids["artifact_id"]
+    assert summary["current_artifact_candidate"]["detail_path"] == f"/api/artifacts/{ids['artifact_id']}"
+    assert summary["latest_pending_proposal"]["event_id"] == pending_proposal.event_id
+    assert summary["latest_pending_proposal"]["detail_path"] == f"/api/review-queue/{pending_proposal.event_id}"
+    assert summary["latest_apply_ready_proposal"]["event_id"] == approved_proposal.event_id
+    assert summary["latest_apply_ready_proposal"]["detail_path"] == (
+        f"/api/review-queue/{approved_proposal.event_id}"
+    )
 
 
 def test_ui_data_service_detail_endpoints(tmp_path):
