@@ -1836,7 +1836,10 @@ def test_ui_data_service_detail_endpoints(tmp_path):
     assert artifact_detail["title"] == "UI Artifact"
     assert artifact_detail["versions"]
     assert service.detail_payload(f"/api/decisions/{ids['decision_id']}")["record"]["reason"] == "UI decision"
-    assert service.detail_payload(f"/api/boundary/{ids['rule_id']}")["record"]["reason"] == "UI boundary"
+    boundary_detail = service.detail_payload(f"/api/boundary/{ids['rule_id']}")["record"]
+    assert boundary_detail["reason"] == "UI boundary"
+    assert boundary_detail["detail_governance_summary"]["list_path"] == "/api/boundary"
+    assert boundary_detail["detail_governance_summary"]["linked_audit_count"] >= 1
     audit_detail = service.detail_payload(f"/api/audit/{ids['audit_id']}")["record"]
     assert audit_detail["summary"] == "UI audit event"
     assert audit_detail["related_boundary_rule_ids"] == [ids["rule_id"]]
@@ -1856,7 +1859,10 @@ def test_ui_data_service_detail_endpoints(tmp_path):
     assert consent_detail["impacted_target_summary"]["primary_target_path"] == (
         f"/api/contexts/{ids['context_id']}"
     )
-    assert service.detail_payload(f"/api/lifecycle/{ids['lifecycle_id']}")["record"]["reason"] == "UI lifecycle marker"
+    lifecycle_detail = service.detail_payload(f"/api/lifecycle/{ids['lifecycle_id']}")["record"]
+    assert lifecycle_detail["reason"] == "UI lifecycle marker"
+    assert lifecycle_detail["detail_governance_summary"]["list_path"] == "/api/lifecycle"
+    assert lifecycle_detail["detail_governance_summary"]["linked_audit_count"] >= 1
     summary_detail = service.detail_payload(f"/api/summary-jobs/{ids['summary_job_id']}")["record"]
     assert summary_detail["title"] == "UI Summary Draft"
     assert summary_detail["suggested_cli_family"] == "chronicle summary show --id"
@@ -2887,9 +2893,13 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "function renderBoundaryTable(endpoint, rows)" in html
     assert "function renderLifecycleGovernanceSummary(rows)" in html
     assert "function renderLifecycleTable(endpoint, rows)" in html
+    assert "function renderBoundaryLifecycleGovernanceNotice(record)" in html
     assert "sectionTitle(label('section.boundary_governance', 'Boundary Governance'))" in html
     assert "sectionTitle(label('section.lifecycle_governance', 'Lifecycle Governance'))" in html
+    assert "isBoundary ? 'notice.boundary_detail_governance' : 'notice.lifecycle_detail_governance'" in html
+    assert "isBoundary ? 'Boundary Governance Link' : 'Lifecycle Governance Link'" in html
     assert "renderAuditGovernanceNotice," in html
+    assert "renderBoundaryLifecycleGovernanceNotice," in html
     assert "renderRuntimeWorkspaceNotice," in html
     assert "renderSummaryJobWorkspaceNotice," in html
     assert "renderArtifactWorkbenchNotice," in html

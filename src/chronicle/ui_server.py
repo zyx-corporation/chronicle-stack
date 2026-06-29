@@ -4310,6 +4310,66 @@ class ChronicleUIDataService:
             "governance_summary": self.audit_governance_summary(rows),
         }
 
+    def _boundary_detail_governance_summary(self, rule_id: str) -> dict[str, Any]:
+        boundary_rows = self.boundary_rules()["boundary_rules"]
+        audit_rows = self.audit_events().get("audit_events", [])
+        related_audits = [
+            row
+            for row in audit_rows
+            if rule_id in [str(item) for item in row.get("related_boundary_rule_ids", [])]
+        ]
+        latest_audit = related_audits[0] if related_audits else {}
+        return {
+            "status": "audit_linked" if related_audits else "audit_unlinked",
+            "list_path": "/api/boundary",
+            "list_label": "Boundary Governance",
+            "rule_count": len(boundary_rows),
+            "linked_audit_count": len(related_audits),
+            "latest_audit_summary": latest_audit.get("summary", ""),
+            "latest_audit_detail_path": (
+                f"/api/audit/{latest_audit['audit_id']}" if latest_audit.get("audit_id") else None
+            ),
+            "message": (
+                "Boundary detail links back to the read-only governance rail and related audit evidence."
+                if related_audits
+                else "Boundary detail links back to the read-only governance rail even when no related audit evidence is currently derived."
+            ),
+            "boundary_note": (
+                "Boundary detail governance summary is derived and read-only; it does not enforce or mutate rule state."
+            ),
+            "boundary_note_key": "ui.boundary_detail_governance.note.read_only_derived",
+        }
+
+    def _lifecycle_detail_governance_summary(self, lifecycle_id: str) -> dict[str, Any]:
+        lifecycle_rows = self.lifecycle_markers()["lifecycle_markers"]
+        audit_rows = self.audit_events().get("audit_events", [])
+        related_audits = [
+            row
+            for row in audit_rows
+            if lifecycle_id in [str(item) for item in row.get("related_lifecycle_ids", [])]
+        ]
+        latest_audit = related_audits[0] if related_audits else {}
+        return {
+            "status": "audit_linked" if related_audits else "audit_unlinked",
+            "list_path": "/api/lifecycle",
+            "list_label": "Lifecycle Governance",
+            "marker_count": len(lifecycle_rows),
+            "linked_audit_count": len(related_audits),
+            "latest_audit_summary": latest_audit.get("summary", ""),
+            "latest_audit_detail_path": (
+                f"/api/audit/{latest_audit['audit_id']}" if latest_audit.get("audit_id") else None
+            ),
+            "message": (
+                "Lifecycle detail links back to the read-only governance rail and related audit evidence."
+                if related_audits
+                else "Lifecycle detail links back to the read-only governance rail even when no related audit evidence is currently derived."
+            ),
+            "boundary_note": (
+                "Lifecycle detail governance summary is derived and read-only; it does not enforce or mutate lifecycle state."
+            ),
+            "boundary_note_key": "ui.lifecycle_detail_governance.note.read_only_derived",
+        }
+
     def lifecycle_markers(self, *, limit: int = 100) -> dict[str, Any]:
         events = self.lifecycle.list_events()
         return {"lifecycle_markers": [_dump_model(event) for event in reversed(events[-limit:])]}
@@ -6813,6 +6873,10 @@ class ChronicleUIDataService:
         elif resource == "boundary":
             rules = self.chronicle.index.load_boundary_rules()
             record = _dump_model(rules[record_id]) if record_id in rules else None
+            if record is not None:
+                record["detail_governance_summary"] = self._boundary_detail_governance_summary(
+                    record_id
+                )
         elif resource == "audit":
             record = next(
                 (
@@ -6824,6 +6888,11 @@ class ChronicleUIDataService:
             )
         elif resource == "lifecycle":
             record = _find_by_attr(self.lifecycle.list_events(), "lifecycle_id", record_id)
+            if record is not None:
+                record = _dump_model(record) if hasattr(record, "model_dump") else dict(record)
+                record["detail_governance_summary"] = self._lifecycle_detail_governance_summary(
+                    record_id
+                )
         elif resource == "chronicle-objects":
             object_record = self.chronicle_objects.get(record_id)
             record = _dump_model(object_record)
@@ -10347,6 +10416,29 @@ function renderAuditGovernanceNotice(record) {{
       + detailLine('Scope note', localizedImplicationNote)
   );
 }}
+function renderBoundaryLifecycleGovernanceNotice(record) {{
+  if (!record.detail_governance_summary) return '';
+  const summary = record.detail_governance_summary;
+  const localizedBoundaryNote = summary.boundary_note_key
+    ? formatLabel(summary.boundary_note_key, {{}}, summary.boundary_note || '')
+    : (summary.boundary_note || '');
+  const isBoundary = !!record.rule_id;
+  return renderNotice(
+    label(
+      isBoundary ? 'notice.boundary_detail_governance' : 'notice.lifecycle_detail_governance',
+      isBoundary ? 'Boundary Governance Link' : 'Lifecycle Governance Link'
+    ),
+    messageParagraph(summary.message || '')
+      + detailLine(isBoundary ? 'Boundary rules' : 'Lifecycle markers', (isBoundary ? summary.rule_count : summary.marker_count) ?? 0)
+      + detailLine('Linked audits', summary.linked_audit_count ?? 0)
+      + detailLine('Latest audit', summary.latest_audit_summary || '')
+      + navigationCluster([
+        summary.list_path ? detailNavButton(summary.list_path, summary.list_label || (isBoundary ? 'Boundary Governance' : 'Lifecycle Governance')) : '',
+        summary.latest_audit_detail_path ? detailNavButton(summary.latest_audit_detail_path, label('button.open_latest_audit', 'Open latest audit')) : '',
+      ])
+      + detailLine('Scope note', localizedBoundaryNote)
+  );
+}}
 function renderArtifactWorkbenchNotice(record) {{
   const linkedContexts = Array.isArray(record.linked_contexts) ? record.linked_contexts : [];
   const linkedDecisions = Array.isArray(record.linked_decisions) ? record.linked_decisions : [];
@@ -11504,6 +11596,7 @@ const detailNoticeRenderers = [
   renderPackageReadinessNotice,
   renderSummaryJobWorkspaceNotice,
   renderAuditGovernanceNotice,
+  renderBoundaryLifecycleGovernanceNotice,
   renderArtifactWorkbenchNotice,
   renderRelatedLinksNotice,
   renderAuthReadinessNotice,
