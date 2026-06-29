@@ -9576,6 +9576,44 @@ function renderRuntimePreviewNotice(record) {{
       + detailLine('CLI', preview.suggested_cli_family || '')
   );
 }}
+function renderRuntimeWorkspaceNotice(record) {{
+  if (!record.posture_role && !record.downstream_boundary_note && !record.trial_sufficiency_summary && !record.handoff_summary) return '';
+  const posture = record.posture_role || {{}};
+  const boundary = record.downstream_boundary_note || {{}};
+  const trial = record.trial_sufficiency_summary || {{}};
+  const handoff = record.handoff_summary || {{}};
+  const localizedPostureNote = posture.boundary_note_key
+    ? formatLabel(posture.boundary_note_key, {{}}, posture.boundary_note || '')
+    : (posture.boundary_note || '');
+  const localizedBoundaryNote = boundary.boundary_note_key
+    ? formatLabel(boundary.boundary_note_key, {{}}, boundary.boundary_note || '')
+    : (boundary.boundary_note || '');
+  const localizedTrialNote = trial.boundary_note_key
+    ? formatLabel(trial.boundary_note_key, {{}}, trial.boundary_note || '')
+    : (trial.boundary_note || '');
+  const localizedHandoffNote = handoff.boundary_note_key
+    ? formatLabel(handoff.boundary_note_key, {{}}, handoff.boundary_note || '')
+    : (handoff.boundary_note || '');
+  return renderNotice(
+    label('notice.runtime_workspace', 'Runtime Workspace'),
+    detailLine('Posture role', posture.status || '')
+      + detailLine('Posture note', posture.message || '')
+      + detailLine('Downstream boundary', boundary.status || '')
+      + detailLine('Boundary note', boundary.message || '')
+      + detailLine('Trial sufficiency', trial.status || '')
+      + detailLine('Trial message', trial.message || '')
+      + detailLine('Import ready', typeof trial.import_ready === 'boolean' ? String(trial.import_ready) : '')
+      + detailLine('Missing behavior', trial.missing_behavior || '')
+      + detailLine('Handoff status', handoff.status || '')
+      + detailLine('Handoff message', handoff.message || '')
+      + detailLine('Downstream commands', handoff.downstream_command_count ?? 0)
+      + detailLine('Referenced records', handoff.referenced_record_count ?? 0)
+      + detailLine('Eligible contexts', handoff.eligible_context_count ?? 0)
+      + detailLine('Reviewed files', handoff.reviewed_file_count ?? 0)
+      + detailLine('Import validation', handoff.import_validation_status || '')
+      + detailLine('Scope note', localizedPostureNote || localizedBoundaryNote || localizedTrialNote || localizedHandoffNote)
+  );
+}}
 function renderQueryEngineTrialPreviewNotice(record) {{
   if (!record.query_engine_trial_preview) return '';
   const preview = record.query_engine_trial_preview;
@@ -10047,6 +10085,32 @@ function renderPackageReadinessNotice(record) {{
       + detailLine('Scope note', localizedBoundaryNote),
       readinessButtons,
     )
+  );
+}}
+function renderSummaryJobWorkspaceNotice(record) {{
+  if (!record.package_readiness_summary && !record.auth_advisory_summary && !record.identity_assurance_summary) return '';
+  const readiness = record.package_readiness_summary || {{}};
+  const authAdvisory = record.auth_advisory_summary || {{}};
+  const identity = record.identity_assurance_summary || {{}};
+  const localizedReadiness = readiness.label_key
+    ? formatLabel(readiness.label_key, {{}}, readiness.label || '')
+    : (readiness.label || readiness.status || '');
+  const localizedAuthNote = authAdvisory.boundary_note_key
+    ? formatLabel(authAdvisory.boundary_note_key, {{}}, authAdvisory.boundary_note || '')
+    : (authAdvisory.boundary_note || '');
+  const localizedIdentityNote = identity.boundary_note_key
+    ? formatLabel(identity.boundary_note_key, {{}}, identity.boundary_note || '')
+    : (identity.boundary_note || '');
+  return renderNotice(
+    label('notice.summary_job_workspace', 'Summary Job Workspace'),
+    detailLine('Package readiness', localizedReadiness)
+      + detailLine('Package note', readiness.message || '')
+      + detailLine('Auth advisory', authAdvisory.status || '')
+      + detailLine('Auth message', authAdvisory.message || '')
+      + detailLine('Auth blockers', authAdvisory.blocker_count ?? 0)
+      + detailLine('Identity assurance', identity.status || '')
+      + detailLine('Identity message', identity.message || '')
+      + detailLine('Scope note', localizedAuthNote || localizedIdentityNote)
   );
 }}
 function renderArtifactWorkbenchNotice(record) {{
@@ -11119,6 +11183,7 @@ function detailNavigationOptions(endpoint, record) {{
 }}
 const detailNoticeRenderers = [
   renderRuntimePreviewNotice,
+  renderRuntimeWorkspaceNotice,
   renderQueryEngineTrialPreviewNotice,
   renderResponseMetadataNotice,
   renderRetrievalHandoffNotice,
@@ -11126,6 +11191,7 @@ const detailNoticeRenderers = [
   renderPackageHandoffPreviewNotice,
   renderInvocationPlanNotice,
   renderPackageReadinessNotice,
+  renderSummaryJobWorkspaceNotice,
   renderArtifactWorkbenchNotice,
   renderRelatedLinksNotice,
   renderAuthReadinessNotice,

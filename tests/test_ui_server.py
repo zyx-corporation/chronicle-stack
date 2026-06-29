@@ -2871,6 +2871,8 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "function endpointBody(endpoint, payload)" in html
     assert "function detailNavigationOptions(endpoint, record)" in html
     assert "const detailNoticeRenderers = [" in html
+    assert "renderRuntimeWorkspaceNotice," in html
+    assert "renderSummaryJobWorkspaceNotice," in html
     assert "renderArtifactWorkbenchNotice," in html
     assert "function renderDetailNotices(record)" in html
     assert "function detailNoticeBody(endpoint, record)" in html
@@ -3085,6 +3087,14 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "filterValueLabel('runtimeRecords', 'retrieval_plan')" in html
     assert "filterValueLabel('runtimeRecords', 'query_engine_trial')" in html
     assert "label('notice.query_engine_trial_preview', 'Query-Engine Trial Preview')" in html
+    assert "function renderRuntimeWorkspaceNotice(record)" in html
+    assert "label('notice.runtime_workspace', 'Runtime Workspace')" in html
+    assert "detailLine('Posture role', posture.status || '')" in html
+    assert "detailLine('Handoff status', handoff.status || '')" in html
+    assert "function renderSummaryJobWorkspaceNotice(record)" in html
+    assert "label('notice.summary_job_workspace', 'Summary Job Workspace')" in html
+    assert "detailLine('Auth advisory', authAdvisory.status || '')" in html
+    assert "detailLine('Identity assurance', identity.status || '')" in html
     assert "detailLine('Bundle manifest', preview.bundle_manifest_path || '')" in html
     assert "filterValueLabel('reviewQueue', 'response_id')" in html
     assert "summaryJsonLine('Runtime kinds', triage.runtime_record_kinds)" in html
