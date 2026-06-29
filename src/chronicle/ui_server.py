@@ -8815,12 +8815,8 @@ function renderAuditGovernanceSummary(summary) {{
     + detailLine('Scope note', localizedBoundaryNote)
   );
 }}
-function renderAuditRow(row, endpoint) {{
+function renderAuditTimelineRow(row, endpoint) {{
   const path = detailPath(endpoint, row);
-  const implication = row.operational_implication || {{}};
-  const impacted = row.impacted_target_summary || {{}};
-  const boundaryCount = Array.isArray(row.related_boundary_rule_ids) ? row.related_boundary_rule_ids.length : 0;
-  const lifecycleCount = Array.isArray(row.related_lifecycle_ids) ? row.related_lifecycle_ids.length : 0;
   return '<tr>'
     + '<td>' + detailJsonButton(endpoint, row) + (path ? detailButton(path) : '') + '</td>'
     + '<td>' + cellStack([
@@ -8834,6 +8830,21 @@ function renderAuditRow(row, endpoint) {{
       cellMeta(String(row.purpose || '')),
     ]) + '</td>'
     + '<td>' + cellStack([
+      cellTitle(String(row.actor || '')),
+      cellMeta(String(row.audit_id || '')),
+      cellMeta(String(row.created_at || '')),
+    ]) + '</td>'
+    + '</tr>';
+}}
+function renderAuditInterpretationRow(row, endpoint) {{
+  const path = detailPath(endpoint, row);
+  const implication = row.operational_implication || {{}};
+  const impacted = row.impacted_target_summary || {{}};
+  const boundaryCount = Array.isArray(row.related_boundary_rule_ids) ? row.related_boundary_rule_ids.length : 0;
+  const lifecycleCount = Array.isArray(row.related_lifecycle_ids) ? row.related_lifecycle_ids.length : 0;
+  return '<tr>'
+    + '<td>' + detailJsonButton(endpoint, row) + (path ? detailButton(path) : '') + '</td>'
+    + '<td>' + cellStack([
       cellTitle(implication.status || ''),
       cellMeta(implication.message || ''),
       cellMeta('boundary=' + String(boundaryCount) + ' lifecycle=' + String(lifecycleCount)),
@@ -8843,20 +8854,42 @@ function renderAuditRow(row, endpoint) {{
       cellMeta(impacted.primary_target_path || ''),
       cellMeta('records=' + String(impacted.record_count ?? 0)),
     ]) + '</td>'
+    + '<td>' + cellStack([
+      cellTitle(String(row.result || '')),
+      cellMeta(String(row.operation || '')),
+      cellMeta(String(row.target_environment || '')),
+    ]) + '</td>'
     + '</tr>';
+}}
+function renderAuditTimelinePanel(endpoint, rows) {{
+  return renderPanel(
+    sectionTitle(label('section.audit_timeline', 'Audit Timeline'))
+    + tableHtml([
+      label('label.table_detail', 'Detail'),
+      label('label.table_summary', 'Summary'),
+      label('label.table_operation', 'Operation'),
+      label('label.table_event', 'Event'),
+    ], rows.map(row => renderAuditTimelineRow(row, endpoint)).join(''))
+  );
+}}
+function renderAuditInterpretationPanel(endpoint, rows) {{
+  return renderPanel(
+    sectionTitle(label('section.audit_interpretation', 'Audit Interpretation'))
+    + tableHtml([
+      label('label.table_detail', 'Detail'),
+      label('label.table_status', 'Status'),
+      label('label.table_target', 'Target'),
+      label('label.table_operation', 'Operation'),
+    ], rows.map(row => renderAuditInterpretationRow(row, endpoint)).join(''))
+  );
 }}
 function renderAuditTable(endpoint, rows) {{
   const payload = window.__chronicleRoutePayload || {{}};
   const governance = payload.governance_summary || {{}};
   const sorted = rows.slice().sort((a, b) => String(b.created_at || '').localeCompare(String(a.created_at || '')));
   return renderAuditGovernanceSummary(governance)
-    + tableHtml([
-      label('label.table_detail', 'Detail'),
-      label('label.table_summary', 'Summary'),
-      label('label.table_operation', 'Operation'),
-      label('label.table_status', 'Status'),
-      label('label.table_target', 'Target'),
-    ], sorted.map(row => renderAuditRow(row, endpoint)).join(''));
+    + renderAuditTimelinePanel(endpoint, sorted)
+    + renderAuditInterpretationPanel(endpoint, sorted);
 }}
 function renderGenericTable(endpoint, rows) {{
   const keys = Object.keys(rows[0]).slice(0, 8);

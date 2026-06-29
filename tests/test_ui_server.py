@@ -2879,6 +2879,10 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "sectionTitle(label('section.import_implication_summary', 'Import Implication Summary'))" in html
     assert "function renderAuditTable(endpoint, rows)" in html
     assert "function renderAuditGovernanceSummary(summary)" in html
+    assert "function renderAuditTimelinePanel(endpoint, rows)" in html
+    assert "function renderAuditInterpretationPanel(endpoint, rows)" in html
+    assert "sectionTitle(label('section.audit_timeline', 'Audit Timeline'))" in html
+    assert "sectionTitle(label('section.audit_interpretation', 'Audit Interpretation'))" in html
     assert "renderAuditGovernanceNotice," in html
     assert "renderRuntimeWorkspaceNotice," in html
     assert "renderSummaryJobWorkspaceNotice," in html
