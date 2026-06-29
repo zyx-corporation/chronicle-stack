@@ -904,6 +904,33 @@ def test_ui_overview_data(tmp_path):
     assert overview["current_work_summary"]["boundary_note_key"] == (
         "ui.current_work_summary.note.read_only_derived"
     )
+    assert overview["overview_evidence_summary"]["boundary_rule_count"] == 1
+    assert overview["overview_evidence_summary"]["audit_event_count"] == 2
+    assert overview["overview_evidence_summary"]["lifecycle_event_count"] == 1
+    assert overview["overview_evidence_summary"]["trust_node_count"] == 1
+    assert overview["overview_evidence_summary"]["trust_relation_count"] == 1
+    assert overview["overview_evidence_summary"]["auth_blocker_count"] >= 1
+    assert overview["overview_evidence_summary"]["consent_record_count"] == 0
+    assert overview["overview_evidence_summary"]["federation_overlap_count"] == 0
+    assert overview["overview_evidence_summary"]["latest_boundary_rule"]["reason"] == "UI boundary"
+    assert overview["overview_evidence_summary"]["latest_boundary_rule"]["detail_path"] == (
+        f"/api/boundary/{ids['rule_id']}"
+    )
+    assert overview["overview_evidence_summary"]["latest_audit_event"]["summary"].startswith(
+        "Trust relation asserted: "
+    )
+    assert overview["overview_evidence_summary"]["latest_audit_event"]["detail_path"].startswith(
+        "/api/audit/"
+    )
+    assert overview["overview_evidence_summary"]["latest_lifecycle_event"]["reason"] == (
+        "UI lifecycle marker"
+    )
+    assert overview["overview_evidence_summary"]["latest_lifecycle_event"]["detail_path"] == (
+        f"/api/lifecycle/{ids['lifecycle_id']}"
+    )
+    assert overview["overview_evidence_summary"]["boundary_note_key"] == (
+        "ui.overview_evidence_summary.note.read_only_derived"
+    )
     assert overview["triage"]["needs_attention_reviews"] == 3
     assert overview["triage"]["runtime_record_kinds"]["summary"] == 1
     assert overview["triage"]["runtime_record_kinds"]["retrieval_plan"] == 1
@@ -1611,6 +1638,20 @@ def test_ui_html_filtering_includes_provider_response_metadata_fields(tmp_path, 
     assert "detailLine('Latest apply-ready proposal', latestApplyReady.summary || '')" in html
     assert "detailLine('Latest objection', latestObjection.summary || '')" in html
     assert "data => renderOverviewCurrentWorkPanel(data.currentWork)," in html
+    assert "function renderOverviewEvidencePanel(evidence)" in html
+    assert "sectionTitle(label('section.overview_evidence', 'Evidence Rail'))" in html
+    assert "label('overview.boundary_rules', 'Boundary rules')" in html
+    assert "label('overview.audit_events', 'Audit events')" in html
+    assert "label('overview.lifecycle_events', 'Lifecycle events')" in html
+    assert "label('overview.trust_nodes', 'Trust nodes')" in html
+    assert "label('overview.trust_relations', 'Trust relations')" in html
+    assert "label('overview.auth_blockers', 'Auth blockers')" in html
+    assert "label('overview.consent_records', 'Consent records')" in html
+    assert "label('overview.federation_overlaps', 'Federation overlaps')" in html
+    assert "detailLine('Latest boundary rule', latestBoundary.reason || '')" in html
+    assert "detailLine('Latest audit event', latestAudit.summary || '')" in html
+    assert "detailLine('Latest lifecycle event', latestLifecycle.reason || '')" in html
+    assert "data => renderOverviewEvidencePanel(data.overviewEvidence)," in html
 
 
 def test_overview_current_work_summary_tracks_questions_proposals_and_objections(tmp_path):
