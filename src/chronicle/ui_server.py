@@ -8891,6 +8891,114 @@ function renderAuditTable(endpoint, rows) {{
     + renderAuditTimelinePanel(endpoint, sorted)
     + renderAuditInterpretationPanel(endpoint, sorted);
 }}
+function renderBoundaryGovernanceSummary(rows) {{
+  const enabledCount = rows.filter(row => row.enabled !== false).length;
+  const warnCount = rows.filter(row => String(row.rule_type || '') === 'warn').length;
+  const blockCount = rows.filter(row => String(row.rule_type || '') === 'block').length;
+  const latest = rows[0] || {{}};
+  const fieldCounts = rows.reduce((counts, row) => {{
+    const key = String(row.field || 'unknown');
+    counts[key] = (counts[key] || 0) + 1;
+    return counts;
+  }}, {{}});
+  return renderPanel(
+    sectionTitle(label('section.boundary_governance', 'Boundary Governance'))
+    + detailLine('Boundary rules', rows.length)
+    + detailLine('Enabled rules', enabledCount)
+    + detailLine('Warn rules', warnCount)
+    + detailLine('Block rules', blockCount)
+    + summaryJsonLine('Fields', fieldCounts)
+    + detailLine('Latest boundary', latest.reason || '')
+    + detailLine('Scope note', 'Boundary route remains a local read-only rule inspection surface.')
+  );
+}}
+function renderBoundaryTable(endpoint, rows) {{
+  const sorted = rows.slice().sort((a, b) => String(b.created_at || '').localeCompare(String(a.created_at || '')));
+  return renderBoundaryGovernanceSummary(sorted)
+    + tableHtml([
+      label('label.table_detail', 'Detail'),
+      label('label.table_status', 'Status'),
+      label('label.table_operation', 'Operation'),
+      label('label.table_target', 'Target'),
+      label('label.table_summary', 'Summary'),
+    ], sorted.map(row => {{
+      const path = detailPath(endpoint, row);
+      return '<tr>'
+        + '<td>' + detailJsonButton(endpoint, row) + (path ? detailButton(path) : '') + '</td>'
+        + '<td>' + cellStack([
+          cellTitle(String(row.rule_type || '')),
+          cellMeta(String(row.enabled !== false)),
+          cellMeta(String(row.created_at || '')),
+        ]) + '</td>'
+        + '<td>' + cellStack([
+          cellTitle(String(row.field || '')),
+          cellMeta(String(row.operator || '')),
+          cellMeta(String(row.value ?? '')),
+        ]) + '</td>'
+        + '<td>' + cellStack([
+          cellTitle(String(row.rule_id || '')),
+          cellMeta(String(row.metadata && row.metadata.source_event_id || '')),
+        ]) + '</td>'
+        + '<td>' + cellStack([
+          cellTitle(String(row.reason || '')),
+        ]) + '</td>'
+        + '</tr>';
+    }}).join(''));
+}}
+function renderLifecycleGovernanceSummary(rows) {{
+  const latest = rows[0] || {{}};
+  const reasonClassCounts = rows.reduce((counts, row) => {{
+    const key = String(row.reason_class || 'unknown');
+    counts[key] = (counts[key] || 0) + 1;
+    return counts;
+  }}, {{}});
+  const actionCounts = rows.reduce((counts, row) => {{
+    const key = String(row.action || 'unknown');
+    counts[key] = (counts[key] || 0) + 1;
+    return counts;
+  }}, {{}});
+  return renderPanel(
+    sectionTitle(label('section.lifecycle_governance', 'Lifecycle Governance'))
+    + detailLine('Lifecycle markers', rows.length)
+    + summaryJsonLine('Actions', actionCounts)
+    + summaryJsonLine('Reason classes', reasonClassCounts)
+    + detailLine('Latest lifecycle', latest.reason || '')
+    + detailLine('Latest target kind', latest.target_kind || '')
+    + detailLine('Scope note', 'Lifecycle route remains a local read-only marker inspection surface.')
+  );
+}}
+function renderLifecycleTable(endpoint, rows) {{
+  const sorted = rows.slice().sort((a, b) => String(b.created_at || '').localeCompare(String(a.created_at || '')));
+  return renderLifecycleGovernanceSummary(sorted)
+    + tableHtml([
+      label('label.table_detail', 'Detail'),
+      label('label.table_event', 'Event'),
+      label('label.table_status', 'Status'),
+      label('label.table_target', 'Target'),
+      label('label.table_summary', 'Summary'),
+    ], sorted.map(row => {{
+      const path = detailPath(endpoint, row);
+      return '<tr>'
+        + '<td>' + detailJsonButton(endpoint, row) + (path ? detailButton(path) : '') + '</td>'
+        + '<td>' + cellStack([
+          cellTitle(String(row.action || '')),
+          cellMeta(String(row.lifecycle_id || '')),
+          cellMeta(String(row.created_at || '')),
+        ]) + '</td>'
+        + '<td>' + cellStack([
+          cellTitle(String(row.reason_class || '')),
+          cellMeta(String(row.actor || '')),
+        ]) + '</td>'
+        + '<td>' + cellStack([
+          cellTitle(String(row.target_kind || '')),
+          cellMeta(String(row.target_id || '')),
+        ]) + '</td>'
+        + '<td>' + cellStack([
+          cellTitle(String(row.reason || '')),
+        ]) + '</td>'
+        + '</tr>';
+    }}).join(''));
+}}
 function renderGenericTable(endpoint, rows) {{
   const keys = Object.keys(rows[0]).slice(0, 8);
   return '<table><thead><tr><th>' + esc(label('label.table_detail', 'Detail')) + '</th>' + keys.map(k => '<th>' + esc(k) + '</th>').join('') + '</tr></thead><tbody>'
@@ -8904,6 +9012,8 @@ function renderGenericTable(endpoint, rows) {{
 }}
 const endpointRenderers = {{
   '/api/audit': renderAuditTable,
+  '/api/boundary': renderBoundaryTable,
+  '/api/lifecycle': renderLifecycleTable,
   '/api/runtime-records': renderRuntimeRecordsTable,
   '/api/review-queue': renderReviewQueueTable,
   '/api/summary-jobs': renderSummaryJobsTable,

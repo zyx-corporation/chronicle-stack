@@ -2883,11 +2883,19 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "function renderAuditInterpretationPanel(endpoint, rows)" in html
     assert "sectionTitle(label('section.audit_timeline', 'Audit Timeline'))" in html
     assert "sectionTitle(label('section.audit_interpretation', 'Audit Interpretation'))" in html
+    assert "function renderBoundaryGovernanceSummary(rows)" in html
+    assert "function renderBoundaryTable(endpoint, rows)" in html
+    assert "function renderLifecycleGovernanceSummary(rows)" in html
+    assert "function renderLifecycleTable(endpoint, rows)" in html
+    assert "sectionTitle(label('section.boundary_governance', 'Boundary Governance'))" in html
+    assert "sectionTitle(label('section.lifecycle_governance', 'Lifecycle Governance'))" in html
     assert "renderAuditGovernanceNotice," in html
     assert "renderRuntimeWorkspaceNotice," in html
     assert "renderSummaryJobWorkspaceNotice," in html
     assert "renderArtifactWorkbenchNotice," in html
     assert "'/api/audit': renderAuditTable," in html
+    assert "'/api/boundary': renderBoundaryTable," in html
+    assert "'/api/lifecycle': renderLifecycleTable," in html
     assert "if (endpoint === '/api/federation-package-preview') return renderFederationPackagePreview(payload);" in html
     assert "function renderDetailNotices(record)" in html
     assert "function detailNoticeBody(endpoint, record)" in html
