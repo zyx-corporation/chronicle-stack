@@ -2277,6 +2277,7 @@ class ChronicleUIDataService:
         review_queue = self.review_queue()["review_queue"]
         summary_jobs = self.summary_jobs_list()["summary_jobs"]
         chronicle_objects = self.chronicle_object_records()["chronicle_objects"]
+        proposals = self.proposal_records()["proposals"]
         federation_inbox = self.federation_inbox()["federation_messages"]
         federation_outbox = self.federation_outbox()["federation_messages"]
         reactions = self.reaction_records()["reactions"]
@@ -2342,6 +2343,11 @@ class ChronicleUIDataService:
             "runtime_records_summary": runtime_records_summary,
             "summary_jobs_summary": summary_jobs_summary,
             "chronicle_object_summary": self.chronicle_object_summary(chronicle_objects),
+            "current_work_summary": self.current_work_summary(
+                chronicle_objects=chronicle_objects,
+                artifacts=self.artifacts()["artifacts"],
+                proposals=proposals,
+            ),
             "federation_summary": self.federation_summary(federation_inbox, federation_outbox),
             "reaction_summary": self.reaction_summary(reactions),
             "trust_summary": self.trust_overview(trust_nodes, trust_relations),
@@ -2369,6 +2375,147 @@ class ChronicleUIDataService:
         return {
             "type_counts": type_counts,
             "derived_counts": derived_counts,
+        }
+
+    def current_work_summary(
+        self,
+        *,
+        chronicle_objects: list[dict[str, Any]] | None = None,
+        artifacts: list[dict[str, Any]] | None = None,
+        proposals: list[dict[str, Any]] | None = None,
+    ) -> dict[str, Any]:
+        object_rows = (
+            chronicle_objects
+            if chronicle_objects is not None
+            else self.chronicle_object_records()["chronicle_objects"]
+        )
+        artifact_rows = artifacts if artifacts is not None else self.artifacts()["artifacts"]
+        proposal_rows = proposals if proposals is not None else self.proposal_records()["proposals"]
+
+        active_objects = [
+            row
+            for row in object_rows
+            if str((row.get("lifecycle") or {}).get("state", "active")) == "active"
+        ]
+        active_questions = [
+            row for row in active_objects if str(row.get("object_type", "")) == "question"
+        ]
+        active_objections = [
+            row for row in active_objects if str(row.get("object_type", "")) == "objection"
+        ]
+        active_hypotheses = [
+            row for row in active_objects if str(row.get("object_type", "")) == "hypothesis"
+        ]
+        apply_ready_proposals = [
+            row for row in proposal_rows if bool(row.get("apply_ready"))
+        ]
+        apply_ready_event_ids = {
+            str(row.get("event_id", "")) for row in apply_ready_proposals if str(row.get("event_id", ""))
+        }
+        pending_proposals = [
+            row
+            for row in proposal_rows
+            if str(row.get("review_status", "")) == "needs_review"
+            and str(row.get("event_id", "")) not in apply_ready_event_ids
+        ]
+        latest_question = active_questions[-1] if active_questions else None
+        latest_objection = active_objections[-1] if active_objections else None
+        latest_proposal = pending_proposals[-1] if pending_proposals else None
+        latest_apply_ready = apply_ready_proposals[-1] if apply_ready_proposals else None
+
+        artifact_candidates = sorted(
+            artifact_rows,
+            key=lambda item: (
+                int(item.get("pending_proposal_count", 0)),
+                int(item.get("proposal_count", 0)),
+                0 if str(item.get("artifact_type", "")) == "summary" else 1,
+                str(item.get("updated_at", "")),
+            ),
+        )
+        current_artifact = artifact_candidates[-1] if artifact_candidates else None
+
+        return {
+            "question_count": len(active_questions),
+            "objection_count": len(active_objections),
+            "hypothesis_count": len(active_hypotheses),
+            "pending_proposal_count": len(pending_proposals),
+            "apply_ready_proposal_count": len(apply_ready_proposals),
+            "current_question": (
+                {
+                    "object_id": latest_question.get("object_id"),
+                    "summary": latest_question.get("summary"),
+                    "detail_path": (
+                        f"/api/chronicle-objects/{latest_question['object_id']}"
+                        if latest_question and latest_question.get("object_id")
+                        else None
+                    ),
+                }
+                if latest_question
+                else None
+            ),
+            "latest_objection": (
+                {
+                    "object_id": latest_objection.get("object_id"),
+                    "summary": latest_objection.get("summary"),
+                    "detail_path": (
+                        f"/api/chronicle-objects/{latest_objection['object_id']}"
+                        if latest_objection and latest_objection.get("object_id")
+                        else None
+                    ),
+                }
+                if latest_objection
+                else None
+            ),
+            "current_artifact_candidate": (
+                {
+                    "artifact_id": current_artifact.get("artifact_id"),
+                    "title": current_artifact.get("title"),
+                    "status": current_artifact.get("status"),
+                    "pending_proposal_count": current_artifact.get("pending_proposal_count", 0),
+                    "proposal_count": current_artifact.get("proposal_count", 0),
+                    "detail_path": (
+                        f"/api/artifacts/{current_artifact['artifact_id']}"
+                        if current_artifact and current_artifact.get("artifact_id")
+                        else None
+                    ),
+                }
+                if current_artifact
+                else None
+            ),
+            "latest_pending_proposal": (
+                {
+                    "event_id": latest_proposal.get("event_id"),
+                    "summary": latest_proposal.get("summary"),
+                    "target_kind": (latest_proposal.get("proposal") or {}).get("target_kind"),
+                    "target_id": (latest_proposal.get("proposal") or {}).get("target_id"),
+                    "detail_path": (
+                        f"/api/review-queue/{latest_proposal['event_id']}"
+                        if latest_proposal and latest_proposal.get("event_id")
+                        else None
+                    ),
+                }
+                if latest_proposal
+                else None
+            ),
+            "latest_apply_ready_proposal": (
+                {
+                    "event_id": latest_apply_ready.get("event_id"),
+                    "summary": latest_apply_ready.get("summary"),
+                    "target_kind": (latest_apply_ready.get("proposal") or {}).get("target_kind"),
+                    "target_id": (latest_apply_ready.get("proposal") or {}).get("target_id"),
+                    "detail_path": (
+                        f"/api/review-queue/{latest_apply_ready['event_id']}"
+                        if latest_apply_ready and latest_apply_ready.get("event_id")
+                        else None
+                    ),
+                }
+                if latest_apply_ready
+                else None
+            ),
+            "boundary_note": (
+                "Current work summary is an overview-only derived priority aid; it does not rank, approve, or mutate Chronicle records automatically."
+            ),
+            "boundary_note_key": "ui.current_work_summary.note.read_only_derived",
         }
 
     def runtime_records_overview(self, runtime_records: list[dict[str, Any]] | None = None) -> dict[str, Any]:
@@ -9628,6 +9775,44 @@ function renderOverviewMutationReadinessPanel(mutationReadiness) {{
     + detailListLine('Next steps', mutationReadiness.next_steps, ' | ')
   );
 }}
+function renderOverviewCurrentWorkPanel(currentWork) {{
+  const currentQuestion = currentWork.current_question || {{}};
+  const currentArtifact = currentWork.current_artifact_candidate || {{}};
+  const latestProposal = currentWork.latest_pending_proposal || {{}};
+  const latestApplyReady = currentWork.latest_apply_ready_proposal || {{}};
+  const latestObjection = currentWork.latest_objection || {{}};
+  const localizedBoundaryNote = currentWork.boundary_note_key
+    ? formatLabel(currentWork.boundary_note_key, {{}}, currentWork.boundary_note || '')
+    : (currentWork.boundary_note || '');
+  return renderPanel(
+    sectionTitle(label('section.current_work', 'Current Work'))
+    + buttonRow([
+      overviewCountButton(label('overview.current_questions', 'Current questions'), currentWork.question_count ?? 0, 'badge-neutral', '/api/chronicle-objects'),
+      overviewCountButton(label('overview.pending_proposals', 'Pending proposals'), currentWork.pending_proposal_count ?? 0, 'badge-warning', '/api/review-queue'),
+      overviewCountButton(label('overview.apply_ready_proposals', 'Apply-ready proposals'), currentWork.apply_ready_proposal_count ?? 0, 'badge-ready', '/api/review-queue'),
+    ])
+    + buttonRow([
+      overviewCountButton(label('overview.unresolved_objections', 'Unresolved objections'), currentWork.objection_count ?? 0, 'badge-warning', '/api/objection-view'),
+      overviewCountButton(label('overview.active_hypotheses', 'Active hypotheses'), currentWork.hypothesis_count ?? 0, 'badge-neutral', '/api/chronicle-objects'),
+    ])
+    + detailLine('Current question', currentQuestion.summary || '')
+    + navigationCluster([
+      currentQuestion.detail_path ? detailNavButton(currentQuestion.detail_path, label('button.open_current_question', 'Open current question')) : '',
+      latestObjection.detail_path ? detailNavButton(latestObjection.detail_path, label('button.open_latest_objection', 'Open latest objection')) : '',
+    ])
+    + detailLine('Artifact candidate', currentArtifact.title || '')
+    + detailLine('Artifact proposal counts', String(currentArtifact.pending_proposal_count ?? 0) + ' pending / ' + String(currentArtifact.proposal_count ?? 0) + ' total')
+    + navigationCluster([
+      currentArtifact.detail_path ? detailNavButton(currentArtifact.detail_path, label('button.open_artifact_candidate', 'Open artifact candidate')) : '',
+      latestProposal.detail_path ? detailNavButton(latestProposal.detail_path, label('button.open_pending_proposal', 'Open pending proposal')) : '',
+      latestApplyReady.detail_path ? detailNavButton(latestApplyReady.detail_path, label('button.open_apply_ready_proposal', 'Open apply-ready proposal')) : '',
+    ])
+    + detailLine('Latest pending proposal', latestProposal.summary || '')
+    + detailLine('Latest apply-ready proposal', latestApplyReady.summary || '')
+    + detailLine('Latest objection', latestObjection.summary || '')
+    + detailLine('Scope note', localizedBoundaryNote)
+  );
+}}
 function renderOverviewAiIndexPanel(aiIndex, counts) {{
   const vectorEntryCount = aiIndex.vector && aiIndex.vector.entry_count ? aiIndex.vector.entry_count : 0;
   const graphNodeCount = aiIndex.graph && aiIndex.graph.node_count ? aiIndex.graph.node_count : 0;
@@ -9848,6 +10033,7 @@ function overviewTriageJumpButtons() {{
 const overviewPanelRenderers = [
   data => renderOverviewHeaderPanel(data.chronicle),
   data => renderOverviewCountsPanel(data.counts),
+  data => renderOverviewCurrentWorkPanel(data.currentWork),
   data => renderOverviewRuntimeBoundaryPanel(data.runtime),
   data => renderOverviewRuntimeConfigPanel(data.runtimeConfig, data.runtimeConfigContract),
   data => renderOverviewUiBoundaryPanel(data.uiBoundary),
@@ -9879,6 +10065,7 @@ function renderOverview(payload) {{
   const federationOverlap = payload.federation_overlap_summary || {{}};
   const triage = payload.triage || {{}};
   const mutationReadiness = payload.mutation_readiness || {{}};
+  const currentWork = payload.current_work_summary || {{}};
   const runtimeConfig = payload.runtime_config || {{}};
   const runtimeConfigContract = runtimeConfig.config || {{}};
   const runtimeRecords = payload.runtime_records_summary || {{}};
@@ -9891,6 +10078,7 @@ function renderOverview(payload) {{
     authBoundaryOverview,
     chronicle,
     counts,
+    currentWork,
     federationOverlap,
     federationPreflight,
     federationSummary,
