@@ -2348,6 +2348,19 @@ class ChronicleUIDataService:
                 artifacts=self.artifacts()["artifacts"],
                 proposals=proposals,
             ),
+            "overview_evidence_summary": self.overview_evidence_summary(
+                boundary_rules=boundary_rules,
+                audit_events=[_dump_model(event) for event in audit_events],
+                lifecycle_events=[_dump_model(event) for event in lifecycle_events],
+                trust_nodes=trust_nodes,
+                trust_relations=trust_relations,
+                auth_boundary_summary=self.ui_boundary()["ui_boundary"]["auth_boundary_summary"],
+                federation_preflight=self.federation_preflight_summary(),
+                federation_overlap=self.federation_overlap_summary(
+                    runtime_records,
+                    review_queue,
+                ),
+            ),
             "federation_summary": self.federation_summary(federation_inbox, federation_outbox),
             "reaction_summary": self.reaction_summary(reactions),
             "trust_summary": self.trust_overview(trust_nodes, trust_relations),
@@ -2516,6 +2529,86 @@ class ChronicleUIDataService:
                 "Current work summary is an overview-only derived priority aid; it does not rank, approve, or mutate Chronicle records automatically."
             ),
             "boundary_note_key": "ui.current_work_summary.note.read_only_derived",
+        }
+
+    def overview_evidence_summary(
+        self,
+        *,
+        boundary_rules: dict[str, Any] | None = None,
+        audit_events: list[dict[str, Any]] | None = None,
+        lifecycle_events: list[dict[str, Any]] | None = None,
+        trust_nodes: list[dict[str, Any]] | None = None,
+        trust_relations: list[dict[str, Any]] | None = None,
+        auth_boundary_summary: dict[str, Any] | None = None,
+        federation_preflight: dict[str, Any] | None = None,
+        federation_overlap: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        boundary_rows = list((boundary_rules or {}).values()) if isinstance(boundary_rules, dict) else []
+        audit_rows = audit_events or []
+        lifecycle_rows = lifecycle_events or []
+        trust_node_rows = trust_nodes or []
+        trust_relation_rows = trust_relations or []
+        auth_summary = auth_boundary_summary or {}
+        preflight = federation_preflight or {}
+        overlap = federation_overlap or {}
+
+        latest_boundary = (
+            sorted(boundary_rows, key=lambda item: str(getattr(item, "created_at", "")))[-1]
+            if boundary_rows
+            else None
+        )
+        latest_audit = audit_rows[-1] if audit_rows else None
+        latest_lifecycle = lifecycle_rows[-1] if lifecycle_rows else None
+
+        return {
+            "boundary_rule_count": len(boundary_rows),
+            "audit_event_count": len(audit_rows),
+            "lifecycle_event_count": len(lifecycle_rows),
+            "trust_node_count": len(trust_node_rows),
+            "trust_relation_count": len(trust_relation_rows),
+            "auth_blocker_count": len(auth_summary.get("blockers", []) or []),
+            "consent_record_count": int(preflight.get("consent_record_count", 0) or 0),
+            "federation_overlap_count": int(overlap.get("runtime_overlap_count", 0) or 0)
+            + int(overlap.get("review_overlap_count", 0) or 0),
+            "latest_boundary_rule": (
+                {
+                    "rule_id": latest_boundary.rule_id,
+                    "reason": latest_boundary.reason,
+                    "detail_path": f"/api/boundary/{latest_boundary.rule_id}",
+                }
+                if latest_boundary is not None
+                else None
+            ),
+            "latest_audit_event": (
+                {
+                    "audit_id": latest_audit.get("audit_id"),
+                    "summary": latest_audit.get("summary"),
+                    "detail_path": (
+                        f"/api/audit/{latest_audit['audit_id']}" if latest_audit.get("audit_id") else None
+                    ),
+                }
+                if latest_audit is not None
+                else None
+            ),
+            "latest_lifecycle_event": (
+                {
+                    "lifecycle_id": latest_lifecycle.get("lifecycle_id"),
+                    "reason": latest_lifecycle.get("reason"),
+                    "detail_path": (
+                        f"/api/lifecycle/{latest_lifecycle['lifecycle_id']}"
+                        if latest_lifecycle.get("lifecycle_id")
+                        else None
+                    ),
+                }
+                if latest_lifecycle is not None
+                else None
+            ),
+            "auth_status": auth_summary.get("status"),
+            "federation_status": preflight.get("status"),
+            "boundary_note": (
+                "Overview evidence summary is a derived priority rail for trust, boundary, audit, and lifecycle inspection; it does not enforce or mutate anything."
+            ),
+            "boundary_note_key": "ui.overview_evidence_summary.note.read_only_derived",
         }
 
     def runtime_records_overview(self, runtime_records: list[dict[str, Any]] | None = None) -> dict[str, Any]:
@@ -9813,6 +9906,42 @@ function renderOverviewCurrentWorkPanel(currentWork) {{
     + detailLine('Scope note', localizedBoundaryNote)
   );
 }}
+function renderOverviewEvidencePanel(evidence) {{
+  const latestBoundary = evidence.latest_boundary_rule || {{}};
+  const latestAudit = evidence.latest_audit_event || {{}};
+  const latestLifecycle = evidence.latest_lifecycle_event || {{}};
+  const localizedBoundaryNote = evidence.boundary_note_key
+    ? formatLabel(evidence.boundary_note_key, {{}}, evidence.boundary_note || '')
+    : (evidence.boundary_note || '');
+  return renderPanel(
+    sectionTitle(label('section.overview_evidence', 'Evidence Rail'))
+    + buttonRow([
+      overviewCountButton(label('overview.boundary_rules', 'Boundary rules'), evidence.boundary_rule_count ?? 0, 'badge-neutral', '/api/boundary'),
+      overviewCountButton(label('overview.audit_events', 'Audit events'), evidence.audit_event_count ?? 0, 'badge-neutral', '/api/audit'),
+      overviewCountButton(label('overview.lifecycle_events', 'Lifecycle events'), evidence.lifecycle_event_count ?? 0, 'badge-neutral', '/api/lifecycle'),
+    ])
+    + buttonRow([
+      overviewCountButton(label('overview.trust_nodes', 'Trust nodes'), evidence.trust_node_count ?? 0, 'badge-neutral', '/api/trust-nodes'),
+      overviewCountButton(label('overview.trust_relations', 'Trust relations'), evidence.trust_relation_count ?? 0, 'badge-neutral', '/api/trust-relations'),
+      overviewCountButton(label('overview.auth_blockers', 'Auth blockers'), evidence.auth_blocker_count ?? 0, 'badge-warning', '/api/review-queue'),
+    ])
+    + buttonRow([
+      overviewCountButton(label('overview.consent_records', 'Consent records'), evidence.consent_record_count ?? 0, 'badge-neutral', '/api/audit'),
+      overviewCountButton(label('overview.federation_overlaps', 'Federation overlaps'), evidence.federation_overlap_count ?? 0, 'badge-warning', '/api/review-queue'),
+    ])
+    + detailLine('Auth status', evidence.auth_status || '')
+    + detailLine('Federation status', evidence.federation_status || '')
+    + detailLine('Latest boundary rule', latestBoundary.reason || '')
+    + detailLine('Latest audit event', latestAudit.summary || '')
+    + detailLine('Latest lifecycle event', latestLifecycle.reason || '')
+    + navigationCluster([
+      latestBoundary.detail_path ? detailNavButton(latestBoundary.detail_path, label('button.open_latest_boundary', 'Open latest boundary')) : '',
+      latestAudit.detail_path ? detailNavButton(latestAudit.detail_path, label('button.open_latest_audit', 'Open latest audit')) : '',
+      latestLifecycle.detail_path ? detailNavButton(latestLifecycle.detail_path, label('button.open_latest_lifecycle', 'Open latest lifecycle')) : '',
+    ])
+    + detailLine('Scope note', localizedBoundaryNote)
+  );
+}}
 function renderOverviewAiIndexPanel(aiIndex, counts) {{
   const vectorEntryCount = aiIndex.vector && aiIndex.vector.entry_count ? aiIndex.vector.entry_count : 0;
   const graphNodeCount = aiIndex.graph && aiIndex.graph.node_count ? aiIndex.graph.node_count : 0;
@@ -10034,6 +10163,7 @@ const overviewPanelRenderers = [
   data => renderOverviewHeaderPanel(data.chronicle),
   data => renderOverviewCountsPanel(data.counts),
   data => renderOverviewCurrentWorkPanel(data.currentWork),
+  data => renderOverviewEvidencePanel(data.overviewEvidence),
   data => renderOverviewRuntimeBoundaryPanel(data.runtime),
   data => renderOverviewRuntimeConfigPanel(data.runtimeConfig, data.runtimeConfigContract),
   data => renderOverviewUiBoundaryPanel(data.uiBoundary),
@@ -10066,6 +10196,7 @@ function renderOverview(payload) {{
   const triage = payload.triage || {{}};
   const mutationReadiness = payload.mutation_readiness || {{}};
   const currentWork = payload.current_work_summary || {{}};
+  const overviewEvidence = payload.overview_evidence_summary || {{}};
   const runtimeConfig = payload.runtime_config || {{}};
   const runtimeConfigContract = runtimeConfig.config || {{}};
   const runtimeRecords = payload.runtime_records_summary || {{}};
@@ -10083,6 +10214,7 @@ function renderOverview(payload) {{
     federationPreflight,
     federationSummary,
     identityBoundary,
+    overviewEvidence,
     reviewerBoundary,
     mutationReadiness,
     runtime,
