@@ -3146,6 +3146,62 @@ class ChronicleUIDataService:
             "needs_attention_reviews": len(review_queue),
         }
 
+    def review_queue_route_summary(
+        self,
+        review_queue: list[dict[str, Any]],
+    ) -> dict[str, Any]:
+        review_capability_counts: dict[str, int] = {}
+        readiness_counts: dict[str, int] = {}
+        cli_parity_counts: dict[str, int] = {}
+        warning_counts: dict[str, int] = {}
+        provider_response_present_reviews = 0
+        latest_provider_response_detail_path: str | None = None
+        ready_now = 0
+        advisory_only = 0
+        package_ready = 0
+
+        for row in review_queue:
+            capability_status = str(row.get("review_capability", {}).get("status", "unknown"))
+            review_capability_counts[capability_status] = review_capability_counts.get(capability_status, 0) + 1
+            if capability_status == "ready":
+                ready_now += 1
+            elif capability_status == "advisory_only":
+                advisory_only += 1
+
+            readiness_status = str(row.get("package_readiness_summary", {}).get("status", "unknown"))
+            readiness_counts[readiness_status] = readiness_counts.get(readiness_status, 0) + 1
+            if readiness_status == "package_context_available":
+                package_ready += 1
+
+            parity_status = str(row.get("cli_parity_summary", {}).get("status", "unknown"))
+            cli_parity_counts[parity_status] = cli_parity_counts.get(parity_status, 0) + 1
+
+            for warning_code in row.get("review_capability", {}).get("warnings", []):
+                code = str(warning_code)
+                warning_counts[code] = warning_counts.get(code, 0) + 1
+
+            response_summary = row.get("response_metadata_summary", {})
+            if isinstance(response_summary, dict) and response_summary.get("present") is True:
+                provider_response_present_reviews += 1
+                if latest_provider_response_detail_path is None:
+                    target_event_id = str(row.get("target_event_id", ""))
+                    if target_event_id.startswith("evt_"):
+                        latest_provider_response_detail_path = f"/api/review-queue/{target_event_id}"
+
+        return {
+            "review_capability_counts": review_capability_counts,
+            "package_readiness_counts": readiness_counts,
+            "cli_parity_counts": cli_parity_counts,
+            "warning_counts": warning_counts,
+            "warning_summaries": self._warning_summaries(warning_counts),
+            "ready_now_reviews": ready_now,
+            "advisory_only_reviews": advisory_only,
+            "package_ready_reviews": package_ready,
+            "provider_response_present_reviews": provider_response_present_reviews,
+            "latest_provider_response_detail_path": latest_provider_response_detail_path,
+            "needs_attention_reviews": len(review_queue),
+        }
+
     def _warning_summaries(self, warning_counts: dict[str, int]) -> list[dict[str, Any]]:
         rows: list[dict[str, Any]] = []
         for code, count in warning_counts.items():
@@ -4777,7 +4833,10 @@ class ChronicleUIDataService:
         )
         for row in rows:
             row["mutation_enablement_summary"] = mutation_enablement
-        return {"review_queue": rows}
+        return {
+            "review_queue": rows,
+            "review_queue_summary": self.review_queue_route_summary(rows),
+        }
 
     def summary_jobs_list(self, *, limit: int = 100) -> dict[str, Any]:
         rows: list[dict[str, Any]] = []
@@ -8741,6 +8800,8 @@ function renderRuntimeRecordsTable(endpoint, rows) {{
 }}
 function renderReviewQueueTable(endpoint, rows) {{
   const query = (window.__chronicleFilters && window.__chronicleFilters.reviewQueue || '').toLowerCase();
+  const payload = window.__chronicleRoutePayload || {{}};
+  const summary = payload.review_queue_summary || {{}};
   const filtered = filterRows(rows, row => {{
     if (!query) return true;
     if (matchesReviewerBoundaryFilter(query, row.reviewer_enforcement_status, row.reviewer_validation_gate_status)) return true;
@@ -8778,7 +8839,9 @@ function renderReviewQueueTable(endpoint, rows) {{
   }});
   const sorted = sortReviewRows(filtered);
   const mutationEnabled = sorted.some(row => row.ui_mutation_enabled);
-  return listToolbar(endpoint, 'reviewQueue', t('placeholder.review_filter'), [
+  return renderMultiPanelRoute([
+    renderReviewQueueWorkspacePanel(summary),
+    listToolbar(endpoint, 'reviewQueue', t('placeholder.review_filter'), [
       {{ value: 'attention', label: t('sort.review.attention') }},
       {{ value: 'parity', label: t('sort.review.parity') }},
       {{ value: 'latest', label: t('sort.review.latest') }},
@@ -8805,7 +8868,8 @@ function renderReviewQueueTable(endpoint, rows) {{
       label('label.table_preview', 'Preview'),
       label('label.table_warnings', 'Warnings'),
       label('label.table_latest_reviewer', 'Latest Reviewer'),
-    ], sorted.map(row => renderReviewQueueRow(row, endpoint)).join(''));
+    ], sorted.map(row => renderReviewQueueRow(row, endpoint)).join('')),
+  ]);
 }}
 function renderSummaryJobsTable(endpoint, rows) {{
   const query = (window.__chronicleFilters && window.__chronicleFilters.summaryJobs || '').toLowerCase();
@@ -11288,6 +11352,21 @@ function renderSummaryJobsWorkspacePanel(summary) {{
     + summaryJsonLine('Runtime providers', summary.runtime_provider_counts)
     + navigationCluster([
       latestResponseButton(summary.latest_provider_response_detail_path, 'button.open_latest_summary_response', 'Open Latest Summary Response'),
+    ])
+  );
+}}
+function renderReviewQueueWorkspacePanel(summary) {{
+  return renderPanel(
+    sectionTitle(label('section.review_queue_workspace', 'Review Queue Workspace'))
+    + detailLine('Needs attention', summary.needs_attention_reviews ?? 0)
+    + detailLine('Ready now', summary.ready_now_reviews ?? 0)
+    + detailLine('Advisory only', summary.advisory_only_reviews ?? 0)
+    + detailLine('Package ready', summary.package_ready_reviews ?? 0)
+    + summaryJsonLine('Review capability', summary.review_capability_counts)
+    + summaryJsonLine('CLI parity', summary.cli_parity_counts)
+    + summaryJsonLine('Warnings', summary.warning_counts)
+    + navigationCluster([
+      latestResponseButton(summary.latest_provider_response_detail_path, 'button.open_latest_review_response', 'Open Latest Review Response'),
     ])
   );
 }}

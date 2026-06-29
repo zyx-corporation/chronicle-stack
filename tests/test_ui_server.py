@@ -2732,6 +2732,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "function renderReviewQueueTable(endpoint, rows)" in html
     assert "function renderSummaryJobsTable(endpoint, rows)" in html
     assert "function renderRuntimeRecordsWorkspacePanel(summary)" in html
+    assert "function renderReviewQueueWorkspacePanel(summary)" in html
     assert "function renderSummaryJobsWorkspacePanel(summary)" in html
     assert "function renderGenericTable(endpoint, rows)" in html
     assert "const endpointRenderers =" in html
@@ -2848,6 +2849,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "function overviewSummaryJobCountButtons(counts, summaryJobs)" in html
     assert "function renderOverviewSummaryJobsPanel(counts, summaryJobs)" in html
     assert "sectionTitle(label('section.runtime_records_workspace', 'Runtime Records Workspace'))" in html
+    assert "sectionTitle(label('section.review_queue_workspace', 'Review Queue Workspace'))" in html
     assert "sectionTitle(label('section.summary_jobs_workspace', 'Summary Jobs Workspace'))" in html
     assert "function overviewTriageCountRows(triage)" in html
     assert "function renderOverviewTriagePanel(triage, warningButtons, warningSummaries)" in html
@@ -3377,6 +3379,8 @@ def test_http_root_and_read_only_endpoints(tmp_path):
             assert key in payload, endpoint
             if endpoint == "/api/runtime-records":
                 assert "runtime_records_summary" in payload
+            if endpoint == "/api/review-queue":
+                assert "review_queue_summary" in payload
             if endpoint == "/api/summary-jobs":
                 assert "summary_jobs_summary" in payload
 
