@@ -2871,9 +2871,13 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "function endpointBody(endpoint, payload)" in html
     assert "function detailNavigationOptions(endpoint, record)" in html
     assert "const detailNoticeRenderers = [" in html
+    assert "function renderAuditTable(endpoint, rows)" in html
+    assert "function renderAuditGovernanceSummary(summary)" in html
+    assert "renderAuditGovernanceNotice," in html
     assert "renderRuntimeWorkspaceNotice," in html
     assert "renderSummaryJobWorkspaceNotice," in html
     assert "renderArtifactWorkbenchNotice," in html
+    assert "'/api/audit': renderAuditTable," in html
     assert "function renderDetailNotices(record)" in html
     assert "function detailNoticeBody(endpoint, record)" in html
     assert "function renderReviewerBoundaryDrilldownNotice(record)" in html
@@ -3095,6 +3099,9 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "label('notice.summary_job_workspace', 'Summary Job Workspace')" in html
     assert "detailLine('Auth advisory', authAdvisory.status || '')" in html
     assert "detailLine('Identity assurance', identity.status || '')" in html
+    assert "function renderAuditGovernanceNotice(record)" in html
+    assert "label('notice.audit_governance', 'Audit Governance')" in html
+    assert "detailLine('Operational status', implication.status || '')" in html
     assert "detailLine('Bundle manifest', preview.bundle_manifest_path || '')" in html
     assert "filterValueLabel('reviewQueue', 'response_id')" in html
     assert "summaryJsonLine('Runtime kinds', triage.runtime_record_kinds)" in html
