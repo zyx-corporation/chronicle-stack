@@ -4561,6 +4561,13 @@ class ChronicleUIDataService:
             }.get(str(payload.get("status", "")), "ui.federation_package_preview.message.unavailable")
             payload["boundary_note_key"] = "ui.federation_package_preview.note.read_only_derived"
             payload["mode"] = mode
+            payload["package_route_summary"] = self._federation_package_route_summary(payload, mode)
+            payload["trust_reference_summary"] = self._federation_package_trust_reference_summary(payload)
+            payload["consent_summary"] = self._federation_package_consent_summary(payload)
+            payload["import_implication_summary"] = self._federation_package_import_implication_summary(
+                payload,
+                mode,
+            )
             return payload
         except ChronicleError as exc:
             return {
@@ -4577,6 +4584,138 @@ class ChronicleUIDataService:
                 "findings": [],
                 "warnings": [exc.code],
             }
+
+    def _federation_package_route_summary(
+        self,
+        payload: dict[str, Any],
+        mode: str,
+    ) -> dict[str, Any]:
+        manifest = payload.get("manifest", {}) if isinstance(payload.get("manifest"), dict) else {}
+        record_count = len(manifest.get("referenced_records", []) or [])
+        file_count = len(manifest.get("files", []) or [])
+        return {
+            "mode": mode,
+            "package_path": payload.get("package_path", ""),
+            "target_node": manifest.get("target_node", ""),
+            "purpose": manifest.get("purpose", ""),
+            "record_count": record_count,
+            "file_count": file_count,
+            "visibility": manifest.get("visibility", ""),
+            "status": payload.get("status", ""),
+            "message": (
+                "This package route stays local and inspectable; it summarizes what bundle would be reviewed before any transport decision."
+            ),
+            "boundary_note": (
+                "Package route summary is derived from the supplied local bundle directory and does not send, import, or auto-apply anything."
+            ),
+            "boundary_note_key": "ui.federation_package_route.note.read_only_derived",
+        }
+
+    def _federation_package_trust_reference_summary(self, payload: dict[str, Any]) -> dict[str, Any]:
+        manifest = payload.get("manifest", {}) if isinstance(payload.get("manifest"), dict) else {}
+        metadata = manifest.get("metadata", {}) if isinstance(manifest.get("metadata"), dict) else {}
+        target_node = str(manifest.get("target_node", "") or "")
+        trust_preview = str(metadata.get("trust_preview", "") or "")
+        trust_target_node = str(metadata.get("trust_target_node", "") or target_node)
+        trust_summary = self.trust.summarize_for_target(target_node=trust_target_node)
+        trust_payload = trust_summary.model_dump(mode="json")
+        return {
+            "target_node": target_node,
+            "trust_target_node": trust_target_node,
+            "preview_message": trust_preview or trust_payload.get("preview_message", ""),
+            "relation_count": trust_payload.get("relation_count", 0),
+            "active_relation_count": trust_payload.get("active_relation_count", 0),
+            "dominant_level": trust_payload.get("dominant_level", "unknown"),
+            "domains": trust_payload.get("domains", []),
+            "capability_counts": trust_payload.get("capability_counts", {}),
+            "detail_path": f"/api/trust-nodes/{trust_target_node}" if trust_target_node else None,
+            "boundary_note": (
+                "Trust reference summary is advisory-only; it helps explain the handoff context but does not grant transport or import permission."
+            ),
+            "boundary_note_key": "ui.federation_package_trust.note.read_only_derived",
+        }
+
+    def _federation_package_consent_summary(self, payload: dict[str, Any]) -> dict[str, Any]:
+        manifest = payload.get("manifest", {}) if isinstance(payload.get("manifest"), dict) else {}
+        consent = manifest.get("consent", {}) if isinstance(manifest.get("consent"), dict) else {}
+        target_node = str(manifest.get("target_node", "") or "")
+        latest_consent = None
+        for audit_row in reversed(self.audit_events().get("audit_events", [])):
+            consent_summary = audit_row.get("federation_consent_summary")
+            if not isinstance(consent_summary, dict):
+                continue
+            if str(consent_summary.get("target_node", "") or "") != target_node:
+                continue
+            latest_consent = consent_summary
+            break
+        consent_status = str(consent.get("status", "") or "not_recorded")
+        return {
+            "status": consent_status,
+            "granted_by": consent.get("granted_by", ""),
+            "recorded_at": consent.get("recorded_at"),
+            "scope": consent.get("scope", ""),
+            "purpose": consent.get("purpose", ""),
+            "third_party_sharing_allowed": bool(consent.get("third_party_sharing_allowed", False)),
+            "third_party_sharing_reason": consent.get("third_party_sharing_reason"),
+            "latest_audit_id": latest_consent.get("audit_id") if latest_consent else None,
+            "latest_detail_path": (
+                f"/api/audit/{latest_consent['audit_id']}"
+                if latest_consent and latest_consent.get("audit_id")
+                else None
+            ),
+            "message": (
+                "Consent metadata is recorded directly in the package manifest."
+                if consent_status == "recorded"
+                else "Consent metadata is not recorded in the package manifest; keep handoff review explicit and local."
+            ),
+            "boundary_note": (
+                "Consent summary is descriptive and append-only; it does not itself authorize shipment, redistribution, or import."
+            ),
+            "boundary_note_key": "ui.federation_package_consent.note.read_only_derived",
+        }
+
+    def _federation_package_import_implication_summary(
+        self,
+        payload: dict[str, Any],
+        mode: str,
+    ) -> dict[str, Any]:
+        findings = payload.get("findings", []) if isinstance(payload.get("findings"), list) else []
+        blocked_codes = [
+            str(item.get("code", ""))
+            for item in findings
+            if isinstance(item, dict) and str(item.get("severity", "")) == "blocked"
+        ]
+        warning_codes = [
+            str(item.get("code", ""))
+            for item in findings
+            if isinstance(item, dict) and str(item.get("severity", "")) == "warning"
+        ]
+        import_candidate = bool(payload.get("import_candidate", False))
+        mode_status = "manual_review_ready" if import_candidate else "manual_review_blocked"
+        if mode == "import-preview" and not import_candidate:
+            message = (
+                "Import preview remains blocked until verification, consent, and package findings are resolved by explicit local review."
+            )
+        elif mode == "import-preview":
+            message = (
+                "Import preview is structurally reviewable, but Chronicle primary records remain authoritative until a separate explicit import decision."
+            )
+        else:
+            message = (
+                "Package preview can inform a later import decision, but no import path is implied until the explicit import-preview and review steps are checked."
+            )
+        return {
+            "mode": mode,
+            "status": mode_status,
+            "import_candidate": import_candidate,
+            "blocked_codes": blocked_codes,
+            "warning_codes": warning_codes,
+            "message": message,
+            "boundary_note": (
+                "Import implication summary remains advisory-only and manual; preview inspection never mutates Chronicle primary records."
+            ),
+            "boundary_note_key": "ui.federation_package_import_implication.note.read_only_derived",
+        }
 
     def graph_summary(self) -> dict[str, Any]:
         try:
