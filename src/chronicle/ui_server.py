@@ -8793,6 +8793,71 @@ function renderSummaryJobsTable(endpoint, rows) {{
       label('label.table_runtime', 'Runtime'),
     ], sorted.map(row => renderSummaryJobRow(row, endpoint)).join(''));
 }}
+function renderAuditGovernanceSummary(summary) {{
+  const localizedBoundaryNote = summary.boundary_note_key
+    ? formatLabel(summary.boundary_note_key, {{}}, summary.boundary_note || '')
+    : (summary.boundary_note || '');
+  return renderPanel(
+    sectionTitle(label('section.audit_governance', 'Audit Governance'))
+    + detailLine('Audit events', summary.audit_event_count ?? 0)
+    + detailLine('Boundary-linked audits', summary.linked_boundary_count ?? 0)
+    + detailLine('Lifecycle-linked audits', summary.linked_lifecycle_count ?? 0)
+    + detailLine('Consent records', summary.consent_record_count ?? 0)
+    + summaryJsonLine('Operations', summary.operation_counts)
+    + summaryJsonLine('Results', summary.result_counts)
+    + summaryJsonLine('Target environments', summary.target_environment_counts)
+    + detailLine('Latest audit', summary.latest_summary || '')
+    + navigationCluster([
+      summary.latest_detail_path ? detailNavButton(summary.latest_detail_path, label('button.open_latest_audit', 'Open latest audit')) : '',
+      openEndpointButton('/api/boundary'),
+      openEndpointButton('/api/lifecycle'),
+    ])
+    + detailLine('Scope note', localizedBoundaryNote)
+  );
+}}
+function renderAuditRow(row, endpoint) {{
+  const path = detailPath(endpoint, row);
+  const implication = row.operational_implication || {{}};
+  const impacted = row.impacted_target_summary || {{}};
+  const boundaryCount = Array.isArray(row.related_boundary_rule_ids) ? row.related_boundary_rule_ids.length : 0;
+  const lifecycleCount = Array.isArray(row.related_lifecycle_ids) ? row.related_lifecycle_ids.length : 0;
+  return '<tr>'
+    + '<td>' + detailJsonButton(endpoint, row) + (path ? detailButton(path) : '') + '</td>'
+    + '<td>' + cellStack([
+      cellTitle(row.summary || row.operation || ''),
+      cellMeta((row.created_at || '') + ' | ' + (row.actor || '')),
+      jumpBadge(String(row.result || 'info'), String(row.result || '') === 'blocked' ? 'badge-warning' : 'badge-neutral', '/api/audit', 'auditEvents', String(row.result || '')),
+    ]) + '</td>'
+    + '<td>' + cellStack([
+      cellTitle(String(row.operation || '')),
+      cellMeta(String(row.target_environment || '')),
+      cellMeta(String(row.purpose || '')),
+    ]) + '</td>'
+    + '<td>' + cellStack([
+      cellTitle(implication.status || ''),
+      cellMeta(implication.message || ''),
+      cellMeta('boundary=' + String(boundaryCount) + ' lifecycle=' + String(lifecycleCount)),
+    ]) + '</td>'
+    + '<td>' + cellStack([
+      cellTitle(impacted.primary_target_label || ''),
+      cellMeta(impacted.primary_target_path || ''),
+      cellMeta('records=' + String(impacted.record_count ?? 0)),
+    ]) + '</td>'
+    + '</tr>';
+}}
+function renderAuditTable(endpoint, rows) {{
+  const payload = window.__chronicleRoutePayload || {{}};
+  const governance = payload.governance_summary || {{}};
+  const sorted = rows.slice().sort((a, b) => String(b.created_at || '').localeCompare(String(a.created_at || '')));
+  return renderAuditGovernanceSummary(governance)
+    + tableHtml([
+      label('label.table_detail', 'Detail'),
+      label('label.table_summary', 'Summary'),
+      label('label.table_operation', 'Operation'),
+      label('label.table_status', 'Status'),
+      label('label.table_target', 'Target'),
+    ], sorted.map(row => renderAuditRow(row, endpoint)).join(''));
+}}
 function renderGenericTable(endpoint, rows) {{
   const keys = Object.keys(rows[0]).slice(0, 8);
   return '<table><thead><tr><th>' + esc(label('label.table_detail', 'Detail')) + '</th>' + keys.map(k => '<th>' + esc(k) + '</th>').join('') + '</tr></thead><tbody>'
@@ -8805,6 +8870,7 @@ function renderGenericTable(endpoint, rows) {{
     }}).join('') + '</tbody></table>';
 }}
 const endpointRenderers = {{
+  '/api/audit': renderAuditTable,
   '/api/runtime-records': renderRuntimeRecordsTable,
   '/api/review-queue': renderReviewQueueTable,
   '/api/summary-jobs': renderSummaryJobsTable,
@@ -10113,6 +10179,31 @@ function renderSummaryJobWorkspaceNotice(record) {{
       + detailLine('Scope note', localizedAuthNote || localizedIdentityNote)
   );
 }}
+function renderAuditGovernanceNotice(record) {{
+  if (!record.operational_implication && !record.impacted_target_summary) return '';
+  const implication = record.operational_implication || {{}};
+  const impacted = record.impacted_target_summary || {{}};
+  const localizedImplicationNote = implication.boundary_note_key
+    ? formatLabel(implication.boundary_note_key, {{}}, implication.boundary_note || '')
+    : (implication.boundary_note || '');
+  return renderNotice(
+    label('notice.audit_governance', 'Audit Governance'),
+    detailLine('Operational status', implication.status || '')
+      + detailLine('Operational note', implication.message || '')
+      + detailLine('Boundary links', Array.isArray(record.related_boundary_rule_ids) ? record.related_boundary_rule_ids.length : 0)
+      + detailLine('Lifecycle links', Array.isArray(record.related_lifecycle_ids) ? record.related_lifecycle_ids.length : 0)
+      + detailLine('Impacted target', impacted.primary_target_label || '')
+      + detailLine('Impacted detail', impacted.primary_target_path || '')
+      + detailLine('Impacted records', impacted.record_count ?? 0)
+      + summaryJsonLine('Impacted kinds', impacted.kind_counts)
+      + navigationCluster([
+        impacted.primary_target_path ? detailNavButton(impacted.primary_target_path, label('button.open_impacted_target', 'Open impacted target')) : '',
+        Array.isArray(record.related_boundary_rule_ids) && record.related_boundary_rule_ids[0] ? detailNavButton('/api/boundary/' + encodeURIComponent(record.related_boundary_rule_ids[0]), label('button.open_latest_boundary', 'Open latest boundary')) : '',
+        Array.isArray(record.related_lifecycle_ids) && record.related_lifecycle_ids[0] ? detailNavButton('/api/lifecycle/' + encodeURIComponent(record.related_lifecycle_ids[0]), label('button.open_latest_lifecycle', 'Open latest lifecycle')) : '',
+      ])
+      + detailLine('Scope note', localizedImplicationNote)
+  );
+}}
 function renderArtifactWorkbenchNotice(record) {{
   const linkedContexts = Array.isArray(record.linked_contexts) ? record.linked_contexts : [];
   const linkedDecisions = Array.isArray(record.linked_decisions) ? record.linked_decisions : [];
@@ -11192,6 +11283,7 @@ const detailNoticeRenderers = [
   renderInvocationPlanNotice,
   renderPackageReadinessNotice,
   renderSummaryJobWorkspaceNotice,
+  renderAuditGovernanceNotice,
   renderArtifactWorkbenchNotice,
   renderRelatedLinksNotice,
   renderAuthReadinessNotice,
