@@ -2871,6 +2871,12 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "function endpointBody(endpoint, payload)" in html
     assert "function detailNavigationOptions(endpoint, record)" in html
     assert "const detailNoticeRenderers = [" in html
+    assert "function renderFederationPackagePreview(payload)" in html
+    assert "sectionTitle(label('section.federation_package_preview', 'Federation Package Preview'))" in html
+    assert "sectionTitle(label('section.package_route_summary', 'Package Route Summary'))" in html
+    assert "sectionTitle(label('section.trust_reference_summary', 'Trust Reference Summary'))" in html
+    assert "sectionTitle(label('section.consent_summary', 'Consent Summary'))" in html
+    assert "sectionTitle(label('section.import_implication_summary', 'Import Implication Summary'))" in html
     assert "function renderAuditTable(endpoint, rows)" in html
     assert "function renderAuditGovernanceSummary(summary)" in html
     assert "renderAuditGovernanceNotice," in html
@@ -2878,6 +2884,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "renderSummaryJobWorkspaceNotice," in html
     assert "renderArtifactWorkbenchNotice," in html
     assert "'/api/audit': renderAuditTable," in html
+    assert "if (endpoint === '/api/federation-package-preview') return renderFederationPackagePreview(payload);" in html
     assert "function renderDetailNotices(record)" in html
     assert "function detailNoticeBody(endpoint, record)" in html
     assert "function renderReviewerBoundaryDrilldownNotice(record)" in html
