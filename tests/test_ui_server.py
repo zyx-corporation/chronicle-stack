@@ -2731,6 +2731,8 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "function renderRuntimeRecordsTable(endpoint, rows)" in html
     assert "function renderReviewQueueTable(endpoint, rows)" in html
     assert "function renderSummaryJobsTable(endpoint, rows)" in html
+    assert "function renderRuntimeRecordsWorkspacePanel(summary)" in html
+    assert "function renderSummaryJobsWorkspacePanel(summary)" in html
     assert "function renderGenericTable(endpoint, rows)" in html
     assert "const endpointRenderers =" in html
     assert "reviewerIdentityBadge" in html
@@ -2845,6 +2847,8 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "function renderOverviewRuntimeRecordsPanel(counts, runtimeRecords)" in html
     assert "function overviewSummaryJobCountButtons(counts, summaryJobs)" in html
     assert "function renderOverviewSummaryJobsPanel(counts, summaryJobs)" in html
+    assert "sectionTitle(label('section.runtime_records_workspace', 'Runtime Records Workspace'))" in html
+    assert "sectionTitle(label('section.summary_jobs_workspace', 'Summary Jobs Workspace'))" in html
     assert "function overviewTriageCountRows(triage)" in html
     assert "function renderOverviewTriagePanel(triage, warningButtons, warningSummaries)" in html
     assert "function overviewWarningButtons(warningSummaries)" in html
@@ -3371,6 +3375,10 @@ def test_http_root_and_read_only_endpoints(tmp_path):
             assert status == 200, endpoint
             payload = json.loads(body)
             assert key in payload, endpoint
+            if endpoint == "/api/runtime-records":
+                assert "runtime_records_summary" in payload
+            if endpoint == "/api/summary-jobs":
+                assert "summary_jobs_summary" in payload
 
         package_dir = tmp_path / "http-federation-package-preview"
         FederationPackageService(tmp_path).create_package(
