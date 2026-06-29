@@ -4314,6 +4314,245 @@ class ChronicleUIDataService:
         events = self.lifecycle.list_events()
         return {"lifecycle_markers": [_dump_model(event) for event in reversed(events[-limit:])]}
 
+    def _runtime_posture_role(self, record: dict[str, Any]) -> dict[str, Any]:
+        kind = str(record.get("runtime_record_kind", "") or "unknown")
+        status_map = {
+            "summary": (
+                "local_summary_review",
+                "This runtime record is a local generated-summary trace awaiting explicit review.",
+            ),
+            "execution": (
+                "explicit_runtime_execution",
+                "This runtime record captures an explicit runtime execution trace inside the Chronicle review boundary.",
+            ),
+            "retrieval_plan": (
+                "retrieval_handoff_preview",
+                "This runtime record is a retrieval and handoff preview for downstream inspection.",
+            ),
+            "query_engine_trial": (
+                "downstream_trial_record",
+                "This runtime record captures a downstream query-engine trial outcome for review.",
+            ),
+            "invocation_plan": (
+                "explicit_invocation_plan",
+                "This runtime record is an invocation plan that stays inspectable until an explicit execution decision.",
+            ),
+            "ai_boundary_preview": (
+                "boundary_preview",
+                "This runtime record explains the current AI boundary posture without executing external runtime behavior.",
+            ),
+        }
+        status, message = status_map.get(
+            kind,
+            ("runtime_record", "This runtime record remains a read-only Chronicle runtime trace."),
+        )
+        return {
+            "status": status,
+            "record_kind": kind,
+            "message": message,
+            "boundary_note": (
+                "Posture role is a derived reading aid for the runtime workspace; it does not execute, approve, or mutate anything."
+            ),
+            "boundary_note_key": "ui.runtime_posture_role.note.read_only_derived",
+        }
+
+    def _runtime_downstream_boundary_note(
+        self,
+        record: dict[str, Any],
+        payload: dict[str, Any],
+    ) -> dict[str, Any]:
+        kind = str(record.get("runtime_record_kind", "") or "unknown")
+        if kind in {"retrieval_plan", "query_engine_trial"}:
+            message = (
+                "Chronicle core ends at contracts, bundles, and recorded trial evidence; downstream query runtime behavior remains outside this repository."
+            )
+            status = "external_runtime_boundary"
+        elif kind == "invocation_plan":
+            message = (
+                "Invocation planning is visible here, but any actual runtime call still depends on an explicit local execution step and current boundary rules."
+            )
+            status = "explicit_execution_boundary"
+        else:
+            message = (
+                "This runtime surface stays within Chronicle's local read-only boundary and does not imply an external query runtime handoff."
+            )
+            status = "local_runtime_boundary"
+        return {
+            "status": status,
+            "record_kind": kind,
+            "message": message,
+            "boundary_note": (
+                "Downstream boundary note is explanatory only; it does not expand Chronicle core responsibilities."
+            ),
+            "boundary_note_key": "ui.runtime_downstream_boundary.note.read_only_derived",
+        }
+
+    def _runtime_trial_sufficiency_summary(
+        self,
+        record: dict[str, Any],
+        payload: dict[str, Any],
+    ) -> dict[str, Any]:
+        trial_preview = record.get("query_engine_trial_preview", {})
+        if isinstance(trial_preview, dict) and trial_preview:
+            sufficient = bool(trial_preview.get("sufficient", False))
+            return {
+                "status": "sufficient" if sufficient else "insufficient",
+                "sufficient": sufficient,
+                "import_ready": bool(trial_preview.get("import_ready", False)),
+                "missing_behavior": trial_preview.get("missing_behavior", ""),
+                "detail_path": (
+                    f"/api/runtime-records/{record['event_id']}" if record.get("event_id") else None
+                ),
+                "message": (
+                    "Recorded downstream trial is currently sufficient for the reviewed consumer."
+                    if sufficient
+                    else "Recorded downstream trial is insufficient; inspect missing behavior before external follow-up."
+                ),
+                "boundary_note": (
+                    "Trial sufficiency is a derived assessment over recorded trial evidence; it does not change Chronicle primary records."
+                ),
+                "boundary_note_key": "ui.runtime_trial_sufficiency.note.read_only_derived",
+            }
+        retrieval_plan = payload.get("runtime_retrieval_plan")
+        if isinstance(retrieval_plan, dict):
+            handoff = retrieval_plan.get("query_engine_handoff", {})
+            import_validation = handoff.get("import_validation", {}) if isinstance(handoff, dict) else {}
+            import_status = str(import_validation.get("status", "") or "advisory_only")
+            import_ready = bool(import_validation.get("import_ready", False))
+            return {
+                "status": import_status,
+                "sufficient": None,
+                "import_ready": import_ready,
+                "missing_behavior": "",
+                "detail_path": (
+                    f"/api/runtime-records/{record['event_id']}" if record.get("event_id") else None
+                ),
+                "message": (
+                    "Retrieval handoff includes an import-readiness posture for downstream trial preparation."
+                ),
+                "boundary_note": (
+                    "Trial sufficiency summary remains advisory until a downstream trial is explicitly recorded."
+                ),
+                "boundary_note_key": "ui.runtime_trial_sufficiency.note.read_only_derived",
+            }
+        return {
+            "status": "no_trial_context",
+            "sufficient": None,
+            "import_ready": False,
+            "missing_behavior": "",
+            "detail_path": None,
+            "message": "No downstream trial sufficiency context is attached to this runtime record.",
+            "boundary_note": (
+                "Trial sufficiency summary is only descriptive when no downstream trial evidence is present."
+            ),
+            "boundary_note_key": "ui.runtime_trial_sufficiency.note.read_only_derived",
+        }
+
+    def _runtime_handoff_summary(
+        self,
+        record: dict[str, Any],
+        payload: dict[str, Any],
+    ) -> dict[str, Any]:
+        kind = str(record.get("runtime_record_kind", "") or "unknown")
+        if kind == "retrieval_plan":
+            plan = payload.get("runtime_retrieval_plan", {})
+            handoff = plan.get("query_engine_handoff", {}) if isinstance(plan, dict) else {}
+            import_validation = handoff.get("import_validation", {}) if isinstance(handoff, dict) else {}
+            return {
+                "status": "retrieval_handoff_available",
+                "downstream_command_count": len(handoff.get("suggested_commands", []) or []),
+                "referenced_record_count": len(handoff.get("referenced_record_ids", []) or []),
+                "eligible_context_count": len(handoff.get("eligible_context_ids", []) or []),
+                "reviewed_file_count": 0,
+                "bundle_dir": "",
+                "bundle_manifest_path": "",
+                "import_validation_status": import_validation.get("status", ""),
+                "message": "Retrieval plan includes a downstream handoff contract for external query-runtime inspection.",
+                "boundary_note": (
+                    "Handoff summary is a read-only contract view; Chronicle does not execute the downstream runtime here."
+                ),
+                "boundary_note_key": "ui.runtime_handoff_summary.note.read_only_derived",
+            }
+        if kind == "query_engine_trial":
+            trial_preview = record.get("query_engine_trial_preview", {})
+            return {
+                "status": "trial_handoff_recorded",
+                "downstream_command_count": 0,
+                "referenced_record_count": 0,
+                "eligible_context_count": 0,
+                "reviewed_file_count": len(trial_preview.get("files_reviewed", []) or []),
+                "bundle_dir": trial_preview.get("bundle_dir", ""),
+                "bundle_manifest_path": trial_preview.get("bundle_manifest_path", ""),
+                "import_validation_status": trial_preview.get("import_validation_status", ""),
+                "message": "Recorded trial row keeps the reviewed bundle and consumer context close to downstream evaluation evidence.",
+                "boundary_note": (
+                    "Trial handoff summary remains descriptive and does not re-run or import the downstream bundle."
+                ),
+                "boundary_note_key": "ui.runtime_handoff_summary.note.read_only_derived",
+            }
+        if kind == "invocation_plan":
+            plan = payload.get("runtime_invocation_plan", {})
+            return {
+                "status": "invocation_plan_available",
+                "downstream_command_count": len(plan.get("downstream_commands", []) or []),
+                "referenced_record_count": len(plan.get("source_refs", []) or []),
+                "eligible_context_count": 0,
+                "reviewed_file_count": 0,
+                "bundle_dir": "",
+                "bundle_manifest_path": "",
+                "import_validation_status": "",
+                "message": "Invocation plan lists the next explicit local commands without crossing the review boundary.",
+                "boundary_note": (
+                    "Invocation handoff summary is still a plan surface; no execution occurs here."
+                ),
+                "boundary_note_key": "ui.runtime_handoff_summary.note.read_only_derived",
+            }
+        return {
+            "status": "no_handoff_contract",
+            "downstream_command_count": 0,
+            "referenced_record_count": 0,
+            "eligible_context_count": 0,
+            "reviewed_file_count": 0,
+            "bundle_dir": "",
+            "bundle_manifest_path": "",
+            "import_validation_status": "",
+            "message": "No downstream handoff contract is attached to this runtime record.",
+            "boundary_note": (
+                "Handoff summary stays empty when this runtime row is not a downstream contract surface."
+            ),
+            "boundary_note_key": "ui.runtime_handoff_summary.note.read_only_derived",
+        }
+
+    def _summary_job_auth_advisory_summary(self, row: dict[str, Any]) -> dict[str, Any]:
+        notice = row.get("auth_boundary_notice", {})
+        return {
+            "status": str(notice.get("status", row.get("auth_readiness_status", "unknown"))),
+            "message": str(notice.get("message", "")),
+            "blocker_count": len(notice.get("blockers", []) or []),
+            "next_step_count": len(notice.get("next_steps", []) or []),
+            "boundary_note": (
+                "Auth advisory summary is descriptive only; it does not enable browser-side mutation."
+            ),
+            "boundary_note_key": "ui.summary_job_auth_advisory.note.read_only_derived",
+        }
+
+    def _summary_job_identity_assurance_summary(self, row: dict[str, Any]) -> dict[str, Any]:
+        assurance = row.get("latest_identity_assurance", {})
+        if isinstance(assurance, dict) and assurance:
+            message = str(assurance.get("message", ""))
+            status = str(assurance.get("status", "unknown"))
+        else:
+            status = str(row.get("identity_assurance_status", "unknown"))
+            message = "No reviewer identity assurance has been attached to this summary job yet."
+        return {
+            "status": status,
+            "message": message,
+            "boundary_note": (
+                "Identity assurance summary is read-only review metadata and does not by itself authorize action."
+            ),
+            "boundary_note_key": "ui.summary_job_identity_assurance.note.read_only_derived",
+        }
+
     def runtime_records(self, *, limit: int = 100) -> dict[str, Any]:
         self.chronicle.require_initialized()
         events = [
@@ -4389,6 +4628,16 @@ class ChronicleUIDataService:
                 )
                 data["review_preview_only"] = not bool(data["ui_mutation_enabled"])
             data["response_metadata_summary"] = self._runtime_response_metadata_summary(payload=data["payload"])
+            data["posture_role"] = self._runtime_posture_role(data)
+            data["downstream_boundary_note"] = self._runtime_downstream_boundary_note(
+                data,
+                data["payload"],
+            )
+            data["trial_sufficiency_summary"] = self._runtime_trial_sufficiency_summary(
+                data,
+                data["payload"],
+            )
+            data["handoff_summary"] = self._runtime_handoff_summary(data, data["payload"])
             rows.append(data)
         return {"runtime_records": rows}
 
@@ -4488,9 +4737,11 @@ class ChronicleUIDataService:
                     data["review_capability_status"] = str(
                         review_row.get("review_capability", {}).get("status", "")
                     )
+                    data["auth_boundary_notice"] = review_row.get("auth_boundary_notice", {})
                     data["auth_readiness_status"] = str(
                         review_row.get("auth_boundary_notice", {}).get("status", "")
                     )
+                    data["package_readiness_summary"] = review_row.get("package_readiness_summary", {})
                     data["package_readiness_status"] = str(
                         review_row.get("package_readiness_summary", {}).get("status", "")
                     )
@@ -4523,6 +4774,10 @@ class ChronicleUIDataService:
                         data["identity_assurance_status"] = str(
                             review_row.get("latest_identity_assurance", {}).get("status", "")
                         )
+                    data["auth_advisory_summary"] = self._summary_job_auth_advisory_summary(data)
+                    data["identity_assurance_summary"] = self._summary_job_identity_assurance_summary(
+                        data
+                    )
             rows.append(data)
         return {"summary_jobs": rows}
 
@@ -6283,6 +6538,16 @@ class ChronicleUIDataService:
             record["suggested_cli_family"] = preview.suggested_cli_family
             record["related_links"] = self.runtime_related_links(parts[2], payload)
             record["response_metadata_summary"] = self._runtime_response_metadata_summary(payload=payload)
+            record["posture_role"] = self._runtime_posture_role(record)
+            record["downstream_boundary_note"] = self._runtime_downstream_boundary_note(
+                record,
+                payload,
+            )
+            record["trial_sufficiency_summary"] = self._runtime_trial_sufficiency_summary(
+                record,
+                payload,
+            )
+            record["handoff_summary"] = self._runtime_handoff_summary(record, payload)
             review_row = self._review_queue_row(parts[2])
             if review_row is not None:
                 boundary = self.ui_boundary()["ui_boundary"]
@@ -6478,6 +6743,10 @@ class ChronicleUIDataService:
                     ]
                     job["ui_mutation_enabled"] = bool(boundary.get("mutation_enabled", False))
                     job["review_preview_only"] = not bool(boundary.get("mutation_enabled", False))
+                    job["auth_advisory_summary"] = self._summary_job_auth_advisory_summary(job)
+                    job["identity_assurance_summary"] = self._summary_job_identity_assurance_summary(
+                        job
+                    )
             job["related_links"] = self.summary_job_related_links(parts[2], job)
             return {"record": job}
 

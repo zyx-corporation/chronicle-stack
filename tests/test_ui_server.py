@@ -1036,6 +1036,16 @@ def test_ui_data_service_read_endpoints(tmp_path):
     assert runtime_summary_row["review_target_event_id"] == ids["runtime_summary_event_id"]
     assert runtime_summary_row["action_preview_summary"]["status"] == "preview_only"
     assert runtime_summary_row["runtime_record_preview"]["title_key"] == "ui.runtime_preview.title.summary"
+    assert runtime_summary_row["posture_role"]["status"] == "local_summary_review"
+    assert runtime_summary_row["posture_role"]["boundary_note_key"] == (
+        "ui.runtime_posture_role.note.read_only_derived"
+    )
+    assert runtime_summary_row["downstream_boundary_note"]["status"] == "local_runtime_boundary"
+    assert runtime_summary_row["downstream_boundary_note"]["boundary_note_key"] == (
+        "ui.runtime_downstream_boundary.note.read_only_derived"
+    )
+    assert runtime_summary_row["trial_sufficiency_summary"]["status"] == "no_trial_context"
+    assert runtime_summary_row["handoff_summary"]["status"] == "no_handoff_contract"
     assert runtime_summary_row["mutation_enablement_summary"]["status"] == "preview_only"
     assert "explicit local write enablement still requires" in runtime_summary_row["mutation_enablement_summary"]["message"]
     assert runtime_summary_row["mutation_enablement_summary"]["message_key"] == (
@@ -1095,7 +1105,22 @@ def test_ui_data_service_read_endpoints(tmp_path):
     assert service.summary_jobs_list()["summary_jobs"][0]["review_target_event_id"].startswith("evt_")
     assert service.summary_jobs_list()["summary_jobs"][0]["review_capability_status"] == "advisory_only"
     assert service.summary_jobs_list()["summary_jobs"][0]["auth_readiness_status"] == "advisory_only"
+    assert service.summary_jobs_list()["summary_jobs"][0]["package_readiness_summary"]["status"] == (
+        "no_context_records"
+    )
     assert service.summary_jobs_list()["summary_jobs"][0]["package_readiness_status"] == "no_context_records"
+    assert service.summary_jobs_list()["summary_jobs"][0]["auth_advisory_summary"]["status"] == (
+        "advisory_only"
+    )
+    assert service.summary_jobs_list()["summary_jobs"][0]["auth_advisory_summary"][
+        "boundary_note_key"
+    ] == "ui.summary_job_auth_advisory.note.read_only_derived"
+    assert service.summary_jobs_list()["summary_jobs"][0]["identity_assurance_summary"]["status"] == (
+        "unknown"
+    )
+    assert service.summary_jobs_list()["summary_jobs"][0]["identity_assurance_summary"][
+        "boundary_note_key"
+    ] == "ui.summary_job_identity_assurance.note.read_only_derived"
     assert service.summary_jobs_list()["summary_jobs"][0]["cli_parity_status"] == "aligned"
     assert service.summary_jobs_list()["summary_jobs"][0]["action_preview_summary"]["status"] == "preview_only"
     assert (
@@ -1839,6 +1864,8 @@ def test_ui_data_service_detail_endpoints(tmp_path):
     assert summary_detail["review_target_event_id"].startswith("evt_")
     assert summary_detail["review_capability"]["status"] == "advisory_only"
     assert summary_detail["auth_boundary_notice"]["status"] == "advisory_only"
+    assert summary_detail["auth_advisory_summary"]["status"] == "advisory_only"
+    assert summary_detail["identity_assurance_summary"]["status"] == "unknown"
     assert "auth_not_enabled" in summary_detail["auth_boundary_notice"]["blockers"]
     assert summary_detail["package_readiness"]["status"] == "no_context_records"
     assert summary_detail["cli_parity"]["status"] == "aligned"
@@ -1867,6 +1894,10 @@ def test_ui_data_service_detail_endpoints(tmp_path):
     runtime_detail = service.detail_payload(f"/api/runtime-records/{ids['runtime_summary_event_id']}")["record"]
     assert "runtime_summary" in runtime_detail["payload"]
     assert runtime_detail["runtime_record_preview"]["record_kind"] == "summary"
+    assert runtime_detail["posture_role"]["status"] == "local_summary_review"
+    assert runtime_detail["downstream_boundary_note"]["status"] == "local_runtime_boundary"
+    assert runtime_detail["trial_sufficiency_summary"]["status"] == "no_trial_context"
+    assert runtime_detail["handoff_summary"]["status"] == "no_handoff_contract"
     assert runtime_detail["auth_boundary_notice"]["status"] == "advisory_only"
     assert runtime_detail["mutation_enablement"]["enablement_ready"] is False
     assert runtime_detail["mutation_enablement"]["operational_readiness"]["remaining_count"] >= 1
@@ -1905,6 +1936,13 @@ def test_trust_workspace_payloads_capture_withdrawal_history(tmp_path):
     retrieval_detail = service.detail_payload(f"/api/runtime-records/{ids['runtime_plan_event_id']}")["record"]
     assert "runtime_retrieval_plan" in retrieval_detail["payload"]
     assert retrieval_detail["runtime_record_preview"]["record_kind"] == "retrieval_plan"
+    assert retrieval_detail["posture_role"]["status"] == "retrieval_handoff_preview"
+    assert retrieval_detail["downstream_boundary_note"]["status"] == "external_runtime_boundary"
+    assert retrieval_detail["trial_sufficiency_summary"]["message"].startswith(
+        "Retrieval handoff includes an import-readiness posture"
+    )
+    assert retrieval_detail["handoff_summary"]["status"] == "retrieval_handoff_available"
+    assert retrieval_detail["handoff_summary"]["downstream_command_count"] >= 1
     assert retrieval_detail["retrieval_handoff"]["query"] == "UI Context"
     assert retrieval_detail["retrieval_handoff"]["package_review_required"] is True
     assert retrieval_detail["retrieval_handoff"]["downstream_commands"][0].startswith("chronicle package review")
