@@ -31,6 +31,7 @@ from chronicle.services.federation_message_service import FederationMessageServi
 from chronicle.services.graph_index_service import GraphIndexService
 from chronicle.services.lifecycle_service import LifecycleService
 from chronicle.services.proposal_service import ProposalService
+from chronicle.services.rde_service import RdeService
 from chronicle.services.review_service import ReviewService
 from chronicle.services.runtime_config_service import RuntimeConfigService
 from chronicle.services.runtime_service import RuntimeService
@@ -1714,6 +1715,104 @@ def test_ui_data_service_detail_endpoints(tmp_path):
     assert retrieval_detail["query_engine_handoff_preview"]["import_validation"]["counts_summary_key"] == (
         "ui.template.query_engine_import_validation.counts"
     )
+
+
+def test_artifact_detail_exposes_workbench_summaries(tmp_path):
+    ChronicleService(tmp_path).init("Artifact Workbench")
+    context = ContextService(tmp_path).add_context(
+        title="Workbench Context",
+        visibility_hint=VisibilityHint.PUBLIC,
+    )
+    artifact, first_version = ArtifactService(tmp_path).create(
+        title="Workbench Artifact",
+        artifact_type=ArtifactType.DOCUMENT,
+        content="first version",
+        visibility_hint=VisibilityHint.PRIVATE,
+        source=SourceProvenance(source_type="context", source_ref=context.context_id),
+    )
+    _updated_artifact, second_version = ArtifactService(tmp_path).update(
+        artifact.artifact_id,
+        content="second version",
+        summary="Refined workbench narrative",
+    )
+    decision = DecisionService(tmp_path).record(
+        decision_type=DecisionType.ACCEPTED,
+        reason="Accept workbench direction",
+        artifact_id=artifact.artifact_id,
+    )
+    rde_record = RdeService(tmp_path).record(
+        artifact_id=artifact.artifact_id,
+        from_version_id=first_version.version_id,
+        to_version_id=second_version.version_id,
+        summary="Tracked workbench change",
+        unresolved=["Confirm audit linkage"],
+        deviation_risks=["Semantic drift"],
+    )
+    audit_event = AuditService(tmp_path).record(
+        operation=AuditOperation.CONTEXT_USE,
+        actor="tester",
+        purpose="artifact workbench audit",
+        target_environment=AuditTargetEnvironment.LOCAL,
+        referenced_records=[
+            artifact.artifact_id,
+            context.context_id,
+            decision.decision_id,
+            rde_record.rde_record_id,
+        ],
+        source_event_id=second_version.source_event_id,
+        result=AuditSeverity.INFO,
+        summary="Workbench artifact audit",
+    )
+    ChronicleService(tmp_path).rebuild_indexes()
+
+    service = ChronicleUIDataService(tmp_path)
+    detail = service.detail_payload(f"/api/artifacts/{artifact.artifact_id}")["record"]
+
+    assert detail["linked_contexts"] == [
+        {
+            "context_id": context.context_id,
+            "title": "Workbench Context",
+            "scope": "project",
+            "visibility_hint": "public",
+            "detail_path": f"/api/contexts/{context.context_id}",
+            "linked_via": ["artifact_source"],
+        }
+    ]
+    assert detail["linked_decisions"][0]["decision_id"] == decision.decision_id
+    assert detail["linked_decisions"][0]["detail_path"] == f"/api/decisions/{decision.decision_id}"
+    assert detail["linked_rde_records"] == [
+        {
+            "rde_record_id": rde_record.rde_record_id,
+            "summary": "Tracked workbench change",
+            "created_at": rde_record.created_at.isoformat(),
+            "from_version_id": first_version.version_id,
+            "to_version_id": second_version.version_id,
+            "unresolved_count": 1,
+            "deviation_risk_count": 1,
+            "detail_path": f"/api/rde/{rde_record.rde_record_id}",
+        }
+    ]
+    assert detail["source_event_summary"]["status"] == "available"
+    assert detail["source_event_summary"]["event_count"] == 2
+    assert detail["source_event_summary"]["version_count"] == 2
+    assert detail["source_event_summary"]["latest_event_id"] == second_version.source_event_id
+    assert detail["boundary_summary"]["status"] == "advisory"
+    assert detail["boundary_summary"]["visibility_hint"] == "private"
+    assert detail["boundary_summary"]["source_type"] == "context"
+    assert detail["boundary_summary"]["linked_context_count"] == 1
+    assert detail["audit_summary"]["status"] == "related_audits_present"
+    assert detail["audit_summary"]["audit_event_count"] == 1
+    assert detail["audit_summary"]["latest_audit_id"] == audit_event.audit_id
+    assert detail["audit_summary"]["latest_detail_path"] == f"/api/audit/{audit_event.audit_id}"
+    assert detail["audit_summary"]["operation_counts"] == {"context_use": 1}
+    assert detail["audit_summary"]["result_counts"] == {"info": 1}
+    assert detail["audit_summary"]["audits"][0]["matched_record_ids"] == [
+        artifact.artifact_id,
+        context.context_id,
+        decision.decision_id,
+        rde_record.rde_record_id,
+    ]
+    assert detail["audit_summary"]["audits"][0]["source_event_matched"] is True
 
 
 def test_ui_read_models_expose_matching_federation_consent_summary_on_overlap(tmp_path):
