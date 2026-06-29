@@ -4069,18 +4069,245 @@ class ChronicleUIDataService:
         rules = sorted(self.chronicle.index.load_boundary_rules().values(), key=lambda item: item.created_at)
         return {"boundary_rules": [_dump_model(rule) for rule in rules]}
 
+    def _boundary_record_values(self, record_id: str) -> dict[str, str | list[str]]:
+        contexts = self.chronicle.index.load_contexts()
+        artifacts, _ = self.chronicle.index.load_artifacts()
+        if record_id in contexts:
+            context = contexts[record_id]
+            return {
+                "scope": context.scope.value,
+                "visibility": context.visibility_hint.value,
+                "source_type": context.source_type,
+                "source_ref": context.source_ref,
+                "tag": list(context.tags),
+            }
+        if record_id in artifacts:
+            artifact = artifacts[record_id]
+            source = artifact.source
+            return {
+                "visibility": artifact.visibility_hint.value,
+                "source_type": source.source_type if source else "",
+                "source_ref": source.source_ref if source else "",
+                "tag": list(artifact.tags),
+            }
+        return {}
+
+    def _matches_boundary_rule(
+        self,
+        rule: dict[str, Any],
+        record_values: dict[str, str | list[str]],
+    ) -> bool:
+        field = str(rule.get("field", "") or "")
+        if field not in record_values:
+            return False
+        actual = record_values[field]
+        expected = rule.get("value")
+        operator = str(rule.get("operator", "") or "")
+        if operator == "equals":
+            return actual == expected
+        if operator == "not_equals":
+            return actual != expected
+        if operator == "in":
+            if isinstance(expected, list):
+                return actual in expected
+            return False
+        if operator == "contains":
+            if isinstance(actual, list):
+                return expected in actual
+            if isinstance(actual, str) and isinstance(expected, str):
+                return expected in actual
+        return False
+
+    def _related_boundary_rule_ids(self, audit_row: dict[str, Any]) -> list[str]:
+        rules = self.boundary_rules()["boundary_rules"]
+        matched_rule_ids: list[str] = []
+        for record_id in audit_row.get("referenced_records", []) or []:
+            if not isinstance(record_id, str):
+                continue
+            record_values = self._boundary_record_values(record_id)
+            if not record_values:
+                continue
+            for rule in rules:
+                rule_id = str(rule.get("rule_id", "") or "")
+                if not rule_id or rule_id in matched_rule_ids:
+                    continue
+                if self._matches_boundary_rule(rule, record_values):
+                    matched_rule_ids.append(rule_id)
+        if matched_rule_ids:
+            return matched_rule_ids
+        if str(audit_row.get("target_environment", "") or "") == "local":
+            return [
+                str(rule.get("rule_id", "") or "")
+                for rule in rules
+                if bool(rule.get("enabled", True)) and str(rule.get("rule_id", "") or "")
+            ]
+        return matched_rule_ids
+
+    def _related_lifecycle_ids(self, audit_row: dict[str, Any]) -> list[str]:
+        referenced_ids = {
+            str(item)
+            for item in (audit_row.get("referenced_records", []) or [])
+            if isinstance(item, str)
+        }
+        source_event_id = str(audit_row.get("source_event_id", "") or "")
+        lifecycle_ids: list[str] = []
+        for row in self.lifecycle_markers()["lifecycle_markers"]:
+            target_id = str(row.get("target_id", "") or "")
+            if target_id and target_id in referenced_ids:
+                lifecycle_ids.append(str(row.get("lifecycle_id", "") or ""))
+                continue
+            metadata = row.get("metadata", {}) if isinstance(row.get("metadata"), dict) else {}
+            if source_event_id and str(metadata.get("source_event_id", "") or "") == source_event_id:
+                lifecycle_ids.append(str(row.get("lifecycle_id", "") or ""))
+        filtered_ids = [item for item in lifecycle_ids if item]
+        if filtered_ids:
+            return filtered_ids
+        if str(audit_row.get("target_environment", "") or "") == "local":
+            return [
+                str(row.get("lifecycle_id", "") or "")
+                for row in self.lifecycle_markers()["lifecycle_markers"]
+                if str(row.get("lifecycle_id", "") or "")
+            ]
+        return filtered_ids
+
+    def _audit_impacted_target_summary(self, audit_row: dict[str, Any]) -> dict[str, Any]:
+        referenced_records = [
+            str(item) for item in (audit_row.get("referenced_records", []) or []) if isinstance(item, str)
+        ]
+        kind_counts: dict[str, int] = {}
+        primary_target_path = None
+        primary_target_label = None
+        for record_id in referenced_records:
+            if "_" in record_id:
+                kind = record_id.split("_", 1)[0]
+            else:
+                kind = "unknown"
+            kind_counts[kind] = kind_counts.get(kind, 0) + 1
+            if primary_target_path is None:
+                if record_id.startswith("ctx_"):
+                    primary_target_path = f"/api/contexts/{record_id}"
+                    primary_target_label = "context"
+                elif record_id.startswith("art_"):
+                    primary_target_path = f"/api/artifacts/{record_id}"
+                    primary_target_label = "artifact"
+                elif record_id.startswith("dec_"):
+                    primary_target_path = f"/api/decisions/{record_id}"
+                    primary_target_label = "decision"
+                elif record_id.startswith("rde_"):
+                    primary_target_path = f"/api/rde/{record_id}"
+                    primary_target_label = "rde"
+                elif record_id.startswith("obj_"):
+                    primary_target_path = f"/api/chronicle-objects/{record_id}"
+                    primary_target_label = "chronicle_object"
+                elif record_id.startswith("evt_"):
+                    primary_target_path = f"/api/events/{record_id}"
+                    primary_target_label = "event"
+        return {
+            "record_count": len(referenced_records),
+            "kind_counts": kind_counts,
+            "primary_target_label": primary_target_label,
+            "primary_target_path": primary_target_path,
+            "source_event_id": audit_row.get("source_event_id"),
+        }
+
+    def _audit_operational_implication(
+        self,
+        audit_row: dict[str, Any],
+        related_boundary_rule_ids: list[str],
+        related_lifecycle_ids: list[str],
+        impacted_target_summary: dict[str, Any],
+    ) -> dict[str, Any]:
+        result = str(audit_row.get("result", "") or "info")
+        target_environment = str(audit_row.get("target_environment", "") or "unknown")
+        if result == "blocked":
+            status = "blocked_review_required"
+            message = (
+                "This audit event records a blocked outcome; inspect related boundary and lifecycle context before any follow-up interpretation."
+            )
+        elif result == "warning":
+            status = "warning_review_recommended"
+            message = (
+                "This audit event records a warning outcome; use the related boundary and lifecycle context as a governance reading aid."
+            )
+        elif target_environment == "external":
+            status = "external_handoff_advisory"
+            message = (
+                "This audit event touches an external target environment; keep transport and import decisions explicit and separate from this read-only view."
+            )
+        else:
+            status = "local_trace_available"
+            message = (
+                "This audit event provides a local governance trace for the referenced Chronicle records."
+            )
+        return {
+            "status": status,
+            "message": message,
+            "boundary_rule_count": len(related_boundary_rule_ids),
+            "lifecycle_event_count": len(related_lifecycle_ids),
+            "impacted_record_count": int(impacted_target_summary.get("record_count", 0) or 0),
+            "boundary_note": (
+                "Operational implication is a derived governance summary; it does not enforce policy or mutate Chronicle records."
+            ),
+            "boundary_note_key": "ui.audit_operational_implication.note.read_only_derived",
+        }
+
+    def _audit_event_row(self, event: dict[str, Any]) -> dict[str, Any]:
+        data = dict(event)
+        related_boundary_rule_ids = self._related_boundary_rule_ids(data)
+        related_lifecycle_ids = self._related_lifecycle_ids(data)
+        impacted_target_summary = self._audit_impacted_target_summary(data)
+        data["related_boundary_rule_ids"] = related_boundary_rule_ids
+        data["related_lifecycle_ids"] = related_lifecycle_ids
+        data["impacted_target_summary"] = impacted_target_summary
+        data["operational_implication"] = self._audit_operational_implication(
+            data,
+            related_boundary_rule_ids,
+            related_lifecycle_ids,
+            impacted_target_summary,
+        )
+        consent_summary = self._federation_consent_audit_summary(data)
+        if consent_summary is not None:
+            data["federation_consent_summary"] = consent_summary
+        return data
+
+    def audit_governance_summary(self, audit_rows: list[dict[str, Any]] | None = None) -> dict[str, Any]:
+        rows = audit_rows if audit_rows is not None else self.audit_events()["audit_events"]
+        operation_counts = _count_values(rows, "operation")
+        result_counts = _count_values(rows, "result")
+        environment_counts = _count_values(rows, "target_environment")
+        linked_boundary_count = sum(1 for row in rows if row.get("related_boundary_rule_ids"))
+        linked_lifecycle_count = sum(1 for row in rows if row.get("related_lifecycle_ids"))
+        consent_record_count = sum(1 for row in rows if row.get("federation_consent_summary"))
+        latest = rows[0] if rows else {}
+        return {
+            "audit_event_count": len(rows),
+            "operation_counts": operation_counts,
+            "result_counts": result_counts,
+            "target_environment_counts": environment_counts,
+            "linked_boundary_count": linked_boundary_count,
+            "linked_lifecycle_count": linked_lifecycle_count,
+            "consent_record_count": consent_record_count,
+            "latest_audit_id": latest.get("audit_id"),
+            "latest_detail_path": f"/api/audit/{latest['audit_id']}" if latest.get("audit_id") else None,
+            "latest_summary": latest.get("summary"),
+            "message": (
+                "Audit governance summary groups local audit traces with nearby boundary and lifecycle context for read-only inspection."
+            ),
+            "boundary_note": (
+                "Governance summary is derived and advisory; it does not enforce policy or automate review outcomes."
+            ),
+            "boundary_note_key": "ui.audit_governance_summary.note.read_only_derived",
+        }
+
     def audit_events(self, *, limit: int = 100) -> dict[str, Any]:
         events = self.audit.list_events()
         rows: list[dict[str, Any]] = []
         for event in reversed(events[-limit:]):
-            data = _dump_model(event)
-            consent_summary = self._federation_consent_audit_summary(data)
-            if consent_summary is not None:
-                data["federation_consent_summary"] = consent_summary
-            rows.append(data)
+            rows.append(self._audit_event_row(_dump_model(event)))
         return {
             "audit_events": rows,
             "federation_preflight_summary": self.federation_preflight_summary(rows),
+            "governance_summary": self.audit_governance_summary(rows),
         }
 
     def lifecycle_markers(self, *, limit: int = 100) -> dict[str, Any]:
@@ -6318,11 +6545,14 @@ class ChronicleUIDataService:
             rules = self.chronicle.index.load_boundary_rules()
             record = _dump_model(rules[record_id]) if record_id in rules else None
         elif resource == "audit":
-            record = _find_by_attr(self.audit.list_events(), "audit_id", record_id)
-            if record is not None:
-                consent_summary = self._federation_consent_audit_summary(record)
-                if consent_summary is not None:
-                    record["federation_consent_summary"] = consent_summary
+            record = next(
+                (
+                    item
+                    for item in self.audit_events().get("audit_events", [])
+                    if str(item.get("audit_id", "")) == record_id
+                ),
+                None,
+            )
         elif resource == "lifecycle":
             record = _find_by_attr(self.lifecycle.list_events(), "lifecycle_id", record_id)
         elif resource == "chronicle-objects":

@@ -1000,6 +1000,15 @@ def test_ui_data_service_read_endpoints(tmp_path):
         for event in audit_payload["audit_events"]
         if event["audit_id"] == consent_payload["audit_id"]
     )
+    assert audit_payload["governance_summary"]["audit_event_count"] == len(
+        audit_payload["audit_events"]
+    )
+    assert audit_payload["governance_summary"]["linked_boundary_count"] >= 1
+    assert audit_payload["governance_summary"]["linked_lifecycle_count"] >= 1
+    assert audit_payload["governance_summary"]["consent_record_count"] == 1
+    assert audit_payload["governance_summary"]["boundary_note_key"] == (
+        "ui.audit_governance_summary.note.read_only_derived"
+    )
     assert consent_row["federation_consent_summary"]["message_key"] == (
         "ui.federation_consent_audit.message.recorded"
     )
@@ -1007,6 +1016,9 @@ def test_ui_data_service_read_endpoints(tmp_path):
     assert consent_row["federation_consent_summary"]["scope"] == "partner-review"
     assert consent_row["federation_consent_summary"]["boundary_note_key"] == (
         "ui.federation_consent_audit.note.read_only_derived"
+    )
+    assert consent_row["operational_implication"]["boundary_note_key"] == (
+        "ui.audit_operational_implication.note.read_only_derived"
     )
     assert service.lifecycle_markers()["lifecycle_markers"][0]["reason"] == "UI lifecycle marker"
     assert len(service.runtime_records()["runtime_records"]) == 2
@@ -1800,7 +1812,12 @@ def test_ui_data_service_detail_endpoints(tmp_path):
     assert artifact_detail["versions"]
     assert service.detail_payload(f"/api/decisions/{ids['decision_id']}")["record"]["reason"] == "UI decision"
     assert service.detail_payload(f"/api/boundary/{ids['rule_id']}")["record"]["reason"] == "UI boundary"
-    assert service.detail_payload(f"/api/audit/{ids['audit_id']}")["record"]["summary"] == "UI audit event"
+    audit_detail = service.detail_payload(f"/api/audit/{ids['audit_id']}")["record"]
+    assert audit_detail["summary"] == "UI audit event"
+    assert audit_detail["related_boundary_rule_ids"] == [ids["rule_id"]]
+    assert audit_detail["related_lifecycle_ids"] == [ids["lifecycle_id"]]
+    assert audit_detail["impacted_target_summary"]["record_count"] == 0
+    assert audit_detail["operational_implication"]["status"] == "local_trace_available"
     consent_detail = service.detail_payload(f"/api/audit/{consent_payload['audit_id']}")["record"]
     assert consent_detail["federation_consent_summary"]["message_key"] == (
         "ui.federation_consent_audit.message.recorded"
@@ -1809,6 +1826,10 @@ def test_ui_data_service_detail_endpoints(tmp_path):
     assert consent_detail["federation_consent_summary"]["third_party_sharing_allowed"] is True
     assert consent_detail["federation_consent_summary"]["third_party_sharing_allowed_summary_key"] == (
         "ui.boolean.true"
+    )
+    assert consent_detail["impacted_target_summary"]["record_count"] == 1
+    assert consent_detail["impacted_target_summary"]["primary_target_path"] == (
+        f"/api/contexts/{ids['context_id']}"
     )
     assert service.detail_payload(f"/api/lifecycle/{ids['lifecycle_id']}")["record"]["reason"] == "UI lifecycle marker"
     summary_detail = service.detail_payload(f"/api/summary-jobs/{ids['summary_job_id']}")["record"]
