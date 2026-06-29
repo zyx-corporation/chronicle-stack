@@ -1317,7 +1317,7 @@ def test_ui_data_service_read_endpoints(tmp_path):
 
 
 def test_ui_data_service_federation_package_preview_query_surfaces(tmp_path):
-    _populate(tmp_path)
+    ids = _populate(tmp_path)
     package_dir = tmp_path / "federation-package-ui-preview"
     FederationPackageService(tmp_path).create_package(
         purpose="ui preview review",
@@ -1345,6 +1345,30 @@ def test_ui_data_service_federation_package_preview_query_surfaces(tmp_path):
     assert preview["verification"]["valid"] is True
     assert isinstance(preview["findings"], list)
     assert isinstance(preview["warnings"], list)
+    assert preview["package_route_summary"]["target_node"] == "node:partner:beta"
+    assert preview["package_route_summary"]["record_count"] == 1
+    assert preview["package_route_summary"]["boundary_note_key"] == (
+        "ui.federation_package_route.note.read_only_derived"
+    )
+    assert preview["trust_reference_summary"]["target_node"] == "node:partner:beta"
+    assert preview["trust_reference_summary"]["active_relation_count"] == 1
+    assert preview["trust_reference_summary"]["dominant_level"] == "trusted"
+    assert preview["trust_reference_summary"]["detail_path"] == (
+        f"/api/trust-nodes/{ids['trust_node_id']}"
+    )
+    assert preview["trust_reference_summary"]["boundary_note_key"] == (
+        "ui.federation_package_trust.note.read_only_derived"
+    )
+    assert preview["consent_summary"]["status"] == "not_recorded"
+    assert preview["consent_summary"]["latest_audit_id"] is None
+    assert preview["consent_summary"]["boundary_note_key"] == (
+        "ui.federation_package_consent.note.read_only_derived"
+    )
+    assert preview["import_implication_summary"]["mode"] == "preview"
+    assert preview["import_implication_summary"]["import_candidate"] is True
+    assert preview["import_implication_summary"]["boundary_note_key"] == (
+        "ui.federation_package_import_implication.note.read_only_derived"
+    )
 
     import_preview_payload = service.api_payload(
         "/api/federation-package-preview",
@@ -1363,6 +1387,10 @@ def test_ui_data_service_federation_package_preview_query_surfaces(tmp_path):
     assert import_preview["boundary_note_key"] == "ui.federation_package_preview.note.read_only_derived"
     assert isinstance(import_preview["findings"], list)
     assert isinstance(import_preview["warnings"], list)
+    assert import_preview["package_route_summary"]["mode"] == "import-preview"
+    assert import_preview["consent_summary"]["status"] == "not_recorded"
+    assert import_preview["import_implication_summary"]["mode"] == "import-preview"
+    assert import_preview["import_implication_summary"]["import_candidate"] is True
     assert service.ai_index_status()["ai_index_status"]["vector"]["entry_count"] == 1
     assert service.ai_index_vector_entries()["vector_entries"][0]["record_id"] == service.events()["events"][-1]["event_id"]
     assert service.ai_index_graph_nodes()["graph_nodes"]
