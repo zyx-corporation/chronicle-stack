@@ -8967,6 +8967,93 @@ function renderPackageReadinessNotice(record) {{
     )
   );
 }}
+function renderArtifactWorkbenchNotice(record) {{
+  const linkedContexts = Array.isArray(record.linked_contexts) ? record.linked_contexts : [];
+  const linkedDecisions = Array.isArray(record.linked_decisions) ? record.linked_decisions : [];
+  const linkedRdeRecords = Array.isArray(record.linked_rde_records) ? record.linked_rde_records : [];
+  const sourceEventSummary = record.source_event_summary || null;
+  const boundarySummary = record.boundary_summary || null;
+  const auditSummary = record.audit_summary || null;
+  if (
+    linkedContexts.length === 0
+    && linkedDecisions.length === 0
+    && linkedRdeRecords.length === 0
+    && !sourceEventSummary
+    && !boundarySummary
+    && !auditSummary
+  ) return '';
+  const contextSummaries = linkedContexts.map(item => {{
+    const path = item.detail_path || '';
+    const title = item.title || item.context_id || 'context';
+    const via = Array.isArray(item.linked_via) && item.linked_via.length > 0
+      ? ' (' + item.linked_via.join(' / ') + ')'
+      : '';
+    return title + via + (path ? ' -> ' + path : '');
+  }});
+  const contextButtons = linkedContexts.map(item =>
+    detailNavButton(item.detail_path || '', item.title || item.context_id || 'Open context')
+  ).filter(Boolean);
+  const decisionSummaries = linkedDecisions.map(item =>
+    (item.decision_type || 'decision') + ': ' + (item.reason || item.decision_id || '') + (item.decided_at ? ' @ ' + item.decided_at : '')
+  );
+  const decisionButtons = linkedDecisions.map(item =>
+    detailNavButton(item.detail_path || '', item.reason || item.decision_id || 'Open decision')
+  ).filter(Boolean);
+  const rdeSummaries = linkedRdeRecords.map(item => {{
+    const counts = 'unresolved=' + String(item.unresolved_count ?? 0) + ', risk=' + String(item.deviation_risk_count ?? 0);
+    return (item.summary || item.rde_record_id || 'rde') + ' (' + counts + ')';
+  }});
+  const rdeButtons = linkedRdeRecords.map(item =>
+    detailNavButton(item.detail_path || '', item.summary || item.rde_record_id || 'Open RDE')
+  ).filter(Boolean);
+  const latestEventButton = sourceEventSummary && sourceEventSummary.latest_event_id
+    ? detailNavButton('/api/events/' + sourceEventSummary.latest_event_id, sourceEventSummary.latest_event_summary || sourceEventSummary.latest_event_id)
+    : '';
+  const auditButtons = auditSummary && Array.isArray(auditSummary.audits)
+    ? auditSummary.audits.slice(0, 3).map(item =>
+        detailNavButton(item.detail_path || '', item.summary || item.audit_id || 'Open audit')
+      ).filter(Boolean)
+    : [];
+  const localizedSourceBoundaryNote = sourceEventSummary && sourceEventSummary.boundary_note_key
+    ? formatLabel(sourceEventSummary.boundary_note_key, {{}}, sourceEventSummary.boundary_note || '')
+    : ((sourceEventSummary && sourceEventSummary.boundary_note) || '');
+  const localizedBoundaryNote = boundarySummary && boundarySummary.boundary_note_key
+    ? formatLabel(boundarySummary.boundary_note_key, {{}}, boundarySummary.boundary_note || '')
+    : ((boundarySummary && boundarySummary.boundary_note) || '');
+  const localizedAuditBoundaryNote = auditSummary && auditSummary.boundary_note_key
+    ? formatLabel(auditSummary.boundary_note_key, {{}}, auditSummary.boundary_note || '')
+    : ((auditSummary && auditSummary.boundary_note) || '');
+  return renderNotice(
+    label('notice.artifact_workbench', 'Artifact Workbench'),
+    detailListLine('Linked contexts', contextSummaries, ' | ')
+      + (contextButtons.length > 0 ? '<p>' + contextButtons.join(' ') + '</p>' : '')
+      + detailListLine('Linked decisions', decisionSummaries, ' | ')
+      + (decisionButtons.length > 0 ? '<p>' + decisionButtons.join(' ') + '</p>' : '')
+      + detailListLine('Linked RDE records', rdeSummaries, ' | ')
+      + (rdeButtons.length > 0 ? '<p>' + rdeButtons.join(' ') + '</p>' : '')
+      + (sourceEventSummary
+        ? detailLine('Source events', String(sourceEventSummary.event_count ?? 0) + ' / versions=' + String(sourceEventSummary.version_count ?? 0))
+          + detailLine('Latest source event', sourceEventSummary.latest_event_summary || sourceEventSummary.latest_event_id || '')
+          + detailLine('Source-event scope note', localizedSourceBoundaryNote)
+          + (latestEventButton ? '<p>' + latestEventButton + '</p>' : '')
+        : '')
+      + (boundarySummary
+        ? detailLine('Boundary visibility', boundarySummary.visibility_hint || '')
+          + detailLine('Boundary source type', boundarySummary.source_type || '')
+          + detailListLine('Allowed operations', boundarySummary.allowed_operations, ' | ')
+          + detailLine('Linked context count', boundarySummary.linked_context_count ?? 0)
+          + detailLine('Boundary scope note', localizedBoundaryNote)
+        : '')
+      + (auditSummary
+        ? detailLine('Related audits', auditSummary.audit_event_count ?? 0)
+          + detailLine('Latest audit summary', auditSummary.latest_summary || '')
+          + detailLine('Audit scope note', localizedAuditBoundaryNote)
+          + summaryJsonLine('Audit operations', auditSummary.operation_counts)
+          + summaryJsonLine('Audit results', auditSummary.result_counts)
+          + (auditButtons.length > 0 ? '<p>' + auditButtons.join(' ') + '</p>' : '')
+        : '')
+  );
+}}
 function renderRelatedLinksNotice(record) {{
   if (!Array.isArray(record.related_links) || record.related_links.length === 0) return '';
   return renderNotice(
@@ -9877,6 +9964,7 @@ const detailNoticeRenderers = [
   renderPackageHandoffPreviewNotice,
   renderInvocationPlanNotice,
   renderPackageReadinessNotice,
+  renderArtifactWorkbenchNotice,
   renderRelatedLinksNotice,
   renderAuthReadinessNotice,
   renderReviewCapabilityNotice,
