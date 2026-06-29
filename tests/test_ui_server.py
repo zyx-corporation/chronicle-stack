@@ -2814,6 +2814,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "function handleViewInput(event)" in html
     assert "function handleViewChange(event)" in html
     assert "function renderPanel(body)" in html
+    assert "function renderMultiPanelRoute(panels, payload = null, includeResponseJson = false)" in html
     assert "function renderOverviewHeaderPanel(chronicle)" in html
     assert "function renderOverviewCountsPanel(counts)" in html
     assert "function renderOverviewRuntimeBoundaryPanel(runtime)" in html
@@ -2878,6 +2879,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "function detailNavigationOptions(endpoint, record)" in html
     assert "const detailNoticeRenderers = [" in html
     assert "function renderFederationPackagePreview(payload)" in html
+    assert "renderMultiPanelRoute([" in html
     assert "sectionTitle(label('section.federation_package_preview', 'Federation Package Preview'))" in html
     assert "sectionTitle(label('section.package_route_summary', 'Package Route Summary'))" in html
     assert "sectionTitle(label('section.trust_reference_summary', 'Trust Reference Summary'))" in html
