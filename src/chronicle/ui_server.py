@@ -4699,7 +4699,10 @@ class ChronicleUIDataService:
             )
             data["handoff_summary"] = self._runtime_handoff_summary(data, data["payload"])
             rows.append(data)
-        return {"runtime_records": rows}
+        return {
+            "runtime_records": rows,
+            "runtime_records_summary": self.runtime_records_overview(rows),
+        }
 
     def review_queue(self, *, limit: int = 100) -> dict[str, Any]:
         self.chronicle.require_initialized()
@@ -4839,7 +4842,10 @@ class ChronicleUIDataService:
                         data
                     )
             rows.append(data)
-        return {"summary_jobs": rows}
+        return {
+            "summary_jobs": rows,
+            "summary_jobs_summary": self.summary_jobs_overview(rows),
+        }
 
     def mutation_readiness_summary(self, review_queue: list[dict[str, Any]] | None = None) -> dict[str, Any]:
         boundary = self.ui_boundary()["ui_boundary"]
@@ -8664,6 +8670,8 @@ function renderSummaryJobRow(row, endpoint) {{
 }}
 function renderRuntimeRecordsTable(endpoint, rows) {{
   const query = (window.__chronicleFilters && window.__chronicleFilters.runtimeRecords || '').toLowerCase();
+  const payload = window.__chronicleRoutePayload || {{}};
+  const summary = payload.runtime_records_summary || {{}};
   const filtered = filterRows(rows, row => {{
     if (!query) return true;
     if (matchesReviewerBoundaryFilter(query, row.reviewer_enforcement_status, row.reviewer_validation_gate_status)) return true;
@@ -8699,7 +8707,9 @@ function renderRuntimeRecordsTable(endpoint, rows) {{
   }});
   const sorted = sortRuntimeRows(filtered);
   const mutationEnabled = sorted.some(row => row.ui_mutation_enabled);
-  return listToolbar(endpoint, 'runtimeRecords', t('placeholder.runtime_filter'), [
+  return renderMultiPanelRoute([
+    renderRuntimeRecordsWorkspacePanel(summary),
+    listToolbar(endpoint, 'runtimeRecords', t('placeholder.runtime_filter'), [
       {{ value: 'latest', label: t('sort.runtime.latest') }},
       {{ value: 'mutation', label: t('sort.runtime.mutation') }},
       {{ value: 'auth', label: t('sort.runtime.auth') }},
@@ -8726,7 +8736,8 @@ function renderRuntimeRecordsTable(endpoint, rows) {{
       label('label.table_auth', 'Auth'),
       label('label.table_preview', 'Preview'),
       label('label.table_review_route', 'Review Route'),
-    ], sorted.map(row => renderRuntimeRecordRow(row, endpoint)).join(''));
+    ], sorted.map(row => renderRuntimeRecordRow(row, endpoint)).join('')),
+  ]);
 }}
 function renderReviewQueueTable(endpoint, rows) {{
   const query = (window.__chronicleFilters && window.__chronicleFilters.reviewQueue || '').toLowerCase();
@@ -8798,6 +8809,8 @@ function renderReviewQueueTable(endpoint, rows) {{
 }}
 function renderSummaryJobsTable(endpoint, rows) {{
   const query = (window.__chronicleFilters && window.__chronicleFilters.summaryJobs || '').toLowerCase();
+  const payload = window.__chronicleRoutePayload || {{}};
+  const summary = payload.summary_jobs_summary || {{}};
   const filtered = filterRows(rows, row => {{
     if (!query) return true;
     if (matchesReviewerBoundaryFilter(query, row.reviewer_enforcement_status, row.reviewer_validation_gate_status)) return true;
@@ -8833,7 +8846,9 @@ function renderSummaryJobsTable(endpoint, rows) {{
   }});
   const sorted = sortSummaryJobRows(filtered);
   const mutationEnabled = sorted.some(row => row.ui_mutation_enabled);
-  return listToolbar(endpoint, 'summaryJobs', t('placeholder.summary_filter'), [
+  return renderMultiPanelRoute([
+    renderSummaryJobsWorkspacePanel(summary),
+    listToolbar(endpoint, 'summaryJobs', t('placeholder.summary_filter'), [
       {{ value: 'latest', label: t('sort.summary.latest') }},
       {{ value: 'mutation', label: t('sort.summary.mutation') }},
       {{ value: 'review', label: t('sort.summary.review') }},
@@ -8860,7 +8875,8 @@ function renderSummaryJobsTable(endpoint, rows) {{
       label('label.table_identity', 'Identity'),
       label('label.table_preview', 'Preview'),
       label('label.table_runtime', 'Runtime'),
-    ], sorted.map(row => renderSummaryJobRow(row, endpoint)).join(''));
+    ], sorted.map(row => renderSummaryJobRow(row, endpoint)).join('')),
+  ]);
 }}
 function renderAuditGovernanceSummary(summary) {{
   const localizedBoundaryNote = summary.boundary_note_key
@@ -11242,6 +11258,36 @@ function renderOverviewFederationPanel(federationSummary, federationPreflight, f
       openEndpointButton('/api/federation-inbox'),
       openEndpointButton('/api/federation-outbox'),
       openEndpointButton('/api/audit'),
+    ])
+  );
+}}
+function renderRuntimeRecordsWorkspacePanel(summary) {{
+  return renderPanel(
+    sectionTitle(label('section.runtime_records_workspace', 'Runtime Records Workspace'))
+    + detailLine('Provider responses', summary.provider_response_present_count ?? 0)
+    + detailLine('Response missing', summary.provider_response_absent_count ?? 0)
+    + detailLine('Trial count', (summary.query_engine_trial_summary && summary.query_engine_trial_summary.total_count) ?? 0)
+    + detailLine('Escalation cues', (summary.query_engine_trial_escalation_summary && summary.query_engine_trial_escalation_summary.active_count) ?? 0)
+    + summaryJsonLine('Kinds', summary.kind_counts)
+    + summaryJsonLine('Auth readiness', summary.auth_readiness_counts)
+    + summaryJsonLine('Mutation readiness', summary.mutation_readiness_counts)
+    + navigationCluster([
+      latestResponseButton(summary.latest_provider_response_detail_path, 'button.open_latest_runtime_response', 'Open Latest Runtime Response'),
+    ])
+  );
+}}
+function renderSummaryJobsWorkspacePanel(summary) {{
+  return renderPanel(
+    sectionTitle(label('section.summary_jobs_workspace', 'Summary Jobs Workspace'))
+    + detailLine('Provider responses', summary.provider_response_present_count ?? 0)
+    + detailLine('Response missing', summary.provider_response_absent_count ?? 0)
+    + detailLine('Source refs total', summary.summary_source_total ?? 0)
+    + summaryJsonLine('Statuses', summary.status_counts)
+    + summaryJsonLine('Review capability', summary.review_capability_counts)
+    + summaryJsonLine('Package readiness', summary.package_readiness_counts)
+    + summaryJsonLine('Runtime providers', summary.runtime_provider_counts)
+    + navigationCluster([
+      latestResponseButton(summary.latest_provider_response_detail_path, 'button.open_latest_summary_response', 'Open Latest Summary Response'),
     ])
   );
 }}
