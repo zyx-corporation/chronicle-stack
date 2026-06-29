@@ -1738,7 +1738,35 @@ def test_ui_data_service_detail_endpoints(tmp_path):
         f"/api/trust-relations/{ids['trust_relation_id']}"
     )["record"]
     assert trust_node_detail["subject_id"] == "subject:beta"
+    assert trust_node_detail["relation_count"] == 1
+    assert trust_node_detail["latest_activity_summary"]["status"] == "active_relation_present"
+    assert trust_node_detail["latest_activity_summary"]["relation_id"] == ids["trust_relation_id"]
+    assert trust_node_detail["latest_activity_summary"]["detail_path"] == (
+        f"/api/trust-relations/{ids['trust_relation_id']}"
+    )
+    assert trust_node_detail["domain_coverage_summary"]["domains"] == ["technical_review"]
+    assert trust_node_detail["domain_coverage_summary"]["active_relation_count"] == 1
+    assert trust_node_detail["domain_coverage_summary"]["capability_counts"] == {
+        "reference": 1,
+        "review": 1,
+    }
     assert trust_relation_detail["level"] == "trusted"
+    assert trust_relation_detail["subject_summary"]["subject_id"] == "subject:beta"
+    assert trust_relation_detail["subject_summary"]["detail_path"] == (
+        f"/api/trust-nodes/{ids['trust_node_id']}"
+    )
+    assert trust_relation_detail["active_state"]["status"] == "active"
+    assert trust_relation_detail["active_state"]["is_active"] is True
+    assert trust_relation_detail["history_summary"]["history_event_count"] == 1
+    assert trust_relation_detail["history_summary"]["transition_count"] == 1
+    assert trust_relation_detail["history_summary"]["latest_detail_path"].startswith("/api/audit/")
+    assert trust_relation_detail["federation_implication"]["status"] == (
+        "advisory_capability_present"
+    )
+    assert trust_relation_detail["federation_implication"]["capabilities"] == [
+        "review",
+        "reference",
+    ]
     artifact_detail = service.detail_payload(f"/api/artifacts/{ids['artifact_id']}")["record"]
     assert artifact_detail["title"] == "UI Artifact"
     assert artifact_detail["versions"]
@@ -1802,6 +1830,29 @@ def test_ui_data_service_detail_endpoints(tmp_path):
     assert runtime_detail["suggested_cli_family"] == "chronicle runtime summarize --record"
     assert runtime_detail["related_links"][0]["path"] == f"/api/review-queue/{ids['runtime_summary_event_id']}"
     assert runtime_detail["related_links"][0]["label"] == "Open matching review detail"
+
+
+def test_trust_workspace_payloads_capture_withdrawal_history(tmp_path):
+    ids = _populate(tmp_path)
+    TrustService(tmp_path).withdraw_relation(
+        relation_id=ids["trust_relation_id"],
+        reason="review window expired",
+    )
+
+    service = ChronicleUIDataService(tmp_path)
+    trust_relation = service.trust_relations()["trust_relations"][0]
+    trust_node = service.trust_nodes()["trust_nodes"][0]
+
+    assert trust_relation["active_state"]["status"] == "withdrawn"
+    assert trust_relation["active_state"]["is_active"] is False
+    assert trust_relation["history_summary"]["history_event_count"] == 2
+    assert trust_relation["history_summary"]["transition_count"] == 2
+    assert trust_relation["history_summary"]["withdrawal_reason"] == "review window expired"
+    assert trust_relation["history_summary"]["withdrawn_at"] is not None
+    assert trust_relation["federation_implication"]["status"] == "withdrawn_advisory"
+    assert trust_node["latest_activity_summary"]["status"] == "withdrawn_relation_present"
+    assert trust_node["domain_coverage_summary"]["active_relation_count"] == 0
+    assert trust_node["domain_coverage_summary"]["withdrawn_relation_count"] == 1
     retrieval_detail = service.detail_payload(f"/api/runtime-records/{ids['runtime_plan_event_id']}")["record"]
     assert "runtime_retrieval_plan" in retrieval_detail["payload"]
     assert retrieval_detail["runtime_record_preview"]["record_kind"] == "retrieval_plan"
