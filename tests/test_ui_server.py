@@ -2619,6 +2619,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "function endpointBody(endpoint, payload)" in html
     assert "function detailNavigationOptions(endpoint, record)" in html
     assert "const detailNoticeRenderers = [" in html
+    assert "renderArtifactWorkbenchNotice," in html
     assert "function renderDetailNotices(record)" in html
     assert "function detailNoticeBody(endpoint, record)" in html
     assert "function renderReviewerBoundaryDrilldownNotice(record)" in html
@@ -2688,6 +2689,14 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "reviewQueueFilterChips" in html
     assert "summaryJobsFilterChips" in html
     assert "humanizeDetailPath" in html
+    assert "function renderArtifactWorkbenchNotice(record)" in html
+    assert "label('notice.artifact_workbench', 'Artifact Workbench')" in html
+    assert "detailListLine('Linked contexts', contextSummaries, ' | ')" in html
+    assert "detailListLine('Linked decisions', decisionSummaries, ' | ')" in html
+    assert "detailListLine('Linked RDE records', rdeSummaries, ' | ')" in html
+    assert "detailLine('Source-event scope note', localizedSourceBoundaryNote)" in html
+    assert "detailLine('Boundary visibility', boundarySummary.visibility_hint || '')" in html
+    assert "summaryJsonLine('Audit operations', auditSummary.operation_counts)" in html
     assert "label('notice.related_links', 'Related Links')" in html
     assert "__chronicleDetailTrail" in html
     assert "readinessBadge" in html
