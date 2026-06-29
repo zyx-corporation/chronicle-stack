@@ -3617,13 +3617,203 @@ class ChronicleUIDataService:
             paths.append(f"/api/decisions/{record['target_decision_id']}")
         return paths
 
+    def _trust_relation_history_events(self, relation_id: str) -> list[dict[str, Any]]:
+        rows: list[dict[str, Any]] = []
+        for event in self.audit.list_events():
+            metadata = getattr(event, "metadata", {}) or {}
+            if str(metadata.get("relation_id", "")) != relation_id:
+                continue
+            rows.append(_dump_model(event))
+        return sorted(rows, key=lambda item: str(item.get("created_at", "")))
+
+    def _trust_relation_subject_summary(
+        self,
+        relation: dict[str, Any],
+        node_profiles: dict[str, dict[str, Any]],
+    ) -> dict[str, Any]:
+        node = node_profiles.get(str(relation.get("target_node", "")), {})
+        subject_id = str(relation.get("target_subject_id", "") or node.get("subject_id", ""))
+        display_name = str(node.get("display_name", "") or "")
+        return {
+            "subject_id": subject_id,
+            "display_name": display_name,
+            "node_id": relation.get("target_node"),
+            "detail_path": (
+                f"/api/trust-nodes/{relation['target_node']}"
+                if relation.get("target_node")
+                else None
+            ),
+        }
+
+    def _trust_relation_active_state(self, relation: dict[str, Any]) -> dict[str, Any]:
+        is_active = str(relation.get("status", "")) == "active"
+        level = str(relation.get("level", "") or "unknown")
+        if is_active:
+            message = (
+                "This trust relation remains active and advisory-only; it informs local package or "
+                "message review without granting autonomous execution."
+            )
+        else:
+            message = (
+                "This trust relation has been withdrawn; treat any package or message handoff as "
+                "untrusted until a new explicit assertion is recorded."
+            )
+        return {
+            "status": "active" if is_active else "withdrawn",
+            "is_active": is_active,
+            "level": level,
+            "message": message,
+        }
+
+    def _trust_relation_history_summary(self, relation: dict[str, Any]) -> dict[str, Any]:
+        history_events = self._trust_relation_history_events(str(relation.get("relation_id", "")))
+        latest_history = history_events[-1] if history_events else None
+        is_active = str(relation.get("status", "")) == "active"
+        return {
+            "history_event_count": len(history_events),
+            "transition_count": 1 + (1 if relation.get("withdrawn_at") else 0),
+            "asserted_at": relation.get("created_at"),
+            "withdrawn_at": relation.get("withdrawn_at"),
+            "withdrawal_reason": relation.get("withdrawal_reason", ""),
+            "latest_audit_id": latest_history.get("audit_id") if latest_history else None,
+            "latest_detail_path": (
+                f"/api/audit/{latest_history['audit_id']}"
+                if latest_history and latest_history.get("audit_id")
+                else None
+            ),
+            "status_line": (
+                "Assertion remains active; no withdrawal event is recorded."
+                if is_active
+                else (
+                    "Assertion was withdrawn and remains read-only history."
+                    if relation.get("withdrawn_at")
+                    else "Assertion is no longer active."
+                )
+            ),
+        }
+
+    def _trust_relation_federation_implication(self, relation: dict[str, Any]) -> dict[str, Any]:
+        capabilities = [str(item) for item in relation.get("capabilities", []) if isinstance(item, str)]
+        is_active = str(relation.get("status", "")) == "active"
+        if not is_active:
+            status = "withdrawn_advisory"
+            message = (
+                "Federation implication is withdrawn; any downstream package or message review should "
+                "treat this relation as historical context only."
+            )
+        elif capabilities:
+            status = "advisory_capability_present"
+            message = (
+                "Active trust relation can inform downstream package or message review for the listed "
+                "capabilities, but Chronicle still stays read-only and approval-explicit."
+            )
+        else:
+            status = "relation_only"
+            message = (
+                "Active trust relation is present, but no explicit capability set is attached for "
+                "federation review."
+            )
+        return {
+            "status": status,
+            "message": message,
+            "target_node": relation.get("target_node"),
+            "purpose": relation.get("purpose"),
+            "context_scope": relation.get("context_scope", ""),
+            "capabilities": capabilities,
+            "boundary_note": (
+                "Trust implication is advisory-only and derived from local trust assertions; it does "
+                "not grant permission or trigger network behavior."
+            ),
+            "boundary_note_key": "ui.trust_relation_federation_implication.note.read_only_derived",
+        }
+
+    def _trust_node_latest_activity_summary(self, relations: list[dict[str, Any]]) -> dict[str, Any]:
+        if not relations:
+            return {
+                "status": "no_relations",
+                "message": "No trust relation has been asserted for this node yet.",
+                "relation_id": None,
+                "detail_path": None,
+                "activity_at": None,
+            }
+        latest_relation = max(
+            relations,
+            key=lambda item: str(item.get("withdrawn_at") or item.get("created_at") or ""),
+        )
+        is_active = str(latest_relation.get("status", "")) == "active"
+        return {
+            "status": "active_relation_present" if is_active else "withdrawn_relation_present",
+            "message": (
+                f"Latest trust activity keeps this node {latest_relation.get('level', 'unknown')} "
+                f"for {latest_relation.get('purpose', 'unspecified purpose')}."
+                if is_active
+                else (
+                    "Latest trust activity is a withdrawal; rely on recorded history before reusing "
+                    "this node in federation review."
+                )
+            ),
+            "relation_id": latest_relation.get("relation_id"),
+            "detail_path": (
+                f"/api/trust-relations/{latest_relation['relation_id']}"
+                if latest_relation.get("relation_id")
+                else None
+            ),
+            "activity_at": latest_relation.get("withdrawn_at") or latest_relation.get("created_at"),
+        }
+
+    def _trust_node_domain_coverage_summary(self, relations: list[dict[str, Any]]) -> dict[str, Any]:
+        active_relations = [row for row in relations if str(row.get("status", "")) == "active"]
+        withdrawn_relations = [row for row in relations if str(row.get("status", "")) == "withdrawn"]
+        domains = sorted({str(row.get("domain", "")) for row in relations if str(row.get("domain", ""))})
+        capability_counts: dict[str, int] = {}
+        for row in active_relations:
+            for capability in row.get("capabilities", []):
+                capability_value = str(capability)
+                capability_counts[capability_value] = capability_counts.get(capability_value, 0) + 1
+        return {
+            "domain_count": len(domains),
+            "domains": domains,
+            "active_relation_count": len(active_relations),
+            "withdrawn_relation_count": len(withdrawn_relations),
+            "capability_counts": capability_counts,
+            "boundary_note": (
+                "Domain coverage is a derived summary of local trust assertions for this node; it is "
+                "not a reputation score or permission grant."
+            ),
+            "boundary_note_key": "ui.trust_node_domain_coverage.note.read_only_derived",
+        }
+
     def trust_nodes(self) -> dict[str, Any]:
         self.chronicle.require_initialized()
-        return {"trust_nodes": [_dump_model(row) for row in self.trust.list_node_profiles()]}
+        node_rows = [_dump_model(row) for row in self.trust.list_node_profiles()]
+        relation_rows = [_dump_model(row) for row in self.trust.list_relations()]
+        rows: list[dict[str, Any]] = []
+        for node in node_rows:
+            node_relations = [
+                relation for relation in relation_rows if relation.get("target_node") == node.get("node_id")
+            ]
+            data = dict(node)
+            data["relation_count"] = len(node_relations)
+            data["latest_activity_summary"] = self._trust_node_latest_activity_summary(node_relations)
+            data["domain_coverage_summary"] = self._trust_node_domain_coverage_summary(node_relations)
+            rows.append(data)
+        return {"trust_nodes": rows}
 
     def trust_relations(self) -> dict[str, Any]:
         self.chronicle.require_initialized()
-        return {"trust_relations": [_dump_model(row) for row in self.trust.list_relations()]}
+        node_profiles = {
+            row.node_id: _dump_model(row)
+            for row in self.trust.list_node_profiles()
+        }
+        rows: list[dict[str, Any]] = []
+        for relation in self.trust.list_relations():
+            data = _dump_model(relation)
+            data["subject_summary"] = self._trust_relation_subject_summary(data, node_profiles)
+            data["active_state"] = self._trust_relation_active_state(data)
+            data["history_summary"] = self._trust_relation_history_summary(data)
+            data["federation_implication"] = self._trust_relation_federation_implication(data)
+            rows.append(data)
+        return {"trust_relations": rows}
 
     def trust_overview(
         self,
@@ -6017,9 +6207,23 @@ class ChronicleUIDataService:
             message_record = self.federation_messages.get_message(FederationMessageBox.OUTBOX, record_id)
             record = self._federation_message_row(message_record)
         elif resource == "trust-nodes":
-            record = _dump_model(next(item for item in self.trust.list_node_profiles() if item.node_id == record_id))
+            record = next(
+                (
+                    item
+                    for item in self.trust_nodes()["trust_nodes"]
+                    if str(item.get("node_id", "")) == record_id
+                ),
+                None,
+            )
         elif resource == "trust-relations":
-            record = _dump_model(next(item for item in self.trust.list_relations() if item.relation_id == record_id))
+            record = next(
+                (
+                    item
+                    for item in self.trust_relations()["trust_relations"]
+                    if str(item.get("relation_id", "")) == record_id
+                ),
+                None,
+            )
         else:
             return None
         return {"record": record} if record is not None else None
