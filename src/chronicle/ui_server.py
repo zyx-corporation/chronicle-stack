@@ -5395,7 +5395,29 @@ class ChronicleUIDataService:
 
     def ai_index_vector_entries(self) -> dict[str, Any]:
         snapshot = self.vector_index.snapshot()
-        return {"vector_entries": [_dump_model(entry) for entry in snapshot.entries]}
+        rows = [_dump_model(entry) for entry in snapshot.entries]
+        provider_counts = _count_values(rows, "embedding_provider")
+        model_counts = _count_values(rows, "embedding_model")
+        external_call_count = sum(1 for row in rows if bool(row.get("external_call_made")))
+        latest_detail_path = ""
+        latest_indexed_at = ""
+        for row in rows:
+            indexed_at = str(row.get("indexed_at", "") or "")
+            if indexed_at >= latest_indexed_at:
+                latest_indexed_at = indexed_at
+                record_id = str(row.get("record_id", "") or "")
+                latest_detail_path = f"/api/ai-index/vector/{record_id}" if record_id else ""
+        return {
+            "vector_entries": rows,
+            "vector_entries_summary": {
+                "entry_count": len(rows),
+                "embedding_provider_counts": provider_counts,
+                "embedding_model_counts": model_counts,
+                "external_call_count": external_call_count,
+                "latest_detail_path": latest_detail_path,
+                "latest_indexed_at": latest_indexed_at,
+            },
+        }
 
     def ai_index_graph_nodes(self) -> dict[str, Any]:
         snapshot = self.graph_index.snapshot()
@@ -10129,6 +10151,57 @@ function renderArtifactRow(row, endpoint) {{
     ]) + '</td>'
     + '</tr>';
 }}
+function renderAiIndexVectorRow(row, endpoint) {{
+  const button = detailJsonButton(endpoint, row);
+  const path = detailPath(endpoint, row);
+  const metadata = row.metadata || {{}};
+  return '<tr>'
+    + '<td>' + detailCell(button, path) + '</td>'
+    + '<td>' + cellStack([
+      cellTitle(String(row.record_id || '')),
+      cellMeta(String(row.record_type || '')),
+      cellMeta(String(row.indexed_at || '')),
+    ]) + '</td>'
+    + '<td>' + cellStack([
+      cellTitle(String(row.embedding_provider || '')),
+      cellMeta(String(row.embedding_model || '')),
+      cellMeta(String(row.external_call_made || false)),
+    ]) + '</td>'
+    + '<td>' + cellStack([
+      cellTitle(String(metadata.source || '')),
+      cellMeta(String(row.text || '')),
+    ]) + '</td>'
+    + '</tr>';
+}}
+function renderAiIndexVectorTable(endpoint, rows) {{
+  const payload = window.__chronicleRoutePayload || {{}};
+  const summary = payload.vector_entries_summary || {{}};
+  const sorted = rows.slice().sort((a, b) => String(b.indexed_at || '').localeCompare(String(a.indexed_at || '')));
+  return renderMultiPanelRoute([
+    renderWorkspaceSummaryPanel(
+      label('section.ai_index_vector', 'AI Index Vector'),
+      workspaceCountLine('Entries', summary.entry_count)
+      + workspaceCountLine('External calls', summary.external_call_count)
+      + workspaceCountLine('Latest indexed at', summary.latest_indexed_at || ''),
+      [
+        {{ label: 'Providers', value: summary.embedding_provider_counts }},
+        {{ label: 'Models', value: summary.embedding_model_counts }},
+      ],
+      summary.latest_detail_path,
+      'button.open_detail',
+      'Open Detail',
+    ),
+    renderPanel(
+      sectionTitle(label('section.ai_index_vector', 'AI Index Vector'))
+      + tableHtml([
+        label('label.table_detail', 'Detail'),
+        label('label.table_event', 'Event'),
+        label('label.table_status', 'Status'),
+        label('label.table_source', 'Source'),
+      ], sorted.map(row => renderAiIndexVectorRow(row, endpoint)).join(''))
+    ),
+  ]);
+}}
 function renderArtifactsTable(endpoint, rows) {{
   const payload = window.__chronicleRoutePayload || {{}};
   const summary = payload.artifacts_summary || {{}};
@@ -10599,6 +10672,7 @@ const endpointRenderers = {{
   '/api/contexts': renderContextsTable,
   '/api/decisions': renderDecisionsTable,
   '/api/events': renderEventsTable,
+  '/api/ai-index-vector': renderAiIndexVectorTable,
   '/api/lifecycle': renderLifecycleTable,
   '/api/proposals': renderProposalsTable,
   '/api/reactions': renderReactionsTable,
