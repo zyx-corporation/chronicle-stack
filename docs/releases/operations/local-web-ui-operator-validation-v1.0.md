@@ -114,6 +114,7 @@ chronicle ui \
 - confirm row preview summaries, auth badges, and related buttons provide enough context before opening detail
 - confirm review-backed runtime detail also exposes a `Review Steps` notice with current step, next action, and suggested command
 - confirm review-backed runtime detail also exposes an `Identity Sufficiency` notice with auth status, assurance status, blockers, and next action
+- confirm review-backed runtime detail also exposes an `Outcome Matrix` notice with action dispositions, queue results, UI intent, and reviewer-kind expectations
 - confirm detail view exposes runtime preview, runtime workspace, response metadata, and related-link navigation
 
 ### 4. Review Queue Workspace
@@ -121,7 +122,7 @@ chronicle ui \
 - confirm `Needs attention`, `CLI drift first`, reviewer sort, and warning-priority behavior remain understandable
 - confirm the first workspace column exposes the same primary `Open Detail` entry pattern used in the other workspaces
 - confirm warning badges and auth/identity slices are clickable and stay read-only
-- confirm detail view exposes review capability, `Review Steps`, `Identity Sufficiency`, auth readiness, identity assurance, CLI parity, mutation enablement, action preview, and review timeline
+- confirm detail view exposes review capability, `Review Steps`, `Identity Sufficiency`, `Outcome Matrix`, auth readiness, identity assurance, CLI parity, mutation enablement, action preview, and review timeline
 - confirm blocked review routes still return explicit preview/fallback semantics rather than silent failure
 
 ### 5. Summary Jobs Workspace
@@ -131,6 +132,7 @@ chronicle ui \
 - confirm summary job rows still expose runtime/source/reviewer context without opening detail
 - confirm review-backed summary detail also exposes a `Review Steps` notice with current step, next action, and suggested command
 - confirm review-backed summary detail also exposes an `Identity Sufficiency` notice with auth status, assurance status, blockers, and next action
+- confirm review-backed summary detail also exposes an `Outcome Matrix` notice with action dispositions, queue results, UI intent, and reviewer-kind expectations
 - confirm detail view connects summary job state back to review capability, package readiness, and mutation preview contracts
 
 ### 6. Mutation Boundary Understanding
