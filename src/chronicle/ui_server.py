@@ -7874,6 +7874,7 @@ nav {{ display: flex; flex-wrap: wrap; gap: 4px; margin: 14px 0 16px; padding-bo
 .cell-meta {{ color: #4b5563; font-size: 0.92em; }}
 .cell-stack {{ display: flex; flex-direction: column; align-items: flex-start; gap: 4px; min-width: 11rem; }}
 .cell-stack > * {{ max-width: 100%; }}
+.detail-cell {{ display: flex; flex-direction: column; align-items: flex-start; gap: 4px; min-width: 8.5rem; }}
 .cell-details {{ margin-top: 6px; }}
 .cell-details {{ width: 100%; }}
 .cell-details summary {{ cursor: pointer; color: #1f2937; font-size: 0.9em; }}
@@ -7885,7 +7886,7 @@ nav {{ display: flex; flex-wrap: wrap; gap: 4px; margin: 14px 0 16px; padding-bo
 .json-block summary {{ cursor: pointer; font-weight: 600; color: #111827; }}
 .json-block[open] summary {{ margin-bottom: 10px; }}
 pre {{ white-space: pre-wrap; word-break: break-word; background: #f9fafb; padding: 12px; border-radius: 8px; overflow-x: auto; }}
-table {{ width: 100%; border-collapse: collapse; display: block; overflow-x: auto; }}
+table {{ width: max-content; min-width: 100%; border-collapse: collapse; display: block; overflow-x: auto; }}
 thead, tbody {{ width: 100%; }}
 th, td {{ padding: 6px; border-bottom: 1px solid #e5e7eb; vertical-align: top; }}
 th {{ position: sticky; top: 0; background: #ffffff; }}
@@ -8703,6 +8704,11 @@ function detailJsonButton(endpoint, row) {{
   const path = detailPath(endpoint, row);
   return path ? '<button data-detail="' + esc(path) + '">JSON</button>' : '';
 }}
+function detailCell(buttonHtml, path) {{
+  const parts = [buttonHtml];
+  if (path) parts.push(detailButton(path));
+  return '<div class="detail-cell">' + parts.filter(part => part).join('') + '</div>';
+}}
 function stackedCell(parts, separator = '<br>') {{
   return parts.filter(part => part).join(separator);
 }}
@@ -8974,7 +8980,7 @@ function renderRuntimeRecordRow(row, endpoint) {{
     relatedDetailButton(row, '/api/artifacts/', 'Open artifact'),
   ].filter(Boolean);
   return '<tr>'
-    + '<td>' + button + (path ? detailButton(path) : '') + '</td>'
+    + '<td>' + detailCell(button, path) + '</td>'
     + '<td><span class="id">' + esc(row.event_id || '') + '</span></td>'
     + '<td>' + kindBadge + '</td>'
     + '<td>' + cellStack([
@@ -9057,7 +9063,7 @@ function renderReviewQueueRow(row, endpoint) {{
     relatedDetailButton(row, '/api/runtime-records/', 'Open matching runtime record'),
   ].filter(Boolean);
   return '<tr>'
-    + '<td>' + button + (path ? detailButton(path) : '') + '</td>'
+    + '<td>' + detailCell(button, path) + '</td>'
     + '<td>' + cellStack([
       '<div><span class="id">' + esc(row.target_event_id || '') + '</span></div>',
       reviewKindBadge,
@@ -9143,7 +9149,7 @@ function renderSummaryJobRow(row, endpoint) {{
     relatedDetailButton(row, '/api/artifacts/', 'Open artifact'),
   ].filter(Boolean);
   return '<tr>'
-    + '<td>' + button + (path ? detailButton(path) : '') + '</td>'
+    + '<td>' + detailCell(button, path) + '</td>'
     + '<td>' + cellStack(['<div><span class="id">' + esc(row.summary_job_id || '') + '</span></div>', cellTitle(row.title || ''), targetButton]) + '</td>'
     + '<td>' + cellStack([
       cellTitle(row.status || ''),
