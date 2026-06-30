@@ -3045,6 +3045,8 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "if (endpoint === '/api/runtime-config') return renderRuntimeConfigRoute(payload);" in html
     assert "function renderGraphSummaryRoute(payload)" in html
     assert "if (endpoint === '/api/graph-summary') return renderGraphSummaryRoute(payload);" in html
+    assert "function renderAiIndexStatusRoute(payload)" in html
+    assert "if (endpoint === '/api/ai-index-status') return renderAiIndexStatusRoute(payload);" in html
     assert "function renderPackageReview(payload)" in html
     assert "if (endpoint === '/api/package-review') return renderPackageReview(payload);" in html
     assert "if (endpoint === '/api/federation-package-preview') return renderFederationPackagePreview(payload);" in html
