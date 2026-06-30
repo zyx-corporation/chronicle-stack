@@ -2939,6 +2939,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "label('section.decisions_workspace', 'Decisions Workspace')" in html
     assert "label('section.events_workspace', 'Events Workspace')" in html
     assert "label('section.chronicle_objects_workspace', 'Chronicle Objects Workspace')" in html
+    assert "label('section.graph_summary', 'Graph Summary')" in html
     assert "label('section.package_review', 'Package Review')" in html
     assert "label('section.proposals_workspace', 'Proposals Workspace')" in html
     assert "label('section.reactions_workspace', 'Reactions Workspace')" in html
@@ -3042,6 +3043,8 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "'/api/artifacts': renderArtifactsTable," in html
     assert "function renderRuntimeConfigRoute(payload)" in html
     assert "if (endpoint === '/api/runtime-config') return renderRuntimeConfigRoute(payload);" in html
+    assert "function renderGraphSummaryRoute(payload)" in html
+    assert "if (endpoint === '/api/graph-summary') return renderGraphSummaryRoute(payload);" in html
     assert "function renderPackageReview(payload)" in html
     assert "if (endpoint === '/api/package-review') return renderPackageReview(payload);" in html
     assert "if (endpoint === '/api/federation-package-preview') return renderFederationPackagePreview(payload);" in html
