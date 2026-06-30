@@ -2818,6 +2818,9 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "function handleViewChange(event)" in html
     assert "function renderPanel(body)" in html
     assert "function renderMultiPanelRoute(panels, payload = null, includeResponseJson = false)" in html
+    assert "function workspaceCountLine(labelText, value)" in html
+    assert "function workspaceLatestResponseLine(path, labelKey, fallbackLabel)" in html
+    assert "function workspaceSummaryLines(summaryPairs)" in html
     assert "function renderOverviewHeaderPanel(chronicle)" in html
     assert "function renderOverviewCountsPanel(counts)" in html
     assert "function renderOverviewRuntimeBoundaryPanel(runtime)" in html
@@ -2886,6 +2889,9 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "const detailNoticeRenderers = [" in html
     assert "function renderFederationPackagePreview(payload)" in html
     assert "renderMultiPanelRoute([" in html
+    assert "workspaceLatestResponseLine(summary.latest_provider_response_detail_path, 'button.open_latest_runtime_response', 'Open Latest Runtime Response')" in html
+    assert "workspaceLatestResponseLine(summary.latest_provider_response_detail_path, 'button.open_latest_review_response', 'Open Latest Review Response')" in html
+    assert "workspaceLatestResponseLine(summary.latest_provider_response_detail_path, 'button.open_latest_summary_response', 'Open Latest Summary Response')" in html
     assert "sectionTitle(label('section.federation_package_preview', 'Federation Package Preview'))" in html
     assert "sectionTitle(label('section.package_route_summary', 'Package Route Summary'))" in html
     assert "sectionTitle(label('section.trust_reference_summary', 'Trust Reference Summary'))" in html

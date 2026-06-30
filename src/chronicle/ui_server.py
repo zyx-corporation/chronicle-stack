@@ -10972,6 +10972,17 @@ function renderMultiPanelRoute(panels, payload = null, includeResponseJson = fal
   return panelBodies
     + collapsibleJsonBlock(label('label.response_json', 'Response JSON'), payload || {{}}, true);
 }}
+function workspaceCountLine(labelText, value) {{
+  return detailLine(labelText, value ?? 0);
+}}
+function workspaceLatestResponseLine(path, labelKey, fallbackLabel) {{
+  return navigationCluster([
+    latestResponseButton(path, labelKey, fallbackLabel),
+  ]);
+}}
+function workspaceSummaryLines(summaryPairs) {{
+  return (summaryPairs || []).map(item => summaryJsonLine(item.label, item.value)).join('');
+}}
 function renderOverviewHeaderPanel(chronicle) {{
   return renderPanel(
     '<p><strong>' + esc(chronicle.title || '') + '</strong></p>'
@@ -11328,46 +11339,46 @@ function renderOverviewFederationPanel(federationSummary, federationPreflight, f
 function renderRuntimeRecordsWorkspacePanel(summary) {{
   return renderPanel(
     sectionTitle(label('section.runtime_records_workspace', 'Runtime Records Workspace'))
-    + detailLine('Provider responses', summary.provider_response_present_count ?? 0)
-    + detailLine('Response missing', summary.provider_response_absent_count ?? 0)
-    + detailLine('Trial count', (summary.query_engine_trial_summary && summary.query_engine_trial_summary.total_count) ?? 0)
-    + detailLine('Escalation cues', (summary.query_engine_trial_escalation_summary && summary.query_engine_trial_escalation_summary.active_count) ?? 0)
-    + summaryJsonLine('Kinds', summary.kind_counts)
-    + summaryJsonLine('Auth readiness', summary.auth_readiness_counts)
-    + summaryJsonLine('Mutation readiness', summary.mutation_readiness_counts)
-    + navigationCluster([
-      latestResponseButton(summary.latest_provider_response_detail_path, 'button.open_latest_runtime_response', 'Open Latest Runtime Response'),
+    + workspaceCountLine('Provider responses', summary.provider_response_present_count)
+    + workspaceCountLine('Response missing', summary.provider_response_absent_count)
+    + workspaceCountLine('Trial count', summary.query_engine_trial_summary && summary.query_engine_trial_summary.total_count)
+    + workspaceCountLine('Escalation cues', summary.query_engine_trial_escalation_summary && summary.query_engine_trial_escalation_summary.active_count)
+    + workspaceSummaryLines([
+      {{ label: 'Kinds', value: summary.kind_counts }},
+      {{ label: 'Auth readiness', value: summary.auth_readiness_counts }},
+      {{ label: 'Mutation readiness', value: summary.mutation_readiness_counts }},
     ])
+    + workspaceLatestResponseLine(summary.latest_provider_response_detail_path, 'button.open_latest_runtime_response', 'Open Latest Runtime Response')
   );
 }}
 function renderSummaryJobsWorkspacePanel(summary) {{
   return renderPanel(
     sectionTitle(label('section.summary_jobs_workspace', 'Summary Jobs Workspace'))
-    + detailLine('Provider responses', summary.provider_response_present_count ?? 0)
-    + detailLine('Response missing', summary.provider_response_absent_count ?? 0)
-    + detailLine('Source refs total', summary.summary_source_total ?? 0)
-    + summaryJsonLine('Statuses', summary.status_counts)
-    + summaryJsonLine('Review capability', summary.review_capability_counts)
-    + summaryJsonLine('Package readiness', summary.package_readiness_counts)
-    + summaryJsonLine('Runtime providers', summary.runtime_provider_counts)
-    + navigationCluster([
-      latestResponseButton(summary.latest_provider_response_detail_path, 'button.open_latest_summary_response', 'Open Latest Summary Response'),
+    + workspaceCountLine('Provider responses', summary.provider_response_present_count)
+    + workspaceCountLine('Response missing', summary.provider_response_absent_count)
+    + workspaceCountLine('Source refs total', summary.summary_source_total)
+    + workspaceSummaryLines([
+      {{ label: 'Statuses', value: summary.status_counts }},
+      {{ label: 'Review capability', value: summary.review_capability_counts }},
+      {{ label: 'Package readiness', value: summary.package_readiness_counts }},
+      {{ label: 'Runtime providers', value: summary.runtime_provider_counts }},
     ])
+    + workspaceLatestResponseLine(summary.latest_provider_response_detail_path, 'button.open_latest_summary_response', 'Open Latest Summary Response')
   );
 }}
 function renderReviewQueueWorkspacePanel(summary) {{
   return renderPanel(
     sectionTitle(label('section.review_queue_workspace', 'Review Queue Workspace'))
-    + detailLine('Needs attention', summary.needs_attention_reviews ?? 0)
-    + detailLine('Ready now', summary.ready_now_reviews ?? 0)
-    + detailLine('Advisory only', summary.advisory_only_reviews ?? 0)
-    + detailLine('Package ready', summary.package_ready_reviews ?? 0)
-    + summaryJsonLine('Review capability', summary.review_capability_counts)
-    + summaryJsonLine('CLI parity', summary.cli_parity_counts)
-    + summaryJsonLine('Warnings', summary.warning_counts)
-    + navigationCluster([
-      latestResponseButton(summary.latest_provider_response_detail_path, 'button.open_latest_review_response', 'Open Latest Review Response'),
+    + workspaceCountLine('Needs attention', summary.needs_attention_reviews)
+    + workspaceCountLine('Ready now', summary.ready_now_reviews)
+    + workspaceCountLine('Advisory only', summary.advisory_only_reviews)
+    + workspaceCountLine('Package ready', summary.package_ready_reviews)
+    + workspaceSummaryLines([
+      {{ label: 'Review capability', value: summary.review_capability_counts }},
+      {{ label: 'CLI parity', value: summary.cli_parity_counts }},
+      {{ label: 'Warnings', value: summary.warning_counts }},
     ])
+    + workspaceLatestResponseLine(summary.latest_provider_response_detail_path, 'button.open_latest_review_response', 'Open Latest Review Response')
   );
 }}
 function overviewRuntimeRecordCountButtons(counts, runtimeRecords) {{
