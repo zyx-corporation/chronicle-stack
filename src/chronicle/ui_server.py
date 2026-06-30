@@ -6153,6 +6153,79 @@ class ChronicleUIDataService:
         }
 
     @staticmethod
+    def _apply_prerequisites_summary(
+        package_readiness: dict[str, Any] | None,
+        capability: dict[str, Any] | None,
+        action_preview: dict[str, Any] | None,
+        mutation_enablement: dict[str, Any] | None,
+    ) -> dict[str, Any]:
+        package_readiness = package_readiness or {}
+        capability = capability or {}
+        action_preview = action_preview or {}
+        mutation_enablement = mutation_enablement or {}
+
+        package_status = str(package_readiness.get("status", "unknown"))
+        capability_status = str(capability.get("status", "unknown"))
+        preview_status = str(action_preview.get("status", "unknown"))
+        mutation_enabled = bool(action_preview.get("ui_mutation_enabled", False))
+        can_review_now = bool(capability.get("can_review_now", False))
+        suggested_commands = [
+            str(command)
+            for command in package_readiness.get("suggested_commands", [])
+            if isinstance(command, str) and command
+        ]
+        cli_equivalent = str(action_preview.get("cli_equivalent", ""))
+        if cli_equivalent and cli_equivalent not in suggested_commands:
+            suggested_commands.append(cli_equivalent)
+        operational_readiness = mutation_enablement.get("operational_readiness", {}) or {}
+        remaining_count = int(operational_readiness.get("remaining_count", 0) or 0)
+
+        rows = [
+            {
+                "label": "Package context",
+                "status": ("ready" if package_status == "package_context_available" else "advisory"),
+                "detail": str(package_readiness.get("message", "")),
+            },
+            {
+                "label": "Reviewer boundary",
+                "status": ("ready" if can_review_now else capability_status or "advisory_only"),
+                "detail": str(capability.get("message", "")),
+            },
+            {
+                "label": "Execution path",
+                "status": ("ready" if mutation_enabled else "preview_only"),
+                "detail": str(action_preview.get("message", "")),
+            },
+        ]
+
+        if capability_status == "resolved":
+            status = "resolved"
+            message = "Review is already resolved; inspect follow-up state before preparing any new apply path."
+        elif not can_review_now:
+            status = "boundary_blocked"
+            message = "Apply preparation is still blocked by reviewer boundary prerequisites."
+        elif not mutation_enabled:
+            status = "preview_only"
+            message = "Apply preparation is complete enough for CLI-led review, but this UI session remains preview-only."
+        else:
+            status = "ready"
+            message = "Apply preparation is aligned across reviewer boundary and the enabled local execution path."
+
+        if status in {"preview_only", "ready"} and package_status != "package_context_available":
+            message += " Package/export context remains advisory-only for this review target."
+
+        return {
+            "status": status,
+            "message": message,
+            "package_status": package_status,
+            "capability_status": capability_status,
+            "preview_status": preview_status,
+            "remaining_prerequisite_count": remaining_count,
+            "suggested_commands": suggested_commands,
+            "rows": rows,
+        }
+
+    @staticmethod
     def _review_kind(payload: dict[str, Any]) -> str:
         if "runtime_summary" in payload:
             return "runtime_summary"
@@ -6903,6 +6976,12 @@ class ChronicleUIDataService:
                 record["outcome_matrix"] = self._outcome_matrix_summary(
                     review_row.get("action_preview_summary"),
                 )
+                record["apply_prerequisites"] = self._apply_prerequisites_summary(
+                    review_row.get("package_readiness_summary"),
+                    review_row.get("review_capability"),
+                    review_row.get("action_preview_summary"),
+                    record.get("mutation_enablement"),
+                )
                 record["reviewer_enforcement_summary"] = boundary.get("reviewer_enforcement_summary", {})
                 record["reviewer_validation_gate_summary"] = boundary.get(
                     "reviewer_validation_gate_summary", {}
@@ -7020,6 +7099,12 @@ class ChronicleUIDataService:
                     row["outcome_matrix"] = self._outcome_matrix_summary(
                         row.get("action_preview"),
                     )
+                    row["apply_prerequisites"] = self._apply_prerequisites_summary(
+                        row.get("package_readiness"),
+                        row.get("review_capability"),
+                        row.get("action_preview"),
+                        row.get("mutation_enablement"),
+                    )
                     row["reviewer_enforcement_summary"] = boundary.get("reviewer_enforcement_summary", {})
                     row["reviewer_validation_gate_summary"] = boundary.get(
                         "reviewer_validation_gate_summary", {}
@@ -7095,6 +7180,12 @@ class ChronicleUIDataService:
                     )
                     job["outcome_matrix"] = self._outcome_matrix_summary(
                         job.get("action_preview"),
+                    )
+                    job["apply_prerequisites"] = self._apply_prerequisites_summary(
+                        job.get("package_readiness"),
+                        job.get("review_capability"),
+                        job.get("action_preview"),
+                        job.get("mutation_enablement"),
                     )
                     job["reviewer_enforcement_summary"] = boundary.get("reviewer_enforcement_summary", {})
                     job["reviewer_validation_gate_summary"] = boundary.get(
@@ -11012,6 +11103,26 @@ function renderOutcomeMatrixNotice(record) {{
       + detailListLine('Action outcomes', matrixLines, ' | ')
   );
 }}
+function renderApplyPrerequisitesNotice(record) {{
+  if (!record.apply_prerequisites) return '';
+  const summary = record.apply_prerequisites;
+  const rows = Array.isArray(summary.rows) ? summary.rows : [];
+  const prerequisiteLines = rows.map(item =>
+    (item.label || 'Prerequisite')
+      + ': ' + (item.status || '')
+      + ((item.detail || '') ? ' - ' + item.detail : '')
+  );
+  return renderNotice(
+    label('notice.apply_prerequisites', 'Apply Prerequisites'),
+    statusMessageBody(summary.status, summary.message)
+      + detailLine('Package status', summary.package_status || '')
+      + detailLine('Review capability', summary.capability_status || '')
+      + detailLine('Execution path', summary.preview_status || '')
+      + detailLine('Remaining prerequisites', summary.remaining_prerequisite_count ?? 0)
+      + detailListLine('Checklist', prerequisiteLines, ' | ')
+      + detailListLine('Suggested commands', summary.suggested_commands, ' | ')
+  );
+}}
 function renderMutationEnablementNotice(record) {{
   if (!record.mutation_enablement) return '';
   const readiness = record.mutation_enablement;
@@ -12150,6 +12261,7 @@ const detailNoticeRenderers = [
   renderReviewStepSummaryNotice,
   renderIdentitySufficiencyNotice,
   renderOutcomeMatrixNotice,
+  renderApplyPrerequisitesNotice,
   renderMutationEnablementNotice,
   renderDetailActionPreviewNotice,
   renderCliParityNotice,
