@@ -9,6 +9,7 @@
 - local web UI validation report template: `local-web-ui-operator-validation-report-template.md`
 - local web UI validation evidence example: `local-web-ui-operator-validation-evidence-2026-06-30.md`
 - local web UI manual walkthrough evidence example: `local-web-ui-operator-validation-evidence-2026-06-30-manual-walkthrough.md`
+- local web UI detail-entry follow-up evidence example: `local-web-ui-operator-validation-evidence-2026-06-30-detail-entry-followup.md`
 - release tag policy: `release-tag-policy.md`
 
 ## Quick Start
@@ -18,6 +19,7 @@
 3. 検証結果を残すなら `local-web-ui-operator-validation-report-template.md`
 4. preflight/startup evidence の実例を見るなら `local-web-ui-operator-validation-evidence-2026-06-30.md`
 5. manual walkthrough の実例を見るなら `local-web-ui-operator-validation-evidence-2026-06-30-manual-walkthrough.md`
+6. detail-entry fix 後の follow-up を見るなら `local-web-ui-operator-validation-evidence-2026-06-30-detail-entry-followup.md`
 
 ## Historical / Versioned Operations Docs
 
