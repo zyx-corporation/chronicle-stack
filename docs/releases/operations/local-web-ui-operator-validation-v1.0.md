@@ -251,6 +251,13 @@ chronicle ui \
 - confirm warning panels expose warning codes and finding rows expose summary, severity, record id, and recommendation as read-only review cues
 - confirm route navigation keeps `Open Review Queue` and `Open Runtime Config` available without implying mutation capability from this package review surface
 
+### 19. Runtime Config
+
+- confirm `/api/runtime-config` opens with a dedicated multi-panel route instead of response JSON only
+- confirm the summary panel exposes source, provider kind, provider name, model, capability list, and warning list before raw JSON is opened
+- confirm the boundary panel exposes explicit invocation, network/model defaults, derived index flags, and review requirements as local read-only runtime cues
+- confirm route navigation keeps `Open Package Review` and `Open Overview` available without implying that configuration alone invokes any model or mutation path
+
 ## Evidence to Record
 
 For a validation pass, record:
