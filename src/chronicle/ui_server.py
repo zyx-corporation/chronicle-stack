@@ -4172,7 +4172,57 @@ class ChronicleUIDataService:
     def decisions(self) -> dict[str, Any]:
         self.chronicle.require_initialized()
         decisions = sorted(self.chronicle.index.load_decisions().values(), key=lambda item: item.decided_at)
-        return {"decisions": [_dump_model(decision) for decision in decisions]}
+        rows = [_dump_model(decision) for decision in decisions]
+        return {"decisions": rows, "decisions_summary": self.decisions_route_summary(rows)}
+
+    def decisions_route_summary(
+        self, decision_rows: list[dict[str, Any]] | None = None
+    ) -> dict[str, Any]:
+        if decision_rows is not None:
+            rows = list(decision_rows)
+        else:
+            decisions = sorted(
+                self.chronicle.index.load_decisions().values(), key=lambda item: item.decided_at
+            )
+            rows = [_dump_model(decision) for decision in decisions]
+        type_counts: dict[str, int] = {}
+        decided_by_counts: dict[str, int] = {}
+        artifact_linked_count = 0
+        event_linked_count = 0
+        latest_decision_detail_path: str | None = None
+        latest_decided_at = ""
+
+        for row in rows:
+            decision_type = str(row.get("decision_type", "") or "")
+            if decision_type:
+                type_counts[decision_type] = type_counts.get(decision_type, 0) + 1
+
+            decided_by = str(row.get("decided_by", "") or "")
+            if decided_by:
+                decided_by_counts[decided_by] = decided_by_counts.get(decided_by, 0) + 1
+
+            if row.get("artifact_id"):
+                artifact_linked_count += 1
+            if row.get("event_id"):
+                event_linked_count += 1
+
+            decided_at = str(row.get("decided_at", "") or "")
+            if decided_at >= latest_decided_at:
+                latest_decided_at = decided_at
+                decision_id = str(row.get("decision_id", "") or "")
+                latest_decision_detail_path = (
+                    f"/api/decisions/{decision_id}" if decision_id else None
+                )
+
+        return {
+            "decision_count": len(rows),
+            "type_counts": type_counts,
+            "decided_by_counts": decided_by_counts,
+            "artifact_linked_count": artifact_linked_count,
+            "event_linked_count": event_linked_count,
+            "latest_decision_detail_path": latest_decision_detail_path,
+            "latest_decided_at": latest_decided_at,
+        }
 
     def rde_records(self) -> dict[str, Any]:
         self.chronicle.require_initialized()
@@ -9889,10 +9939,72 @@ function renderArtifactsTable(endpoint, rows) {{
     ),
   ]);
 }}
+function renderDecisionRow(row, endpoint) {{
+  const button = detailJsonButton(endpoint, row);
+  const path = detailPath(endpoint, row);
+  return '<tr>'
+    + '<td>' + detailCell(button, path) + '</td>'
+    + '<td>' + cellStack([
+      cellTitle(String(row.decision_type || '')),
+      cellMeta(String(row.decision_id || '')),
+      cellMeta(String(row.decided_at || '')),
+    ]) + '</td>'
+    + '<td>' + cellStack([
+      cellTitle(String(row.reason || '')),
+      cellMeta(String(row.notes || '')),
+      cellMeta(Array.isArray(row.alternatives) ? row.alternatives.join(' | ') : ''),
+    ]) + '</td>'
+    + '<td>' + cellStack([
+      cellTitle(String(row.decided_by || '')),
+      cellMeta(String(row.event_id || '')),
+      cellMeta(String(row.chronicle_id || '')),
+    ]) + '</td>'
+    + '<td>' + cellStack([
+      cellTitle(String(row.artifact_id || '')),
+      cellMeta(row.artifact_id ? '/api/artifacts/' + String(row.artifact_id) : ''),
+      cellMeta(row.event_id ? '/api/events/' + String(row.event_id) : ''),
+    ]) + '</td>'
+    + '</tr>';
+}}
+function renderDecisionsWorkspacePanel(summary) {{
+  return renderWorkspaceSummaryPanel(
+    label('section.decisions_workspace', 'Decisions Workspace'),
+    workspaceCountLine('Decisions', summary.decision_count)
+    + workspaceCountLine('Artifact linked', summary.artifact_linked_count)
+    + workspaceCountLine('Event linked', summary.event_linked_count)
+    + workspaceCountLine('Latest decided', summary.latest_decided_at || ''),
+    [
+      {{ label: 'Types', value: summary.type_counts }},
+      {{ label: 'Decided by', value: summary.decided_by_counts }},
+    ],
+    summary.latest_decision_detail_path,
+    'button.open_detail',
+    'Open Detail',
+  );
+}}
+function renderDecisionsTable(endpoint, rows) {{
+  const payload = window.__chronicleRoutePayload || {{}};
+  const summary = payload.decisions_summary || {{}};
+  const sorted = rows.slice().sort((a, b) => String(b.decided_at || '').localeCompare(String(a.decided_at || '')));
+  return renderMultiPanelRoute([
+    renderDecisionsWorkspacePanel(summary),
+    renderPanel(
+      sectionTitle(label('section.decisions_workspace', 'Decisions Workspace'))
+      + tableHtml([
+        label('label.table_detail', 'Detail'),
+        label('label.table_decision', 'Decision'),
+        label('label.table_reason', 'Reason'),
+        label('label.table_actor', 'Actor'),
+        label('label.table_target', 'Target'),
+      ], sorted.map(row => renderDecisionRow(row, endpoint)).join(''))
+    ),
+  ]);
+}}
 const endpointRenderers = {{
   '/api/artifacts': renderArtifactsTable,
   '/api/audit': renderAuditTable,
   '/api/boundary': renderBoundaryTable,
+  '/api/decisions': renderDecisionsTable,
   '/api/lifecycle': renderLifecycleTable,
   '/api/federation-inbox': renderFederationInboxTable,
   '/api/federation-outbox': renderFederationOutboxTable,
