@@ -155,6 +155,13 @@ chronicle ui \
 - confirm filtered list -> detail -> related list traversal does not lose operator context unexpectedly
 - confirm record JSON / response JSON visibility still matches the surrounding read model
 
+### 8. Trust Workspace
+
+- confirm `Trust Nodes` opens with a workspace summary rail instead of the generic fallback table
+- confirm each trust node row exposes latest activity, domain coverage, and capability-count context before detail is opened
+- confirm `Trust Relations` opens with the same workspace summary rail and relation-specific history/purpose context
+- confirm each trust relation row exposes subject, active state, purpose/domain/capability context, and history counts without implying permission grant
+
 ## Evidence to Record
 
 For a validation pass, record:
