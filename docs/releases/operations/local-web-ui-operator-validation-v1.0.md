@@ -188,6 +188,14 @@ chronicle ui \
 - confirm proposals cells expose pending and total proposal counts plus latest proposal-event context
 - confirm source cells expose artifact type, source type, and source reference as semantic locator context
 
+### 11. Decisions Workspace
+
+- confirm `Decisions Workspace` opens with a workspace summary rail instead of the generic fallback table
+- confirm decision rows expose decision type, decision id, and latest decision timestamp before detail is opened
+- confirm reason cells expose decision reason, notes, and alternatives as list-level interpretation cues
+- confirm actor cells expose decider, source event context, and chronicle id as operator traceability context
+- confirm target cells expose artifact linkage and source event linkage without implying mutation capability
+
 ## Evidence to Record
 
 For a validation pass, record:
