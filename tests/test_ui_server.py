@@ -1000,6 +1000,11 @@ def test_ui_data_service_read_endpoints(tmp_path):
         for event in audit_payload["audit_events"]
         if event["audit_id"] == consent_payload["audit_id"]
     )
+    trust_nodes_payload = service.trust_nodes()
+    trust_relations_payload = service.trust_relations()
+    assert trust_nodes_payload["trust_overview"]["node_count"] >= 1
+    assert trust_nodes_payload["trust_overview"]["relation_count"] >= 1
+    assert trust_relations_payload["trust_overview"]["domain_counts"]["technical_review"] >= 1
     assert audit_payload["governance_summary"]["audit_event_count"] == len(
         audit_payload["audit_events"]
     )
@@ -3059,6 +3064,11 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "function renderApplyPrerequisitesNotice(record)" in html
     assert "label('notice.apply_prerequisites', 'Apply Prerequisites')" in html
     assert "detailListLine('Checklist', prerequisiteLines, ' | ')" in html
+    assert "function renderTrustWorkspaceSummary(summary)" in html
+    assert "function renderTrustNodesTable(endpoint, rows)" in html
+    assert "function renderTrustRelationsTable(endpoint, rows)" in html
+    assert "'/api/trust-nodes': renderTrustNodesTable" in html
+    assert "'/api/trust-relations': renderTrustRelationsTable" in html
     assert "__chronicleDetailTrail" in html
     assert "readinessBadge" in html
     assert "reviewCapabilityBadge" in html

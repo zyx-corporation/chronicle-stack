@@ -3853,7 +3853,10 @@ class ChronicleUIDataService:
             data["latest_activity_summary"] = self._trust_node_latest_activity_summary(node_relations)
             data["domain_coverage_summary"] = self._trust_node_domain_coverage_summary(node_relations)
             rows.append(data)
-        return {"trust_nodes": rows}
+        return {
+            "trust_nodes": rows,
+            "trust_overview": self.trust_overview(rows, relation_rows),
+        }
 
     def trust_relations(self) -> dict[str, Any]:
         self.chronicle.require_initialized()
@@ -3869,7 +3872,13 @@ class ChronicleUIDataService:
             data["history_summary"] = self._trust_relation_history_summary(data)
             data["federation_implication"] = self._trust_relation_federation_implication(data)
             rows.append(data)
-        return {"trust_relations": rows}
+        return {
+            "trust_relations": rows,
+            "trust_overview": self.trust_overview(
+                self.trust_nodes()["trust_nodes"],
+                rows,
+            ),
+        }
 
     def trust_overview(
         self,
@@ -9527,6 +9536,120 @@ function renderLifecycleTable(endpoint, rows) {{
     }}).join('')),
   ]);
 }}
+function renderTrustWorkspaceSummary(summary) {{
+  const latestNode = summary.latest_node || {{}};
+  const latestRelation = summary.latest_relation || {{}};
+  return renderPanel(
+    sectionTitle(label('section.trust_workspace', 'Trust Workspace'))
+    + detailLine('Trust nodes', summary.node_count ?? 0)
+    + detailLine('Trust relations', summary.relation_count ?? 0)
+    + detailLine('Delegated actors', summary.delegated_actor_count ?? 0)
+    + detailLine('AI proxy relations', summary.ai_proxy_generation_count ?? 0)
+    + summaryJsonLine('Levels', summary.level_counts)
+    + summaryJsonLine('Statuses', summary.status_counts)
+    + summaryJsonLine('Domains', summary.domain_counts)
+    + detailLine('Latest node', latestNode.display_name || latestNode.node_id || '')
+    + detailLine('Latest relation', latestRelation.purpose || latestRelation.relation_id || '')
+    + navigationCluster([
+      latestNode.detail_path ? detailNavButton(latestNode.detail_path, label('button.open_latest_trust_node', 'Open latest trust node')) : '',
+      latestRelation.detail_path ? detailNavButton(latestRelation.detail_path, label('button.open_latest_trust_relation', 'Open latest trust relation')) : '',
+    ])
+    + detailLine('Scope note', 'Trust workspace remains a local advisory surface; it does not grant permission or automate transport.')
+  );
+}}
+function renderTrustNodeRow(row, endpoint) {{
+  const path = detailPath(endpoint, row);
+  const activity = row.latest_activity_summary || {{}};
+  const coverage = row.domain_coverage_summary || {{}};
+  return '<tr>'
+    + '<td>' + detailJsonButton(endpoint, row) + (path ? detailButton(path) : '') + '</td>'
+    + '<td>' + cellStack([
+      cellTitle(String(row.display_name || row.node_id || '')),
+      cellMeta(String(row.subject_id || '')),
+      cellMeta(String(row.node_id || '')),
+    ]) + '</td>'
+    + '<td>' + cellStack([
+      cellTitle(String(activity.status || '')),
+      cellMeta(String(activity.message || '')),
+      cellMeta(String(activity.activity_at || '')),
+    ]) + '</td>'
+    + '<td>' + cellStack([
+      cellTitle('relations=' + String(row.relation_count ?? 0)),
+      cellMeta('domains=' + String(coverage.domain_count ?? 0)),
+      cellMeta('active=' + String(coverage.active_relation_count ?? 0) + ' withdrawn=' + String(coverage.withdrawn_relation_count ?? 0)),
+    ]) + '</td>'
+    + '<td>' + cellStack([
+      cellTitle((coverage.domains || []).join(', ')),
+      cellMeta(JSON.stringify(coverage.capability_counts || {{}})),
+    ]) + '</td>'
+    + '</tr>';
+}}
+function renderTrustNodesTable(endpoint, rows) {{
+  const payload = window.__chronicleRoutePayload || {{}};
+  const summary = payload.trust_overview || {{}};
+  const sorted = rows.slice().sort((a, b) => Number(b.relation_count || 0) - Number(a.relation_count || 0));
+  return renderMultiPanelRoute([
+    renderTrustWorkspaceSummary(summary),
+    renderPanel(
+      sectionTitle(label('section.trust_nodes', 'Trust Nodes'))
+      + tableHtml([
+        label('label.table_detail', 'Detail'),
+        label('label.table_subject', 'Subject'),
+        label('label.table_status', 'Status'),
+        label('label.table_coverage', 'Coverage'),
+        label('label.table_capabilities', 'Capabilities'),
+      ], sorted.map(row => renderTrustNodeRow(row, endpoint)).join(''))
+    ),
+  ]);
+}}
+function renderTrustRelationRow(row, endpoint) {{
+  const path = detailPath(endpoint, row);
+  const subject = row.subject_summary || {{}};
+  const activeState = row.active_state || {{}};
+  const history = row.history_summary || {{}};
+  const implication = row.federation_implication || {{}};
+  return '<tr>'
+    + '<td>' + detailJsonButton(endpoint, row) + (path ? detailButton(path) : '') + '</td>'
+    + '<td>' + cellStack([
+      cellTitle(String(subject.display_name || subject.subject_id || row.target_node || '')),
+      cellMeta(String(subject.subject_id || '')),
+      cellMeta(String(row.target_node || '')),
+    ]) + '</td>'
+    + '<td>' + cellStack([
+      cellTitle(String(activeState.status || '')),
+      cellMeta(String(activeState.level || row.level || '')),
+      cellMeta(String(activeState.message || '')),
+    ]) + '</td>'
+    + '<td>' + cellStack([
+      cellTitle(String(implication.purpose || row.purpose || '')),
+      cellMeta(String(row.domain || '')),
+      cellMeta((implication.capabilities || []).join(', ')),
+    ]) + '</td>'
+    + '<td>' + cellStack([
+      cellTitle(history.status_line || ''),
+      cellMeta('history=' + String(history.history_event_count ?? 0) + ' transitions=' + String(history.transition_count ?? 0)),
+      cellMeta(String(history.withdrawn_at || history.asserted_at || '')),
+    ]) + '</td>'
+    + '</tr>';
+}}
+function renderTrustRelationsTable(endpoint, rows) {{
+  const payload = window.__chronicleRoutePayload || {{}};
+  const summary = payload.trust_overview || {{}};
+  const sorted = rows.slice().sort((a, b) => String(b.created_at || '').localeCompare(String(a.created_at || '')));
+  return renderMultiPanelRoute([
+    renderTrustWorkspaceSummary(summary),
+    renderPanel(
+      sectionTitle(label('section.trust_relations', 'Trust Relations'))
+      + tableHtml([
+        label('label.table_detail', 'Detail'),
+        label('label.table_subject', 'Subject'),
+        label('label.table_status', 'Status'),
+        label('label.table_operation', 'Purpose'),
+        label('label.table_history', 'History'),
+      ], sorted.map(row => renderTrustRelationRow(row, endpoint)).join(''))
+    ),
+  ]);
+}}
 function renderGenericTable(endpoint, rows) {{
   const keys = Object.keys(rows[0]).slice(0, 8);
   return '<table><thead><tr><th>' + esc(label('label.table_detail', 'Detail')) + '</th>' + keys.map(k => '<th>' + esc(k) + '</th>').join('') + '</tr></thead><tbody>'
@@ -9542,6 +9665,8 @@ const endpointRenderers = {{
   '/api/audit': renderAuditTable,
   '/api/boundary': renderBoundaryTable,
   '/api/lifecycle': renderLifecycleTable,
+  '/api/trust-nodes': renderTrustNodesTable,
+  '/api/trust-relations': renderTrustRelationsTable,
   '/api/runtime-records': renderRuntimeRecordsTable,
   '/api/review-queue': renderReviewQueueTable,
   '/api/summary-jobs': renderSummaryJobsTable,
