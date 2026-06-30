@@ -2818,6 +2818,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "function handleViewChange(event)" in html
     assert "function renderPanel(body)" in html
     assert "function renderMultiPanelRoute(panels, payload = null, includeResponseJson = false)" in html
+    assert "function renderMultiPanelDetail(panels, payload)" in html
     assert "function workspaceCountLine(labelText, value)" in html
     assert "function workspaceLatestResponseLine(path, labelKey, fallbackLabel)" in html
     assert "function workspaceSummaryLines(summaryPairs)" in html
@@ -2921,7 +2922,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "'/api/boundary': renderBoundaryTable," in html
     assert "'/api/lifecycle': renderLifecycleTable," in html
     assert "if (endpoint === '/api/federation-package-preview') return renderFederationPackagePreview(payload);" in html
-    assert "function renderDetailNotices(record)" in html
+    assert "function renderDetailNoticePanels(record)" in html
     assert "function detailNoticeBody(endpoint, record)" in html
     assert "function renderReviewerBoundaryDrilldownNotice(record)" in html
     assert "label('notice.reviewer_boundary_drilldown', 'Reviewer Boundary Drilldown')" in html
