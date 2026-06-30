@@ -111,6 +111,7 @@ chronicle ui \
 - confirm list filters, sort changes, and reset behavior work without page confusion
 - confirm `mutation`, `auth`, and `kind` sorting still change row ordering predictably
 - confirm the first workspace column exposes a primary `Open Detail` entry alongside the JSON inspection button
+- confirm first-column detail affordances stay vertically readable and directly clickable rather than collapsing under row compression
 - confirm runtime rows expose posture, boundary, and trial/handoff state as list-level context before detail is opened
 - confirm row preview summaries, auth badges, and related buttons provide enough context before opening detail
 - confirm route / handoff detail exposes trial sufficiency, import-readiness, command-count, and reviewed-file context without implying execution
@@ -124,6 +125,7 @@ chronicle ui \
 
 - confirm `Needs attention`, `CLI drift first`, reviewer sort, and warning-priority behavior remain understandable
 - confirm the first workspace column exposes the same primary `Open Detail` entry pattern used in the other workspaces
+- confirm first-column detail affordances stay vertically readable and directly clickable rather than collapsing under row compression
 - confirm target rows expose review capability status directly beside the target summary before detail is opened
 - confirm status cells expose package readiness, auth boundary, and CLI parity cues without collapsing into badge-only reading
 - confirm reviewer / assurance cells expose identity assurance context as well as reviewer identity
@@ -135,6 +137,7 @@ chronicle ui \
 
 - confirm summary-job list supports title/review/mutation sorting with no broken state carry-over
 - confirm the first workspace column exposes a primary `Open Detail` entry alongside raw JSON inspection
+- confirm first-column detail affordances stay vertically readable and directly clickable rather than collapsing under row compression
 - confirm summary job rows still expose runtime/source/reviewer context without opening detail
 - confirm workspace rows expose package readiness, auth advisory, and identity-assurance summaries before detail is opened
 - confirm runtime cells expose provider, source count, auth status, and review status as list-level runtime context
