@@ -6,6 +6,7 @@
 
 - release operator guide: `release-operator-guide.md`
 - local web UI operator validation: `local-web-ui-operator-validation-v1.0.md`
+- local web UI validation report template: `local-web-ui-operator-validation-report-template.md`
 - release tag policy: `release-tag-policy.md`
 
 ## Historical / Versioned Operations Docs
