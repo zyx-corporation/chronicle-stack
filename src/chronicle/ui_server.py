@@ -13249,6 +13249,46 @@ function renderRuntimeConfigRoute(payload) {{
       ),
     ], payload, true);
 }}
+function renderGraphSummaryRoute(payload) {{
+  const summary = payload.graph_summary || {{}};
+  const localizedMessage = summary.message_key
+    ? formatLabel(summary.message_key, {{}}, summary.message || '')
+    : (summary.message || '');
+  const localizedBoundaryNote = summary.boundary_note_key
+    ? formatLabel(summary.boundary_note_key, {{}}, summary.boundary_note || '')
+    : (summary.boundary_note || '');
+  const localizedCounts = summary.counts_summary_key
+    ? formatLabel(summary.counts_summary_key, summary.counts_summary_params || {{}}, '')
+    : '';
+  return routeHeading('/api/graph-summary')
+    + renderMultiPanelRoute([
+      renderPanel(
+        sectionTitle(label('section.graph_summary', 'Graph Summary'))
+        + statusMessageBody(summary.status, localizedMessage, [
+          openEndpointButton('/api/ai-index-status'),
+          openEndpointButton('/api/overview'),
+        ])
+        + detailLine('Nodes', summary.nodes ?? 0)
+        + detailLine('Edges', summary.edges ?? 0)
+        + detailLine('Counts', localizedCounts)
+        + detailLine('Contract version', summary.contract_version || '')
+        + detailLine('Incremental mode', summary.incremental_mode || '')
+        + detailLine('Scope note', localizedBoundaryNote)
+      ),
+      renderPanel(
+        sectionTitle('Incremental Expectations')
+        + detailListLine('Expectations', summary.incremental_expectations, ' | ')
+      ),
+      renderPanel(
+        sectionTitle(label('section.runtime_boundary', 'Runtime Boundary'))
+        + detailLine('Derived surface', String(summary.derived_surface))
+        + detailLine('Primary record authoritative', String(summary.primary_record_authoritative))
+        + detailLine('External services', String(summary.external_services))
+        + detailLine('GraphRAG runtime', String(summary.graphrag_runtime))
+        + detailLine('Correctness proof', String(summary.correctness_proof))
+      ),
+    ], payload, true);
+}}
 function renderPackageReview(payload) {{
   const review = payload.package_review || {{}};
   const localizedMessage = review.message_key
@@ -13410,6 +13450,7 @@ function renderTable(endpoint, rows) {{
 function endpointBody(endpoint, payload) {{
   if (endpoint === '/api/overview') return renderOverview(payload);
   if (endpoint === '/api/runtime-config') return renderRuntimeConfigRoute(payload);
+  if (endpoint === '/api/graph-summary') return renderGraphSummaryRoute(payload);
   if (endpoint === '/api/package-review') return renderPackageReview(payload);
   if (endpoint === '/api/federation-package-preview') return renderFederationPackagePreview(payload);
   const rows = firstArray(payload);
