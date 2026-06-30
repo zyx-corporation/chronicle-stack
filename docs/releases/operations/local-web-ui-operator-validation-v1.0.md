@@ -258,6 +258,13 @@ chronicle ui \
 - confirm the boundary panel exposes explicit invocation, network/model defaults, derived index flags, and review requirements as local read-only runtime cues
 - confirm route navigation keeps `Open Package Review` and `Open Overview` available without implying that configuration alone invokes any model or mutation path
 
+### 20. Graph Summary
+
+- confirm `/api/graph-summary` opens with a dedicated multi-panel route instead of response JSON only
+- confirm the summary panel exposes node count, edge count, contract version, incremental mode, and derived-count summary before raw JSON is opened
+- confirm the expectations panel exposes incremental rebuild expectations as read-only operational cues rather than execution promises
+- confirm the boundary panel exposes derived-surface, primary-record-authoritative, external-services, GraphRAG runtime, and correctness-proof flags without implying writable graph state
+
 ## Evidence to Record
 
 For a validation pass, record:
