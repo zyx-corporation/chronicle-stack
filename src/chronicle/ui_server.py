@@ -13289,6 +13289,55 @@ function renderGraphSummaryRoute(payload) {{
       ),
     ], payload, true);
 }}
+function renderAiIndexStatusRoute(payload) {{
+  const status = payload.ai_index_status || {{}};
+  const vector = status.vector || {{}};
+  const graph = status.graph || {{}};
+  const localizedMessage = status.message_key
+    ? formatLabel(status.message_key, {{}}, status.message || '')
+    : (status.message || '');
+  const localizedBoundaryNote = status.boundary_note_key
+    ? formatLabel(status.boundary_note_key, {{}}, status.boundary_note || '')
+    : (status.boundary_note || '');
+  const localizedVectorCounts = vector.counts_summary_key
+    ? formatLabel(vector.counts_summary_key, vector.counts_summary_params || {{}}, '')
+    : '';
+  const localizedGraphCounts = graph.counts_summary_key
+    ? formatLabel(graph.counts_summary_key, graph.counts_summary_params || {{}}, '')
+    : '';
+  return routeHeading('/api/ai-index-status')
+    + renderMultiPanelRoute([
+      renderPanel(
+        sectionTitle(label('section.ai_index_snapshot', 'AI Index Snapshot'))
+        + statusMessageBody(status.status, localizedMessage, [
+          openEndpointButton('/api/graph-summary'),
+          openEndpointButton('/api/overview'),
+        ])
+        + detailLine('Vector counts', localizedVectorCounts)
+        + detailLine('Graph counts', localizedGraphCounts)
+        + detailLine('Vector path', vector.path || '')
+        + detailLine('Graph path', graph.path || '')
+        + detailLine('Scope note', localizedBoundaryNote)
+      ),
+      renderPanel(
+        sectionTitle('Vector Index')
+        + detailLine('Entries', vector.entry_count ?? 0)
+        + detailLine('Embedding provider', vector.embedding_provider || '')
+        + detailLine('Embedding model', vector.embedding_model || '')
+        + detailLine('External call made', String(vector.external_call_made))
+      ),
+      renderPanel(
+        sectionTitle(label('section.runtime_boundary', 'Runtime Boundary'))
+        + detailLine('Graph nodes', graph.node_count ?? 0)
+        + detailLine('Graph edges', graph.edge_count ?? 0)
+        + detailLine('Derived surface', String(status.derived_surface))
+        + detailLine('Primary record authoritative', String(status.primary_record_authoritative))
+        + detailLine('External services', String(status.external_services))
+        + detailLine('GraphRAG runtime', String(status.graphrag_runtime))
+        + detailLine('Correctness proof', String(status.correctness_proof))
+      ),
+    ], payload, true);
+}}
 function renderPackageReview(payload) {{
   const review = payload.package_review || {{}};
   const localizedMessage = review.message_key
@@ -13451,6 +13500,7 @@ function endpointBody(endpoint, payload) {{
   if (endpoint === '/api/overview') return renderOverview(payload);
   if (endpoint === '/api/runtime-config') return renderRuntimeConfigRoute(payload);
   if (endpoint === '/api/graph-summary') return renderGraphSummaryRoute(payload);
+  if (endpoint === '/api/ai-index-status') return renderAiIndexStatusRoute(payload);
   if (endpoint === '/api/package-review') return renderPackageReview(payload);
   if (endpoint === '/api/federation-package-preview') return renderFederationPackagePreview(payload);
   const rows = firstArray(payload);
