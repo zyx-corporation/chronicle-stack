@@ -8576,6 +8576,7 @@ function rowMatchesWorkspaceQuery(query, row, queryTokens) {{
 }}
 function renderRuntimeRecordRow(row, endpoint) {{
   const button = detailJsonButton(endpoint, row);
+  const path = detailPath(endpoint, row);
   const preview = row.runtime_record_preview || {{}};
   const actionPreview = row.action_preview_summary || {{}};
   const previewActions = Array.isArray(actionPreview.actions) ? actionPreview.actions : [];
@@ -8607,7 +8608,7 @@ function renderRuntimeRecordRow(row, endpoint) {{
     relatedDetailButton(row, '/api/artifacts/', 'Open artifact'),
   ].filter(Boolean);
   return '<tr>'
-    + '<td>' + button + '</td>'
+    + '<td>' + button + (path ? detailButton(path) : '') + '</td>'
     + '<td><span class="id">' + esc(row.event_id || '') + '</span></td>'
     + '<td>' + kindBadge + '</td>'
     + '<td>' + cellStack([
@@ -8713,6 +8714,7 @@ function renderReviewQueueRow(row, endpoint) {{
 }}
 function renderSummaryJobRow(row, endpoint) {{
   const button = detailJsonButton(endpoint, row);
+  const path = detailPath(endpoint, row);
   const reviewStatus = row.review_capability_status || '';
   const authReadinessStatus = row.auth_readiness_status || '';
   const packageStatus = row.package_readiness_status || '';
@@ -8737,7 +8739,7 @@ function renderSummaryJobRow(row, endpoint) {{
     relatedDetailButton(row, '/api/artifacts/', 'Open artifact'),
   ].filter(Boolean);
   return '<tr>'
-    + '<td>' + button + '</td>'
+    + '<td>' + button + (path ? detailButton(path) : '') + '</td>'
     + '<td>' + cellStack(['<div><span class="id">' + esc(row.summary_job_id || '') + '</span></div>', cellTitle(row.title || ''), targetButton]) + '</td>'
     + '<td>' + cellStack([
       cellMeta(row.status || ''),
