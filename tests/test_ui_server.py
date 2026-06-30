@@ -1457,6 +1457,7 @@ def test_ui_data_service_federation_package_preview_query_surfaces(tmp_path):
     assert import_preview["import_implication_summary"]["import_candidate"] is True
     assert service.ai_index_status()["ai_index_status"]["vector"]["entry_count"] == 1
     assert service.ai_index_vector_entries()["vector_entries"][0]["record_id"] == service.events()["events"][-1]["event_id"]
+    assert service.ai_index_vector_entries()["vector_entries_summary"]["entry_count"] == 1
     assert service.ai_index_graph_nodes()["graph_nodes"]
     assert service.ai_index_graph_edges()["graph_edges"]
 
@@ -2940,6 +2941,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "label('section.events_workspace', 'Events Workspace')" in html
     assert "label('section.chronicle_objects_workspace', 'Chronicle Objects Workspace')" in html
     assert "label('section.graph_summary', 'Graph Summary')" in html
+    assert "label('section.ai_index_vector', 'AI Index Vector')" in html
     assert "label('section.package_review', 'Package Review')" in html
     assert "label('section.proposals_workspace', 'Proposals Workspace')" in html
     assert "label('section.reactions_workspace', 'Reactions Workspace')" in html
@@ -3049,6 +3051,9 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "if (endpoint === '/api/graph-summary') return renderGraphSummaryRoute(payload);" in html
     assert "function renderAiIndexStatusRoute(payload)" in html
     assert "if (endpoint === '/api/ai-index-status') return renderAiIndexStatusRoute(payload);" in html
+    assert "function renderAiIndexVectorTable(endpoint, rows)" in html
+    assert "function renderAiIndexVectorRow(row, endpoint)" in html
+    assert "'/api/ai-index-vector': renderAiIndexVectorTable," in html
     assert "function renderPackageReview(payload)" in html
     assert "if (endpoint === '/api/package-review') return renderPackageReview(payload);" in html
     assert "if (endpoint === '/api/federation-package-preview') return renderFederationPackagePreview(payload);" in html
@@ -3379,7 +3384,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "overviewTriageNavigationCluster(triage)" in html
     assert "overviewTriageJumpButtons()" in html
     assert "data-detail-nav" in html
-    assert html.count("'<td>' + detailCell(button, path) + '</td>'") == 11
+    assert html.count("'<td>' + detailCell(button, path) + '</td>'") == 12
     assert "table { width: max-content; min-width: 100%; border-collapse: collapse; display: block; overflow-x: auto; }" in html
     assert "data-detail-trail" in html
     assert "data-back-view" in html
@@ -3567,6 +3572,8 @@ def test_http_root_and_read_only_endpoints(tmp_path):
                 assert "review_queue_summary" in payload
             if endpoint == "/api/summary-jobs":
                 assert "summary_jobs_summary" in payload
+            if endpoint == "/api/ai-index-vector":
+                assert "vector_entries_summary" in payload
 
         package_dir = tmp_path / "http-federation-package-preview"
         FederationPackageService(tmp_path).create_package(
