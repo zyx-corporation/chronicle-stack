@@ -162,6 +162,13 @@ chronicle ui \
 - confirm `Trust Relations` opens with the same workspace summary rail and relation-specific history/purpose context
 - confirm each trust relation row exposes subject, active state, purpose/domain/capability context, and history counts without implying permission grant
 
+### 9. Federation Workspace
+
+- confirm `Federation Inbox` opens with a workspace summary rail instead of the generic fallback table
+- confirm inbox rows expose message route, preview-only state, audit state, and the first related Chronicle link before detail is opened
+- confirm `Federation Outbox` opens with the same workspace summary rail and preserves outbox type counts alongside preview-only counts
+- confirm inbox/outbox route summaries remain descriptive and do not imply shipment, import, or permission grant
+
 ## Evidence to Record
 
 For a validation pass, record:
