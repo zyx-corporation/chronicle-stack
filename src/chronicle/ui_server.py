@@ -3241,7 +3241,55 @@ class ChronicleUIDataService:
             )
             data["latest_proposal_event_id"] = proposals[-1]["event_id"] if proposals else None
             rows.append(data)
-        return {"contexts": rows}
+        return {"contexts": rows, "contexts_summary": self.contexts_route_summary(rows)}
+
+    def contexts_route_summary(self, context_rows: list[dict[str, Any]] | None = None) -> dict[str, Any]:
+        if context_rows is not None:
+            rows = list(context_rows)
+        else:
+            contexts = sorted(
+                self.chronicle.index.load_contexts().values(), key=lambda ctx: ctx.created_at
+            )
+            rows = []
+            for context in contexts:
+                data = _dump_model(context)
+                proposals = self.proposals.proposals_for_target(
+                    target_kind="context", target_id=context.context_id
+                )
+                data["proposal_count"] = len(proposals)
+                data["pending_proposal_count"] = sum(
+                    1 for proposal in proposals if proposal.get("review_status") == "needs_review"
+                )
+                data["latest_proposal_event_id"] = proposals[-1]["event_id"] if proposals else None
+                rows.append(data)
+
+        scope_counts = _count_values(rows, "scope")
+        visibility_counts = _count_values(rows, "visibility_hint")
+        source_type_counts = _count_values(rows, "source_type")
+        proposal_context_count = sum(1 for row in rows if int(row.get("proposal_count", 0) or 0) > 0)
+        pending_proposal_context_count = sum(
+            1 for row in rows if int(row.get("pending_proposal_count", 0) or 0) > 0
+        )
+        latest_context_detail_path: str | None = None
+        latest_created_at = ""
+
+        for row in rows:
+            created_at = str(row.get("created_at", "") or "")
+            if created_at >= latest_created_at:
+                latest_created_at = created_at
+                context_id = str(row.get("context_id", "") or "")
+                latest_context_detail_path = f"/api/contexts/{context_id}" if context_id else None
+
+        return {
+            "context_count": len(rows),
+            "scope_counts": scope_counts,
+            "visibility_counts": visibility_counts,
+            "source_type_counts": source_type_counts,
+            "proposal_context_count": proposal_context_count,
+            "pending_proposal_context_count": pending_proposal_context_count,
+            "latest_context_detail_path": latest_context_detail_path,
+            "latest_created_at": latest_created_at,
+        }
 
     def chronicle_object_records(self) -> dict[str, Any]:
         self.chronicle.require_initialized()
@@ -10000,10 +10048,75 @@ function renderDecisionsTable(endpoint, rows) {{
     ),
   ]);
 }}
+function renderContextRow(row, endpoint) {{
+  const button = detailJsonButton(endpoint, row);
+  const path = detailPath(endpoint, row);
+  const source = row.source || {{}};
+  const tags = Array.isArray(row.tags) ? row.tags : [];
+  return '<tr>'
+    + '<td>' + detailCell(button, path) + '</td>'
+    + '<td>' + cellStack([
+      cellTitle(String(row.title || '')),
+      cellMeta(String(row.context_id || '')),
+      cellMeta(String(row.summary || '')),
+    ]) + '</td>'
+    + '<td>' + cellStack([
+      cellTitle(String(row.scope || '')),
+      cellMeta(String(row.visibility_hint || '')),
+      cellMeta(String(row.confidence || '')),
+    ]) + '</td>'
+    + '<td>' + cellStack([
+      cellTitle('pending=' + String(row.pending_proposal_count ?? 0)),
+      cellMeta('total=' + String(row.proposal_count ?? 0)),
+      cellMeta(String(row.latest_proposal_event_id || '')),
+    ]) + '</td>'
+    + '<td>' + cellStack([
+      cellTitle(String(row.source_type || '')),
+      cellMeta(String(source.source_type || row.source_ref || '')),
+      cellMeta(tags.join(' | ')),
+    ]) + '</td>'
+    + '</tr>';
+}}
+function renderContextsWorkspacePanel(summary) {{
+  return renderWorkspaceSummaryPanel(
+    label('section.contexts_workspace', 'Contexts Workspace'),
+    workspaceCountLine('Contexts', summary.context_count)
+    + workspaceCountLine('With proposals', summary.proposal_context_count)
+    + workspaceCountLine('Pending proposals', summary.pending_proposal_context_count)
+    + workspaceCountLine('Latest created', summary.latest_created_at || ''),
+    [
+      {{ label: 'Scopes', value: summary.scope_counts }},
+      {{ label: 'Visibility', value: summary.visibility_counts }},
+      {{ label: 'Source types', value: summary.source_type_counts }},
+    ],
+    summary.latest_context_detail_path,
+    'button.open_detail',
+    'Open Detail',
+  );
+}}
+function renderContextsTable(endpoint, rows) {{
+  const payload = window.__chronicleRoutePayload || {{}};
+  const summary = payload.contexts_summary || {{}};
+  const sorted = rows.slice().sort((a, b) => String(b.created_at || '').localeCompare(String(a.created_at || '')));
+  return renderMultiPanelRoute([
+    renderContextsWorkspacePanel(summary),
+    renderPanel(
+      sectionTitle(label('section.contexts_workspace', 'Contexts Workspace'))
+      + tableHtml([
+        label('label.table_detail', 'Detail'),
+        label('label.table_context', 'Context'),
+        label('label.table_status', 'Status'),
+        label('label.table_proposals', 'Proposals'),
+        label('label.table_source', 'Source'),
+      ], sorted.map(row => renderContextRow(row, endpoint)).join(''))
+    ),
+  ]);
+}}
 const endpointRenderers = {{
   '/api/artifacts': renderArtifactsTable,
   '/api/audit': renderAuditTable,
   '/api/boundary': renderBoundaryTable,
+  '/api/contexts': renderContextsTable,
   '/api/decisions': renderDecisionsTable,
   '/api/lifecycle': renderLifecycleTable,
   '/api/federation-inbox': renderFederationInboxTable,
