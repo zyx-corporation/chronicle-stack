@@ -2648,6 +2648,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "Chronicle Stack ローカルUI" in html
     assert "読み取り専用の前景ローカルUIです。" in html
     assert ".shell-grid {" in html
+    assert "white-space: nowrap;" in html
     assert "#detail { position: sticky;" in html
     assert "@media (max-width: 980px)" in html
     assert "window.__chronicleMutationToken =" in html
@@ -2663,7 +2664,9 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert ".fold-section {" in html
     assert ".cell-title {" in html
     assert ".cell-meta {" in html
-    assert ".cell-stack > * + *" in html
+    assert ".cell-stack {" in html
+    assert "display: flex;" in html
+    assert "min-width: 11rem;" in html
     assert ".cell-details {" in html
     assert ".cell-details-body > * + *" in html
     assert ".cell-actions {" in html
