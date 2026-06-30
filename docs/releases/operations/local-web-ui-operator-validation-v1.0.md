@@ -1,6 +1,6 @@
 # Chronicle Stack Local Web UI Operator Validation v1.0
 
-Related: `release-operator-guide.md`, `../../cli-reference.md`
+Related: `release-operator-guide.md`, `local-web-ui-operator-validation-report-template.md`, `../../cli-reference.md`
 
 Status: draft operator validation guide  
 Scope: manual validation checklist for the current local web UI
@@ -156,6 +156,8 @@ Recommended evidence format:
 - passed checks
 - open gaps
 - follow-on recommendation
+
+You can capture this in `local-web-ui-operator-validation-report-template.md`.
 
 ## Exit Guidance
 
