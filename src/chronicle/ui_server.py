@@ -6101,6 +6101,58 @@ class ChronicleUIDataService:
         }
 
     @staticmethod
+    def _outcome_matrix_summary(action_preview: dict[str, Any] | None) -> dict[str, Any]:
+        action_preview = action_preview or {}
+        write_route_contract = action_preview.get("write_route_contract", {}) or {}
+        target_state_contract = write_route_contract.get("target_state_contract", {}) or {}
+        authorization_contract = write_route_contract.get("authorization_contract", {}) or {}
+        target_rows = [
+            item for item in target_state_contract.get("action_target_matrix", []) if isinstance(item, dict)
+        ]
+        auth_rows = {
+            str(item.get("action", "")): item
+            for item in authorization_contract.get("action_authorization_matrix", [])
+            if isinstance(item, dict) and item.get("action")
+        }
+
+        rows: list[dict[str, Any]] = []
+        for item in target_rows:
+            action = str(item.get("action", ""))
+            auth_item = auth_rows.get(action, {})
+            rows.append(
+                {
+                    "action": action,
+                    "requires_pending": bool(item.get("requires_pending", False)),
+                    "resulting_queue_state": str(item.get("resulting_queue_state", "")),
+                    "resulting_disposition": str(item.get("resulting_disposition", "")),
+                    "ui_intent": str(auth_item.get("ui_intent", "")),
+                    "note_status": str(auth_item.get("note_status", "")),
+                    "authorized_reviewer_kinds": [
+                        str(kind) for kind in auth_item.get("authorized_reviewer_kinds", []) if kind
+                    ],
+                    "summary": str(item.get("summary", "")) or str(auth_item.get("summary", "")),
+                }
+            )
+
+        queue_states = [row["resulting_queue_state"] for row in rows if row.get("resulting_queue_state")]
+        if any(state == "remains_pending" for state in queue_states):
+            status = "mixed_outcomes"
+            message = "Review actions do not all resolve the queue the same way; some paths remain pending for follow-up."
+        elif rows:
+            status = "resolves_by_default"
+            message = "Review actions mostly resolve the queue by default unless a specific action keeps the target pending."
+        else:
+            status = "unknown"
+            message = "No action outcome matrix is available for this review path."
+
+        return {
+            "status": status,
+            "message": message,
+            "action_count": len(rows),
+            "rows": rows,
+        }
+
+    @staticmethod
     def _review_kind(payload: dict[str, Any]) -> str:
         if "runtime_summary" in payload:
             return "runtime_summary"
@@ -6848,6 +6900,9 @@ class ChronicleUIDataService:
                     review_row.get("auth_boundary_notice"),
                     review_row.get("latest_identity_assurance"),
                 )
+                record["outcome_matrix"] = self._outcome_matrix_summary(
+                    review_row.get("action_preview_summary"),
+                )
                 record["reviewer_enforcement_summary"] = boundary.get("reviewer_enforcement_summary", {})
                 record["reviewer_validation_gate_summary"] = boundary.get(
                     "reviewer_validation_gate_summary", {}
@@ -6962,6 +7017,9 @@ class ChronicleUIDataService:
                         row.get("auth_boundary_notice"),
                         row.get("latest_identity_assurance"),
                     )
+                    row["outcome_matrix"] = self._outcome_matrix_summary(
+                        row.get("action_preview"),
+                    )
                     row["reviewer_enforcement_summary"] = boundary.get("reviewer_enforcement_summary", {})
                     row["reviewer_validation_gate_summary"] = boundary.get(
                         "reviewer_validation_gate_summary", {}
@@ -7034,6 +7092,9 @@ class ChronicleUIDataService:
                     job["identity_sufficiency_summary"] = self._identity_sufficiency_summary(
                         job.get("auth_boundary_notice"),
                         job.get("latest_identity_assurance"),
+                    )
+                    job["outcome_matrix"] = self._outcome_matrix_summary(
+                        job.get("action_preview"),
                     )
                     job["reviewer_enforcement_summary"] = boundary.get("reviewer_enforcement_summary", {})
                     job["reviewer_validation_gate_summary"] = boundary.get(
@@ -10931,6 +10992,26 @@ function renderIdentitySufficiencyNotice(record) {{
       + detailListLine('Blocked by', summary.blocked_by, ' | ')
   );
 }}
+function renderOutcomeMatrixNotice(record) {{
+  if (!record.outcome_matrix) return '';
+  const summary = record.outcome_matrix;
+  const rows = Array.isArray(summary.rows) ? summary.rows : [];
+  const matrixLines = rows.map(item => {{
+    const reviewerKinds = Array.isArray(item.authorized_reviewer_kinds) ? item.authorized_reviewer_kinds.join(', ') : '';
+    return (item.action || 'action')
+      + ': disposition=' + (item.resulting_disposition || '')
+      + '; queue=' + (item.resulting_queue_state || '')
+      + '; intent=' + (item.ui_intent || '')
+      + '; note=' + (item.note_status || '')
+      + (reviewerKinds ? '; reviewer=' + reviewerKinds : '');
+  }});
+  return renderNotice(
+    label('notice.outcome_matrix', 'Outcome Matrix'),
+    statusMessageBody(summary.status, summary.message)
+      + detailLine('Action count', summary.action_count ?? 0)
+      + detailListLine('Action outcomes', matrixLines, ' | ')
+  );
+}}
 function renderMutationEnablementNotice(record) {{
   if (!record.mutation_enablement) return '';
   const readiness = record.mutation_enablement;
@@ -12068,6 +12149,7 @@ const detailNoticeRenderers = [
   renderReviewCapabilityNotice,
   renderReviewStepSummaryNotice,
   renderIdentitySufficiencyNotice,
+  renderOutcomeMatrixNotice,
   renderMutationEnablementNotice,
   renderDetailActionPreviewNotice,
   renderCliParityNotice,
