@@ -10972,6 +10972,10 @@ function renderMultiPanelRoute(panels, payload = null, includeResponseJson = fal
   return panelBodies
     + collapsibleJsonBlock(label('label.response_json', 'Response JSON'), payload || {{}}, true);
 }}
+function renderMultiPanelDetail(panels, payload) {{
+  return (panels || []).filter(Boolean).join('')
+    + collapsibleJsonBlock(label('label.record_json', 'Record JSON'), payload || {{}}, false);
+}}
 function workspaceCountLine(labelText, value) {{
   return detailLine(labelText, value ?? 0);
 }}
@@ -11757,18 +11761,20 @@ const detailNoticeRenderers = [
   renderReviewerBoundaryDrilldownNotice,
   renderReviewTimelineNotice,
 ];
-function renderDetailNotices(record) {{
-  return detailNoticeRenderers.map(renderer => renderer(record)).join('');
+function renderDetailNoticePanels(record) {{
+  return detailNoticeRenderers.map(renderer => renderer(record)).filter(Boolean);
 }}
 function detailNoticeBody(endpoint, record) {{
   const options = detailNavigationOptions(endpoint, record);
-  return renderNavigationNotice(endpoint, record, options) + renderDetailNotices(record);
+  return [
+    renderNavigationNotice(endpoint, record, options),
+    ...renderDetailNoticePanels(record),
+  ];
 }}
 function detailBody(endpoint, payload) {{
   const record = payload.record || {{}};
   return routeHeading(endpoint)
-    + detailNoticeBody(endpoint, record)
-    + collapsibleJsonBlock(label('label.record_json', 'Record JSON'), payload, false);
+    + renderMultiPanelDetail(detailNoticeBody(endpoint, record), payload);
 }}
 async function loadEndpoint(endpoint) {{
   window.__chronicleCurrentEndpoint = endpoint;
