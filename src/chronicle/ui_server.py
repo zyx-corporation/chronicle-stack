@@ -13202,6 +13202,53 @@ function renderOverview(payload) {{
     + renderPanel(activeViewSummary('/api/overview', 'overview'))
     + renderOverviewPanels(overviewData);
 }}
+function renderRuntimeConfigRoute(payload) {{
+  const runtimeConfig = payload.runtime_config || {{}};
+  const config = runtimeConfig.config || {{}};
+  const boundary = runtimeConfig.boundary || {{}};
+  const localizedSource = runtimeConfig.source_summary_key
+    ? formatLabel(runtimeConfig.source_summary_key, runtimeConfig.source_summary_params || {{}}, runtimeConfig.source_summary || runtimeConfig.source || '')
+    : (runtimeConfig.source_summary || runtimeConfig.source || '');
+  const localizedProviderKind = config.provider_kind_summary_key
+    ? formatLabel(config.provider_kind_summary_key, config.provider_kind_summary_params || {{}}, config.provider_kind_summary || config.provider_kind || '')
+    : (config.provider_kind_summary || config.provider_kind || '');
+  const localizedAllowNetwork = config.allow_network_summary_key
+    ? formatLabel(config.allow_network_summary_key, config.allow_network_summary_params || {{}}, config.allow_network_summary || String(config.allow_network))
+    : (config.allow_network_summary || String(config.allow_network));
+  const localizedAllowExternalContext = config.allow_external_context_summary_key
+    ? formatLabel(config.allow_external_context_summary_key, config.allow_external_context_summary_params || {{}}, config.allow_external_context_summary || String(config.allow_external_context))
+    : (config.allow_external_context_summary || String(config.allow_external_context));
+  return routeHeading('/api/runtime-config')
+    + renderMultiPanelRoute([
+      renderPanel(
+        sectionTitle(label('section.runtime_config', 'Runtime Config'))
+        + detailLine('Source', localizedSource)
+        + detailLine('Configured at', runtimeConfig.configured_at || '')
+        + detailLine('Provider kind', localizedProviderKind)
+        + detailLine('Provider name', config.provider_name || '')
+        + detailLine('Model', config.model_name || '')
+        + detailLine('Allow network', localizedAllowNetwork)
+        + detailLine('Allow external context', localizedAllowExternalContext)
+        + detailLine('Review required', String(config.review_required))
+        + detailListLine('Capabilities', config.capabilities, ' | ')
+        + detailListLine('Warnings', runtimeConfig.warnings, ' | ')
+      ),
+      renderPanel(
+        sectionTitle(label('section.runtime_boundary', 'Runtime Boundary'))
+        + detailLine('Explicit invocation required', String(boundary.explicit_invocation_required))
+        + detailLine('Network calls default', String(boundary.network_calls_default))
+        + detailLine('Model calls default', String(boundary.model_calls_default))
+        + detailLine('Vector DB default', String(boundary.vector_db_default))
+        + detailLine('Graph DB default', String(boundary.graph_db_default))
+        + detailLine('Generated output requires review', String(boundary.generated_output_requires_review))
+        + detailLine('Indexes are derived', String(boundary.indexes_are_derived))
+        + navigationCluster([
+          openEndpointButton('/api/package-review'),
+          openEndpointButton('/api/overview'),
+        ])
+      ),
+    ], payload, true);
+}}
 function renderPackageReview(payload) {{
   const review = payload.package_review || {{}};
   const localizedMessage = review.message_key
@@ -13362,6 +13409,7 @@ function renderTable(endpoint, rows) {{
 }}
 function endpointBody(endpoint, payload) {{
   if (endpoint === '/api/overview') return renderOverview(payload);
+  if (endpoint === '/api/runtime-config') return renderRuntimeConfigRoute(payload);
   if (endpoint === '/api/package-review') return renderPackageReview(payload);
   if (endpoint === '/api/federation-package-preview') return renderFederationPackagePreview(payload);
   const rows = firstArray(payload);
