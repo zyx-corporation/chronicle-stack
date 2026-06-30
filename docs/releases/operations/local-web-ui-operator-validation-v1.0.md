@@ -236,6 +236,14 @@ chronicle ui \
 - confirm version cells expose unresolved, deviation-risk, and supplemented counts before detail is opened
 - confirm source cells expose preserved, transformed, and next-update-policy context without implying mutation capability
 
+### 17. Proposals Workspace
+
+- confirm `Proposals Workspace` opens with a workspace summary rail instead of the generic fallback table
+- confirm proposal rows expose summary, event id, and timestamp before detail is opened
+- confirm status cells expose review status, latest disposition, and apply-ready state as list-level interpretation cues
+- confirm target cells expose target kind, target id, and related context linkage before detail is opened
+- confirm source cells expose CLI apply guidance, artifact linkage, and applied status without implying direct in-UI mutation capability
+
 ## Evidence to Record
 
 For a validation pass, record:
