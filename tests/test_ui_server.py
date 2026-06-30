@@ -965,6 +965,8 @@ def test_ui_data_service_read_endpoints(tmp_path):
     assert service.artifacts()["artifacts"][0]["title"] == "UI Artifact"
     assert service.artifacts()["artifacts"][0]["proposal_count"] == 1
     assert len(service.proposal_records()["proposals"]) == 3
+    assert service.federation_inbox()["federation_summary"]["inbox_type_counts"]["request_context"] == 1
+    assert service.federation_outbox()["federation_summary"]["outbox_preview_only_count"] >= 0
     assert any(
         proposal["apply_ready"] is True
         and proposal["cli_apply_hint"].startswith("chronicle context apply-proposal --event evt_")
@@ -3069,6 +3071,10 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "function renderTrustRelationsTable(endpoint, rows)" in html
     assert "'/api/trust-nodes': renderTrustNodesTable" in html
     assert "'/api/trust-relations': renderTrustRelationsTable" in html
+    assert "function renderFederationInboxTable(endpoint, rows)" in html
+    assert "function renderFederationOutboxTable(endpoint, rows)" in html
+    assert "'/api/federation-inbox': renderFederationInboxTable" in html
+    assert "'/api/federation-outbox': renderFederationOutboxTable" in html
     assert "__chronicleDetailTrail" in html
     assert "readinessBadge" in html
     assert "reviewCapabilityBadge" in html
