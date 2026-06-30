@@ -2803,6 +2803,10 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "localizedPayloadText(notice)" in html
     assert "localizedPayloadText(capability)" in html
     assert "localizedPayloadText(assurance)" in html
+    assert "label('section.operational_readiness', 'Operational Readiness')" in html
+    assert "label('section.reviewer_context', 'Reviewer Context')" in html
+    assert "label('section.write_route_contract', 'Write Route Contract')" in html
+    assert "label('section.next_steps', 'Next Steps')" in html
     assert "function renderDetailActionPreviewControls(preview, actions, mutationTargetEventId)" in html
     assert "function renderDetailActionPreviewList(preview, actions)" in html
     assert "function renderDetailActionPreviewNotice(record)" in html

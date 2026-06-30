@@ -10720,17 +10720,39 @@ function renderMutationEnablementNotice(record) {{
   const localizedEnablementReady = readiness.enablement_ready_summary_key
     ? formatLabel(readiness.enablement_ready_summary_key, readiness.enablement_ready_summary_params || {{}}, readiness.enablement_ready_summary || String(readiness.enablement_ready))
     : (readiness.enablement_ready_summary || String(readiness.enablement_ready));
-  return renderNotice(
-    label('notice.mutation_enablement', 'Mutation Enablement'),
+  const detailSection = noticeSection(
+    label('status.detail', 'Detail'),
     statusScopeNoticeBody(readiness.status, readiness.message, readinessButtons, readiness.scope_note)
       + detailLine('Enablement ready', localizedEnablementReady)
       + detailLine('Enablement checks', String(readiness.enablement_satisfied_count ?? 0) + '/' + String(readiness.enablement_required_count ?? 0))
       + detailLine('Blockers', detailMessages(blockerDetails, readiness.blockers))
-      + mutationOperationalDetailLines(operationalReadiness, blockerSummaries, enablementChecks, 'Checks')
-      + reviewerContextDetailLines(reviewerContext, identityProofContract)
+  );
+  const operationalSection = noticeSection(
+    label('section.operational_readiness', 'Operational Readiness'),
+    mutationOperationalDetailLines(operationalReadiness, blockerSummaries, enablementChecks, 'Checks')
+  );
+  const reviewerContextSection = noticeSection(
+    label('section.reviewer_context', 'Reviewer Context'),
+    reviewerContextDetailLines(reviewerContext, identityProofContract)
       + reviewerLabelDetailLines(reviewerContext)
-      + writeRouteDetailLines(writeRouteContract, identityProofContract, authorizationContract, targetStateContract)
-      + detailListLine('Next steps', readiness.next_steps, ' | ')
+  );
+  const writeRouteSection = noticeSection(
+    label('section.write_route_contract', 'Write Route Contract'),
+    writeRouteDetailLines(writeRouteContract, identityProofContract, authorizationContract, targetStateContract)
+  );
+  const nextStepsSection = noticeSection(
+    label('section.next_steps', 'Next Steps'),
+    detailListLine('Next steps', readiness.next_steps, ' | ')
+  );
+  return renderNotice(
+    label('notice.mutation_enablement', 'Mutation Enablement'),
+    noticeSectionGroup([
+      detailSection,
+      operationalSection,
+      reviewerContextSection,
+      writeRouteSection,
+      nextStepsSection,
+    ])
   );
 }}
 function renderDetailActionPreviewControls(preview, actions, mutationTargetEventId) {{
