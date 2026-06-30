@@ -2378,16 +2378,43 @@ class ChronicleUIDataService:
         )
         type_counts: dict[str, int] = {}
         derived_counts = {"derived": 0, "explicit": 0}
+        visibility_counts = _count_values(rows, "visibility_hint")
+        created_by_counts = _count_values(rows, "created_by")
+        lifecycle_counts: dict[str, int] = {}
+        evidence_linked_count = 0
+        latest_object_detail_path: str | None = None
+        latest_created_at = ""
         for row in rows:
             object_type = str(row.get("object_type", "unknown"))
             type_counts[object_type] = type_counts.get(object_type, 0) + 1
+            lifecycle = row.get("lifecycle", {}) or {}
+            state = str(lifecycle.get("state", "") or "unknown")
+            lifecycle_counts[state] = lifecycle_counts.get(state, 0) + 1
             if bool(row.get("derived")):
                 derived_counts["derived"] += 1
             else:
                 derived_counts["explicit"] += 1
+            if isinstance(row.get("evidence"), list) and row.get("evidence"):
+                evidence_linked_count += 1
+            created_at = str(row.get("created_at", "") or "")
+            if created_at >= latest_created_at:
+                latest_created_at = created_at
+                object_id = str(row.get("object_id", "") or "")
+                latest_object_detail_path = (
+                    f"/api/chronicle-objects/{object_id}" if object_id else None
+                )
         return {
             "type_counts": type_counts,
             "derived_counts": derived_counts,
+            "object_count": len(rows),
+            "object_type_counts": type_counts,
+            "visibility_counts": visibility_counts,
+            "created_by_counts": created_by_counts,
+            "lifecycle_counts": lifecycle_counts,
+            "derived_count": derived_counts["derived"],
+            "evidence_linked_count": evidence_linked_count,
+            "latest_object_detail_path": latest_object_detail_path,
+            "latest_created_at": latest_created_at,
         }
 
     def current_work_summary(
@@ -3335,7 +3362,10 @@ class ChronicleUIDataService:
             data = _dump_model(record)
             data["related_resource_paths"] = self._chronicle_object_related_resource_paths(data)
             rows.append(data)
-        return {"chronicle_objects": rows}
+        return {
+            "chronicle_objects": rows,
+            "chronicle_objects_summary": self.chronicle_object_summary(rows),
+        }
 
     def _federation_message_rows(self, box: FederationMessageBox) -> list[dict[str, Any]]:
         self.chronicle.require_initialized()
@@ -10300,10 +10330,76 @@ function renderReactionsTable(endpoint, rows) {{
     ),
   ]);
 }}
+function renderChronicleObjectRow(row, endpoint) {{
+  const button = detailJsonButton(endpoint, row);
+  const path = detailPath(endpoint, row);
+  const evidence = Array.isArray(row.evidence) ? row.evidence : [];
+  const related = Array.isArray(row.related_resource_paths) ? row.related_resource_paths : [];
+  const lifecycle = row.lifecycle || {{}};
+  return '<tr>'
+    + '<td>' + detailCell(button, path) + '</td>'
+    + '<td>' + cellStack([
+      cellTitle(String(row.object_type || '')),
+      cellMeta(String(row.object_id || '')),
+      cellMeta(String(row.created_at || '')),
+    ]) + '</td>'
+    + '<td>' + cellStack([
+      cellTitle(String(row.summary || '')),
+      cellMeta(String(row.detail || '')),
+      cellMeta(String(row.created_by || '')),
+    ]) + '</td>'
+    + '<td>' + cellStack([
+      cellTitle(String(lifecycle.state || row.visibility_hint || '')),
+      cellMeta(String(row.visibility_hint || '')),
+      cellMeta(String(row.derived || false)),
+    ]) + '</td>'
+    + '<td>' + cellStack([
+      cellTitle(String(row.context_id || row.artifact_id || row.decision_id || row.rde_record_id || '')),
+      cellMeta(evidence.join(' | ')),
+      cellMeta(related[0] || ''),
+    ]) + '</td>'
+    + '</tr>';
+}}
+function renderChronicleObjectsWorkspacePanel(summary) {{
+  return renderWorkspaceSummaryPanel(
+    label('section.chronicle_objects_workspace', 'Chronicle Objects Workspace'),
+    workspaceCountLine('Objects', summary.object_count)
+    + workspaceCountLine('Derived', summary.derived_count)
+    + workspaceCountLine('Evidence linked', summary.evidence_linked_count)
+    + workspaceCountLine('Latest object', summary.latest_created_at || ''),
+    [
+      {{ label: 'Object types', value: summary.object_type_counts }},
+      {{ label: 'Visibility', value: summary.visibility_counts }},
+      {{ label: 'Lifecycle', value: summary.lifecycle_counts }},
+    ],
+    summary.latest_object_detail_path,
+    'button.open_detail',
+    'Open Detail',
+  );
+}}
+function renderChronicleObjectsTable(endpoint, rows) {{
+  const payload = window.__chronicleRoutePayload || {{}};
+  const summary = payload.chronicle_objects_summary || {{}};
+  const sorted = rows.slice().sort((a, b) => String(b.created_at || '').localeCompare(String(a.created_at || '')));
+  return renderMultiPanelRoute([
+    renderChronicleObjectsWorkspacePanel(summary),
+    renderPanel(
+      sectionTitle(label('section.chronicle_objects_workspace', 'Chronicle Objects Workspace'))
+      + tableHtml([
+        label('label.table_detail', 'Detail'),
+        label('label.table_object', 'Object'),
+        label('label.table_status', 'Status'),
+        label('label.table_visibility', 'Lifecycle'),
+        label('label.table_target', 'Target'),
+      ], sorted.map(row => renderChronicleObjectRow(row, endpoint)).join(''))
+    ),
+  ]);
+}}
 const endpointRenderers = {{
   '/api/artifacts': renderArtifactsTable,
   '/api/audit': renderAuditTable,
   '/api/boundary': renderBoundaryTable,
+  '/api/chronicle-objects': renderChronicleObjectsTable,
   '/api/contexts': renderContextsTable,
   '/api/decisions': renderDecisionsTable,
   '/api/events': renderEventsTable,
