@@ -4306,7 +4306,45 @@ class ChronicleUIDataService:
                     row["cli_apply_hint"] = f"chronicle artifact apply-proposal --event {event_id}"
                 elif target_kind == "context":
                     row["cli_apply_hint"] = f"chronicle context apply-proposal --event {event_id}"
-        return {"proposals": rows}
+        return {"proposals": rows, "proposals_summary": self.proposals_route_summary(rows)}
+
+    def proposals_route_summary(
+        self, proposal_rows: list[dict[str, Any]] | None = None
+    ) -> dict[str, Any]:
+        rows = list(proposal_rows) if proposal_rows is not None else list(self.proposal_records()["proposals"])
+        review_status_counts = _count_values(rows, "review_status")
+        latest_disposition_counts = _count_values(rows, "latest_review_disposition")
+        target_kind_counts: dict[str, int] = {}
+        apply_ready_count = 0
+        applied_count = 0
+        latest_proposal_detail_path: str | None = None
+        latest_timestamp = ""
+
+        for row in rows:
+            proposal = row.get("proposal", {}) or {}
+            target_kind = str(proposal.get("target_kind", "") or "")
+            if target_kind:
+                target_kind_counts[target_kind] = target_kind_counts.get(target_kind, 0) + 1
+            if bool(row.get("apply_ready")):
+                apply_ready_count += 1
+            if bool(row.get("applied")):
+                applied_count += 1
+            timestamp = str(row.get("timestamp", "") or "")
+            if timestamp >= latest_timestamp:
+                latest_timestamp = timestamp
+                event_id = str(row.get("event_id", "") or "")
+                latest_proposal_detail_path = f"/api/review-queue/{event_id}" if event_id else None
+
+        return {
+            "proposal_count": len(rows),
+            "review_status_counts": review_status_counts,
+            "latest_disposition_counts": latest_disposition_counts,
+            "target_kind_counts": target_kind_counts,
+            "apply_ready_count": apply_ready_count,
+            "applied_count": applied_count,
+            "latest_proposal_detail_path": latest_proposal_detail_path,
+            "latest_timestamp": latest_timestamp,
+        }
 
     def decisions(self) -> dict[str, Any]:
         self.chronicle.require_initialized()
@@ -10489,6 +10527,70 @@ function renderRdeTable(endpoint, rows) {{
     ),
   ]);
 }}
+function renderProposalRow(row, endpoint) {{
+  const button = detailJsonButton(endpoint, row);
+  const path = detailPath(endpoint, row);
+  const proposal = row.proposal || {{}};
+  const contextIds = Array.isArray(row.context_ids) ? row.context_ids : [];
+  return '<tr>'
+    + '<td>' + detailCell(button, path) + '</td>'
+    + '<td>' + cellStack([
+      cellTitle(String(row.summary || '')),
+      cellMeta(String(row.event_id || '')),
+      cellMeta(String(row.timestamp || '')),
+    ]) + '</td>'
+    + '<td>' + cellStack([
+      cellTitle(String(row.review_status || '')),
+      cellMeta(String(row.latest_review_disposition || '')),
+      cellMeta(String(row.apply_ready || false)),
+    ]) + '</td>'
+    + '<td>' + cellStack([
+      cellTitle(String(proposal.target_kind || '')),
+      cellMeta(String(proposal.target_id || '')),
+      cellMeta(contextIds.join(' | ')),
+    ]) + '</td>'
+    + '<td>' + cellStack([
+      cellTitle(String(row.cli_apply_hint || '')),
+      cellMeta(String(row.artifact_id || '')),
+      cellMeta(String(row.applied || false)),
+    ]) + '</td>'
+    + '</tr>';
+}}
+function renderProposalsWorkspacePanel(summary) {{
+  return renderWorkspaceSummaryPanel(
+    label('section.proposals_workspace', 'Proposals Workspace'),
+    workspaceCountLine('Proposals', summary.proposal_count)
+    + workspaceCountLine('Apply ready', summary.apply_ready_count)
+    + workspaceCountLine('Applied', summary.applied_count)
+    + workspaceCountLine('Latest proposal', summary.latest_timestamp || ''),
+    [
+      {{ label: 'Review status', value: summary.review_status_counts }},
+      {{ label: 'Disposition', value: summary.latest_disposition_counts }},
+      {{ label: 'Target kinds', value: summary.target_kind_counts }},
+    ],
+    summary.latest_proposal_detail_path,
+    'button.open_detail',
+    'Open Detail',
+  );
+}}
+function renderProposalsTable(endpoint, rows) {{
+  const payload = window.__chronicleRoutePayload || {{}};
+  const summary = payload.proposals_summary || {{}};
+  const sorted = rows.slice().sort((a, b) => String(b.timestamp || '').localeCompare(String(a.timestamp || '')));
+  return renderMultiPanelRoute([
+    renderProposalsWorkspacePanel(summary),
+    renderPanel(
+      sectionTitle(label('section.proposals_workspace', 'Proposals Workspace'))
+      + tableHtml([
+        label('label.table_detail', 'Detail'),
+        label('label.table_proposal', 'Proposal'),
+        label('label.table_status', 'Status'),
+        label('label.table_target', 'Target'),
+        label('label.table_source', 'Source'),
+      ], sorted.map(row => renderProposalRow(row, endpoint)).join(''))
+    ),
+  ]);
+}}
 const endpointRenderers = {{
   '/api/artifacts': renderArtifactsTable,
   '/api/audit': renderAuditTable,
@@ -10498,6 +10600,7 @@ const endpointRenderers = {{
   '/api/decisions': renderDecisionsTable,
   '/api/events': renderEventsTable,
   '/api/lifecycle': renderLifecycleTable,
+  '/api/proposals': renderProposalsTable,
   '/api/reactions': renderReactionsTable,
   '/api/rde': renderRdeTable,
   '/api/federation-inbox': renderFederationInboxTable,
