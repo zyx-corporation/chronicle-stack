@@ -5,6 +5,13 @@ Related: `release-operator-guide.md`, `local-web-ui-operator-validation-report-t
 Status: draft operator validation guide  
 Scope: manual validation checklist for the current local web UI
 
+## Quick Start
+
+1. preconditions のコマンドを実行する
+2. validation mode を 1 つ選んで `chronicle ui` を起動する
+3. checklist を順に確認する
+4. 結果は `local-web-ui-operator-validation-report-template.md` に記録する
+
 ## Purpose
 
 This guide captures how to validate the current Chronicle Stack local web UI as an operator-facing surface.

@@ -4,6 +4,12 @@ Related: `local-web-ui-operator-validation-v1.0.md`, `release-operator-guide.md`
 
 Use this template when recording one manual validation pass of the current local web UI.
 
+## Quick Start
+
+1. `local-web-ui-operator-validation-v1.0.md` の checklist を走らせる
+2. この template に結果を転記する
+3. follow-on recommendation を 1 つ選んで次の action へつなぐ
+
 ## Validation Metadata
 
 - validation date:
