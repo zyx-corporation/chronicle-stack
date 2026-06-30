@@ -220,6 +220,14 @@ chronicle ui \
 - confirm target cells expose target object, source object, and target context or artifact or decision linkage before detail is opened
 - confirm source cells expose related resource paths and metadata without implying mutation or propagation capability
 
+### 15. Chronicle Objects Workspace
+
+- confirm `Chronicle Objects Workspace` opens with a workspace summary rail instead of the generic fallback table
+- confirm object rows expose object type, object id, and created-at timestamp before detail is opened
+- confirm status cells expose summary, detail, and creator identity as list-level interpretation cues
+- confirm lifecycle cells expose lifecycle state, visibility, and derived-vs-explicit status before detail is opened
+- confirm target cells expose linked context or artifact or decision or RDE references together with evidence and the first related resource path
+
 ## Evidence to Record
 
 For a validation pass, record:
