@@ -8640,6 +8640,7 @@ function renderRuntimeRecordRow(row, endpoint) {{
 }}
 function renderReviewQueueRow(row, endpoint) {{
   const button = detailJsonButton(endpoint, row);
+  const path = detailPath(endpoint, row);
   const capability = row.review_capability || {{}};
   const readiness = row.package_readiness_summary || {{}};
   const parity = row.cli_parity_summary || {{}};
@@ -8668,7 +8669,7 @@ function renderReviewQueueRow(row, endpoint) {{
     relatedDetailButton(row, '/api/runtime-records/', 'Open matching runtime record'),
   ].filter(Boolean);
   return '<tr>'
-    + '<td>' + button + '</td>'
+    + '<td>' + button + (path ? detailButton(path) : '') + '</td>'
     + '<td>' + cellStack([
       '<div><span class="id">' + esc(row.target_event_id || '') + '</span></div>',
       reviewKindBadge,
@@ -9839,6 +9840,9 @@ function detailNavButton(path, labelText) {{
     + esc(localizeTextValue(resolvedLabel))
     + '</button>';
 }}
+function detailButton(path) {{
+  return detailNavButton(path, label('button.open_detail', 'Open Detail'));
+}}
 function detailJumpButton(path, labelText) {{
   return detailNavButton(path, labelText);
 }}
@@ -10971,6 +10975,7 @@ function handleViewClick(event) {{
     );
   }}
   if (event.target.dataset.detail) loadDetail(event.target.dataset.detail);
+  if (event.target.dataset.detailNav) loadDetail(event.target.dataset.detailNav);
   if (event.target.dataset.jump) {{
     applyJumpFilter(event.target.dataset.filterTarget, event.target.dataset.filterValue || '');
     loadEndpoint(event.target.dataset.jump);
