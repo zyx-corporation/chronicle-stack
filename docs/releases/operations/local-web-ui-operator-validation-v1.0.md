@@ -286,6 +286,13 @@ chronicle ui \
 - confirm vector rows expose record id, record type, indexed-at timestamp, embedding provider, embedding model, external-call state, and source metadata as read-only index cues
 - confirm detail navigation opens the latest vector entry without implying writable vector-index operations or external embedding execution
 
+### 24. AI Index Graph Nodes
+
+- confirm `/api/ai-index-graph-nodes` opens with a dedicated workspace route instead of the generic fallback table
+- confirm the workspace summary rail exposes node count, latest node id, label breakdowns, and property-key breakdowns before detail is opened
+- confirm graph-node rows expose node id, label list, source title, and property-key summary as read-only graph-index cues
+- confirm detail navigation opens the latest graph node without implying writable graph-index operations, graph derivation execution, or external runtime activity
+
 ## Evidence to Record
 
 For a validation pass, record:
