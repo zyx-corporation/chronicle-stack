@@ -110,12 +110,14 @@ chronicle ui \
 
 - confirm list filters, sort changes, and reset behavior work without page confusion
 - confirm `mutation`, `auth`, and `kind` sorting still change row ordering predictably
+- confirm the first workspace column exposes a primary `Open Detail` entry alongside the JSON inspection button
 - confirm row preview summaries, auth badges, and related buttons provide enough context before opening detail
 - confirm detail view exposes runtime preview, runtime workspace, response metadata, and related-link navigation
 
 ### 4. Review Queue Workspace
 
 - confirm `Needs attention`, `CLI drift first`, reviewer sort, and warning-priority behavior remain understandable
+- confirm the first workspace column exposes the same primary `Open Detail` entry pattern used in the other workspaces
 - confirm warning badges and auth/identity slices are clickable and stay read-only
 - confirm detail view exposes review capability, auth readiness, identity assurance, CLI parity, mutation enablement, action preview, and review timeline
 - confirm blocked review routes still return explicit preview/fallback semantics rather than silent failure
@@ -123,6 +125,7 @@ chronicle ui \
 ### 5. Summary Jobs Workspace
 
 - confirm summary-job list supports title/review/mutation sorting with no broken state carry-over
+- confirm the first workspace column exposes a primary `Open Detail` entry alongside raw JSON inspection
 - confirm summary job rows still expose runtime/source/reviewer context without opening detail
 - confirm detail view connects summary job state back to review capability, package readiness, and mutation preview contracts
 
