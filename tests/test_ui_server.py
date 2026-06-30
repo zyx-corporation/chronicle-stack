@@ -3006,6 +3006,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "reviewQueueFilterChips" in html
     assert "summaryJobsFilterChips" in html
     assert "humanizeDetailPath" in html
+    assert "function detailJumpButton(path, labelText)" in html
     assert "function renderArtifactWorkbenchNotice(record)" in html
     assert "label('notice.artifact_workbench', 'Artifact Workbench')" in html
     assert "detailListLine('Linked contexts', contextSummaries, ' | ')" in html

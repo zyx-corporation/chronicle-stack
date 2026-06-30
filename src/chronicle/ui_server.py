@@ -9837,6 +9837,9 @@ function detailNavButton(path, labelText) {{
     + esc(localizeTextValue(resolvedLabel))
     + '</button>';
 }}
+function detailJumpButton(path, labelText) {{
+  return detailNavButton(path, labelText);
+}}
 function reviewDetailButton(eventId) {{
   return eventId ? detailNavButton('/api/review-queue/' + eventId, label('button.open_review', 'Open review')) : '';
 }}
