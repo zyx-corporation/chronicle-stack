@@ -22,3 +22,5 @@
 - latest readiness: `readiness/release-readiness-v1.133.md`
 - latest smoke: `smoke/smoke-test-v1.133.md`
 - latest remaining: `remaining/v1.133-release-remaining-issues.md`
+- operator validation guide: `operations/local-web-ui-operator-validation-v1.0.md`
+- release operator guide: `operations/release-operator-guide.md`

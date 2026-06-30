@@ -1,6 +1,6 @@
 # Chronicle Stack Release Operator Guide
 
-Related: `../../adr/0018-local-ui-read-only-navigation-boundary.md`
+Related: `../../adr/0018-local-ui-read-only-navigation-boundary.md`, `local-web-ui-operator-validation-v1.0.md`
 
 Status: v1.5 release-operator guide  
 Scope: manual release execution checklist
@@ -24,6 +24,8 @@ The guide covers:
 - moved-tag opt-out smoke
 - `ui-smoke` continuity evidence
 - release issue evidence and close criteria
+
+For operator-facing local web UI validation beyond release tagging mechanics, use `local-web-ui-operator-validation-v1.0.md`.
 
 ## Boundary
 
