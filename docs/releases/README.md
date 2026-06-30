@@ -13,6 +13,7 @@
 
 ## Subdirectory Indexes
 
+- `notes/README.md`
 - `status/README.md`
 - `readiness/README.md`
 - `smoke/README.md`
