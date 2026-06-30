@@ -1120,6 +1120,24 @@ def _ai_index_graph_node_detail_counts_contract(
     }
 
 
+def _ai_index_graph_edge_detail_message_key(payload: dict[str, Any]) -> str:
+    return (
+        "ui.ai_index_graph_edge_detail.message.properties_present"
+        if bool(payload.get("properties"))
+        else "ui.ai_index_graph_edge_detail.message.no_properties"
+    )
+
+
+def _ai_index_graph_edge_detail_counts_contract(
+    *, property_count: int, source_neighbor_count: int, target_neighbor_count: int
+) -> tuple[str, dict[str, Any]]:
+    return "ui.template.ai_index_graph_edge_detail.counts", {
+        "property_count": property_count,
+        "source_neighbor_count": source_neighbor_count,
+        "target_neighbor_count": target_neighbor_count,
+    }
+
+
 def _package_review_message_key(status: str) -> str:
     return {
         "pass": "ui.package_review.message.pass",
@@ -5455,6 +5473,8 @@ class ChronicleUIDataService:
         property_key_counts: dict[str, int] = {}
         source_node_ids: set[str] = set()
         target_node_ids: set[str] = set()
+        latest_detail_path = ""
+        latest_edge_key = ""
         for row in rows:
             relation = str(row.get("relation", "") or "")
             if relation:
@@ -5468,6 +5488,14 @@ class ChronicleUIDataService:
                 source_node_ids.add(source_id)
             if target_id:
                 target_node_ids.add(target_id)
+            edge_key = f"{source_id}|{relation}|{target_id}"
+            if edge_key >= latest_edge_key:
+                latest_edge_key = edge_key
+                latest_detail_path = (
+                    f"/api/ai-index/graph-edges/{source_id}/{relation}/{target_id}"
+                    if source_id and relation and target_id
+                    else ""
+                )
         return {
             "graph_edges": rows,
             "graph_edges_summary": {
@@ -5476,6 +5504,8 @@ class ChronicleUIDataService:
                 "property_key_counts": property_key_counts,
                 "source_node_count": len(source_node_ids),
                 "target_node_count": len(target_node_ids),
+                "latest_detail_path": latest_detail_path,
+                "latest_edge_key": latest_edge_key,
             },
         }
 
@@ -7301,6 +7331,41 @@ class ChronicleUIDataService:
                 )
                 payload["boundary_note_key"] = "ui.ai_index_graph_node_detail.note.read_only_derived"
                 return {"record": payload}
+            return None
+        if len(parts) == 6 and parts[0] == "api" and parts[1] == "ai-index" and parts[2] == "graph-edges":
+            source_id, relation, target_id = parts[3], parts[4], parts[5]
+            edge = self.graph_index.get_edge(
+                source_id=source_id,
+                relation=relation,
+                target_id=target_id,
+            )
+            if edge is None:
+                return None
+            payload = _dump_model(edge)
+            source_neighbors = self.graph_index.neighbors(node_id=source_id)
+            target_neighbors = self.graph_index.neighbors(node_id=target_id)
+            payload["source_detail_path"] = f"/api/ai-index/graph-nodes/{source_id}"
+            payload["target_detail_path"] = f"/api/ai-index/graph-nodes/{target_id}"
+            payload["source_neighbor_count"] = len(source_neighbors.outgoing) + len(source_neighbors.incoming)
+            payload["target_neighbor_count"] = len(target_neighbors.outgoing) + len(target_neighbors.incoming)
+            payload["message"] = (
+                "Graph edge detail includes derived source and target graph context for local inspection."
+                if payload.get("properties")
+                else "Graph edge detail has no edge properties; inspect source and target graph context for related local structure."
+            )
+            payload["message_key"] = _ai_index_graph_edge_detail_message_key(payload)
+            counts_key, counts_params = _ai_index_graph_edge_detail_counts_contract(
+                property_count=len(payload.get("properties", {})),
+                source_neighbor_count=payload["source_neighbor_count"],
+                target_neighbor_count=payload["target_neighbor_count"],
+            )
+            payload["counts_summary_key"] = counts_key
+            payload["counts_summary_params"] = counts_params
+            payload["boundary_note"] = (
+                "Graph edge detail remains derived, read-only, and non-authoritative over primary Chronicle records."
+            )
+            payload["boundary_note_key"] = "ui.ai_index_graph_edge_detail.note.read_only_derived"
+            return {"record": payload}
             return None
 
         if len(parts) == 3 and parts[0] == "api" and parts[1] == "runtime-records":
@@ -10333,9 +10398,9 @@ function renderAiIndexGraphEdgesTable(endpoint, rows) {{
         {{ label: 'Relations', value: summary.relation_counts }},
         {{ label: 'Property keys', value: summary.property_key_counts }},
       ],
-      null,
-      '',
-      '',
+      summary.latest_detail_path,
+      'button.open_detail',
+      'Open Detail',
     ),
     renderPanel(
       sectionTitle(label('section.ai_index_graph_edges', 'AI Index Graph Edges'))
@@ -13756,7 +13821,16 @@ function renderFederationPackagePreview(payload) {{
     ], payload, true);
 }}
 const detailPathResolvers = {{
-  '/api/ai-index-graph-edges': () => null,
+  '/api/ai-index-graph-edges': row => (
+    row.source_id && row.relation && row.target_id
+      ? '/api/ai-index/graph-edges/'
+        + encodeURIComponent(row.source_id)
+        + '/'
+        + encodeURIComponent(row.relation)
+        + '/'
+        + encodeURIComponent(row.target_id)
+      : null
+  ),
   '/api/ai-index-vector': row => row.record_id ? '/api/ai-index/vector/' + encodeURIComponent(row.record_id) : null,
   '/api/ai-index-graph-nodes': row => row.node_id ? '/api/ai-index/graph-nodes/' + encodeURIComponent(row.node_id) : null,
   '/api/chronicle-objects': row => row.object_id ? '/api/chronicle-objects/' + encodeURIComponent(row.object_id) : null,
