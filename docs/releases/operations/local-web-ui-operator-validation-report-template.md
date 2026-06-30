@@ -16,6 +16,10 @@ Use this template when recording one manual validation pass of the current local
 - operator:
 - local commit SHA:
 - Chronicle root:
+- validation scope:
+  - preflight and startup evidence only
+  - manual browser walkthrough
+  - manual browser walkthrough with explicit gated local mutation
 - validation mode:
   - read-only baseline
   - preview-capability boundary visibility
