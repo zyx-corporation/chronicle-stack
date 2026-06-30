@@ -204,6 +204,14 @@ chronicle ui \
 - confirm proposal cells expose pending and total proposal counts plus latest proposal-event context
 - confirm source cells expose source type, source reference context, and tags without implying write capability
 
+### 13. Events Workspace
+
+- confirm `Events Workspace` opens with a workspace summary rail instead of the generic fallback table
+- confirm event rows expose summary, event id, and timestamp before detail is opened
+- confirm kind cells expose event type, actor, and review status as list-level interpretation cues
+- confirm target cells expose artifact linkage, context linkage, and decision or RDE linkage before detail is opened
+- confirm source cells expose parent-event context, source type, and tags without implying replay or mutation capability
+
 ## Evidence to Record
 
 For a validation pass, record:
