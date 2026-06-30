@@ -228,6 +228,14 @@ chronicle ui \
 - confirm lifecycle cells expose lifecycle state, visibility, and derived-vs-explicit status before detail is opened
 - confirm target cells expose linked context or artifact or decision or RDE references together with evidence and the first related resource path
 
+### 16. RDE Workspace
+
+- confirm `RDE Workspace` opens with a workspace summary rail instead of the generic fallback table
+- confirm RDE rows expose record id, artifact id, and created-at timestamp before detail is opened
+- confirm status cells expose summary, creator identity, and from-version -> to-version transition as list-level interpretation cues
+- confirm version cells expose unresolved, deviation-risk, and supplemented counts before detail is opened
+- confirm source cells expose preserved, transformed, and next-update-policy context without implying mutation capability
+
 ## Evidence to Record
 
 For a validation pass, record:
