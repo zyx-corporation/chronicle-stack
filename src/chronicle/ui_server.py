@@ -13202,6 +13202,63 @@ function renderOverview(payload) {{
     + renderPanel(activeViewSummary('/api/overview', 'overview'))
     + renderOverviewPanels(overviewData);
 }}
+function renderPackageReview(payload) {{
+  const review = payload.package_review || {{}};
+  const localizedMessage = review.message_key
+    ? formatLabel(review.message_key, {{}}, review.message || '')
+    : (review.message || '');
+  const localizedBoundaryNote = review.boundary_note_key
+    ? formatLabel(review.boundary_note_key, {{}}, review.boundary_note || '')
+    : (review.boundary_note || '');
+  const localizedCounts = review.counts_summary_key
+    ? formatLabel(review.counts_summary_key, review.counts_summary_params || {{}}, '')
+    : '';
+  const warnings = Array.isArray(review.package_warnings) ? review.package_warnings : [];
+  const findings = Array.isArray(review.findings) ? review.findings : [];
+  return routeHeading('/api/package-review')
+    + renderMultiPanelRoute([
+      renderPanel(
+        sectionTitle(label('section.package_review', 'Package Review'))
+        + statusMessageBody(review.status, localizedMessage, [
+          openEndpointButton('/api/review-queue'),
+          openEndpointButton('/api/runtime-config'),
+        ])
+        + detailLine('Purpose', review.purpose || '')
+        + detailLine('Target environment', review.target_environment || '')
+        + detailLine('Output classification', review.output_classification || '')
+        + detailLine('Reviewed records', review.record_count ?? 0)
+        + detailLine('Counts', localizedCounts)
+        + detailLine('Scope note', localizedBoundaryNote)
+      ),
+      renderPanel(
+        sectionTitle(label('label.table_warnings', 'Warnings'))
+        + detailListLine('Warning codes', warnings, ' | ')
+      ),
+      renderPanel(
+        sectionTitle('Findings')
+        + tableHtml([
+          label('label.table_summary', 'Summary'),
+          label('label.table_status', 'Status'),
+          label('label.table_target', 'Target'),
+          label('label.table_source', 'Source'),
+        ], findings.map(item => '<tr>'
+          + '<td>' + cellStack([
+            cellTitle(String(item.summary || '')),
+            cellMeta(String(item.code || '')),
+          ]) + '</td>'
+          + '<td>' + cellStack([
+            cellTitle(String(item.severity || '')),
+          ]) + '</td>'
+          + '<td>' + cellStack([
+            cellTitle(String(item.record_id || '')),
+          ]) + '</td>'
+          + '<td>' + cellStack([
+            cellTitle(String(item.recommendation || '')),
+          ]) + '</td>'
+          + '</tr>').join(''))
+      ),
+    ], payload, true);
+}}
 function renderFederationPackagePreview(payload) {{
   const preview = payload.federation_package_preview || {{}};
   const routeSummary = preview.package_route_summary || {{}};
@@ -13305,6 +13362,7 @@ function renderTable(endpoint, rows) {{
 }}
 function endpointBody(endpoint, payload) {{
   if (endpoint === '/api/overview') return renderOverview(payload);
+  if (endpoint === '/api/package-review') return renderPackageReview(payload);
   if (endpoint === '/api/federation-package-preview') return renderFederationPackagePreview(payload);
   const rows = firstArray(payload);
   return rows
