@@ -5450,7 +5450,34 @@ class ChronicleUIDataService:
 
     def ai_index_graph_edges(self) -> dict[str, Any]:
         snapshot = self.graph_index.snapshot()
-        return {"graph_edges": [_dump_model(edge) for edge in snapshot.edges]}
+        rows = [_dump_model(edge) for edge in snapshot.edges]
+        relation_counts: dict[str, int] = {}
+        property_key_counts: dict[str, int] = {}
+        source_node_ids: set[str] = set()
+        target_node_ids: set[str] = set()
+        for row in rows:
+            relation = str(row.get("relation", "") or "")
+            if relation:
+                relation_counts[relation] = relation_counts.get(relation, 0) + 1
+            for key in (row.get("properties", {}) or {}).keys():
+                property_key = str(key)
+                property_key_counts[property_key] = property_key_counts.get(property_key, 0) + 1
+            source_id = str(row.get("source_id", "") or "")
+            target_id = str(row.get("target_id", "") or "")
+            if source_id:
+                source_node_ids.add(source_id)
+            if target_id:
+                target_node_ids.add(target_id)
+        return {
+            "graph_edges": rows,
+            "graph_edges_summary": {
+                "edge_count": len(rows),
+                "relation_counts": relation_counts,
+                "property_key_counts": property_key_counts,
+                "source_node_count": len(source_node_ids),
+                "target_node_count": len(target_node_ids),
+            },
+        }
 
     def runtime_config_state(self) -> dict[str, Any]:
         state = self.runtime_config.show()
@@ -10270,6 +10297,57 @@ function renderAiIndexGraphNodesTable(endpoint, rows) {{
     ),
   ]);
 }}
+function renderAiIndexGraphEdgeRow(row, endpoint) {{
+  const button = detailJsonButton(endpoint, row);
+  const path = detailPath(endpoint, row);
+  const properties = row.properties || {{}};
+  return '<tr>'
+    + '<td>' + detailCell(button, path) + '</td>'
+    + '<td>' + cellStack([
+      cellTitle(String(row.relation || '')),
+      cellMeta(Object.keys(properties).join(' | ')),
+    ]) + '</td>'
+    + '<td>' + cellStack([
+      cellTitle(String(row.source_id || '')),
+      cellMeta(String(row.target_id || '')),
+    ]) + '</td>'
+    + '<td>' + cellStack([
+      cellTitle(String(properties.title || '')),
+      cellMeta(Object.entries(properties).map(([key, value]) => String(key) + '=' + String(value)).join(' | ')),
+    ]) + '</td>'
+    + '</tr>';
+}}
+function renderAiIndexGraphEdgesTable(endpoint, rows) {{
+  const payload = window.__chronicleRoutePayload || {{}};
+  const summary = payload.graph_edges_summary || {{}};
+  const sorted = rows.slice().sort((a, b) => String(a.relation || '').localeCompare(String(b.relation || ''))
+    || String(a.source_id || '').localeCompare(String(b.source_id || ''))
+    || String(a.target_id || '').localeCompare(String(b.target_id || '')));
+  return renderMultiPanelRoute([
+    renderWorkspaceSummaryPanel(
+      label('section.ai_index_graph_edges', 'AI Index Graph Edges'),
+      workspaceCountLine('Edges', summary.edge_count)
+      + workspaceCountLine('Source nodes', summary.source_node_count)
+      + workspaceCountLine('Target nodes', summary.target_node_count),
+      [
+        {{ label: 'Relations', value: summary.relation_counts }},
+        {{ label: 'Property keys', value: summary.property_key_counts }},
+      ],
+      null,
+      '',
+      '',
+    ),
+    renderPanel(
+      sectionTitle(label('section.ai_index_graph_edges', 'AI Index Graph Edges'))
+      + tableHtml([
+        label('label.table_detail', 'Detail'),
+        label('label.table_event', 'Event'),
+        label('label.table_status', 'Status'),
+        label('label.table_source', 'Source'),
+      ], sorted.map(row => renderAiIndexGraphEdgeRow(row, endpoint)).join(''))
+    ),
+  ]);
+}}
 function renderArtifactsTable(endpoint, rows) {{
   const payload = window.__chronicleRoutePayload || {{}};
   const summary = payload.artifacts_summary || {{}};
@@ -10742,6 +10820,7 @@ const endpointRenderers = {{
   '/api/events': renderEventsTable,
   '/api/ai-index-vector': renderAiIndexVectorTable,
   '/api/ai-index-graph-nodes': renderAiIndexGraphNodesTable,
+  '/api/ai-index-graph-edges': renderAiIndexGraphEdgesTable,
   '/api/lifecycle': renderLifecycleTable,
   '/api/proposals': renderProposalsTable,
   '/api/reactions': renderReactionsTable,

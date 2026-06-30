@@ -1461,6 +1461,7 @@ def test_ui_data_service_federation_package_preview_query_surfaces(tmp_path):
     assert service.ai_index_graph_nodes()["graph_nodes"]
     assert service.ai_index_graph_nodes()["graph_nodes_summary"]["node_count"] >= 1
     assert service.ai_index_graph_edges()["graph_edges"]
+    assert service.ai_index_graph_edges()["graph_edges_summary"]["edge_count"] >= 1
 
 
 def test_ui_data_service_exposes_provider_response_metadata_in_read_only_views(tmp_path, monkeypatch):
@@ -3059,6 +3060,9 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "function renderAiIndexGraphNodesTable(endpoint, rows)" in html
     assert "function renderAiIndexGraphNodeRow(row, endpoint)" in html
     assert "'/api/ai-index-graph-nodes': renderAiIndexGraphNodesTable," in html
+    assert "function renderAiIndexGraphEdgesTable(endpoint, rows)" in html
+    assert "function renderAiIndexGraphEdgeRow(row, endpoint)" in html
+    assert "'/api/ai-index-graph-edges': renderAiIndexGraphEdgesTable," in html
     assert "function renderPackageReview(payload)" in html
     assert "if (endpoint === '/api/package-review') return renderPackageReview(payload);" in html
     assert "if (endpoint === '/api/federation-package-preview') return renderFederationPackagePreview(payload);" in html
@@ -3389,7 +3393,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "overviewTriageNavigationCluster(triage)" in html
     assert "overviewTriageJumpButtons()" in html
     assert "data-detail-nav" in html
-    assert html.count("'<td>' + detailCell(button, path) + '</td>'") == 13
+    assert html.count("'<td>' + detailCell(button, path) + '</td>'") == 14
     assert "table { width: max-content; min-width: 100%; border-collapse: collapse; display: block; overflow-x: auto; }" in html
     assert "data-detail-trail" in html
     assert "data-back-view" in html
@@ -3581,6 +3585,8 @@ def test_http_root_and_read_only_endpoints(tmp_path):
                 assert "vector_entries_summary" in payload
             if endpoint == "/api/ai-index-graph-nodes":
                 assert "graph_nodes_summary" in payload
+            if endpoint == "/api/ai-index-graph-edges":
+                assert "graph_edges_summary" in payload
 
         package_dir = tmp_path / "http-federation-package-preview"
         FederationPackageService(tmp_path).create_package(
