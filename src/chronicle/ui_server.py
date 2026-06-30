@@ -5421,7 +5421,32 @@ class ChronicleUIDataService:
 
     def ai_index_graph_nodes(self) -> dict[str, Any]:
         snapshot = self.graph_index.snapshot()
-        return {"graph_nodes": [_dump_model(node) for node in snapshot.nodes]}
+        rows = [_dump_model(node) for node in snapshot.nodes]
+        label_counts: dict[str, int] = {}
+        property_key_counts: dict[str, int] = {}
+        latest_detail_path = ""
+        latest_node_id = ""
+        for row in rows:
+            for label in row.get("labels", []) or []:
+                label_value = str(label)
+                label_counts[label_value] = label_counts.get(label_value, 0) + 1
+            for key in (row.get("properties", {}) or {}).keys():
+                property_key = str(key)
+                property_key_counts[property_key] = property_key_counts.get(property_key, 0) + 1
+            node_id = str(row.get("node_id", "") or "")
+            if node_id >= latest_node_id:
+                latest_node_id = node_id
+                latest_detail_path = f"/api/ai-index/graph-nodes/{node_id}" if node_id else ""
+        return {
+            "graph_nodes": rows,
+            "graph_nodes_summary": {
+                "node_count": len(rows),
+                "label_counts": label_counts,
+                "property_key_counts": property_key_counts,
+                "latest_detail_path": latest_detail_path,
+                "latest_node_id": latest_node_id,
+            },
+        }
 
     def ai_index_graph_edges(self) -> dict[str, Any]:
         snapshot = self.graph_index.snapshot()
@@ -10202,6 +10227,49 @@ function renderAiIndexVectorTable(endpoint, rows) {{
     ),
   ]);
 }}
+function renderAiIndexGraphNodeRow(row, endpoint) {{
+  const button = detailJsonButton(endpoint, row);
+  const path = detailPath(endpoint, row);
+  const properties = row.properties || {{}};
+  return '<tr>'
+    + '<td>' + detailCell(button, path) + '</td>'
+    + '<td>' + cellStack([
+      cellTitle(String(row.node_id || '')),
+      cellMeta((Array.isArray(row.labels) ? row.labels : []).join(' | ')),
+    ]) + '</td>'
+    + '<td>' + cellStack([
+      cellTitle(String(properties.title || '')),
+      cellMeta(Object.keys(properties).join(' | ')),
+    ]) + '</td>'
+    + '</tr>';
+}}
+function renderAiIndexGraphNodesTable(endpoint, rows) {{
+  const payload = window.__chronicleRoutePayload || {{}};
+  const summary = payload.graph_nodes_summary || {{}};
+  const sorted = rows.slice().sort((a, b) => String(a.node_id || '').localeCompare(String(b.node_id || '')));
+  return renderMultiPanelRoute([
+    renderWorkspaceSummaryPanel(
+      label('section.ai_index_graph_nodes', 'AI Index Graph Nodes'),
+      workspaceCountLine('Nodes', summary.node_count)
+      + workspaceCountLine('Latest node', summary.latest_node_id || ''),
+      [
+        {{ label: 'Labels', value: summary.label_counts }},
+        {{ label: 'Property keys', value: summary.property_key_counts }},
+      ],
+      summary.latest_detail_path,
+      'button.open_detail',
+      'Open Detail',
+    ),
+    renderPanel(
+      sectionTitle(label('section.ai_index_graph_nodes', 'AI Index Graph Nodes'))
+      + tableHtml([
+        label('label.table_detail', 'Detail'),
+        label('label.table_event', 'Event'),
+        label('label.table_source', 'Source'),
+      ], sorted.map(row => renderAiIndexGraphNodeRow(row, endpoint)).join(''))
+    ),
+  ]);
+}}
 function renderArtifactsTable(endpoint, rows) {{
   const payload = window.__chronicleRoutePayload || {{}};
   const summary = payload.artifacts_summary || {{}};
@@ -10673,6 +10741,7 @@ const endpointRenderers = {{
   '/api/decisions': renderDecisionsTable,
   '/api/events': renderEventsTable,
   '/api/ai-index-vector': renderAiIndexVectorTable,
+  '/api/ai-index-graph-nodes': renderAiIndexGraphNodesTable,
   '/api/lifecycle': renderLifecycleTable,
   '/api/proposals': renderProposalsTable,
   '/api/reactions': renderReactionsTable,
