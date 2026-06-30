@@ -99,6 +99,20 @@ class GraphIndexService:
         snapshot = self._load_snapshot()
         return next((node for node in snapshot.nodes if node.node_id == node_id), None)
 
+    def get_edge(self, *, source_id: str, relation: str, target_id: str) -> AiGraphEdge | None:
+        self.chronicle.require_initialized()
+        snapshot = self._load_snapshot()
+        return next(
+            (
+                edge
+                for edge in snapshot.edges
+                if edge.source_id == source_id
+                and edge.relation == relation
+                and edge.target_id == target_id
+            ),
+            None,
+        )
+
     def _load_snapshot(self) -> GraphIndexSnapshot:
         if not self.paths.graph_index_file.exists():
             return GraphIndexSnapshot()

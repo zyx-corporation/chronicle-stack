@@ -1462,6 +1462,7 @@ def test_ui_data_service_federation_package_preview_query_surfaces(tmp_path):
     assert service.ai_index_graph_nodes()["graph_nodes_summary"]["node_count"] >= 1
     assert service.ai_index_graph_edges()["graph_edges"]
     assert service.ai_index_graph_edges()["graph_edges_summary"]["edge_count"] >= 1
+    assert service.ai_index_graph_edges()["graph_edges_summary"]["latest_detail_path"]
 
 
 def test_ui_data_service_exposes_provider_response_metadata_in_read_only_views(tmp_path, monkeypatch):
@@ -1913,6 +1914,14 @@ def test_ui_data_service_detail_endpoints(tmp_path):
         "decision_persistence_failed",
     ]
     assert summary_detail["action_preview"]["write_route_contract"]["authorization_contract"]["server_side_checks"][2] == "review_capability_ready"
+    graph_edge_detail = service.detail_payload(
+        f"/api/ai-index/graph-edges/{ids['event_id']}/references/{ids['context_id']}"
+    )["record"]
+    assert graph_edge_detail["source_id"] == ids["event_id"]
+    assert graph_edge_detail["target_id"] == ids["context_id"]
+    assert graph_edge_detail["source_detail_path"] == f"/api/ai-index/graph-nodes/{ids['event_id']}"
+    assert graph_edge_detail["target_detail_path"] == f"/api/ai-index/graph-nodes/{ids['context_id']}"
+    assert graph_edge_detail["boundary_note_key"] == "ui.ai_index_graph_edge_detail.note.read_only_derived"
     assert summary_detail["action_preview"]["write_route_contract"]["target_state_contract"]["action_target_matrix"][1]["resulting_disposition"] == "reject"
     assert summary_detail["action_preview"]["write_route_contract"]["identity_proof_contract"]["required_identity_fields"] == [
         "reviewer_label",
@@ -3622,6 +3631,7 @@ def test_http_root_and_read_only_endpoints(tmp_path):
             f"/api/summary-jobs/{ids['summary_job_id']}",
             f"/api/ai-index/vector/{ids['event_id']}",
             f"/api/ai-index/graph-nodes/{ids['event_id']}",
+            f"/api/ai-index/graph-edges/{ids['event_id']}/references/{ids['context_id']}",
         ]
         for endpoint in detail_paths:
             status, body = _http_get(host, port, endpoint)
