@@ -265,6 +265,13 @@ chronicle ui \
 - confirm the expectations panel exposes incremental rebuild expectations as read-only operational cues rather than execution promises
 - confirm the boundary panel exposes derived-surface, primary-record-authoritative, external-services, GraphRAG runtime, and correctness-proof flags without implying writable graph state
 
+### 21. AI Index Status
+
+- confirm `/api/ai-index-status` opens with a dedicated multi-panel route instead of response JSON only
+- confirm the summary panel exposes vector counts, graph counts, index paths, and derived boundary note before raw JSON is opened
+- confirm the vector panel exposes entry count, embedding provider, embedding model, and external-call state as local read-only index cues
+- confirm the boundary panel exposes graph node or edge counts together with derived-surface, primary-record-authoritative, external-services, GraphRAG runtime, and correctness-proof flags without implying writable index state
+
 ## Evidence to Record
 
 For a validation pass, record:
