@@ -2700,6 +2700,8 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert ".cell-stack {" in html
     assert "display: flex;" in html
     assert "min-width: 11rem;" in html
+    assert ".detail-cell {" in html
+    assert "min-width: 8.5rem;" in html
     assert ".cell-details {" in html
     assert ".cell-details-body > * + *" in html
     assert ".cell-actions {" in html
@@ -2984,6 +2986,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "function detailBody(endpoint, payload)" in html
     assert "function previewButtonsConfig(row, config)" in html
     assert "function detailJsonButton(endpoint, row)" in html
+    assert "function detailCell(buttonHtml, path)" in html
     assert "function stackedCell(parts, separator = '<br>')" in html
     assert "function cellTitle(text)" in html
     assert "function cellMeta(text)" in html
@@ -3303,7 +3306,8 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "overviewTriageNavigationCluster(triage)" in html
     assert "overviewTriageJumpButtons()" in html
     assert "data-detail-nav" in html
-    assert html.count("'<td>' + button + (path ? detailButton(path) : '') + '</td>'") == 3
+    assert html.count("'<td>' + detailCell(button, path) + '</td>'") == 3
+    assert "table { width: max-content; min-width: 100%; border-collapse: collapse; display: block; overflow-x: auto; }" in html
     assert "data-detail-trail" in html
     assert "data-back-view" in html
     assert "uiLabel('No matching runtime records for current filter.')" in html
