@@ -11165,7 +11165,7 @@ function renderOverviewAuthBoundaryPanel(authBoundary, authBoundaryOverview) {{
     + metricsSection(metricsBody)
     + detailListLine('Auth blockers', authBoundary.blockers, ' | ')
     + detailListLine('Auth blocker summaries', blockerSummaries.map(item => (item.summary || item.code || 'blocker')), ' | ')
-    + navigationCluster([latestResponseButton(authBoundaryOverview.latest_provider_response_detail_path, 'button.open_latest_review_response', 'Open Latest Review Response')])
+    + workspaceLatestResponseLine(authBoundaryOverview.latest_provider_response_detail_path, 'button.open_latest_review_response', 'Open Latest Review Response')
     + detailListLine('Auth next steps', authBoundary.next_steps, ' | ')
   );
 }}

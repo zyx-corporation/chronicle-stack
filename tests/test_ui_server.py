@@ -3174,7 +3174,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "statusMessageBody(preview.status, localizedPreviewMessage, previewButtons)" in html
     assert "detailListLine('Expected actions', parity.expected_actions)" in html
     assert "label('button.open_review_queue', 'Open Review Queue')" in html
-    assert "latestResponseButton(authBoundaryOverview.latest_provider_response_detail_path, 'button.open_latest_review_response', 'Open Latest Review Response')" in html
+    assert "workspaceLatestResponseLine(authBoundaryOverview.latest_provider_response_detail_path, 'button.open_latest_review_response', 'Open Latest Review Response')" in html
     assert "label('button.open_runtime_records', 'Open Runtime Records')" in html
     assert "label('button.open_summary_jobs', 'Open Summary Jobs')" in html
     assert "endpointLatestResponseCluster('/api/runtime-records', runtimeRecords.latest_provider_response_detail_path, 'button.open_latest_runtime_response', 'Open Latest Runtime Response')" in html
