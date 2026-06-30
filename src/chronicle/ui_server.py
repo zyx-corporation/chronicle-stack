@@ -13202,6 +13202,67 @@ function renderOverview(payload) {{
     + renderPanel(activeViewSummary('/api/overview', 'overview'))
     + renderOverviewPanels(overviewData);
 }}
+function renderUiBoundaryRoute(payload) {{
+  const uiBoundary = payload.ui_boundary || {{}};
+  const writeRouteContract = uiBoundary.write_route_contract || {{}};
+  const identityProofContract = writeRouteContract.identity_proof_contract || {{}};
+  const authorizationContract = writeRouteContract.authorization_contract || {{}};
+  const targetStateContract = writeRouteContract.target_state_contract || {{}};
+  const authBoundary = uiBoundary.auth_boundary_summary || {{}};
+  const reviewerContext = uiBoundary.reviewer_context_requirements || {{}};
+  const enforcement = uiBoundary.reviewer_enforcement_summary || {{}};
+  const gate = uiBoundary.reviewer_validation_gate_summary || {{}};
+  const localizedMutationEnabled = uiBoundary.mutation_enabled_summary_key
+    ? formatLabel(uiBoundary.mutation_enabled_summary_key, uiBoundary.mutation_enabled_summary_params || {{}}, uiBoundary.mutation_enabled_summary || String(uiBoundary.mutation_enabled))
+    : (uiBoundary.mutation_enabled_summary || String(uiBoundary.mutation_enabled));
+  const localizedMutationCapabilityFlag = uiBoundary.mutation_capability_flag_summary_key
+    ? formatLabel(uiBoundary.mutation_capability_flag_summary_key, uiBoundary.mutation_capability_flag_summary_params || {{}}, uiBoundary.mutation_capability_flag_summary || String(uiBoundary.mutation_capability_flag))
+    : (uiBoundary.mutation_capability_flag_summary || String(uiBoundary.mutation_capability_flag));
+  const localizedSessionGating = uiBoundary.session_gating_summary_key
+    ? formatLabel(uiBoundary.session_gating_summary_key, uiBoundary.session_gating_summary_params || {{}}, uiBoundary.session_gating_summary || String(uiBoundary.session_gating))
+    : (uiBoundary.session_gating_summary || String(uiBoundary.session_gating));
+  return routeHeading('/api/ui-boundary')
+    + renderMultiPanelRoute([
+      renderPanel(
+        sectionTitle(label('section.ui_boundary', 'UI Boundary'))
+        + detailLine('Bind scope', uiBoundary.bind_scope || '')
+        + detailLine('Mutation enabled', localizedMutationEnabled)
+        + detailLine('Mutation capability flag', localizedMutationCapabilityFlag)
+        + detailLine('Auth mode', uiBoundary.auth_mode || '')
+        + detailLine('Authorization mode', uiBoundary.authorization_mode || '')
+        + detailLine('Session gating', localizedSessionGating)
+        + detailLine('Mutation readiness', uiBoundary.mutation_readiness_status || '')
+        + detailLine('Read only', String(uiBoundary.read_only))
+        + detailLine('Shared machine safe', String(uiBoundary.shared_machine_safe))
+        + detailListLine('Mutation blockers', uiBoundary.mutation_blockers, ' | ')
+        + writeRouteDetailLines(writeRouteContract, identityProofContract, authorizationContract, targetStateContract, true)
+      ),
+      renderPanel(
+        sectionTitle(label('section.auth_boundary', 'Auth Boundary'))
+        + statusMessageBody(authBoundary.status, localizedPayloadText(authBoundary), [
+          openEndpointButton('/api/review-queue'),
+          openEndpointButton('/api/runtime-config'),
+        ])
+        + detailLine('Scope note', authBoundary.scope_note_key ? formatLabel(authBoundary.scope_note_key, authBoundary.scope_note_params || {{}}, authBoundary.scope_note || '') : (authBoundary.scope_note || ''))
+        + detailLine('Session gating', authBoundary.session_gating_summary_key ? formatLabel(authBoundary.session_gating_summary_key, authBoundary.session_gating_summary_params || {{}}, authBoundary.session_gating_summary || String(authBoundary.session_gating)) : (authBoundary.session_gating_summary || String(authBoundary.session_gating)))
+        + detailLine('Shared machine safe', authBoundary.shared_machine_safe_summary_key ? formatLabel(authBoundary.shared_machine_safe_summary_key, authBoundary.shared_machine_safe_summary_params || {{}}, authBoundary.shared_machine_safe_summary || String(authBoundary.shared_machine_safe)) : (authBoundary.shared_machine_safe_summary || String(authBoundary.shared_machine_safe)))
+        + detailListLine('Auth blockers', authBoundary.blockers, ' | ')
+        + detailListLine('Auth next steps', authBoundary.next_steps, ' | ')
+      ),
+      renderPanel(
+        sectionTitle(label('section.reviewer_boundary', 'Reviewer Boundary'))
+        + detailLine('Expectation', reviewerContext.expectation_summary || '')
+        + detailListLine('Required fields', reviewerContext.effective_required_fields, ' | ')
+        + detailListLine('Accepted reviewer kinds', reviewerContext.accepted_reviewer_kinds, ' | ')
+        + detailLine('Session boundary', reviewerContext.session_boundary_status_summary || reviewerContext.session_boundary_status || '')
+        + detailLine('UI intent required', reviewerContext.ui_intent_required_summary || String(reviewerContext.ui_intent_required))
+        + detailLine('Enforcement status', enforcement.status || '')
+        + detailLine('Validation gate status', gate.status || '')
+        + detailLine('Fail closed', String(gate.fail_closed))
+        + detailListLine('Validation error codes', gate.validation_error_codes, ' | ')
+      ),
+    ], payload, true);
+}}
 function renderRuntimeConfigRoute(payload) {{
   const runtimeConfig = payload.runtime_config || {{}};
   const config = runtimeConfig.config || {{}};
@@ -13498,6 +13559,7 @@ function renderTable(endpoint, rows) {{
 }}
 function endpointBody(endpoint, payload) {{
   if (endpoint === '/api/overview') return renderOverview(payload);
+  if (endpoint === '/api/ui-boundary') return renderUiBoundaryRoute(payload);
   if (endpoint === '/api/runtime-config') return renderRuntimeConfigRoute(payload);
   if (endpoint === '/api/graph-summary') return renderGraphSummaryRoute(payload);
   if (endpoint === '/api/ai-index-status') return renderAiIndexStatusRoute(payload);

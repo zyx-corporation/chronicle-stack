@@ -3041,6 +3041,8 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "'/api/boundary': renderBoundaryTable," in html
     assert "'/api/lifecycle': renderLifecycleTable," in html
     assert "'/api/artifacts': renderArtifactsTable," in html
+    assert "function renderUiBoundaryRoute(payload)" in html
+    assert "if (endpoint === '/api/ui-boundary') return renderUiBoundaryRoute(payload);" in html
     assert "function renderRuntimeConfigRoute(payload)" in html
     assert "if (endpoint === '/api/runtime-config') return renderRuntimeConfigRoute(payload);" in html
     assert "function renderGraphSummaryRoute(payload)" in html
