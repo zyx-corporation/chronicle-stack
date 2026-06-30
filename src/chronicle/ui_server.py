@@ -6061,6 +6061,46 @@ class ChronicleUIDataService:
         }
 
     @staticmethod
+    def _identity_sufficiency_summary(
+        auth_notice: dict[str, Any] | None,
+        assurance: dict[str, Any] | None,
+    ) -> dict[str, Any]:
+        auth_notice = auth_notice or {}
+        assurance = assurance or {}
+
+        auth_status = str(auth_notice.get("status", "unknown"))
+        assurance_status = str(assurance.get("status", "unknown"))
+        blockers = [str(item) for item in auth_notice.get("blockers", []) if item]
+        next_steps = [str(item) for item in auth_notice.get("next_steps", []) if item]
+
+        if auth_status == "boundary_aligned" and assurance_status == "boundary_aligned":
+            status = "sufficient"
+            message = "Reviewer identity is sufficient for mutation-capable review within the current local boundary."
+            next_action = "Proceed with the selected review path for this record."
+        elif assurance_status == "declared_only":
+            status = "declared_only"
+            message = "Reviewer identity is recorded, but it remains declared-only and does not yet satisfy the current boundary."
+            next_action = next_steps[0] if next_steps else "Strengthen reviewer identity evidence before relying on mutation-capable review."
+        elif assurance_status == "local_session_unverified":
+            status = "advisory_only"
+            message = "Reviewer identity exists, but the current local auth boundary still leaves it advisory-only for mutation-capable review."
+            next_action = next_steps[0] if next_steps else "Align the local auth boundary before relying on mutation-capable review."
+        else:
+            status = "unknown"
+            message = "Reviewer identity sufficiency is not yet established for this review context."
+            next_action = next_steps[0] if next_steps else "Record or align reviewer identity metadata before relying on mutation-capable review."
+
+        return {
+            "status": status,
+            "auth_status": auth_status,
+            "assurance_status": assurance_status,
+            "message": message,
+            "next_action": next_action,
+            "blocked_by": blockers,
+            "blocker_count": len(blockers),
+        }
+
+    @staticmethod
     def _review_kind(payload: dict[str, Any]) -> str:
         if "runtime_summary" in payload:
             return "runtime_summary"
@@ -6804,6 +6844,10 @@ class ChronicleUIDataService:
                     review_row.get("auth_boundary_notice"),
                     review_row.get("action_preview_summary"),
                 )
+                record["identity_sufficiency_summary"] = self._identity_sufficiency_summary(
+                    review_row.get("auth_boundary_notice"),
+                    review_row.get("latest_identity_assurance"),
+                )
                 record["reviewer_enforcement_summary"] = boundary.get("reviewer_enforcement_summary", {})
                 record["reviewer_validation_gate_summary"] = boundary.get(
                     "reviewer_validation_gate_summary", {}
@@ -6914,6 +6958,10 @@ class ChronicleUIDataService:
                         row.get("auth_boundary_notice"),
                         row.get("action_preview"),
                     )
+                    row["identity_sufficiency_summary"] = self._identity_sufficiency_summary(
+                        row.get("auth_boundary_notice"),
+                        row.get("latest_identity_assurance"),
+                    )
                     row["reviewer_enforcement_summary"] = boundary.get("reviewer_enforcement_summary", {})
                     row["reviewer_validation_gate_summary"] = boundary.get(
                         "reviewer_validation_gate_summary", {}
@@ -6982,6 +7030,10 @@ class ChronicleUIDataService:
                         job.get("review_capability"),
                         job.get("auth_boundary_notice"),
                         job.get("action_preview"),
+                    )
+                    job["identity_sufficiency_summary"] = self._identity_sufficiency_summary(
+                        job.get("auth_boundary_notice"),
+                        job.get("latest_identity_assurance"),
                     )
                     job["reviewer_enforcement_summary"] = boundary.get("reviewer_enforcement_summary", {})
                     job["reviewer_validation_gate_summary"] = boundary.get(
@@ -10866,6 +10918,19 @@ function renderReviewStepSummaryNotice(record) {{
       + detailListLine('Remaining steps', summary.remaining_steps, ' | ')
   );
 }}
+function renderIdentitySufficiencyNotice(record) {{
+  if (!record.identity_sufficiency_summary) return '';
+  const summary = record.identity_sufficiency_summary;
+  return renderNotice(
+    label('notice.identity_sufficiency', 'Identity Sufficiency'),
+    statusMessageBody(summary.status, summary.message)
+      + detailLine('Auth status', summary.auth_status || '')
+      + detailLine('Assurance status', summary.assurance_status || '')
+      + detailLine('Next action', summary.next_action || '')
+      + detailLine('Blocker count', summary.blocker_count ?? 0)
+      + detailListLine('Blocked by', summary.blocked_by, ' | ')
+  );
+}}
 function renderMutationEnablementNotice(record) {{
   if (!record.mutation_enablement) return '';
   const readiness = record.mutation_enablement;
@@ -12002,6 +12067,7 @@ const detailNoticeRenderers = [
   renderAuthReadinessNotice,
   renderReviewCapabilityNotice,
   renderReviewStepSummaryNotice,
+  renderIdentitySufficiencyNotice,
   renderMutationEnablementNotice,
   renderDetailActionPreviewNotice,
   renderCliParityNotice,

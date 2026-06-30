@@ -1892,6 +1892,8 @@ def test_ui_data_service_detail_endpoints(tmp_path):
     assert summary_detail["review_step_summary"]["status"] == "advisory_only"
     assert summary_detail["review_step_summary"]["current_step_code"] == "align_boundary"
     assert "auth_not_enabled" in summary_detail["review_step_summary"]["blocked_by"]
+    assert summary_detail["identity_sufficiency_summary"]["status"] == "unknown"
+    assert summary_detail["identity_sufficiency_summary"]["blocker_count"] >= 1
     assert summary_detail["mutation_enablement"]["enablement_ready"] is False
     assert summary_detail["mutation_enablement"]["scope_note"].startswith("The UI remains preview-only")
     assert summary_detail["mutation_enablement"]["operational_readiness"]["status"] == "blocked"
@@ -2568,6 +2570,8 @@ def test_ui_detail_assurance_can_align_with_configured_boundary(tmp_path):
         f"chronicle review approve --event {ids['runtime_summary_event_id']}"
     )
     assert "Align boundary" in review_detail["review_step_summary"]["completed_steps"]
+    assert review_detail["identity_sufficiency_summary"]["status"] == "sufficient"
+    assert review_detail["identity_sufficiency_summary"]["assurance_status"] == "boundary_aligned"
     assert review_detail["auth_boundary_notice"]["status"] == "boundary_aligned"
     assert review_detail["auth_boundary_notice"]["capability_status_summary_key"] == (
         "ui.review_capability.status.ready"
@@ -3033,6 +3037,9 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "function renderReviewStepSummaryNotice(record)" in html
     assert "label('notice.review_steps', 'Review Steps')" in html
     assert "detailLine('Current step', summary.current_step_label || '')" in html
+    assert "function renderIdentitySufficiencyNotice(record)" in html
+    assert "label('notice.identity_sufficiency', 'Identity Sufficiency')" in html
+    assert "detailLine('Assurance status', summary.assurance_status || '')" in html
     assert "__chronicleDetailTrail" in html
     assert "readinessBadge" in html
     assert "reviewCapabilityBadge" in html
