@@ -300,6 +300,12 @@ chronicle ui \
 - confirm graph-edge rows expose relation, source node id, target node id, and property summaries as read-only graph-index cues
 - confirm route navigation stays read-only and does not imply writable graph-index operations, graph derivation execution, or external runtime activity
 
+### 26. AI Index Graph Edge Detail
+
+- confirm the graph-edge summary rail can open the latest detail route under `/api/ai-index/graph-edges/<source>/<relation>/<target>`
+- confirm graph-edge detail exposes source and target graph-node links together with source-neighbor and target-neighbor counts as read-only derived context
+- confirm graph-edge detail keeps property inspection local-only and does not imply writable graph-index operations or external runtime activity
+
 ## Evidence to Record
 
 For a validation pass, record:
