@@ -9033,6 +9033,7 @@ function renderReviewQueueRow(row, endpoint) {{
   const preview = row.action_preview_summary || {{}};
   const previewActions = Array.isArray(preview.actions) ? preview.actions : [];
   const authReadiness = row.auth_boundary_notice || {{}};
+  const assurance = row.latest_identity_assurance || {{}};
   const mutationEnablement = row.mutation_enablement_summary || {{}};
   const responseMetadata = row.response_metadata_summary || {{}};
   const warnList = Array.isArray(capability.warnings) ? capability.warnings : [];
@@ -9045,6 +9046,7 @@ function renderReviewQueueRow(row, endpoint) {{
   const readinessBadge = packageReadinessBadge(readiness);
   const parityBadge = reviewParityBadge(parity);
   const authBadge = authReadinessBadge(authReadiness.status || '');
+  const assuranceBadge = identityAssuranceBadge(assurance.status || '');
   const reviewerEnforcementBadge = row.reviewer_enforcement_status
     ? badge(reviewerBoundaryStatusLabel('reviewer_enforcement', row.reviewer_enforcement_status), 'badge-neutral')
     : '';
@@ -9059,6 +9061,7 @@ function renderReviewQueueRow(row, endpoint) {{
     + '<td>' + cellStack([
       '<div><span class="id">' + esc(row.target_event_id || '') + '</span></div>',
       reviewKindBadge,
+      cellTitle(capability.status || ''),
       cellMeta(row.target_summary || ''),
       cellDetails(label('button.more_details', 'More details'), [
         responseSummaryLine(responseMetadata),
@@ -9066,12 +9069,16 @@ function renderReviewQueueRow(row, endpoint) {{
     ]) + '</td>'
     + '<td>' + cellStack([
       statusBadge,
+      readinessBadge,
+      authBadge,
+      parityBadge,
       reviewerEnforcementBadge,
       reviewerGateBadge,
+      cellMeta(capability.message || ''),
+      cellMeta(readiness.message || ''),
       cellDetails(label('button.more_details', 'More details'), [
-        readinessBadge,
-        parityBadge,
-        authBadge,
+        cellMeta(authReadiness.message || ''),
+        cellMeta(parity.message || ''),
         renderReviewerBoundaryDrilldownSummary(row.reviewer_boundary_drilldown_summary || {{}}),
       ]),
     ]) + '</td>'
@@ -9085,16 +9092,25 @@ function renderReviewQueueRow(row, endpoint) {{
         extraButtons: reviewRowShortcutButtons,
       }})),
       cellDetails(label('button.more_details', 'More details'), [
+        cellMeta('preview=' + String(preview.status || '')),
+        cellMeta('operational=' + String(mutationEnablement.operational_status || '')),
+        cellMeta('remaining=' + String(mutationEnablement.remaining_count ?? '')),
         cellMeta(renderMutationEnablementSummary(mutationEnablement)),
       ]),
     ]) + '</td>'
     + '<td>' + cellStack([
       warnBadges,
+      cellMeta(authReadiness.status || ''),
       cellDetails(label('button.more_details', 'More details'), [
         cellMeta(warnDetails.map(item => item.message).join(' | ') || warnList.join(', ') || '(none)'),
       ]),
     ]) + '</td>'
-    + '<td>' + reviewerCell(row.latest_reviewer_identity, row.latest_reviewer || '') + '</td>'
+    + '<td>' + cellStack([
+      assuranceBadge,
+      reviewerCell(row.latest_reviewer_identity, row.latest_reviewer || ''),
+      cellMeta(assurance.message || ''),
+      cellMeta((row.latest_reviewer_identity && row.latest_reviewer_identity.kind) || ''),
+    ]) + '</td>'
     + '</tr>';
 }}
 function renderSummaryJobRow(row, endpoint) {{
@@ -9300,7 +9316,7 @@ function renderReviewQueueTable(endpoint, rows) {{
       label('label.table_status', 'Status'),
       label('label.table_preview', 'Preview'),
       label('label.table_warnings', 'Warnings'),
-      label('label.table_latest_reviewer', 'Latest Reviewer'),
+      label('label.table_latest_reviewer', 'Reviewer / Assurance'),
     ], sorted.map(row => renderReviewQueueRow(row, endpoint)).join('')),
   ]);
 }}

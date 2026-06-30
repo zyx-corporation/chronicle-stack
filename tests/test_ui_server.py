@@ -2769,6 +2769,9 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "function renderSummaryJobsTable(endpoint, rows)" in html
     assert "cellTitle(posture.status || '')" in html
     assert "cellMeta(handoff.status || trial.status || '')" in html
+    assert "cellTitle(capability.status || '')" in html
+    assert "cellMeta('preview=' + String(preview.status || ''))" in html
+    assert "cellMeta(assurance.message || '')" in html
     assert "cellMeta(packageReadiness.message || '')" in html
     assert "cellMeta('auth=' + String(authReadinessStatus || ''))" in html
     assert "function renderRuntimeRecordsWorkspacePanel(summary)" in html
@@ -3035,7 +3038,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "label('label.response_json', 'Response JSON')" in html
     assert "label('label.table_detail', 'Detail')" in html
     assert "label('label.table_event', 'Event')" in html
-    assert "label('label.table_latest_reviewer', 'Latest Reviewer')" in html
+    assert "label('label.table_latest_reviewer', 'Reviewer / Assurance')" in html
     assert "label('label.table_summary_job', 'Summary Job')" in html
     assert "label('section.recovery_contract', 'Recovery Contract')" in html
     assert "label('section.review_action', 'Review Action')" in html
@@ -3282,6 +3285,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "reviewQueueSliceButtons()," in html
     assert "summaryJobsSliceButtons()," in html
     assert "label('label.table_review_route', 'Route / Handoff')" in html
+    assert "label('label.table_latest_reviewer', 'Reviewer / Assurance')" in html
     assert "Auth aligned" in html
     assert "Auth advisory" in html
     assert "label('button.open_review', 'Open review')" in html
