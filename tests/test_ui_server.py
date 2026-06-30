@@ -2806,6 +2806,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "function renderDetailActionPreviewControls(preview, actions, mutationTargetEventId)" in html
     assert "function renderDetailActionPreviewList(preview, actions)" in html
     assert "function renderDetailActionPreviewNotice(record)" in html
+    assert "function noticeSectionGroup(sections)" in html
     assert "async function responseJsonOrEmpty(response)" in html
     assert "async function postJson(path, body = undefined)" in html
     assert "function appendCommandFeedback(target, command, copied)" in html
