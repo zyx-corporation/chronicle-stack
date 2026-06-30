@@ -179,6 +179,15 @@ chronicle ui \
 - confirm `Federation Outbox` opens with the same workspace summary rail and preserves outbox type counts alongside preview-only counts
 - confirm inbox/outbox route summaries remain descriptive and do not imply shipment, import, or permission grant
 
+### 10. Artifacts Workspace
+
+- confirm `Artifacts Workspace` opens with a workspace summary rail instead of the generic fallback table
+- confirm artifact rows expose title/id/path context before detail is opened
+- confirm status cells expose review state, visibility, and tag context as list-level locator cues
+- confirm version cells expose current version, total version count, and recent update timestamp before detail is opened
+- confirm proposals cells expose pending and total proposal counts plus latest proposal-event context
+- confirm source cells expose artifact type, source type, and source reference as semantic locator context
+
 ## Evidence to Record
 
 For a validation pass, record:
