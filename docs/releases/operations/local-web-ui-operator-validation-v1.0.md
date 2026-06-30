@@ -293,6 +293,13 @@ chronicle ui \
 - confirm graph-node rows expose node id, label list, source title, and property-key summary as read-only graph-index cues
 - confirm detail navigation opens the latest graph node without implying writable graph-index operations, graph derivation execution, or external runtime activity
 
+### 25. AI Index Graph Edges
+
+- confirm `/api/ai-index-graph-edges` opens with a dedicated workspace route instead of the generic fallback table
+- confirm the workspace summary rail exposes edge count, source-node count, target-node count, relation breakdowns, and property-key breakdowns before detail JSON is opened
+- confirm graph-edge rows expose relation, source node id, target node id, and property summaries as read-only graph-index cues
+- confirm route navigation stays read-only and does not imply writable graph-index operations, graph derivation execution, or external runtime activity
+
 ## Evidence to Record
 
 For a validation pass, record:
