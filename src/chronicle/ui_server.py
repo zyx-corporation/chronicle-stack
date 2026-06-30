@@ -9365,17 +9365,20 @@ function compareReviewerLabel(left, right) {{
 function compareReviewTargetDesc(left, right) {{
   return compareTextDesc(left.target_event_id, right.target_event_id);
 }}
+function attentionRankFromStatuses(reviewStatus, packageStatus, parityStatus) {{
+  if (parityStatus === 'drift_detected') return 0;
+  if (reviewStatus === 'advisory_only') return 1;
+  if (reviewStatus === 'ready') return 2;
+  if (packageStatus === 'package_context_available') return 3;
+  if (reviewStatus === 'resolved') return 4;
+  return 5;
+}}
 function reviewAttentionRank(row) {{
   const capability = row.review_capability || {{}};
   const readiness = row.package_readiness_summary || {{}};
   const parity = row.cli_parity_summary || {{}};
-  if (parity.status === 'drift_detected') return 0;
   if (row.review_kind === 'review_requested') return 0;
-  if (capability.status === 'advisory_only') return 1;
-  if (capability.status === 'ready') return 2;
-  if (readiness.status === 'package_context_available') return 3;
-  if (capability.status === 'resolved') return 4;
-  return 5;
+  return attentionRankFromStatuses(capability.status, readiness.status, parity.status);
 }}
 function reviewParityRank(row) {{
   const parity = row.cli_parity_summary || {{}};
@@ -9467,15 +9470,11 @@ function sortReviewRows(rows) {{
   }});
 }}
 function summaryJobAttentionRank(row) {{
-  const reviewStatus = String(row.review_capability_status || '');
-  const packageStatus = String(row.package_readiness_status || '');
-  const parityStatus = String(row.cli_parity_status || '');
-  if (parityStatus === 'drift_detected') return 0;
-  if (reviewStatus === 'advisory_only') return 1;
-  if (reviewStatus === 'ready') return 2;
-  if (packageStatus === 'package_context_available') return 3;
-  if (reviewStatus === 'resolved') return 4;
-  return 5;
+  return attentionRankFromStatuses(
+    String(row.review_capability_status || ''),
+    String(row.package_readiness_status || ''),
+    String(row.cli_parity_status || ''),
+  );
 }}
 function compareSummaryJobDesc(left, right) {{
   return compareTextDesc(left.summary_job_id, right.summary_job_id);

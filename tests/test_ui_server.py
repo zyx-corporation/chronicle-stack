@@ -2741,6 +2741,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "sortRuntimeRows" in html
     assert "function mutationSummaryRank(summary)" in html
     assert "function authStatusRank(status)" in html
+    assert "function attentionRankFromStatuses(reviewStatus, packageStatus, parityStatus)" in html
     assert "includesQuery" in html
     assert "endpointFilterTargets" in html
     assert "endpointSortDefaults" in html
