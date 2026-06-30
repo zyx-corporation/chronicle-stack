@@ -244,6 +244,13 @@ chronicle ui \
 - confirm target cells expose target kind, target id, and related context linkage before detail is opened
 - confirm source cells expose CLI apply guidance, artifact linkage, and applied status without implying direct in-UI mutation capability
 
+### 18. Package Review
+
+- confirm `/api/package-review` opens with a dedicated multi-panel route instead of response JSON only
+- confirm the summary panel exposes package review status, reviewed record count, target environment, and output classification before raw JSON is opened
+- confirm warning panels expose warning codes and finding rows expose summary, severity, record id, and recommendation as read-only review cues
+- confirm route navigation keeps `Open Review Queue` and `Open Runtime Config` available without implying mutation capability from this package review surface
+
 ## Evidence to Record
 
 For a validation pass, record:
