@@ -12473,7 +12473,7 @@ const detailPathResolvers = {{
   '/api/trust-nodes': row => row.node_id ? '/api/trust-nodes/' + encodeURIComponent(row.node_id) : null,
   '/api/trust-relations': row => row.relation_id ? '/api/trust-relations/' + encodeURIComponent(row.relation_id) : null,
   '/api/runtime-records': row => row.event_id ? '/api/runtime-records/' + encodeURIComponent(row.event_id) : null,
-  '/api/review-queue': row => row.event_id ? '/api/review-queue/' + encodeURIComponent(row.event_id) : null,
+  '/api/review-queue': row => row.target_event_id ? '/api/review-queue/' + encodeURIComponent(row.target_event_id) : null,
 }};
 function detailPath(endpoint, row) {{
   const resolver = detailPathResolvers[endpoint];
