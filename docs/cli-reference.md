@@ -419,6 +419,7 @@ read-only endpoint:
 - summary jobs list では reviewer identity / session assurance も matching review target 由来の badge として read-only で確認できます。
 - review queue / runtime records / summary jobs list はいずれも先頭列の primary `Open Detail` button から row detail に直接入れ、隣の JSON button は raw payload inspection を維持します。
 - review detail と review-backed runtime / summary detail では `Review Steps` notice により current step, next action, suggested command, completed steps, remaining steps を read-only に確認できます。
+- review detail と review-backed runtime / summary detail では `Identity Sufficiency` notice により auth status, assurance status, blocker count, blocked-by reasons, next action を read-only に確認できます。
 - review detail / summary detail では `Auth Readiness` notice により current preview auth boundary, reviewer identity assurance, blocker, next step を read-only で確認できます。
 - runtime record detail でも matching review target がある場合は同じ `Auth Readiness` notice を表示します。
 この read-only semantic boundary と CLI parity の扱いは [ADR-0019](adr/0019-local-ui-review-semantics-parity-boundary.md) で固定しています。
