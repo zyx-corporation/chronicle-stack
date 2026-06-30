@@ -8944,6 +8944,10 @@ function renderRuntimeRecordRow(row, endpoint) {{
   const previewActions = Array.isArray(actionPreview.actions) ? actionPreview.actions : [];
   const mutationEnablement = row.mutation_enablement_summary || {{}};
   const responseMetadata = row.response_metadata_summary || {{}};
+  const posture = row.posture_role || {{}};
+  const boundary = row.downstream_boundary_note || {{}};
+  const trial = row.trial_sufficiency_summary || {{}};
+  const handoff = row.handoff_summary || {{}};
   const sourceBadges = sourceCountBadges(preview.source_counts || {{}});
   const authBadge = row.auth_readiness_status === 'boundary_aligned'
     ? jumpBadge(label('badge.auth_aligned', 'Auth aligned'), 'badge-ready', '/api/review-queue', 'reviewQueue', 'boundary_aligned')
@@ -8974,6 +8978,17 @@ function renderRuntimeRecordRow(row, endpoint) {{
     + '<td><span class="id">' + esc(row.event_id || '') + '</span></td>'
     + '<td>' + kindBadge + '</td>'
     + '<td>' + cellStack([
+      cellTitle(posture.status || ''),
+      cellMeta(boundary.status || ''),
+      cellMeta(handoff.status || trial.status || ''),
+      cellDetails(label('button.more_details', 'More details'), [
+        cellMeta(posture.message || ''),
+        cellMeta(boundary.message || ''),
+        cellMeta(trial.message || ''),
+        cellMeta(handoff.message || ''),
+      ]),
+    ]) + '</td>'
+    + '<td>' + cellStack([
       authBadge,
       mutationBadge,
       reviewerEnforcementBadge,
@@ -8992,13 +9007,21 @@ function renderRuntimeRecordRow(row, endpoint) {{
         responseSummaryLine(responseMetadata),
       ]),
     ]) + '</td>'
-    + '<td>' + previewCell(actionPreview, previewActions, previewButtonsConfig(row, {{
+    + '<td>' + cellStack([
+      previewCell(actionPreview, previewActions, previewButtonsConfig(row, {{
       recordId: row.review_target_event_id || row.event_id || '',
       fieldPrefix: 'runtime-records',
       successDetail: '/api/runtime-records/' + esc(row.event_id || ''),
       previewTarget: 'runtime-records-action-preview-response',
       extraButtons: runtimeRowShortcutButtons,
-    }})) + '</td>'
+      }})),
+      cellDetails(label('button.more_details', 'More details'), [
+        cellMeta('trial=' + String(trial.status || '')),
+        cellMeta('import=' + String(trial.import_ready ?? '')),
+        cellMeta('handoff commands=' + String(handoff.downstream_command_count ?? 0)),
+        cellMeta('reviewed files=' + String(handoff.reviewed_file_count ?? 0)),
+      ]),
+    ]) + '</td>'
     + '</tr>';
 }}
 function renderReviewQueueRow(row, endpoint) {{
@@ -9089,6 +9112,9 @@ function renderSummaryJobRow(row, endpoint) {{
   const identityBadge = identityAssuranceBadge(identityAssuranceStatus);
   const packageBadge = packageStatusBadge(packageStatus);
   const responseMetadata = row.response_metadata_summary || {{}};
+  const packageReadiness = row.package_readiness_summary || {{}};
+  const authAdvisory = row.auth_advisory_summary || {{}};
+  const identitySummary = row.identity_assurance_summary || {{}};
   const reviewerEnforcementBadge = row.reviewer_enforcement_status
     ? badge(reviewerBoundaryStatusLabel('reviewer_enforcement', row.reviewer_enforcement_status), 'badge-neutral')
     : '';
@@ -9104,19 +9130,24 @@ function renderSummaryJobRow(row, endpoint) {{
     + '<td>' + button + (path ? detailButton(path) : '') + '</td>'
     + '<td>' + cellStack(['<div><span class="id">' + esc(row.summary_job_id || '') + '</span></div>', cellTitle(row.title || ''), targetButton]) + '</td>'
     + '<td>' + cellStack([
-      cellMeta(row.status || ''),
+      cellTitle(row.status || ''),
       reviewBadge,
+      packageBadge,
       reviewerEnforcementBadge,
       reviewerGateBadge,
       cellDetails(label('button.more_details', 'More details'), [
         authBadge,
-        packageBadge,
         mutationEnablementBadge(mutationEnablement),
         cellMeta(renderMutationEnablementSummary(mutationEnablement)),
         renderReviewerBoundaryDrilldownSummary(row.reviewer_boundary_drilldown_summary || {{}}),
       ]),
     ]) + '</td>'
-    + '<td>' + summaryIdentityCell(identityBadge, row.latest_reviewer_identity) + '</td>'
+    + '<td>' + cellStack([
+      identityBadge,
+      cellMeta(packageReadiness.message || ''),
+      cellMeta(authAdvisory.message || ''),
+      cellMeta(identitySummary.message || ''),
+    ]) + '</td>'
     + '<td>' + previewCell(preview, previewActions, previewButtonsConfig(row, {{
       recordId: row.review_target_event_id || '',
       fieldPrefix: 'summary-jobs',
@@ -9125,8 +9156,10 @@ function renderSummaryJobRow(row, endpoint) {{
       extraButtons: summaryRowShortcutButtons,
     }})) + '</td>'
     + '<td>' + cellStack([
-      cellMeta(row.runtime_provider_kind || ''),
+      cellTitle(row.runtime_provider_kind || ''),
       cellMeta('sources: ' + String(row.summary_source_count ?? 0)),
+      cellMeta('auth=' + String(authReadinessStatus || '')),
+      cellMeta('review=' + String(reviewStatus || '')),
       cellDetails(label('button.more_details', 'More details'), [
         responseSummaryLine(responseMetadata),
       ]),
@@ -9195,9 +9228,10 @@ function renderRuntimeRecordsTable(endpoint, rows) {{
       label('label.table_detail', 'Detail'),
       label('label.table_event', 'Event'),
       label('label.table_kind', 'Kind'),
+      label('label.table_status', 'Posture'),
       label('label.table_auth', 'Auth'),
       label('label.table_preview', 'Preview'),
-      label('label.table_review_route', 'Review Route'),
+      label('label.table_review_route', 'Route / Handoff'),
     ], sorted.map(row => renderRuntimeRecordRow(row, endpoint)).join('')),
   ]);
 }}
@@ -9331,7 +9365,7 @@ function renderSummaryJobsTable(endpoint, rows) {{
       label('label.table_detail', 'Detail'),
       label('label.table_summary_job', 'Summary Job'),
       label('label.table_status', 'Status'),
-      label('label.table_identity', 'Identity'),
+      label('label.table_identity', 'Workspace'),
       label('label.table_preview', 'Preview'),
       label('label.table_runtime', 'Runtime'),
     ], sorted.map(row => renderSummaryJobRow(row, endpoint)).join('')),
