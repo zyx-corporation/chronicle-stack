@@ -3040,6 +3040,8 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "'/api/boundary': renderBoundaryTable," in html
     assert "'/api/lifecycle': renderLifecycleTable," in html
     assert "'/api/artifacts': renderArtifactsTable," in html
+    assert "function renderRuntimeConfigRoute(payload)" in html
+    assert "if (endpoint === '/api/runtime-config') return renderRuntimeConfigRoute(payload);" in html
     assert "function renderPackageReview(payload)" in html
     assert "if (endpoint === '/api/package-review') return renderPackageReview(payload);" in html
     assert "if (endpoint === '/api/federation-package-preview') return renderFederationPackagePreview(payload);" in html
