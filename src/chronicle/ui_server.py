@@ -9409,25 +9409,25 @@ function authStatusRank(status) {{
   if (value) return 2;
   return 3;
 }}
+function compareRuntimeReadiness(left, right, primary = 'mutation') {{
+  const mutationCompare = mutationSummaryRank(left.mutation_enablement_summary) - mutationSummaryRank(right.mutation_enablement_summary);
+  const authCompare = authStatusRank(left.auth_readiness_status) - authStatusRank(right.auth_readiness_status);
+  if (primary === 'auth') {{
+    if (authCompare !== 0) return authCompare;
+    if (mutationCompare !== 0) return mutationCompare;
+  }} else {{
+    if (mutationCompare !== 0) return mutationCompare;
+    if (authCompare !== 0) return authCompare;
+  }}
+  return compareTextDesc(left.event_id, right.event_id);
+}}
 function sortRuntimeRows(rows) {{
   const sortValue = currentSortValue('/api/runtime-records');
   if (sortValue === 'mutation') {{
-    return sortRows(rows, (left, right) => {{
-      const mutationCompare = mutationSummaryRank(left.mutation_enablement_summary) - mutationSummaryRank(right.mutation_enablement_summary);
-      if (mutationCompare !== 0) return mutationCompare;
-      const authCompare = authStatusRank(left.auth_readiness_status) - authStatusRank(right.auth_readiness_status);
-      if (authCompare !== 0) return authCompare;
-      return compareTextDesc(left.event_id, right.event_id);
-    }});
+    return sortRows(rows, (left, right) => compareRuntimeReadiness(left, right, 'mutation'));
   }}
   if (sortValue === 'auth') {{
-    return sortRows(rows, (left, right) => {{
-      const authCompare = authStatusRank(left.auth_readiness_status) - authStatusRank(right.auth_readiness_status);
-      if (authCompare !== 0) return authCompare;
-      const mutationCompare = mutationSummaryRank(left.mutation_enablement_summary) - mutationSummaryRank(right.mutation_enablement_summary);
-      if (mutationCompare !== 0) return mutationCompare;
-      return compareTextDesc(left.event_id, right.event_id);
-    }});
+    return sortRows(rows, (left, right) => compareRuntimeReadiness(left, right, 'auth'));
   }}
   if (sortValue === 'kind') {{
     return sortRows(rows, (left, right) => {{
