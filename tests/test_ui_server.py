@@ -2825,6 +2825,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "function reloadCurrentEndpoint()" in html
     assert "function handleViewClick(event)" in html
     assert "function handleDetailClick(event)" in html
+    assert "if (event.target.dataset.detailNav) loadDetail(event.target.dataset.detailNav);" in html
     assert "function handleViewInput(event)" in html
     assert "function handleViewChange(event)" in html
     assert "function renderPanel(body)" in html
@@ -2969,6 +2970,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "function endpointLatestResponseCluster(endpoint, path, labelKey, fallbackLabel)" in html
     assert "function overviewCountButton(text, count, cls, endpoint, filterTarget, filterValue)" in html
     assert "function detailNavButton(path, labelText)" in html
+    assert "function detailButton(path)" in html
     assert "function reviewDetailButton(eventId)" in html
     assert "function reviewQueueStatusButtons(status, prefix = '')" in html
     assert "function relatedDetailButton(record, prefix, fallbackLabel = '')" in html
@@ -3239,6 +3241,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "overviewTriageNavigationCluster(triage)" in html
     assert "overviewTriageJumpButtons()" in html
     assert "data-detail-nav" in html
+    assert "'<td>' + button + (path ? detailButton(path) : '') + '</td>'" in html
     assert "data-detail-trail" in html
     assert "data-back-view" in html
     assert "uiLabel('No matching runtime records for current filter.')" in html
