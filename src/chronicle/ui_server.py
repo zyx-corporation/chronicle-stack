@@ -8549,6 +8549,29 @@ function renderWorkspaceTableControls(toolbarHtml, buttonRows, query, rows, empt
       previewConfig.disabledMessage,
     );
 }}
+function responseMetadataQueryTokens(responseMetadata) {{
+  return [
+    responseMetadata.response_id || '',
+    responseMetadata.finish_reason || '',
+    responseMetadata.provider_status || '',
+    String(responseMetadata.usage_input_tokens ?? ''),
+    String(responseMetadata.usage_output_tokens ?? ''),
+    String(responseMetadata.usage_total_tokens ?? ''),
+    ...(Array.isArray(responseMetadata.response_keys) ? responseMetadata.response_keys : []),
+  ];
+}}
+function reviewerIdentityQueryTokens(row) {{
+  return [
+    (row.latest_reviewer_identity && row.latest_reviewer_identity.kind) || '',
+    (row.latest_reviewer_identity && row.latest_reviewer_identity.label) || row.latest_reviewer || '',
+  ];
+}}
+function rowMatchesWorkspaceQuery(query, row, queryTokens) {{
+  if (!query) return true;
+  if (matchesReviewerBoundaryFilter(query, row.reviewer_enforcement_status, row.reviewer_validation_gate_status)) return true;
+  if (query.startsWith('reviewer_enforcement:') || query.startsWith('reviewer_gate:')) return false;
+  return includesQuery(queryTokens, query);
+}}
 function renderRuntimeRecordRow(row, endpoint) {{
   const button = detailJsonButton(endpoint, row);
   const preview = row.runtime_record_preview || {{}};
@@ -8748,14 +8771,11 @@ function renderRuntimeRecordsTable(endpoint, rows) {{
   const payload = window.__chronicleRoutePayload || {{}};
   const summary = payload.runtime_records_summary || {{}};
   const filtered = filterRows(rows, row => {{
-    if (!query) return true;
-    if (matchesReviewerBoundaryFilter(query, row.reviewer_enforcement_status, row.reviewer_validation_gate_status)) return true;
-    if (query.startsWith('reviewer_enforcement:') || query.startsWith('reviewer_gate:')) return false;
     const preview = row.runtime_record_preview || {{}};
     const actionPreview = row.action_preview_summary || {{}};
     const mutationEnablement = row.mutation_enablement_summary || {{}};
     const responseMetadata = row.response_metadata_summary || {{}};
-    return includesQuery([
+    return rowMatchesWorkspaceQuery(query, row, [
       row.event_id || '',
       row.runtime_record_kind || '',
       row.auth_readiness_status || '',
@@ -8771,14 +8791,8 @@ function renderRuntimeRecordsTable(endpoint, rows) {{
       mutationEnablement.identity_proof_status || '',
       String(mutationEnablement.remaining_count ?? ''),
       String(mutationEnablement.blocked_status_code ?? ''),
-      responseMetadata.response_id || '',
-      responseMetadata.finish_reason || '',
-      responseMetadata.provider_status || '',
-      String(responseMetadata.usage_input_tokens ?? ''),
-      String(responseMetadata.usage_output_tokens ?? ''),
-      String(responseMetadata.usage_total_tokens ?? ''),
-      ...(Array.isArray(responseMetadata.response_keys) ? responseMetadata.response_keys : []),
-    ], query);
+      ...responseMetadataQueryTokens(responseMetadata),
+    ]);
   }});
   const sorted = sortRuntimeRows(filtered);
   const mutationEnabled = sorted.some(row => row.ui_mutation_enabled);
@@ -8825,16 +8839,13 @@ function renderReviewQueueTable(endpoint, rows) {{
   const payload = window.__chronicleRoutePayload || {{}};
   const summary = payload.review_queue_summary || {{}};
   const filtered = filterRows(rows, row => {{
-    if (!query) return true;
-    if (matchesReviewerBoundaryFilter(query, row.reviewer_enforcement_status, row.reviewer_validation_gate_status)) return true;
-    if (query.startsWith('reviewer_enforcement:') || query.startsWith('reviewer_gate:')) return false;
     const capability = row.review_capability || {{}};
     const readiness = row.package_readiness_summary || {{}};
     const parity = row.cli_parity_summary || {{}};
     const authReadiness = row.auth_boundary_notice || {{}};
     const mutationEnablement = row.mutation_enablement_summary || {{}};
     const responseMetadata = row.response_metadata_summary || {{}};
-    return includesQuery([
+    return rowMatchesWorkspaceQuery(query, row, [
       row.target_event_id || '',
       row.target_summary || '',
       row.review_kind || '',
@@ -8848,16 +8859,9 @@ function renderReviewQueueTable(endpoint, rows) {{
       mutationEnablement.operational_status || '',
       mutationEnablement.identity_proof_status || '',
       (row.latest_identity_assurance && row.latest_identity_assurance.status) || '',
-      (row.latest_reviewer_identity && row.latest_reviewer_identity.kind) || '',
-      (row.latest_reviewer_identity && row.latest_reviewer_identity.label) || row.latest_reviewer || '',
-      responseMetadata.response_id || '',
-      responseMetadata.finish_reason || '',
-      responseMetadata.provider_status || '',
-      String(responseMetadata.usage_input_tokens ?? ''),
-      String(responseMetadata.usage_output_tokens ?? ''),
-      String(responseMetadata.usage_total_tokens ?? ''),
-      ...(Array.isArray(responseMetadata.response_keys) ? responseMetadata.response_keys : []),
-    ], query);
+      ...reviewerIdentityQueryTokens(row),
+      ...responseMetadataQueryTokens(responseMetadata),
+    ]);
   }});
   const sorted = sortReviewRows(filtered);
   const mutationEnabled = sorted.some(row => row.ui_mutation_enabled);
@@ -8904,12 +8908,9 @@ function renderSummaryJobsTable(endpoint, rows) {{
   const payload = window.__chronicleRoutePayload || {{}};
   const summary = payload.summary_jobs_summary || {{}};
   const filtered = filterRows(rows, row => {{
-    if (!query) return true;
-    if (matchesReviewerBoundaryFilter(query, row.reviewer_enforcement_status, row.reviewer_validation_gate_status)) return true;
-    if (query.startsWith('reviewer_enforcement:') || query.startsWith('reviewer_gate:')) return false;
     const responseMetadata = row.response_metadata_summary || {{}};
     const mutationEnablement = row.mutation_enablement_summary || {{}};
-    return includesQuery([
+    return rowMatchesWorkspaceQuery(query, row, [
       row.summary_job_id || '',
       row.title || '',
       row.status || '',
@@ -8923,18 +8924,11 @@ function renderSummaryJobsTable(endpoint, rows) {{
       mutationEnablement.operational_status || '',
       mutationEnablement.identity_proof_status || '',
       String(mutationEnablement.remaining_count ?? ''),
-      (row.latest_reviewer_identity && row.latest_reviewer_identity.kind) || '',
-      (row.latest_reviewer_identity && row.latest_reviewer_identity.label) || '',
+      ...reviewerIdentityQueryTokens(row),
       row.cli_parity_status || '',
       row.runtime_provider_kind || '',
-      responseMetadata.response_id || '',
-      responseMetadata.finish_reason || '',
-      responseMetadata.provider_status || '',
-      String(responseMetadata.usage_input_tokens ?? ''),
-      String(responseMetadata.usage_output_tokens ?? ''),
-      String(responseMetadata.usage_total_tokens ?? ''),
-      ...(Array.isArray(responseMetadata.response_keys) ? responseMetadata.response_keys : []),
-    ], query);
+      ...responseMetadataQueryTokens(responseMetadata),
+    ]);
   }});
   const sorted = sortSummaryJobRows(filtered);
   const mutationEnabled = sorted.some(row => row.ui_mutation_enabled);
