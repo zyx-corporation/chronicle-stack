@@ -360,7 +360,7 @@ read-only endpoint:
 
 `chronicle ui-smoke` はサーバーを起動せず、ブラウザも使わず、local UI の read-only データ面だけを検証します。
 
-`/api/review-queue` は `review_status=needs_review` の record を返します。既定では preview-only ですが、explicit enable 条件が揃うと GUI review mutation route の server-side gate が有効になります。review detail と review queue / summary jobs list の両方で、そのときだけ明示 reviewer context form と action buttons が現れます。`suggested_cli_family` では引き続き関連 CLI family の目安も表示します。
+`/api/review-queue` は `review_status=needs_review` の record を返します。既定では preview-only ですが、explicit enable 条件が揃うと GUI review mutation route の server-side gate が有効になります。review detail と review queue / summary jobs list の両方で、そのときだけ明示 reviewer context form と action buttons が現れます。workspace table の先頭列には primary `Open Detail` button もあり、review queue / runtime records / summary jobs の各 row から detail に直接入れます。`suggested_cli_family` では引き続き関連 CLI family の目安も表示します。
 
 `/api/ui-boundary` は bind scope, mutation capability flag, explicit mutation enable flag 由来の `mutation_enabled`, auth/authz mode を read-only で返します。`mutation_enabled=true` は `--enable-ui-mutation` と required gate 条件がすべて揃ったときだけ成立します。placeholder / derived config により `auth_mode` / `authorization_mode` / `session_gating` を明示できます。あわせて `auth_boundary_summary` で auth/authz placeholder の derived status / blockers / next steps も返します。overview ではさらに `auth_boundary_overview` / `identity_boundary_summary` により auth warning / reviewer identity / session alignment の集約状態も読めます。
 - 同じ payload には `reviewer_context_requirements` と `mutation_blocker_details` も含まれ、現在の local write-path が要求する reviewer field / accepted reviewer kind / session label requirement を read-only に確認できます。
@@ -417,6 +417,7 @@ read-only endpoint:
 - review queue list では `auth` badge により `Auth advisory` / `Auth aligned` の slice を detail を開かずに辿れます。
 - runtime records list / summary jobs list でも同じ auth readiness badge vocabulary を使い、matching review target がある行だけ advisory/aligned 状態を read-only で辿れます。
 - summary jobs list では reviewer identity / session assurance も matching review target 由来の badge として read-only で確認できます。
+- review queue / runtime records / summary jobs list はいずれも先頭列の primary `Open Detail` button から row detail に直接入れ、隣の JSON button は raw payload inspection を維持します。
 - review detail / summary detail では `Auth Readiness` notice により current preview auth boundary, reviewer identity assurance, blocker, next step を read-only で確認できます。
 - runtime record detail でも matching review target がある場合は同じ `Auth Readiness` notice を表示します。
 この read-only semantic boundary と CLI parity の扱いは [ADR-0019](adr/0019-local-ui-review-semantics-parity-boundary.md) で固定しています。
