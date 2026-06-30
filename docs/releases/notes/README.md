@@ -4,8 +4,8 @@
 
 ## Current Pointer
 
-- latest notes: `release-notes-v1.147.0.md`
-- paired status: `../status/release-status-v1.147.0.md`
+- latest notes: `release-notes-v1.148.0.md`
+- paired status: `../status/release-status-v1.148.0.md`
 - paired readiness: `../readiness/release-readiness-v1.133.md`
 - paired remaining: `../remaining/v1.133-release-remaining-issues.md`
 

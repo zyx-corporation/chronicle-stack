@@ -196,6 +196,14 @@ chronicle ui \
 - confirm actor cells expose decider, source event context, and chronicle id as operator traceability context
 - confirm target cells expose artifact linkage and source event linkage without implying mutation capability
 
+### 12. Contexts Workspace
+
+- confirm `Contexts Workspace` opens with a workspace summary rail instead of the generic fallback table
+- confirm context rows expose title, context id, and summary text before detail is opened
+- confirm status cells expose scope, visibility, and confidence as list-level reading cues
+- confirm proposal cells expose pending and total proposal counts plus latest proposal-event context
+- confirm source cells expose source type, source reference context, and tags without implying write capability
+
 ## Evidence to Record
 
 For a validation pass, record:
