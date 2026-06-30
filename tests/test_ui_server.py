@@ -2950,6 +2950,9 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "function emptyFilterState(query, rows, message, target)" in html
     assert "function listToolbar(endpoint, target, placeholder, sortOptions, filterChipHtml, query)" in html
     assert "function renderWorkspaceTableControls(toolbarHtml, buttonRows, query, rows, emptyMessage, target, mutationConfig, previewConfig)" in html
+    assert "function responseMetadataQueryTokens(responseMetadata)" in html
+    assert "function reviewerIdentityQueryTokens(row)" in html
+    assert "function rowMatchesWorkspaceQuery(query, row, queryTokens)" in html
     assert "function actionPreviewStatus(targetId, mutationEnabled, enabledMessage, disabledMessage)" in html
     assert "function tableHtml(headers, body)" in html
     assert "function packageReviewButtons(record)" in html
