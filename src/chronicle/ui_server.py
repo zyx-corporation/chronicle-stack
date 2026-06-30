@@ -8774,8 +8774,10 @@ function renderRuntimeRecordsTable(endpoint, rows) {{
       {{ value: 'auth', label: t('sort.runtime.auth') }},
       {{ value: 'kind', label: t('sort.runtime.kind') }},
     ], runtimeRecordsFilterChips(), query)
-    + sliceButtonRow(runtimeRecordsSliceButtons())
-    + sliceButtonRow(reviewerBoundaryListButtons('runtimeRecords', '/api/runtime-records', sorted))
+    + sliceButtonRows([
+      runtimeRecordsSliceButtons(),
+      reviewerBoundaryListButtons('runtimeRecords', '/api/runtime-records', sorted),
+    ])
     + emptyFilterState(query, sorted, uiLabel('No matching runtime records for current filter.'), 'runtimeRecords')
     + (
       mutationEnabled
@@ -8847,8 +8849,10 @@ function renderReviewQueueTable(endpoint, rows) {{
       {{ value: 'latest', label: t('sort.review.latest') }},
       {{ value: 'reviewer', label: t('sort.review.reviewer') }},
     ], reviewQueueFilterChips(), query)
-    + sliceButtonRow(reviewQueueSliceButtons())
-    + sliceButtonRow(reviewerBoundaryListButtons('reviewQueue', '/api/review-queue', sorted))
+    + sliceButtonRows([
+      reviewQueueSliceButtons(),
+      reviewerBoundaryListButtons('reviewQueue', '/api/review-queue', sorted),
+    ])
     + emptyFilterState(query, sorted, uiLabel('No matching review rows for current filter.'), 'reviewQueue')
     + (
       mutationEnabled
@@ -8918,8 +8922,10 @@ function renderSummaryJobsTable(endpoint, rows) {{
       {{ value: 'review', label: t('sort.summary.review') }},
       {{ value: 'title', label: t('sort.summary.title') }},
     ], summaryJobsFilterChips(), query)
-    + sliceButtonRow(summaryJobsSliceButtons())
-    + sliceButtonRow(reviewerBoundaryListButtons('summaryJobs', '/api/summary-jobs', sorted))
+    + sliceButtonRows([
+      summaryJobsSliceButtons(),
+      reviewerBoundaryListButtons('summaryJobs', '/api/summary-jobs', sorted),
+    ])
     + emptyFilterState(query, sorted, uiLabel('No matching summary jobs for current filter.'), 'summaryJobs')
     + (
       mutationEnabled
@@ -9629,6 +9635,9 @@ function filterChips(target, cls) {{
 }}
 function sliceButtonRow(buttons) {{
   return buttons.length > 0 ? '<p>' + buttons.join('') + '</p>' : '';
+}}
+function sliceButtonRows(rows) {{
+  return (rows || []).map(buttons => sliceButtonRow(buttons || [])).join('');
 }}
 function reviewerBoundaryListButtons(target, endpoint, rows) {{
   const enforcementCounts = {{}};
@@ -11420,7 +11429,9 @@ function renderOverviewRuntimeRecordsPanel(counts, runtimeRecords) {{
       renderQueryEngineTrialEscalationDrilldownSummary(runtimeRecords.query_engine_trial_escalation_drilldown_summary || {{}}),
     ])
     + metricsSection(metricsBody)
-    + sliceButtonRow(runtimeRecordsSliceButtons())
+    + sliceButtonRows([
+      runtimeRecordsSliceButtons(),
+    ])
     + endpointLatestResponseCluster('/api/runtime-records', runtimeRecords.latest_provider_response_detail_path, 'button.open_latest_runtime_response', 'Open Latest Runtime Response')
   );
 }}
@@ -11453,7 +11464,9 @@ function renderOverviewSummaryJobsPanel(counts, summaryJobs) {{
     + overviewSummaryJobCountButtons(counts, summaryJobs)
     + metricsSection(metricsBody)
     + detailLine('Source refs total', summaryJobs.summary_source_total ?? 0)
-    + sliceButtonRow(summaryJobsSliceButtons())
+    + sliceButtonRows([
+      summaryJobsSliceButtons(),
+    ])
     + endpointLatestResponseCluster('/api/summary-jobs', summaryJobs.latest_provider_response_detail_path, 'button.open_latest_summary_response', 'Open Latest Summary Response')
   );
 }}
@@ -11505,7 +11518,9 @@ function renderOverviewTriagePanel(triage, warningButtons, warningSummaries) {{
     + overviewWarningPriorityBadges(warningSummaries)
     + '</p>'
     + overviewTriageNavigationCluster(triage)
-    + sliceButtonRow(reviewQueueSliceButtons())
+    + sliceButtonRows([
+      reviewQueueSliceButtons(),
+    ])
     + '<p>' + overviewTriageJumpButtons() + '</p>'
   );
 }}

@@ -2807,6 +2807,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "function renderDetailActionPreviewList(preview, actions)" in html
     assert "function renderDetailActionPreviewNotice(record)" in html
     assert "function noticeSectionGroup(sections)" in html
+    assert "function sliceButtonRows(rows)" in html
     assert "async function responseJsonOrEmpty(response)" in html
     assert "async function postJson(path, body = undefined)" in html
     assert "function appendCommandFeedback(target, command, copied)" in html
@@ -2881,9 +2882,10 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "label('ui.label.dominant_validation_gate_status', 'Dominant gate status')" in html
     assert "reviewerBoundaryDominantButtons(drilldownSummaries)" in html
     assert "reviewerBoundaryFilterValue('reviewer_enforcement', status)" in html
-    assert "sliceButtonRow(reviewerBoundaryListButtons('runtimeRecords', '/api/runtime-records', sorted))" in html
-    assert "sliceButtonRow(reviewerBoundaryListButtons('reviewQueue', '/api/review-queue', sorted))" in html
-    assert "sliceButtonRow(reviewerBoundaryListButtons('summaryJobs', '/api/summary-jobs', sorted))" in html
+    assert "sliceButtonRows([" in html
+    assert "reviewerBoundaryListButtons('runtimeRecords', '/api/runtime-records', sorted)" in html
+    assert "reviewerBoundaryListButtons('reviewQueue', '/api/review-queue', sorted)" in html
+    assert "reviewerBoundaryListButtons('summaryJobs', '/api/summary-jobs', sorted)" in html
     assert "function renderOverviewPanels(data)" in html
     assert "const detailPathResolvers =" in html
     assert "function endpointBody(endpoint, payload)" in html
@@ -3121,13 +3123,14 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "Summary mutation preview" in html
     assert "Summary package ready" in html
     assert "Summary provider response" in html
-    assert "sliceButtonRow(runtimeRecordsSliceButtons())" in html
-    assert "sliceButtonRow(summaryJobsSliceButtons())" in html
+    assert "sliceButtonRows([" in html
+    assert "runtimeRecordsSliceButtons()," in html
+    assert "summaryJobsSliceButtons()," in html
     assert "Review requested" in html
     assert "Review ready" in html
     assert "Review advisory" in html
     assert "CLI drift" in html
-    assert "sliceButtonRow(reviewQueueSliceButtons())" in html
+    assert "reviewQueueSliceButtons()," in html
     assert "badge('slice:' + filterLabel, cls)" in html
     assert "' <span class=\"id\">' + esc(value) + '</span>'" in html
     assert "label('overview.warning_priority', 'Warning priority')" in html
@@ -3198,9 +3201,9 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "listToolbar(endpoint, 'summaryJobs', t('placeholder.summary_filter')" in html
     assert "{ value: 'mutation', label: t('sort.runtime.mutation') }" in html
     assert "{ value: 'auth', label: t('sort.runtime.auth') }" in html
-    assert "sliceButtonRow(runtimeRecordsSliceButtons())" in html
-    assert "sliceButtonRow(reviewQueueSliceButtons())" in html
-    assert "sliceButtonRow(summaryJobsSliceButtons())" in html
+    assert "runtimeRecordsSliceButtons()," in html
+    assert "reviewQueueSliceButtons()," in html
+    assert "summaryJobsSliceButtons()," in html
     assert "label('label.table_review_route', 'Review Route')" in html
     assert "Auth aligned" in html
     assert "Auth advisory" in html
