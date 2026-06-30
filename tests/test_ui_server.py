@@ -1896,6 +1896,8 @@ def test_ui_data_service_detail_endpoints(tmp_path):
     assert summary_detail["identity_sufficiency_summary"]["blocker_count"] >= 1
     assert summary_detail["outcome_matrix"]["status"] == "mixed_outcomes"
     assert summary_detail["outcome_matrix"]["rows"][1]["resulting_disposition"] == "reject"
+    assert summary_detail["apply_prerequisites"]["status"] == "boundary_blocked"
+    assert summary_detail["apply_prerequisites"]["rows"][0]["status"] == "advisory"
     assert summary_detail["mutation_enablement"]["enablement_ready"] is False
     assert summary_detail["mutation_enablement"]["scope_note"].startswith("The UI remains preview-only")
     assert summary_detail["mutation_enablement"]["operational_readiness"]["status"] == "blocked"
@@ -2576,6 +2578,11 @@ def test_ui_detail_assurance_can_align_with_configured_boundary(tmp_path):
     assert review_detail["identity_sufficiency_summary"]["assurance_status"] == "boundary_aligned"
     assert review_detail["outcome_matrix"]["action_count"] == 3
     assert review_detail["outcome_matrix"]["rows"][2]["resulting_queue_state"] == "remains_pending"
+    assert review_detail["apply_prerequisites"]["status"] == "preview_only"
+    assert any(
+        command.startswith("chronicle review approve --event")
+        for command in review_detail["apply_prerequisites"]["suggested_commands"]
+    )
     assert review_detail["auth_boundary_notice"]["status"] == "boundary_aligned"
     assert review_detail["auth_boundary_notice"]["capability_status_summary_key"] == (
         "ui.review_capability.status.ready"
@@ -2624,6 +2631,8 @@ def test_ui_detail_exposes_enabled_mutation_preview_when_enabled(tmp_path):
     assert review_detail["action_preview"]["failure_contract"]["recovery_commands"] == [
         f"chronicle review approve --event {ids['runtime_summary_event_id']}"
     ]
+    assert review_detail["apply_prerequisites"]["status"] == "ready"
+    assert review_detail["apply_prerequisites"]["preview_status"] == "enabled"
     assert review_detail["ui_mutation_enabled"] is True
     assert review_detail["review_preview_only"] is False
 
@@ -3047,6 +3056,9 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "function renderOutcomeMatrixNotice(record)" in html
     assert "label('notice.outcome_matrix', 'Outcome Matrix')" in html
     assert "detailListLine('Action outcomes', matrixLines, ' | ')" in html
+    assert "function renderApplyPrerequisitesNotice(record)" in html
+    assert "label('notice.apply_prerequisites', 'Apply Prerequisites')" in html
+    assert "detailListLine('Checklist', prerequisiteLines, ' | ')" in html
     assert "__chronicleDetailTrail" in html
     assert "readinessBadge" in html
     assert "reviewCapabilityBadge" in html
