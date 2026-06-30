@@ -968,6 +968,7 @@ def test_ui_data_service_read_endpoints(tmp_path):
     assert service.chronicle_object_records()["chronicle_objects_summary"]["object_type_counts"][
         "question"
     ] >= 1
+    assert service.rde_records()["rde_records_summary"]["rde_count"] >= 0
     assert service.contexts()["contexts"][0]["title"] == "UI Context"
     assert service.contexts()["contexts"][0]["proposal_count"] == 2
     assert service.contexts()["contexts_summary"]["context_count"] >= 1
@@ -2937,6 +2938,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "label('section.events_workspace', 'Events Workspace')" in html
     assert "label('section.chronicle_objects_workspace', 'Chronicle Objects Workspace')" in html
     assert "label('section.reactions_workspace', 'Reactions Workspace')" in html
+    assert "label('section.rde_workspace', 'RDE Workspace')" in html
     assert "function renderChronicleObjectsWorkspacePanel(summary)" in html
     assert "function renderChronicleObjectsTable(endpoint, rows)" in html
     assert "function renderChronicleObjectRow(row, endpoint)" in html
@@ -2949,6 +2951,10 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "function renderReactionsTable(endpoint, rows)" in html
     assert "function renderReactionRow(row, endpoint)" in html
     assert "'/api/reactions': renderReactionsTable," in html
+    assert "function renderRdeWorkspacePanel(summary)" in html
+    assert "function renderRdeTable(endpoint, rows)" in html
+    assert "function renderRdeRow(row, endpoint)" in html
+    assert "'/api/rde': renderRdeTable," in html
     assert "function renderContextsWorkspacePanel(summary)" in html
     assert "function renderContextsTable(endpoint, rows)" in html
     assert "function renderContextRow(row, endpoint)" in html
@@ -3354,7 +3360,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "overviewTriageNavigationCluster(triage)" in html
     assert "overviewTriageJumpButtons()" in html
     assert "data-detail-nav" in html
-    assert html.count("'<td>' + detailCell(button, path) + '</td>'") == 9
+    assert html.count("'<td>' + detailCell(button, path) + '</td>'") == 10
     assert "table { width: max-content; min-width: 100%; border-collapse: collapse; display: block; overflow-x: auto; }" in html
     assert "data-detail-trail" in html
     assert "data-back-view" in html
@@ -3528,6 +3534,8 @@ def test_http_root_and_read_only_endpoints(tmp_path):
                 assert "events_summary" in payload
             if endpoint == "/api/reactions":
                 assert "reactions_summary" in payload
+            if endpoint == "/api/rde":
+                assert "rde_records_summary" in payload
             if endpoint == "/api/contexts":
                 assert "contexts_summary" in payload
             if endpoint == "/api/runtime-records":

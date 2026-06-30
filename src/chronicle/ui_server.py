@@ -4366,7 +4366,39 @@ class ChronicleUIDataService:
     def rde_records(self) -> dict[str, Any]:
         self.chronicle.require_initialized()
         records = sorted(self.chronicle.index.load_rde_records().values(), key=lambda item: item.created_at)
-        return {"rde_records": [_dump_model(record) for record in records]}
+        rows = [_dump_model(record) for record in records]
+        return {"rde_records": rows, "rde_records_summary": self.rde_records_summary(rows)}
+
+    def rde_records_summary(self, rde_rows: list[dict[str, Any]] | None = None) -> dict[str, Any]:
+        rows = list(rde_rows) if rde_rows is not None else list(self.rde_records()["rde_records"])
+        created_by_counts = _count_values(rows, "created_by")
+        artifact_counts = _count_values(rows, "artifact_id")
+        unresolved_total = 0
+        deviation_risk_total = 0
+        supplemented_total = 0
+        latest_rde_detail_path: str | None = None
+        latest_created_at = ""
+
+        for row in rows:
+            unresolved_total += len(row.get("unresolved", []) or [])
+            deviation_risk_total += len(row.get("deviation_risks", []) or [])
+            supplemented_total += len(row.get("supplemented", []) or [])
+            created_at = str(row.get("created_at", "") or "")
+            if created_at >= latest_created_at:
+                latest_created_at = created_at
+                rde_record_id = str(row.get("rde_record_id", "") or "")
+                latest_rde_detail_path = f"/api/rde/{rde_record_id}" if rde_record_id else None
+
+        return {
+            "rde_count": len(rows),
+            "created_by_counts": created_by_counts,
+            "artifact_counts": artifact_counts,
+            "unresolved_total": unresolved_total,
+            "deviation_risk_total": deviation_risk_total,
+            "supplemented_total": supplemented_total,
+            "latest_rde_detail_path": latest_rde_detail_path,
+            "latest_created_at": latest_created_at,
+        }
 
     def boundary_rules(self) -> dict[str, Any]:
         self.chronicle.require_initialized()
@@ -10395,6 +10427,68 @@ function renderChronicleObjectsTable(endpoint, rows) {{
     ),
   ]);
 }}
+function renderRdeRow(row, endpoint) {{
+  const button = detailJsonButton(endpoint, row);
+  const path = detailPath(endpoint, row);
+  return '<tr>'
+    + '<td>' + detailCell(button, path) + '</td>'
+    + '<td>' + cellStack([
+      cellTitle(String(row.rde_record_id || '')),
+      cellMeta(String(row.artifact_id || '')),
+      cellMeta(String(row.created_at || '')),
+    ]) + '</td>'
+    + '<td>' + cellStack([
+      cellTitle(String(row.summary || '')),
+      cellMeta(String(row.created_by || '')),
+      cellMeta(String(row.from_version_id || '') + ' -> ' + String(row.to_version_id || '')),
+    ]) + '</td>'
+    + '<td>' + cellStack([
+      cellTitle('unresolved=' + String((row.unresolved || []).length)),
+      cellMeta('risks=' + String((row.deviation_risks || []).length)),
+      cellMeta('supplemented=' + String((row.supplemented || []).length)),
+    ]) + '</td>'
+    + '<td>' + cellStack([
+      cellTitle((row.preserved || []).join(' | ')),
+      cellMeta((row.transformed || []).join(' | ')),
+      cellMeta((row.next_update_policy || []).join(' | ')),
+    ]) + '</td>'
+    + '</tr>';
+}}
+function renderRdeWorkspacePanel(summary) {{
+  return renderWorkspaceSummaryPanel(
+    label('section.rde_workspace', 'RDE Workspace'),
+    workspaceCountLine('RDE records', summary.rde_count)
+    + workspaceCountLine('Unresolved', summary.unresolved_total)
+    + workspaceCountLine('Deviation risks', summary.deviation_risk_total)
+    + workspaceCountLine('Latest RDE', summary.latest_created_at || ''),
+    [
+      {{ label: 'Created by', value: summary.created_by_counts }},
+      {{ label: 'Artifacts', value: summary.artifact_counts }},
+      {{ label: 'Supplemented total', value: summary.supplemented_total }},
+    ],
+    summary.latest_rde_detail_path,
+    'button.open_detail',
+    'Open Detail',
+  );
+}}
+function renderRdeTable(endpoint, rows) {{
+  const payload = window.__chronicleRoutePayload || {{}};
+  const summary = payload.rde_records_summary || {{}};
+  const sorted = rows.slice().sort((a, b) => String(b.created_at || '').localeCompare(String(a.created_at || '')));
+  return renderMultiPanelRoute([
+    renderRdeWorkspacePanel(summary),
+    renderPanel(
+      sectionTitle(label('section.rde_workspace', 'RDE Workspace'))
+      + tableHtml([
+        label('label.table_detail', 'Detail'),
+        label('label.table_rde', 'RDE'),
+        label('label.table_status', 'Status'),
+        label('label.table_version', 'Version'),
+        label('label.table_source', 'Source'),
+      ], sorted.map(row => renderRdeRow(row, endpoint)).join(''))
+    ),
+  ]);
+}}
 const endpointRenderers = {{
   '/api/artifacts': renderArtifactsTable,
   '/api/audit': renderAuditTable,
@@ -10405,6 +10499,7 @@ const endpointRenderers = {{
   '/api/events': renderEventsTable,
   '/api/lifecycle': renderLifecycleTable,
   '/api/reactions': renderReactionsTable,
+  '/api/rde': renderRdeTable,
   '/api/federation-inbox': renderFederationInboxTable,
   '/api/federation-outbox': renderFederationOutboxTable,
   '/api/trust-nodes': renderTrustNodesTable,
