@@ -279,6 +279,13 @@ chronicle ui \
 - confirm the auth boundary panel exposes blockers, next steps, and shared-machine or session-gating summaries as read-only local boundary guidance
 - confirm the reviewer boundary panel exposes reviewer-context expectations, accepted kinds, validation gate status, and fail-closed validation families without implying active mutation authority
 
+### 23. AI Index Vector
+
+- confirm `/api/ai-index-vector` opens with a dedicated workspace route instead of the generic fallback table
+- confirm the workspace summary rail exposes entry count, external-call count, latest indexed timestamp, and provider or model breakdowns before detail is opened
+- confirm vector rows expose record id, record type, indexed-at timestamp, embedding provider, embedding model, external-call state, and source metadata as read-only index cues
+- confirm detail navigation opens the latest vector entry without implying writable vector-index operations or external embedding execution
+
 ## Evidence to Record
 
 For a validation pass, record:
