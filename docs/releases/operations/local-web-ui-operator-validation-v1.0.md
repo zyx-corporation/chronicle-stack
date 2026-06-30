@@ -272,6 +272,13 @@ chronicle ui \
 - confirm the vector panel exposes entry count, embedding provider, embedding model, and external-call state as local read-only index cues
 - confirm the boundary panel exposes graph node or edge counts together with derived-surface, primary-record-authoritative, external-services, GraphRAG runtime, and correctness-proof flags without implying writable index state
 
+### 22. UI Boundary
+
+- confirm `/api/ui-boundary` opens with a dedicated multi-panel route instead of response JSON only
+- confirm the summary panel exposes bind scope, mutation flags, auth or authorization mode, session gating, mutation blockers, and write-route contract cues before raw JSON is opened
+- confirm the auth boundary panel exposes blockers, next steps, and shared-machine or session-gating summaries as read-only local boundary guidance
+- confirm the reviewer boundary panel exposes reviewer-context expectations, accepted kinds, validation gate status, and fail-closed validation families without implying active mutation authority
+
 ## Evidence to Record
 
 For a validation pass, record:

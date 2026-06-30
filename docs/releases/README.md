@@ -26,8 +26,8 @@
 
 ## Current Pointer
 
-- latest notes: `notes/release-notes-v1.157.0.md`
-- latest status: `status/release-status-v1.157.0.md`
+- latest notes: `notes/release-notes-v1.158.0.md`
+- latest status: `status/release-status-v1.158.0.md`
 - latest readiness: `readiness/release-readiness-v1.133.md`
 - latest smoke: `smoke/smoke-test-v1.133.md`
 - latest remaining: `remaining/v1.135-release-remaining-issues.md`
