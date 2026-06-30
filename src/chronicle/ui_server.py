@@ -7484,7 +7484,7 @@ class ChronicleUIDataService:
 <title>Chronicle Stack ローカルUI — {title}</title>
 <style>
 body {{ font-family: -apple-system, BlinkMacSystemFont, sans-serif; max-width: 1280px; margin: 0 auto; padding: 20px; color: #1f2937; background: #ffffff; }}
-button {{ margin: 3px; padding: 6px 9px; cursor: pointer; }}
+button {{ margin: 3px; padding: 6px 9px; cursor: pointer; white-space: nowrap; line-height: 1.25; vertical-align: top; }}
 select, input {{ margin: 3px; padding: 6px 8px; }}
 nav {{ display: flex; flex-wrap: wrap; gap: 4px; margin: 14px 0 16px; padding-bottom: 4px; }}
 .shell-grid {{ display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(320px, 0.95fr); gap: 16px; align-items: start; }}
@@ -7500,7 +7500,7 @@ nav {{ display: flex; flex-wrap: wrap; gap: 4px; margin: 14px 0 16px; padding-bo
 .fold-section {{ margin: 12px 0 0; }}
 .fold-section summary {{ cursor: pointer; font-weight: 600; color: #1f2937; }}
 .fold-section[open] summary {{ margin-bottom: 8px; }}
-.badge {{ display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 0.85em; margin-right: 6px; }}
+.badge {{ display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 0.85em; margin-right: 6px; white-space: nowrap; }}
 .badge-warning {{ background: #fef3c7; color: #92400e; }}
 .badge-ready {{ background: #dcfce7; color: #166534; }}
 .badge-neutral {{ background: #e5e7eb; color: #374151; }}
@@ -7510,8 +7510,10 @@ nav {{ display: flex; flex-wrap: wrap; gap: 4px; margin: 14px 0 16px; padding-bo
 .fact-code {{ font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.9em; }}
 .cell-title {{ font-weight: 600; color: #111827; }}
 .cell-meta {{ color: #4b5563; font-size: 0.92em; }}
-.cell-stack > * + * {{ margin-top: 4px; }}
+.cell-stack {{ display: flex; flex-direction: column; align-items: flex-start; gap: 4px; min-width: 11rem; }}
+.cell-stack > * {{ max-width: 100%; }}
 .cell-details {{ margin-top: 6px; }}
+.cell-details {{ width: 100%; }}
 .cell-details summary {{ cursor: pointer; color: #1f2937; font-size: 0.9em; }}
 .cell-details[open] summary {{ margin-bottom: 6px; }}
 .cell-details-body > * + * {{ margin-top: 4px; }}
