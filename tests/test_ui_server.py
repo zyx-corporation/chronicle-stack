@@ -2945,6 +2945,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "function emptyFilterButtons(target)" in html
     assert "function emptyFilterState(query, rows, message, target)" in html
     assert "function listToolbar(endpoint, target, placeholder, sortOptions, filterChipHtml, query)" in html
+    assert "function renderWorkspaceTableControls(toolbarHtml, buttonRows, query, rows, emptyMessage, target, mutationConfig, previewConfig)" in html
     assert "function actionPreviewStatus(targetId, mutationEnabled, enabledMessage, disabledMessage)" in html
     assert "function tableHtml(headers, body)" in html
     assert "function packageReviewButtons(record)" in html
@@ -3198,6 +3199,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "fieldPrefix: 'review-queue'" in html
     assert "fieldPrefix: 'summary-jobs'" in html
     assert "data-success-detail" in html
+    assert "renderWorkspaceTableControls(" in html
     assert "listToolbar(endpoint, 'summaryJobs', t('placeholder.summary_filter')" in html
     assert "{ value: 'mutation', label: t('sort.runtime.mutation') }" in html
     assert "{ value: 'auth', label: t('sort.runtime.auth') }" in html

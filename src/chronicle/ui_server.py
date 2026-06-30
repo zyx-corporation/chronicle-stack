@@ -8533,6 +8533,22 @@ function listToolbar(endpoint, target, placeholder, sortOptions, filterChipHtml,
     + filterChipHtml
     + resetFilterButton(query, target);
 }}
+function renderWorkspaceTableControls(toolbarHtml, buttonRows, query, rows, emptyMessage, target, mutationConfig, previewConfig) {{
+  return toolbarHtml
+    + sliceButtonRows(buttonRows || [])
+    + emptyFilterState(query, rows, emptyMessage, target)
+    + (
+      mutationConfig && mutationConfig.enabled
+        ? renderReviewMutationForm(mutationConfig.title, mutationConfig.prefix)
+        : ''
+    )
+    + actionPreviewStatus(
+      previewConfig.targetId,
+      Boolean(mutationConfig && mutationConfig.enabled),
+      previewConfig.enabledMessage,
+      previewConfig.disabledMessage,
+    );
+}}
 function renderRuntimeRecordRow(row, endpoint) {{
   const button = detailJsonButton(endpoint, row);
   const preview = row.runtime_record_preview || {{}};
@@ -8768,27 +8784,31 @@ function renderRuntimeRecordsTable(endpoint, rows) {{
   const mutationEnabled = sorted.some(row => row.ui_mutation_enabled);
   return renderMultiPanelRoute([
     renderRuntimeRecordsWorkspacePanel(summary),
-    listToolbar(endpoint, 'runtimeRecords', t('placeholder.runtime_filter'), [
-      {{ value: 'latest', label: t('sort.runtime.latest') }},
-      {{ value: 'mutation', label: t('sort.runtime.mutation') }},
-      {{ value: 'auth', label: t('sort.runtime.auth') }},
-      {{ value: 'kind', label: t('sort.runtime.kind') }},
-    ], runtimeRecordsFilterChips(), query)
-    + sliceButtonRows([
-      runtimeRecordsSliceButtons(),
-      reviewerBoundaryListButtons('runtimeRecords', '/api/runtime-records', sorted),
-    ])
-    + emptyFilterState(query, sorted, uiLabel('No matching runtime records for current filter.'), 'runtimeRecords')
-    + (
-      mutationEnabled
-        ? renderReviewMutationForm(uiLabel('Local Review Mutation'), 'runtime-records')
-        : ''
-    )
-    + actionPreviewStatus(
-      'runtime-records-action-preview-response',
-      mutationEnabled,
-      t('notice.mutation_enabled_runtime_records'),
-      t('notice.blocked_route_preview_runtime_records')
+    renderWorkspaceTableControls(
+      listToolbar(endpoint, 'runtimeRecords', t('placeholder.runtime_filter'), [
+        {{ value: 'latest', label: t('sort.runtime.latest') }},
+        {{ value: 'mutation', label: t('sort.runtime.mutation') }},
+        {{ value: 'auth', label: t('sort.runtime.auth') }},
+        {{ value: 'kind', label: t('sort.runtime.kind') }},
+      ], runtimeRecordsFilterChips(), query),
+      [
+        runtimeRecordsSliceButtons(),
+        reviewerBoundaryListButtons('runtimeRecords', '/api/runtime-records', sorted),
+      ],
+      query,
+      sorted,
+      uiLabel('No matching runtime records for current filter.'),
+      'runtimeRecords',
+      {{
+        enabled: mutationEnabled,
+        title: uiLabel('Local Review Mutation'),
+        prefix: 'runtime-records',
+      }},
+      {{
+        targetId: 'runtime-records-action-preview-response',
+        enabledMessage: t('notice.mutation_enabled_runtime_records'),
+        disabledMessage: t('notice.blocked_route_preview_runtime_records'),
+      }},
     )
     + tableHtml([
       label('label.table_detail', 'Detail'),
@@ -8843,27 +8863,31 @@ function renderReviewQueueTable(endpoint, rows) {{
   const mutationEnabled = sorted.some(row => row.ui_mutation_enabled);
   return renderMultiPanelRoute([
     renderReviewQueueWorkspacePanel(summary),
-    listToolbar(endpoint, 'reviewQueue', t('placeholder.review_filter'), [
-      {{ value: 'attention', label: t('sort.review.attention') }},
-      {{ value: 'parity', label: t('sort.review.parity') }},
-      {{ value: 'latest', label: t('sort.review.latest') }},
-      {{ value: 'reviewer', label: t('sort.review.reviewer') }},
-    ], reviewQueueFilterChips(), query)
-    + sliceButtonRows([
-      reviewQueueSliceButtons(),
-      reviewerBoundaryListButtons('reviewQueue', '/api/review-queue', sorted),
-    ])
-    + emptyFilterState(query, sorted, uiLabel('No matching review rows for current filter.'), 'reviewQueue')
-    + (
-      mutationEnabled
-        ? renderReviewMutationForm(uiLabel('Local Review Mutation'), 'review-queue')
-        : ''
-    )
-    + actionPreviewStatus(
-      'review-queue-action-preview-response',
-      mutationEnabled,
-      t('notice.mutation_enabled_review_queue'),
-      t('notice.blocked_route_preview_review_queue')
+    renderWorkspaceTableControls(
+      listToolbar(endpoint, 'reviewQueue', t('placeholder.review_filter'), [
+        {{ value: 'attention', label: t('sort.review.attention') }},
+        {{ value: 'parity', label: t('sort.review.parity') }},
+        {{ value: 'latest', label: t('sort.review.latest') }},
+        {{ value: 'reviewer', label: t('sort.review.reviewer') }},
+      ], reviewQueueFilterChips(), query),
+      [
+        reviewQueueSliceButtons(),
+        reviewerBoundaryListButtons('reviewQueue', '/api/review-queue', sorted),
+      ],
+      query,
+      sorted,
+      uiLabel('No matching review rows for current filter.'),
+      'reviewQueue',
+      {{
+        enabled: mutationEnabled,
+        title: uiLabel('Local Review Mutation'),
+        prefix: 'review-queue',
+      }},
+      {{
+        targetId: 'review-queue-action-preview-response',
+        enabledMessage: t('notice.mutation_enabled_review_queue'),
+        disabledMessage: t('notice.blocked_route_preview_review_queue'),
+      }},
     )
     + tableHtml([
       label('label.table_detail', 'Detail'),
@@ -8916,27 +8940,31 @@ function renderSummaryJobsTable(endpoint, rows) {{
   const mutationEnabled = sorted.some(row => row.ui_mutation_enabled);
   return renderMultiPanelRoute([
     renderSummaryJobsWorkspacePanel(summary),
-    listToolbar(endpoint, 'summaryJobs', t('placeholder.summary_filter'), [
-      {{ value: 'latest', label: t('sort.summary.latest') }},
-      {{ value: 'mutation', label: t('sort.summary.mutation') }},
-      {{ value: 'review', label: t('sort.summary.review') }},
-      {{ value: 'title', label: t('sort.summary.title') }},
-    ], summaryJobsFilterChips(), query)
-    + sliceButtonRows([
-      summaryJobsSliceButtons(),
-      reviewerBoundaryListButtons('summaryJobs', '/api/summary-jobs', sorted),
-    ])
-    + emptyFilterState(query, sorted, uiLabel('No matching summary jobs for current filter.'), 'summaryJobs')
-    + (
-      mutationEnabled
-        ? renderReviewMutationForm(uiLabel('Summary Review Mutation'), 'summary-jobs')
-        : ''
-    )
-    + actionPreviewStatus(
-      'summary-jobs-action-preview-response',
-      mutationEnabled,
-      t('notice.mutation_enabled_summary_jobs'),
-      t('notice.blocked_route_preview_summary_jobs')
+    renderWorkspaceTableControls(
+      listToolbar(endpoint, 'summaryJobs', t('placeholder.summary_filter'), [
+        {{ value: 'latest', label: t('sort.summary.latest') }},
+        {{ value: 'mutation', label: t('sort.summary.mutation') }},
+        {{ value: 'review', label: t('sort.summary.review') }},
+        {{ value: 'title', label: t('sort.summary.title') }},
+      ], summaryJobsFilterChips(), query),
+      [
+        summaryJobsSliceButtons(),
+        reviewerBoundaryListButtons('summaryJobs', '/api/summary-jobs', sorted),
+      ],
+      query,
+      sorted,
+      uiLabel('No matching summary jobs for current filter.'),
+      'summaryJobs',
+      {{
+        enabled: mutationEnabled,
+        title: uiLabel('Summary Review Mutation'),
+        prefix: 'summary-jobs',
+      }},
+      {{
+        targetId: 'summary-jobs-action-preview-response',
+        enabledMessage: t('notice.mutation_enabled_summary_jobs'),
+        disabledMessage: t('notice.blocked_route_preview_summary_jobs'),
+      }},
     )
     + tableHtml([
       label('label.table_detail', 'Detail'),
