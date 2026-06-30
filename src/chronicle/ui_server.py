@@ -3933,7 +3933,44 @@ class ChronicleUIDataService:
             )
             data["latest_proposal_event_id"] = proposals[-1]["event_id"] if proposals else None
             rows.append(data)
-        return {"artifacts": rows}
+        return {"artifacts": rows, "artifacts_summary": self.artifacts_route_summary(rows)}
+
+    def artifacts_route_summary(self, artifact_rows: list[dict[str, Any]] | None = None) -> dict[str, Any]:
+        rows = artifact_rows if artifact_rows is not None else self.artifacts()["artifacts"]
+        status_counts: dict[str, int] = {}
+        type_counts: dict[str, int] = {}
+        visibility_counts: dict[str, int] = {}
+        proposal_artifact_count = 0
+        pending_proposal_artifact_count = 0
+        latest_artifact_detail_path = ""
+        latest_artifact_updated_at = ""
+        for row in rows:
+            status = str(row.get("status", "unknown"))
+            status_counts[status] = status_counts.get(status, 0) + 1
+            artifact_type = str(row.get("artifact_type", "unknown"))
+            type_counts[artifact_type] = type_counts.get(artifact_type, 0) + 1
+            visibility = str(row.get("visibility_hint", "unknown"))
+            visibility_counts[visibility] = visibility_counts.get(visibility, 0) + 1
+            if int(row.get("proposal_count", 0) or 0) > 0:
+                proposal_artifact_count += 1
+            if int(row.get("pending_proposal_count", 0) or 0) > 0:
+                pending_proposal_artifact_count += 1
+            updated_at = str(row.get("updated_at", "") or "")
+            if updated_at and updated_at >= latest_artifact_updated_at:
+                latest_artifact_updated_at = updated_at
+                artifact_id = str(row.get("artifact_id", "") or "")
+                if artifact_id.startswith("art_"):
+                    latest_artifact_detail_path = f"/api/artifacts/{artifact_id}"
+        return {
+            "artifact_count": len(rows),
+            "status_counts": status_counts,
+            "type_counts": type_counts,
+            "visibility_counts": visibility_counts,
+            "proposal_artifact_count": proposal_artifact_count,
+            "pending_proposal_artifact_count": pending_proposal_artifact_count,
+            "latest_artifact_detail_path": latest_artifact_detail_path,
+            "latest_artifact_updated_at": latest_artifact_updated_at,
+        }
 
     def _artifact_linked_contexts(
         self,
@@ -9799,7 +9836,61 @@ function renderGenericTable(endpoint, rows) {{
         + '</tr>';
     }}).join('') + '</tbody></table>';
 }}
+function renderArtifactRow(row, endpoint) {{
+  const button = detailJsonButton(endpoint, row);
+  const path = detailPath(endpoint, row);
+  const source = row.source || {{}};
+  const tags = Array.isArray(row.tags) ? row.tags : [];
+  return '<tr>'
+    + '<td>' + detailCell(button, path) + '</td>'
+    + '<td>' + cellStack([
+      cellTitle(row.title || ''),
+      cellMeta(row.artifact_id || ''),
+      cellMeta(row.path || ''),
+    ]) + '</td>'
+    + '<td>' + cellStack([
+      cellTitle(row.status || ''),
+      cellMeta(row.visibility_hint || ''),
+      cellMeta(tags.join(' | ')),
+    ]) + '</td>'
+    + '<td>' + cellStack([
+      cellTitle(row.current_version_id || ''),
+      cellMeta('versions=' + String(row.version_count ?? 0)),
+      cellMeta(String(row.updated_at || '')),
+    ]) + '</td>'
+    + '<td>' + cellStack([
+      cellTitle('pending=' + String(row.pending_proposal_count ?? 0)),
+      cellMeta('total=' + String(row.proposal_count ?? 0)),
+      cellMeta(String(row.latest_proposal_event_id || '')),
+    ]) + '</td>'
+    + '<td>' + cellStack([
+      cellTitle(String(row.artifact_type || '')),
+      cellMeta(String(source.source_type || '')),
+      cellMeta(String(source.source_ref || '')),
+    ]) + '</td>'
+    + '</tr>';
+}}
+function renderArtifactsTable(endpoint, rows) {{
+  const payload = window.__chronicleRoutePayload || {{}};
+  const summary = payload.artifacts_summary || {{}};
+  const sorted = rows.slice().sort((a, b) => String(b.updated_at || '').localeCompare(String(a.updated_at || '')));
+  return renderMultiPanelRoute([
+    renderArtifactsWorkspacePanel(summary),
+    renderPanel(
+      sectionTitle(label('section.artifacts_workspace', 'Artifacts Workspace'))
+      + tableHtml([
+        label('label.table_detail', 'Detail'),
+        label('label.table_artifact', 'Artifact'),
+        label('label.table_status', 'Status'),
+        label('label.table_version', 'Version'),
+        label('label.table_proposals', 'Proposals'),
+        label('label.table_source', 'Source'),
+      ], sorted.map(row => renderArtifactRow(row, endpoint)).join(''))
+    ),
+  ]);
+}}
 const endpointRenderers = {{
+  '/api/artifacts': renderArtifactsTable,
   '/api/audit': renderAuditTable,
   '/api/boundary': renderBoundaryTable,
   '/api/lifecycle': renderLifecycleTable,
@@ -12129,6 +12220,23 @@ function renderSummaryJobsWorkspacePanel(summary) {{
     summary.latest_provider_response_detail_path,
     'button.open_latest_summary_response',
     'Open Latest Summary Response',
+  );
+}}
+function renderArtifactsWorkspacePanel(summary) {{
+  return renderWorkspaceSummaryPanel(
+    label('section.artifacts_workspace', 'Artifacts Workspace'),
+    workspaceCountLine('Artifacts', summary.artifact_count)
+    + workspaceCountLine('With proposals', summary.proposal_artifact_count)
+    + workspaceCountLine('Pending proposals', summary.pending_proposal_artifact_count)
+    + workspaceCountLine('Latest updated', summary.latest_artifact_updated_at || ''),
+    [
+      {{ label: 'Statuses', value: summary.status_counts }},
+      {{ label: 'Types', value: summary.type_counts }},
+      {{ label: 'Visibility', value: summary.visibility_counts }},
+    ],
+    summary.latest_artifact_detail_path,
+    'button.open_detail',
+    'Open Detail',
   );
 }}
 function renderReviewQueueWorkspacePanel(summary) {{

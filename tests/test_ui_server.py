@@ -964,6 +964,9 @@ def test_ui_data_service_read_endpoints(tmp_path):
     assert service.contexts()["contexts"][0]["proposal_count"] == 2
     assert service.artifacts()["artifacts"][0]["title"] == "UI Artifact"
     assert service.artifacts()["artifacts"][0]["proposal_count"] == 1
+    assert service.artifacts()["artifacts_summary"]["artifact_count"] >= 1
+    assert service.artifacts()["artifacts_summary"]["proposal_artifact_count"] >= 1
+    assert service.artifacts()["artifacts_summary"]["type_counts"]["document"] >= 1
     assert len(service.proposal_records()["proposals"]) == 3
     assert service.federation_inbox()["federation_summary"]["inbox_type_counts"]["request_context"] == 1
     assert service.federation_outbox()["federation_summary"]["outbox_preview_only_count"] >= 0
@@ -2779,6 +2782,9 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "function renderRuntimeRecordsWorkspacePanel(summary)" in html
     assert "function renderReviewQueueWorkspacePanel(summary)" in html
     assert "function renderSummaryJobsWorkspacePanel(summary)" in html
+    assert "function renderArtifactsWorkspacePanel(summary)" in html
+    assert "function renderArtifactsTable(endpoint, rows)" in html
+    assert "function renderArtifactRow(row, endpoint)" in html
     assert "function renderGenericTable(endpoint, rows)" in html
     assert "const endpointRenderers =" in html
     assert "reviewerIdentityBadge" in html
@@ -2911,6 +2917,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "label('section.runtime_records_workspace', 'Runtime Records Workspace')" in html
     assert "label('section.review_queue_workspace', 'Review Queue Workspace')" in html
     assert "label('section.summary_jobs_workspace', 'Summary Jobs Workspace')" in html
+    assert "label('section.artifacts_workspace', 'Artifacts Workspace')" in html
     assert "function overviewTriageCountRows(triage)" in html
     assert "function renderOverviewTriagePanel(triage, warningButtons, warningSummaries)" in html
     assert "function overviewWarningButtons(warningSummaries)" in html
@@ -2979,6 +2986,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "'/api/audit': renderAuditTable," in html
     assert "'/api/boundary': renderBoundaryTable," in html
     assert "'/api/lifecycle': renderLifecycleTable," in html
+    assert "'/api/artifacts': renderArtifactsTable," in html
     assert "if (endpoint === '/api/federation-package-preview') return renderFederationPackagePreview(payload);" in html
     assert "function renderDetailNoticePanels(record)" in html
     assert "function detailNoticeBody(endpoint, record)" in html
@@ -3307,7 +3315,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "overviewTriageNavigationCluster(triage)" in html
     assert "overviewTriageJumpButtons()" in html
     assert "data-detail-nav" in html
-    assert html.count("'<td>' + detailCell(button, path) + '</td>'") == 3
+    assert html.count("'<td>' + detailCell(button, path) + '</td>'") == 4
     assert "table { width: max-content; min-width: 100%; border-collapse: collapse; display: block; overflow-x: auto; }" in html
     assert "data-detail-trail" in html
     assert "data-back-view" in html
