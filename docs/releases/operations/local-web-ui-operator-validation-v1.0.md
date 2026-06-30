@@ -111,7 +111,9 @@ chronicle ui \
 - confirm list filters, sort changes, and reset behavior work without page confusion
 - confirm `mutation`, `auth`, and `kind` sorting still change row ordering predictably
 - confirm the first workspace column exposes a primary `Open Detail` entry alongside the JSON inspection button
+- confirm runtime rows expose posture, boundary, and trial/handoff state as list-level context before detail is opened
 - confirm row preview summaries, auth badges, and related buttons provide enough context before opening detail
+- confirm route / handoff detail exposes trial sufficiency, import-readiness, command-count, and reviewed-file context without implying execution
 - confirm review-backed runtime detail also exposes a `Review Steps` notice with current step, next action, and suggested command
 - confirm review-backed runtime detail also exposes an `Identity Sufficiency` notice with auth status, assurance status, blockers, and next action
 - confirm review-backed runtime detail also exposes an `Outcome Matrix` notice with action dispositions, queue results, UI intent, and reviewer-kind expectations
@@ -131,6 +133,8 @@ chronicle ui \
 - confirm summary-job list supports title/review/mutation sorting with no broken state carry-over
 - confirm the first workspace column exposes a primary `Open Detail` entry alongside raw JSON inspection
 - confirm summary job rows still expose runtime/source/reviewer context without opening detail
+- confirm workspace rows expose package readiness, auth advisory, and identity-assurance summaries before detail is opened
+- confirm runtime cells expose provider, source count, auth status, and review status as list-level runtime context
 - confirm review-backed summary detail also exposes a `Review Steps` notice with current step, next action, and suggested command
 - confirm review-backed summary detail also exposes an `Identity Sufficiency` notice with auth status, assurance status, blockers, and next action
 - confirm review-backed summary detail also exposes an `Outcome Matrix` notice with action dispositions, queue results, UI intent, and reviewer-kind expectations
