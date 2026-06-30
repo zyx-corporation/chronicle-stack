@@ -3252,29 +3252,42 @@ class ChronicleUIDataService:
             rows.append(data)
         return {"chronicle_objects": rows}
 
-    def federation_inbox(self) -> dict[str, Any]:
+    def _federation_message_rows(self, box: FederationMessageBox) -> list[dict[str, Any]]:
         self.chronicle.require_initialized()
-        rows = [
+        return [
             self._federation_message_row(record)
-            for record in self.federation_messages.inspect_box(FederationMessageBox.INBOX)
+            for record in self.federation_messages.inspect_box(box)
         ]
-        return {"federation_messages": rows}
+
+    def federation_inbox(self) -> dict[str, Any]:
+        rows = self._federation_message_rows(FederationMessageBox.INBOX)
+        return {
+            "federation_messages": rows,
+            "federation_summary": self.federation_summary(inbox_rows=rows),
+        }
 
     def federation_outbox(self) -> dict[str, Any]:
-        self.chronicle.require_initialized()
-        rows = [
-            self._federation_message_row(record)
-            for record in self.federation_messages.inspect_box(FederationMessageBox.OUTBOX)
-        ]
-        return {"federation_messages": rows}
+        rows = self._federation_message_rows(FederationMessageBox.OUTBOX)
+        return {
+            "federation_messages": rows,
+            "federation_summary": self.federation_summary(outbox_rows=rows),
+        }
 
     def federation_summary(
         self,
         inbox_rows: list[dict[str, Any]] | None = None,
         outbox_rows: list[dict[str, Any]] | None = None,
     ) -> dict[str, Any]:
-        inbox = inbox_rows if inbox_rows is not None else self.federation_inbox()["federation_messages"]
-        outbox = outbox_rows if outbox_rows is not None else self.federation_outbox()["federation_messages"]
+        inbox = (
+            inbox_rows
+            if inbox_rows is not None
+            else self._federation_message_rows(FederationMessageBox.INBOX)
+        )
+        outbox = (
+            outbox_rows
+            if outbox_rows is not None
+            else self._federation_message_rows(FederationMessageBox.OUTBOX)
+        )
         inbox_type_counts = _count_values(inbox, "message_type")
         outbox_type_counts = _count_values(outbox, "message_type")
         inbox_preview_only_count = sum(1 for row in inbox if bool(row.get("preview_only")))
@@ -9536,6 +9549,75 @@ function renderLifecycleTable(endpoint, rows) {{
     }}).join('')),
   ]);
 }}
+function renderFederationWorkspaceSummary(summary, boxLabel) {{
+  return renderPanel(
+    sectionTitle(label('section.federation_workspace', 'Federation Workspace'))
+    + detailLine('Workspace', boxLabel)
+    + detailLine('Inbox preview-only', summary.inbox_preview_only_count ?? 0)
+    + detailLine('Outbox preview-only', summary.outbox_preview_only_count ?? 0)
+    + detailLine('Inbox audited', summary.inbox_audit_recorded_count ?? 0)
+    + summaryJsonLine('Inbox type counts', summary.inbox_type_counts)
+    + summaryJsonLine('Outbox type counts', summary.outbox_type_counts)
+    + detailLine('Scope note', 'Federation workspace remains a local shipping-inspection surface; it does not ship, import, or authorize messages by itself.')
+  );
+}}
+function renderFederationMessageRow(row, endpoint) {{
+  const path = detailPath(endpoint, row);
+  const relatedPaths = Array.isArray(row.related_resource_paths) ? row.related_resource_paths : [];
+  return '<tr>'
+    + '<td>' + detailJsonButton(endpoint, row) + (path ? detailButton(path) : '') + '</td>'
+    + '<td>' + cellStack([
+      cellTitle(String(row.preview_summary || row.message_type || '')),
+      cellMeta(String(row.message_id || '')),
+      cellMeta(String(row.created_at || '')),
+    ]) + '</td>'
+    + '<td>' + cellStack([
+      cellTitle(String(row.message_type || '')),
+      cellMeta(String(row.purpose || '')),
+      cellMeta(String(row.box || '')),
+    ]) + '</td>'
+    + '<td>' + cellStack([
+      cellTitle(String(row.source_node || '')),
+      cellMeta(String(row.target_node || '')),
+      cellMeta('refs=' + String((row.object_refs || []).length)),
+    ]) + '</td>'
+    + '<td>' + cellStack([
+      cellTitle('preview=' + String(!!row.preview_only)),
+      cellMeta('audit=' + String(!!row.audit_recorded)),
+      cellMeta('review=' + String(!!row.review_required) + ' auto=' + String(!!row.auto_apply)),
+    ]) + '</td>'
+    + '<td>' + cellStack([
+      cellTitle(String(row.signature_status || '')),
+      cellMeta(String(row.retention || '')),
+      cellMeta(relatedPaths[0] || ''),
+    ]) + '</td>'
+    + '</tr>';
+}}
+function renderFederationMessagesTable(endpoint, rows, boxLabel) {{
+  const payload = window.__chronicleRoutePayload || {{}};
+  const summary = payload.federation_summary || {{}};
+  const sorted = rows.slice().sort((a, b) => String(b.created_at || '').localeCompare(String(a.created_at || '')));
+  return renderMultiPanelRoute([
+    renderFederationWorkspaceSummary(summary, boxLabel),
+    renderPanel(
+      sectionTitle(label('section.federation_messages', boxLabel))
+      + tableHtml([
+        label('label.table_detail', 'Detail'),
+        label('label.table_summary', 'Summary'),
+        label('label.table_operation', 'Message'),
+        label('label.table_target', 'Route'),
+        label('label.table_status', 'Boundary'),
+        label('label.table_event', 'Envelope'),
+      ], sorted.map(row => renderFederationMessageRow(row, endpoint)).join(''))
+    ),
+  ]);
+}}
+function renderFederationInboxTable(endpoint, rows) {{
+  return renderFederationMessagesTable(endpoint, rows, 'Federation Inbox');
+}}
+function renderFederationOutboxTable(endpoint, rows) {{
+  return renderFederationMessagesTable(endpoint, rows, 'Federation Outbox');
+}}
 function renderTrustWorkspaceSummary(summary) {{
   const latestNode = summary.latest_node || {{}};
   const latestRelation = summary.latest_relation || {{}};
@@ -9665,6 +9747,8 @@ const endpointRenderers = {{
   '/api/audit': renderAuditTable,
   '/api/boundary': renderBoundaryTable,
   '/api/lifecycle': renderLifecycleTable,
+  '/api/federation-inbox': renderFederationInboxTable,
+  '/api/federation-outbox': renderFederationOutboxTable,
   '/api/trust-nodes': renderTrustNodesTable,
   '/api/trust-relations': renderTrustRelationsTable,
   '/api/runtime-records': renderRuntimeRecordsTable,
