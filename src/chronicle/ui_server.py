@@ -3226,7 +3226,44 @@ class ChronicleUIDataService:
     def events(self, *, limit: int = 100) -> dict[str, Any]:
         self.chronicle.require_initialized()
         events = self.chronicle.jsonl.read_all()
-        return {"events": [_dump_model(event) for event in reversed(events[-limit:])]}
+        rows = [_dump_model(event) for event in reversed(events[-limit:])]
+        return {"events": rows, "events_summary": self.events_route_summary(rows)}
+
+    def events_route_summary(self, event_rows: list[dict[str, Any]] | None = None) -> dict[str, Any]:
+        if event_rows is not None:
+            rows = list(event_rows)
+        else:
+            events = self.chronicle.jsonl.read_all()
+            rows = [_dump_model(event) for event in reversed(events[-100:])]
+        type_counts = _count_values(rows, "event_type")
+        actor_counts = _count_values(rows, "actor")
+        review_status_counts = _count_values(rows, "review_status")
+        artifact_linked_count = sum(1 for row in rows if row.get("artifact_id"))
+        context_linked_count = sum(
+            1 for row in rows if isinstance(row.get("context_ids"), list) and row.get("context_ids")
+        )
+        decision_linked_count = sum(1 for row in rows if row.get("decision_id"))
+        latest_event_detail_path: str | None = None
+        latest_timestamp = ""
+
+        for row in rows:
+            timestamp = str(row.get("timestamp", "") or "")
+            if timestamp >= latest_timestamp:
+                latest_timestamp = timestamp
+                event_id = str(row.get("event_id", "") or "")
+                latest_event_detail_path = f"/api/events/{event_id}" if event_id else None
+
+        return {
+            "event_count": len(rows),
+            "type_counts": type_counts,
+            "actor_counts": actor_counts,
+            "review_status_counts": review_status_counts,
+            "artifact_linked_count": artifact_linked_count,
+            "context_linked_count": context_linked_count,
+            "decision_linked_count": decision_linked_count,
+            "latest_event_detail_path": latest_event_detail_path,
+            "latest_timestamp": latest_timestamp,
+        }
 
     def contexts(self) -> dict[str, Any]:
         self.chronicle.require_initialized()
@@ -10112,12 +10149,77 @@ function renderContextsTable(endpoint, rows) {{
     ),
   ]);
 }}
+function renderEventRow(row, endpoint) {{
+  const button = detailJsonButton(endpoint, row);
+  const path = detailPath(endpoint, row);
+  const contextIds = Array.isArray(row.context_ids) ? row.context_ids : [];
+  const tags = Array.isArray(row.tags) ? row.tags : [];
+  return '<tr>'
+    + '<td>' + detailCell(button, path) + '</td>'
+    + '<td>' + cellStack([
+      cellTitle(String(row.summary || '')),
+      cellMeta(String(row.event_id || '')),
+      cellMeta(String(row.timestamp || '')),
+    ]) + '</td>'
+    + '<td>' + cellStack([
+      cellTitle(String(row.event_type || '')),
+      cellMeta(String(row.actor || '')),
+      cellMeta(String(row.review_status || '')),
+    ]) + '</td>'
+    + '<td>' + cellStack([
+      cellTitle(String(row.artifact_id || '')),
+      cellMeta(contextIds.join(' | ')),
+      cellMeta(String(row.decision_id || row.rde_record_id || '')),
+    ]) + '</td>'
+    + '<td>' + cellStack([
+      cellTitle(String(row.parent_event_id || '')),
+      cellMeta(String((row.source && row.source.source_type) || '')),
+      cellMeta(tags.join(' | ')),
+    ]) + '</td>'
+    + '</tr>';
+}}
+function renderEventsWorkspacePanel(summary) {{
+  return renderWorkspaceSummaryPanel(
+    label('section.events_workspace', 'Events Workspace'),
+    workspaceCountLine('Events', summary.event_count)
+    + workspaceCountLine('Artifact linked', summary.artifact_linked_count)
+    + workspaceCountLine('Context linked', summary.context_linked_count)
+    + workspaceCountLine('Latest event', summary.latest_timestamp || ''),
+    [
+      {{ label: 'Types', value: summary.type_counts }},
+      {{ label: 'Actors', value: summary.actor_counts }},
+      {{ label: 'Review status', value: summary.review_status_counts }},
+    ],
+    summary.latest_event_detail_path,
+    'button.open_detail',
+    'Open Detail',
+  );
+}}
+function renderEventsTable(endpoint, rows) {{
+  const payload = window.__chronicleRoutePayload || {{}};
+  const summary = payload.events_summary || {{}};
+  const sorted = rows.slice().sort((a, b) => String(b.timestamp || '').localeCompare(String(a.timestamp || '')));
+  return renderMultiPanelRoute([
+    renderEventsWorkspacePanel(summary),
+    renderPanel(
+      sectionTitle(label('section.events_workspace', 'Events Workspace'))
+      + tableHtml([
+        label('label.table_detail', 'Detail'),
+        label('label.table_event', 'Event'),
+        label('label.table_kind', 'Kind'),
+        label('label.table_target', 'Target'),
+        label('label.table_source', 'Source'),
+      ], sorted.map(row => renderEventRow(row, endpoint)).join(''))
+    ),
+  ]);
+}}
 const endpointRenderers = {{
   '/api/artifacts': renderArtifactsTable,
   '/api/audit': renderAuditTable,
   '/api/boundary': renderBoundaryTable,
   '/api/contexts': renderContextsTable,
   '/api/decisions': renderDecisionsTable,
+  '/api/events': renderEventsTable,
   '/api/lifecycle': renderLifecycleTable,
   '/api/federation-inbox': renderFederationInboxTable,
   '/api/federation-outbox': renderFederationOutboxTable,
