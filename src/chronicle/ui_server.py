@@ -9836,6 +9836,9 @@ function collapsibleJsonBlock(summaryLabel, value, open = false) {{
 function noticeSection(title, body) {{
   return '<section class="notice-section"><h4>' + esc(title) + '</h4>' + body + '</section>';
 }}
+function noticeSectionGroup(sections) {{
+  return (sections || []).filter(Boolean).join('');
+}}
 function collapsibleSection(title, body, open = false) {{
   return '<details class="fold-section"' + (open ? ' open' : '') + '><summary>'
     + esc(title)
@@ -10756,13 +10759,15 @@ function renderDetailActionPreviewNotice(record) {{
   );
   return renderNotice(
     label('notice.action_preview', 'Action Preview'),
-    noticeSection(
-      label('status.detail', 'Detail'),
-      statusMessageBody(preview.status, localizedPreviewMessage, previewButtons)
-    )
-      + recoveryContractSection
-      + reviewActionSection
-      + actionResultSection
+    noticeSectionGroup([
+      noticeSection(
+        label('status.detail', 'Detail'),
+        statusMessageBody(preview.status, localizedPreviewMessage, previewButtons)
+      ),
+      recoveryContractSection,
+      reviewActionSection,
+      actionResultSection,
+    ])
   );
 }}
 function renderCliParityNotice(record) {{
