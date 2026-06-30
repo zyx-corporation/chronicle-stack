@@ -964,6 +964,10 @@ def test_ui_data_service_read_endpoints(tmp_path):
     assert service.events()["events_summary"]["type_counts"]["decision_recorded"] >= 1
     assert service.events()["events_summary"]["actor_counts"]["reviewer"] >= 1
     assert service.reaction_records()["reactions_summary"]["reaction_count"] >= 0
+    assert service.chronicle_object_records()["chronicle_objects_summary"]["object_count"] >= 1
+    assert service.chronicle_object_records()["chronicle_objects_summary"]["object_type_counts"][
+        "question"
+    ] >= 1
     assert service.contexts()["contexts"][0]["title"] == "UI Context"
     assert service.contexts()["contexts"][0]["proposal_count"] == 2
     assert service.contexts()["contexts_summary"]["context_count"] >= 1
@@ -2931,7 +2935,12 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "label('section.contexts_workspace', 'Contexts Workspace')" in html
     assert "label('section.decisions_workspace', 'Decisions Workspace')" in html
     assert "label('section.events_workspace', 'Events Workspace')" in html
+    assert "label('section.chronicle_objects_workspace', 'Chronicle Objects Workspace')" in html
     assert "label('section.reactions_workspace', 'Reactions Workspace')" in html
+    assert "function renderChronicleObjectsWorkspacePanel(summary)" in html
+    assert "function renderChronicleObjectsTable(endpoint, rows)" in html
+    assert "function renderChronicleObjectRow(row, endpoint)" in html
+    assert "'/api/chronicle-objects': renderChronicleObjectsTable," in html
     assert "function renderEventsWorkspacePanel(summary)" in html
     assert "function renderEventsTable(endpoint, rows)" in html
     assert "function renderEventRow(row, endpoint)" in html
@@ -3345,7 +3354,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "overviewTriageNavigationCluster(triage)" in html
     assert "overviewTriageJumpButtons()" in html
     assert "data-detail-nav" in html
-    assert html.count("'<td>' + detailCell(button, path) + '</td>'") == 8
+    assert html.count("'<td>' + detailCell(button, path) + '</td>'") == 9
     assert "table { width: max-content; min-width: 100%; border-collapse: collapse; display: block; overflow-x: auto; }" in html
     assert "data-detail-trail" in html
     assert "data-back-view" in html
@@ -3513,6 +3522,8 @@ def test_http_root_and_read_only_endpoints(tmp_path):
             assert status == 200, endpoint
             payload = json.loads(body)
             assert key in payload, endpoint
+            if endpoint == "/api/chronicle-objects":
+                assert "chronicle_objects_summary" in payload
             if endpoint == "/api/events":
                 assert "events_summary" in payload
             if endpoint == "/api/reactions":
