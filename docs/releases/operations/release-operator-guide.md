@@ -5,6 +5,14 @@ Related: `../../adr/0018-local-ui-read-only-navigation-boundary.md`, `local-web-
 Status: v1.5 release-operator guide  
 Scope: manual release execution checklist
 
+## Quick Start
+
+1. `VERSION=vX.Y.Z` を設定する
+2. `Pre-tag verification` のコマンドを順に実行する
+3. annotated tag と GitHub Release を作成する
+4. release tagging 後の local web UI 確認が必要なら `local-web-ui-operator-validation-v1.0.md` を使う
+5. validation 結果を残すなら `local-web-ui-operator-validation-report-template.md` に記録する
+
 ## Purpose
 
 This guide captures the recurring manual release execution steps used for Chronicle Stack releases.
@@ -26,6 +34,7 @@ The guide covers:
 - release issue evidence and close criteria
 
 For operator-facing local web UI validation beyond release tagging mechanics, use `local-web-ui-operator-validation-v1.0.md`.
+Use `local-web-ui-operator-validation-report-template.md` when you need to leave one validation pass as a reusable operator record.
 
 ## Boundary
 
