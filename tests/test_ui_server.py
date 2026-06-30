@@ -2767,6 +2767,10 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "function renderRuntimeRecordsTable(endpoint, rows)" in html
     assert "function renderReviewQueueTable(endpoint, rows)" in html
     assert "function renderSummaryJobsTable(endpoint, rows)" in html
+    assert "cellTitle(posture.status || '')" in html
+    assert "cellMeta(handoff.status || trial.status || '')" in html
+    assert "cellMeta(packageReadiness.message || '')" in html
+    assert "cellMeta('auth=' + String(authReadinessStatus || ''))" in html
     assert "function renderRuntimeRecordsWorkspacePanel(summary)" in html
     assert "function renderReviewQueueWorkspacePanel(summary)" in html
     assert "function renderSummaryJobsWorkspacePanel(summary)" in html
@@ -3277,7 +3281,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "runtimeRecordsSliceButtons()," in html
     assert "reviewQueueSliceButtons()," in html
     assert "summaryJobsSliceButtons()," in html
-    assert "label('label.table_review_route', 'Review Route')" in html
+    assert "label('label.table_review_route', 'Route / Handoff')" in html
     assert "Auth aligned" in html
     assert "Auth advisory" in html
     assert "label('button.open_review', 'Open review')" in html
