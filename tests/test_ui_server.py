@@ -960,6 +960,9 @@ def test_ui_data_service_read_endpoints(tmp_path):
     ReviewService(tmp_path).approve(event_id=approved_context_proposal.event_id, reviewer="alice")
     service = ChronicleUIDataService(tmp_path)
 
+    assert service.events()["events_summary"]["event_count"] >= 1
+    assert service.events()["events_summary"]["type_counts"]["decision_recorded"] >= 1
+    assert service.events()["events_summary"]["actor_counts"]["reviewer"] >= 1
     assert service.contexts()["contexts"][0]["title"] == "UI Context"
     assert service.contexts()["contexts"][0]["proposal_count"] == 2
     assert service.contexts()["contexts_summary"]["context_count"] >= 1
@@ -2926,6 +2929,11 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "label('section.artifacts_workspace', 'Artifacts Workspace')" in html
     assert "label('section.contexts_workspace', 'Contexts Workspace')" in html
     assert "label('section.decisions_workspace', 'Decisions Workspace')" in html
+    assert "label('section.events_workspace', 'Events Workspace')" in html
+    assert "function renderEventsWorkspacePanel(summary)" in html
+    assert "function renderEventsTable(endpoint, rows)" in html
+    assert "function renderEventRow(row, endpoint)" in html
+    assert "'/api/events': renderEventsTable," in html
     assert "function renderContextsWorkspacePanel(summary)" in html
     assert "function renderContextsTable(endpoint, rows)" in html
     assert "function renderContextRow(row, endpoint)" in html
@@ -3331,7 +3339,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "overviewTriageNavigationCluster(triage)" in html
     assert "overviewTriageJumpButtons()" in html
     assert "data-detail-nav" in html
-    assert html.count("'<td>' + detailCell(button, path) + '</td>'") == 6
+    assert html.count("'<td>' + detailCell(button, path) + '</td>'") == 7
     assert "table { width: max-content; min-width: 100%; border-collapse: collapse; display: block; overflow-x: auto; }" in html
     assert "data-detail-trail" in html
     assert "data-back-view" in html
@@ -3499,6 +3507,8 @@ def test_http_root_and_read_only_endpoints(tmp_path):
             assert status == 200, endpoint
             payload = json.loads(body)
             assert key in payload, endpoint
+            if endpoint == "/api/events":
+                assert "events_summary" in payload
             if endpoint == "/api/contexts":
                 assert "contexts_summary" in payload
             if endpoint == "/api/runtime-records":
