@@ -967,6 +967,9 @@ def test_ui_data_service_read_endpoints(tmp_path):
     assert service.artifacts()["artifacts_summary"]["artifact_count"] >= 1
     assert service.artifacts()["artifacts_summary"]["proposal_artifact_count"] >= 1
     assert service.artifacts()["artifacts_summary"]["type_counts"]["document"] >= 1
+    assert service.decisions()["decisions_summary"]["decision_count"] >= 1
+    assert service.decisions()["decisions_summary"]["type_counts"]["accepted"] >= 1
+    assert service.decisions()["decisions_summary"]["artifact_linked_count"] >= 1
     assert len(service.proposal_records()["proposals"]) == 3
     assert service.federation_inbox()["federation_summary"]["inbox_type_counts"]["request_context"] == 1
     assert service.federation_outbox()["federation_summary"]["outbox_preview_only_count"] >= 0
@@ -2918,6 +2921,11 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "label('section.review_queue_workspace', 'Review Queue Workspace')" in html
     assert "label('section.summary_jobs_workspace', 'Summary Jobs Workspace')" in html
     assert "label('section.artifacts_workspace', 'Artifacts Workspace')" in html
+    assert "label('section.decisions_workspace', 'Decisions Workspace')" in html
+    assert "function renderDecisionsWorkspacePanel(summary)" in html
+    assert "function renderDecisionsTable(endpoint, rows)" in html
+    assert "function renderDecisionRow(row, endpoint)" in html
+    assert "'/api/decisions': renderDecisionsTable," in html
     assert "function overviewTriageCountRows(triage)" in html
     assert "function renderOverviewTriagePanel(triage, warningButtons, warningSummaries)" in html
     assert "function overviewWarningButtons(warningSummaries)" in html
@@ -3315,7 +3323,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "overviewTriageNavigationCluster(triage)" in html
     assert "overviewTriageJumpButtons()" in html
     assert "data-detail-nav" in html
-    assert html.count("'<td>' + detailCell(button, path) + '</td>'") == 4
+    assert html.count("'<td>' + detailCell(button, path) + '</td>'") == 5
     assert "table { width: max-content; min-width: 100%; border-collapse: collapse; display: block; overflow-x: auto; }" in html
     assert "data-detail-trail" in html
     assert "data-back-view" in html
@@ -3485,6 +3493,8 @@ def test_http_root_and_read_only_endpoints(tmp_path):
             assert key in payload, endpoint
             if endpoint == "/api/runtime-records":
                 assert "runtime_records_summary" in payload
+            if endpoint == "/api/decisions":
+                assert "decisions_summary" in payload
             if endpoint == "/api/review-queue":
                 assert "review_queue_summary" in payload
             if endpoint == "/api/summary-jobs":
