@@ -4,7 +4,7 @@
 
 ## Current Pointer
 
-- latest status: `release-status-v1.149.0.md`
+- latest status: `release-status-v1.150.0.md`
 - paired readiness: `../readiness/release-readiness-v1.133.md`
 - paired smoke: `../smoke/smoke-test-v1.133.md`
 - paired remaining: `../remaining/v1.133-release-remaining-issues.md`
