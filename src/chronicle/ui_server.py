@@ -3514,18 +3514,42 @@ class ChronicleUIDataService:
             data = _dump_model(reaction)
             data["related_resource_paths"] = self._reaction_related_resource_paths(data)
             rows.append(data)
-        return {"reactions": rows}
+        return {"reactions": rows, "reactions_summary": self.reaction_summary(rows)}
 
     def reaction_summary(self, reactions: list[dict[str, Any]] | None = None) -> dict[str, Any]:
         rows = reactions if reactions is not None else self.reaction_records()["reactions"]
         type_counts = _count_values(rows, "reaction_type")
         target_counts: dict[str, int] = {}
+        created_by_counts = _count_values(rows, "created_by")
+        context_linked_count = 0
+        artifact_linked_count = 0
+        decision_linked_count = 0
+        latest_reaction_detail_path: str | None = None
+        latest_created_at = ""
         for row in rows:
             target = str(row.get("target_object_id", "") or "unknown")
             target_counts[target] = target_counts.get(target, 0) + 1
+            if row.get("target_context_id"):
+                context_linked_count += 1
+            if row.get("target_artifact_id"):
+                artifact_linked_count += 1
+            if row.get("target_decision_id"):
+                decision_linked_count += 1
+            created_at = str(row.get("created_at", "") or "")
+            if created_at >= latest_created_at:
+                latest_created_at = created_at
+                reaction_id = str(row.get("reaction_id", "") or "")
+                latest_reaction_detail_path = f"/api/reactions/{reaction_id}" if reaction_id else None
         return {
+            "reaction_count": len(rows),
             "type_counts": type_counts,
             "target_counts": target_counts,
+            "created_by_counts": created_by_counts,
+            "context_linked_count": context_linked_count,
+            "artifact_linked_count": artifact_linked_count,
+            "decision_linked_count": decision_linked_count,
+            "latest_reaction_detail_path": latest_reaction_detail_path,
+            "latest_created_at": latest_created_at,
         }
 
     def _federation_consent_audit_summary(self, audit_row: dict[str, Any]) -> dict[str, Any] | None:
@@ -10213,6 +10237,69 @@ function renderEventsTable(endpoint, rows) {{
     ),
   ]);
 }}
+function renderReactionRow(row, endpoint) {{
+  const button = detailJsonButton(endpoint, row);
+  const path = detailPath(endpoint, row);
+  const relatedPaths = Array.isArray(row.related_resource_paths) ? row.related_resource_paths : [];
+  return '<tr>'
+    + '<td>' + detailCell(button, path) + '</td>'
+    + '<td>' + cellStack([
+      cellTitle(String(row.reaction_type || '')),
+      cellMeta(String(row.reaction_id || '')),
+      cellMeta(String(row.created_at || '')),
+    ]) + '</td>'
+    + '<td>' + cellStack([
+      cellTitle(String(row.summary || '')),
+      cellMeta(String(row.detail || '')),
+      cellMeta(String(row.created_by || '')),
+    ]) + '</td>'
+    + '<td>' + cellStack([
+      cellTitle(String(row.target_object_id || '')),
+      cellMeta(String(row.source_object_id || '')),
+      cellMeta(String(row.target_context_id || row.target_artifact_id || row.target_decision_id || '')),
+    ]) + '</td>'
+    + '<td>' + cellStack([
+      cellTitle(relatedPaths[0] || ''),
+      cellMeta(relatedPaths.slice(1).join(' | ')),
+      cellMeta(JSON.stringify(row.metadata || {{}})),
+    ]) + '</td>'
+    + '</tr>';
+}}
+function renderReactionsWorkspacePanel(summary) {{
+  return renderWorkspaceSummaryPanel(
+    label('section.reactions_workspace', 'Reactions Workspace'),
+    workspaceCountLine('Reactions', summary.reaction_count)
+    + workspaceCountLine('Context linked', summary.context_linked_count)
+    + workspaceCountLine('Artifact linked', summary.artifact_linked_count)
+    + workspaceCountLine('Latest reaction', summary.latest_created_at || ''),
+    [
+      {{ label: 'Types', value: summary.type_counts }},
+      {{ label: 'Created by', value: summary.created_by_counts }},
+      {{ label: 'Targets', value: summary.target_counts }},
+    ],
+    summary.latest_reaction_detail_path,
+    'button.open_detail',
+    'Open Detail',
+  );
+}}
+function renderReactionsTable(endpoint, rows) {{
+  const payload = window.__chronicleRoutePayload || {{}};
+  const summary = payload.reactions_summary || {{}};
+  const sorted = rows.slice().sort((a, b) => String(b.created_at || '').localeCompare(String(a.created_at || '')));
+  return renderMultiPanelRoute([
+    renderReactionsWorkspacePanel(summary),
+    renderPanel(
+      sectionTitle(label('section.reactions_workspace', 'Reactions Workspace'))
+      + tableHtml([
+        label('label.table_detail', 'Detail'),
+        label('label.table_reaction', 'Reaction'),
+        label('label.table_status', 'Status'),
+        label('label.table_target', 'Target'),
+        label('label.table_source', 'Source'),
+      ], sorted.map(row => renderReactionRow(row, endpoint)).join(''))
+    ),
+  ]);
+}}
 const endpointRenderers = {{
   '/api/artifacts': renderArtifactsTable,
   '/api/audit': renderAuditTable,
@@ -10221,6 +10308,7 @@ const endpointRenderers = {{
   '/api/decisions': renderDecisionsTable,
   '/api/events': renderEventsTable,
   '/api/lifecycle': renderLifecycleTable,
+  '/api/reactions': renderReactionsTable,
   '/api/federation-inbox': renderFederationInboxTable,
   '/api/federation-outbox': renderFederationOutboxTable,
   '/api/trust-nodes': renderTrustNodesTable,
