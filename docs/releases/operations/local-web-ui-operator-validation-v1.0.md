@@ -124,6 +124,9 @@ chronicle ui \
 
 - confirm `Needs attention`, `CLI drift first`, reviewer sort, and warning-priority behavior remain understandable
 - confirm the first workspace column exposes the same primary `Open Detail` entry pattern used in the other workspaces
+- confirm target rows expose review capability status directly beside the target summary before detail is opened
+- confirm status cells expose package readiness, auth boundary, and CLI parity cues without collapsing into badge-only reading
+- confirm reviewer / assurance cells expose identity assurance context as well as reviewer identity
 - confirm warning badges and auth/identity slices are clickable and stay read-only
 - confirm detail view exposes review capability, `Review Steps`, `Identity Sufficiency`, `Outcome Matrix`, `Apply Prerequisites`, auth readiness, identity assurance, CLI parity, mutation enablement, action preview, and review timeline
 - confirm blocked review routes still return explicit preview/fallback semantics rather than silent failure
