@@ -2942,6 +2942,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "reviewerBoundaryListButtons('summaryJobs', '/api/summary-jobs', sorted)" in html
     assert "function renderOverviewPanels(data)" in html
     assert "const detailPathResolvers =" in html
+    assert "'/api/review-queue': row => row.target_event_id ? '/api/review-queue/' + encodeURIComponent(row.target_event_id) : null," in html
     assert "function endpointBody(endpoint, payload)" in html
     assert "function detailNavigationOptions(endpoint, record)" in html
     assert "const detailNoticeRenderers = [" in html
