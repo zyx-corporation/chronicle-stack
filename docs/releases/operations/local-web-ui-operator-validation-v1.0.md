@@ -212,6 +212,14 @@ chronicle ui \
 - confirm target cells expose artifact linkage, context linkage, and decision or RDE linkage before detail is opened
 - confirm source cells expose parent-event context, source type, and tags without implying replay or mutation capability
 
+### 14. Reactions Workspace
+
+- confirm `Reactions Workspace` opens with a workspace summary rail instead of the generic fallback table
+- confirm reaction rows expose reaction type, reaction id, and timestamp before detail is opened
+- confirm status cells expose summary, detail, and creator identity as list-level interpretation cues
+- confirm target cells expose target object, source object, and target context or artifact or decision linkage before detail is opened
+- confirm source cells expose related resource paths and metadata without implying mutation or propagation capability
+
 ## Evidence to Record
 
 For a validation pass, record:
