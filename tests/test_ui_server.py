@@ -2825,6 +2825,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "function handleViewInput(event)" in html
     assert "function handleViewChange(event)" in html
     assert "function renderPanel(body)" in html
+    assert "function renderWorkspaceSummaryPanel(title, countLines, summaryPairs, latestResponsePath, latestResponseLabelKey, latestResponseFallback)" in html
     assert "function renderMultiPanelRoute(panels, payload = null, includeResponseJson = false)" in html
     assert "function renderMultiPanelDetail(panels, payload)" in html
     assert "function workspaceCountLine(labelText, value)" in html
@@ -2860,9 +2861,10 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "function renderOverviewRuntimeRecordsPanel(counts, runtimeRecords)" in html
     assert "function overviewSummaryJobCountButtons(counts, summaryJobs)" in html
     assert "function renderOverviewSummaryJobsPanel(counts, summaryJobs)" in html
-    assert "sectionTitle(label('section.runtime_records_workspace', 'Runtime Records Workspace'))" in html
-    assert "sectionTitle(label('section.review_queue_workspace', 'Review Queue Workspace'))" in html
-    assert "sectionTitle(label('section.summary_jobs_workspace', 'Summary Jobs Workspace'))" in html
+    assert "renderWorkspaceSummaryPanel(" in html
+    assert "label('section.runtime_records_workspace', 'Runtime Records Workspace')" in html
+    assert "label('section.review_queue_workspace', 'Review Queue Workspace')" in html
+    assert "label('section.summary_jobs_workspace', 'Summary Jobs Workspace')" in html
     assert "function overviewTriageCountRows(triage)" in html
     assert "function renderOverviewTriagePanel(triage, warningButtons, warningSummaries)" in html
     assert "function overviewWarningButtons(warningSummaries)" in html
@@ -2899,9 +2901,9 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "const detailNoticeRenderers = [" in html
     assert "function renderFederationPackagePreview(payload)" in html
     assert "renderMultiPanelRoute([" in html
-    assert "workspaceLatestResponseLine(summary.latest_provider_response_detail_path, 'button.open_latest_runtime_response', 'Open Latest Runtime Response')" in html
-    assert "workspaceLatestResponseLine(summary.latest_provider_response_detail_path, 'button.open_latest_review_response', 'Open Latest Review Response')" in html
-    assert "workspaceLatestResponseLine(summary.latest_provider_response_detail_path, 'button.open_latest_summary_response', 'Open Latest Summary Response')" in html
+    assert "'button.open_latest_runtime_response'," in html
+    assert "'button.open_latest_review_response'," in html
+    assert "'button.open_latest_summary_response'," in html
     assert "sectionTitle(label('section.federation_package_preview', 'Federation Package Preview'))" in html
     assert "sectionTitle(label('section.package_route_summary', 'Package Route Summary'))" in html
     assert "sectionTitle(label('section.trust_reference_summary', 'Trust Reference Summary'))" in html
