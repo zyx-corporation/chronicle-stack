@@ -3241,7 +3241,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "overviewTriageNavigationCluster(triage)" in html
     assert "overviewTriageJumpButtons()" in html
     assert "data-detail-nav" in html
-    assert "'<td>' + button + (path ? detailButton(path) : '') + '</td>'" in html
+    assert html.count("'<td>' + button + (path ? detailButton(path) : '') + '</td>'") == 3
     assert "data-detail-trail" in html
     assert "data-back-view" in html
     assert "uiLabel('No matching runtime records for current filter.')" in html
