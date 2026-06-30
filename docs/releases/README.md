@@ -14,3 +14,11 @@
 ## Note
 
 リリース種別ごとの文書は `docs/` 直下からこの配下へ整理済みです。新しいリリース文書を追加する場合も、同じ分類に合わせて配置します。
+
+## Current Pointer
+
+- latest notes: `notes/release-notes-v1.133.0.md`
+- latest status: `status/release-status-v1.133.0.md`
+- latest readiness: `readiness/release-readiness-v1.133.md`
+- latest smoke: `smoke/smoke-test-v1.133.md`
+- latest remaining: `remaining/v1.133-release-remaining-issues.md`
