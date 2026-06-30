@@ -5940,6 +5940,127 @@ class ChronicleUIDataService:
         return None
 
     @staticmethod
+    def _review_step_summary(
+        capability: dict[str, Any] | None,
+        auth_notice: dict[str, Any] | None,
+        action_preview: dict[str, Any] | None,
+    ) -> dict[str, Any]:
+        capability = capability or {}
+        auth_notice = auth_notice or {}
+        action_preview = action_preview or {}
+
+        capability_status = str(capability.get("status", "unknown"))
+        auth_status = str(auth_notice.get("status", "unknown"))
+        mutation_enabled = bool(action_preview.get("ui_mutation_enabled", False))
+        cli_equivalent = str(action_preview.get("cli_equivalent", ""))
+        recovery_path = str(action_preview.get("failure_contract", {}).get("recovery_path", ""))
+        blockers = [str(item) for item in auth_notice.get("blockers", []) if item]
+
+        if capability_status == "resolved":
+            return {
+                "status": "resolved",
+                "current_step_code": "resolved",
+                "current_step_label": "Review resolved",
+                "message": "Review target is already resolved; inspect history and follow-up state before any new action.",
+                "next_action": "Inspect the resolved queue or review timeline.",
+                "next_action_command": recovery_path or cli_equivalent or "chronicle review queue --include-resolved --json",
+                "blocked_by": blockers,
+                "completed_steps": ["Target reviewable"],
+                "remaining_steps": [],
+                "steps": [
+                    {
+                        "code": "resolved",
+                        "label": "Review resolved",
+                        "status": "current",
+                        "message": "Pending review action is complete; follow-up inspection remains available.",
+                    }
+                ],
+            }
+
+        steps = [
+            {
+                "code": "target_reviewable",
+                "label": "Target reviewable",
+                "status": "complete",
+                "message": "Target is still present in the current derived review queue.",
+            },
+            {
+                "code": "align_boundary",
+                "label": "Align boundary",
+                "status": "complete" if auth_status == "boundary_aligned" else "current",
+                "message": (
+                    "Reviewer identity and boundary checks are aligned for review."
+                    if auth_status == "boundary_aligned"
+                    else "Boundary blockers still need operator attention before relying on mutation-capable review."
+                ),
+            },
+            {
+                "code": "choose_execution_path",
+                "label": "Choose execution path",
+                "status": (
+                    "complete"
+                    if mutation_enabled
+                    else ("current" if auth_status == "boundary_aligned" else "upcoming")
+                ),
+                "message": (
+                    "Local mutation is enabled for this session."
+                    if mutation_enabled
+                    else "Use the CLI fallback or explicitly enable local mutation for this session."
+                ),
+            },
+            {
+                "code": "submit_review",
+                "label": "Submit review action",
+                "status": "current" if mutation_enabled else "upcoming",
+                "message": (
+                    "Submit the review action with explicit reviewer context."
+                    if mutation_enabled
+                    else "Review action remains preview-only until the selected execution path is available."
+                ),
+            },
+        ]
+
+        if auth_status != "boundary_aligned":
+            status = "advisory_only"
+            current_step_code = "align_boundary"
+            current_step_label = "Align boundary"
+            next_action = (
+                str((auth_notice.get("next_steps") or [""])[0])
+                or "Record or align reviewer identity and boundary conditions first."
+            )
+            next_action_command = cli_equivalent
+            message = "Review remains advisory-only until reviewer identity and boundary conditions align."
+        elif not mutation_enabled:
+            status = "preview_only"
+            current_step_code = "choose_execution_path"
+            current_step_label = "Choose execution path"
+            next_action = "Use the CLI fallback or explicitly enable local mutation for this session."
+            next_action_command = recovery_path or cli_equivalent
+            message = "Review is ready for operator action, but the current UI session remains preview-only."
+        else:
+            status = "enabled"
+            current_step_code = "submit_review"
+            current_step_label = "Submit review action"
+            next_action = "Submit the selected review action with explicit reviewer context."
+            next_action_command = str((action_preview.get("actions") or [{}])[0].get("command", "")) or cli_equivalent
+            message = "Review can proceed through the enabled local mutation route for this session."
+
+        completed_steps = [item["label"] for item in steps if item["status"] == "complete"]
+        remaining_steps = [item["label"] for item in steps if item["status"] != "complete"]
+        return {
+            "status": status,
+            "current_step_code": current_step_code,
+            "current_step_label": current_step_label,
+            "message": message,
+            "next_action": next_action,
+            "next_action_command": next_action_command,
+            "blocked_by": blockers,
+            "completed_steps": completed_steps,
+            "remaining_steps": remaining_steps,
+            "steps": steps,
+        }
+
+    @staticmethod
     def _review_kind(payload: dict[str, Any]) -> str:
         if "runtime_summary" in payload:
             return "runtime_summary"
@@ -6678,6 +6799,11 @@ class ChronicleUIDataService:
                 boundary = self.ui_boundary()["ui_boundary"]
                 record["auth_boundary_notice"] = review_row.get("auth_boundary_notice")
                 record["mutation_enablement"] = self.mutation_readiness_summary()
+                record["review_step_summary"] = self._review_step_summary(
+                    review_row.get("review_capability"),
+                    review_row.get("auth_boundary_notice"),
+                    review_row.get("action_preview_summary"),
+                )
                 record["reviewer_enforcement_summary"] = boundary.get("reviewer_enforcement_summary", {})
                 record["reviewer_validation_gate_summary"] = boundary.get(
                     "reviewer_validation_gate_summary", {}
@@ -6783,6 +6909,11 @@ class ChronicleUIDataService:
                         row.get("latest_identity_assurance"),
                     )
                     row["mutation_enablement"] = self.mutation_readiness_summary()
+                    row["review_step_summary"] = self._review_step_summary(
+                        row.get("review_capability"),
+                        row.get("auth_boundary_notice"),
+                        row.get("action_preview"),
+                    )
                     row["reviewer_enforcement_summary"] = boundary.get("reviewer_enforcement_summary", {})
                     row["reviewer_validation_gate_summary"] = boundary.get(
                         "reviewer_validation_gate_summary", {}
@@ -6847,6 +6978,11 @@ class ChronicleUIDataService:
                         job.get("latest_identity_assurance"),
                     )
                     job["mutation_enablement"] = self.mutation_readiness_summary()
+                    job["review_step_summary"] = self._review_step_summary(
+                        job.get("review_capability"),
+                        job.get("auth_boundary_notice"),
+                        job.get("action_preview"),
+                    )
                     job["reviewer_enforcement_summary"] = boundary.get("reviewer_enforcement_summary", {})
                     job["reviewer_validation_gate_summary"] = boundary.get(
                         "reviewer_validation_gate_summary", {}
@@ -10708,6 +10844,28 @@ function renderReviewCapabilityNotice(record) {{
       + detailLine('Warnings', detailMessages(warnDetails, warnList) || '(none)')
   );
 }}
+function renderReviewStepSummaryNotice(record) {{
+  if (!record.review_step_summary) return '';
+  const summary = record.review_step_summary;
+  const stepBadges = (summary.steps || []).map(item =>
+    badge(
+      item.label || item.code || 'step',
+      item.status === 'complete'
+        ? 'badge-ready'
+        : (item.status === 'current' ? 'badge-warning' : 'badge-neutral')
+    )
+  ).join('');
+  return renderNotice(
+    label('notice.review_steps', 'Review Steps'),
+    statusMessageBody(summary.status, summary.message)
+      + detailLine('Current step', summary.current_step_label || '')
+      + detailLine('Next action', summary.next_action || '')
+      + detailLine('Suggested command', summary.next_action_command || '')
+      + (stepBadges ? '<p>' + stepBadges + '</p>' : '')
+      + detailListLine('Completed steps', summary.completed_steps, ' | ')
+      + detailListLine('Remaining steps', summary.remaining_steps, ' | ')
+  );
+}}
 function renderMutationEnablementNotice(record) {{
   if (!record.mutation_enablement) return '';
   const readiness = record.mutation_enablement;
@@ -11843,6 +12001,7 @@ const detailNoticeRenderers = [
   renderRelatedLinksNotice,
   renderAuthReadinessNotice,
   renderReviewCapabilityNotice,
+  renderReviewStepSummaryNotice,
   renderMutationEnablementNotice,
   renderDetailActionPreviewNotice,
   renderCliParityNotice,

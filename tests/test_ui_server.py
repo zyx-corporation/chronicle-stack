@@ -1889,6 +1889,9 @@ def test_ui_data_service_detail_endpoints(tmp_path):
         "reviewer_kind",
         "ui_intent",
     ]
+    assert summary_detail["review_step_summary"]["status"] == "advisory_only"
+    assert summary_detail["review_step_summary"]["current_step_code"] == "align_boundary"
+    assert "auth_not_enabled" in summary_detail["review_step_summary"]["blocked_by"]
     assert summary_detail["mutation_enablement"]["enablement_ready"] is False
     assert summary_detail["mutation_enablement"]["scope_note"].startswith("The UI remains preview-only")
     assert summary_detail["mutation_enablement"]["operational_readiness"]["status"] == "blocked"
@@ -2559,6 +2562,12 @@ def test_ui_detail_assurance_can_align_with_configured_boundary(tmp_path):
     assert review_detail["cli_parity"]["missing_preview_commands"] == []
     assert review_detail["cli_parity"]["missing_queue_commands"] == []
     assert review_detail["review_capability"]["warning_details"] == []
+    assert review_detail["review_step_summary"]["status"] == "preview_only"
+    assert review_detail["review_step_summary"]["current_step_code"] == "choose_execution_path"
+    assert review_detail["review_step_summary"]["next_action_command"] == (
+        f"chronicle review approve --event {ids['runtime_summary_event_id']}"
+    )
+    assert "Align boundary" in review_detail["review_step_summary"]["completed_steps"]
     assert review_detail["auth_boundary_notice"]["status"] == "boundary_aligned"
     assert review_detail["auth_boundary_notice"]["capability_status_summary_key"] == (
         "ui.review_capability.status.ready"
@@ -3021,6 +3030,9 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "detailLine('Boundary visibility', boundarySummary.visibility_hint || '')" in html
     assert "summaryJsonLine('Audit operations', auditSummary.operation_counts)" in html
     assert "label('notice.related_links', 'Related Links')" in html
+    assert "function renderReviewStepSummaryNotice(record)" in html
+    assert "label('notice.review_steps', 'Review Steps')" in html
+    assert "detailLine('Current step', summary.current_step_label || '')" in html
     assert "__chronicleDetailTrail" in html
     assert "readinessBadge" in html
     assert "reviewCapabilityBadge" in html
