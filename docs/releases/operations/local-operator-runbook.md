@@ -152,7 +152,17 @@ Recommended operator note:
 chronicle record --type user_input --actor user --summary "Operator session closed"
 ```
 
-## 8. Escalate Instead Of Assuming
+## 8. Recovery Shortcut
+
+Restore the latest known-good backup when local Chronicle state needs rollback:
+
+```bash
+scripts/restore-local.sh /path/to/chronicle-backup-....tar.gz
+chronicle doctor --json
+chronicle ui-smoke --json
+```
+
+## 9. Escalate Instead Of Assuming
 
 Stop and investigate if any of these happen:
 
@@ -162,7 +172,7 @@ Stop and investigate if any of these happen:
 - derived views disagree with primary record expectations
 - write-route behavior appears enabled unexpectedly
 
-## 9. Related Guides
+## 10. Related Guides
 
 - install/update: `../../local-deployment-curl.md`
 - doctor semantics: `../../doctor.md`

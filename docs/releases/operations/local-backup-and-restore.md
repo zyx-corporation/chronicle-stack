@@ -76,7 +76,15 @@ DRY_RUN=1 scripts/backup-local.sh "$PWD" "$HOME/.chronicle-backups"
 
 ## Restore A Backup
 
-Move to the Chronicle project root and preserve the current state first if it still exists:
+Helper-based restore:
+
+```bash
+scripts/restore-local.sh /path/to/chronicle-backup-....tar.gz
+```
+
+By default this preserves the current `.chronicle/` as `.chronicle.pre-restore.<timestamp>` before extraction.
+
+Manual restore:
 
 ```bash
 mv .chronicle ".chronicle.pre-restore.$(date -u +%Y%m%dT%H%M%SZ)"
@@ -86,6 +94,12 @@ Restore the selected archive:
 
 ```bash
 tar -C "$PWD" -xzf /path/to/chronicle-backup-....tar.gz
+```
+
+If you intentionally want replacement without a preserved pre-restore directory:
+
+```bash
+PRESERVE_EXISTING=0 scripts/restore-local.sh /path/to/chronicle-backup-....tar.gz
 ```
 
 ## Verify After Restore
