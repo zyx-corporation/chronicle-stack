@@ -163,6 +163,14 @@ export PATH="$HOME/.local/bin:$PATH"
 
 Add that line to your shell profile, such as `~/.zshrc` or `~/.bashrc`, if needed.
 
+## Next Operator Steps
+
+After the CLI is installed:
+
+- day-to-day local operation: `docs/releases/operations/local-operator-runbook.md`
+- local backup / restore: `docs/releases/operations/local-backup-and-restore.md`
+- local UI validation walkthrough: `docs/releases/operations/local-web-ui-operator-validation-v1.0.md`
+
 ## Create a Local Chronicle
 
 ```bash
