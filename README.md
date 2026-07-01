@@ -74,6 +74,12 @@ flowchart TD
 
 詳細は [アーキテクチャ](docs/architecture.md) と [インターフェース契約](docs/interface-contracts.md) を参照してください。
 
+ローカル運用の入口:
+
+- [curl-based Local Deployment](docs/local-deployment-curl.md)
+- [Local Operator Runbook](docs/releases/operations/local-operator-runbook.md)
+- [Local Backup And Restore](docs/releases/operations/local-backup-and-restore.md)
+
 ## 現在の状態
 
 | 領域 | 状態 |
@@ -150,6 +156,9 @@ curl -fsSL https://raw.githubusercontent.com/zyx-corporation/chronicle-stack/mai
 ```
 
 詳細は [curl-based Local Deployment](docs/local-deployment-curl.md) を参照してください。
+
+ローカル導入後の日常運用は [Local Operator Runbook](docs/releases/operations/local-operator-runbook.md) を参照してください。
+backup / restore は [Local Backup And Restore](docs/releases/operations/local-backup-and-restore.md) にまとめています。
 
 ## クイックスタート
 

@@ -4,6 +4,8 @@
 
 ## Current Entry Points
 
+- local operator runbook: `local-operator-runbook.md`
+- local backup/restore guide: `local-backup-and-restore.md`
 - release operator guide: `release-operator-guide.md`
 - local web UI operator validation: `local-web-ui-operator-validation-v1.0.md`
 - local web UI validation report template: `local-web-ui-operator-validation-report-template.md`
@@ -16,12 +18,14 @@
 ## Quick Start
 
 1. release 実行手順を見るなら `release-operator-guide.md`
-2. local web UI を手動検証するなら `local-web-ui-operator-validation-v1.0.md`
-3. 検証結果を残すなら `local-web-ui-operator-validation-report-template.md`
-4. preflight/startup evidence の実例を見るなら `local-web-ui-operator-validation-evidence-2026-06-30.md`
-5. manual walkthrough の実例を見るなら `local-web-ui-operator-validation-evidence-2026-06-30-manual-walkthrough.md`
-6. detail-entry fix 後の follow-up を見るなら `local-web-ui-operator-validation-evidence-2026-06-30-detail-entry-followup.md`
-7. review-queue detail-path fix 後の browser walkthrough を見るなら `local-web-ui-operator-validation-evidence-2026-06-30-review-queue-detail-path-fix.md`
+2. 日常のローカル運用を見るなら `local-operator-runbook.md`
+3. backup / restore を見るなら `local-backup-and-restore.md`
+4. local web UI を手動検証するなら `local-web-ui-operator-validation-v1.0.md`
+5. 検証結果を残すなら `local-web-ui-operator-validation-report-template.md`
+6. preflight/startup evidence の実例を見るなら `local-web-ui-operator-validation-evidence-2026-06-30.md`
+7. manual walkthrough の実例を見るなら `local-web-ui-operator-validation-evidence-2026-06-30-manual-walkthrough.md`
+8. detail-entry fix 後の follow-up を見るなら `local-web-ui-operator-validation-evidence-2026-06-30-detail-entry-followup.md`
+9. review-queue detail-path fix 後の browser walkthrough を見るなら `local-web-ui-operator-validation-evidence-2026-06-30-review-queue-detail-path-fix.md`
 
 ## Historical / Versioned Operations Docs
 
