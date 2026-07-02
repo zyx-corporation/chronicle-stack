@@ -430,39 +430,14 @@ ruff check src/ tests/
 
 ## リリース
 
-- Latest published release: **v1.11.0**
-- Current repository-side release target: **v1.12.0**
-- v1.7.0 release status: [docs/releases/status/release-status-v1.7.0.md](docs/releases/status/release-status-v1.7.0.md)
-- v1.8.0 release status: [docs/releases/status/release-status-v1.8.0.md](docs/releases/status/release-status-v1.8.0.md)
-- v1.9.0 release status: [docs/releases/status/release-status-v1.9.0.md](docs/releases/status/release-status-v1.9.0.md)
-- v1.10.0 release status: [docs/releases/status/release-status-v1.10.0.md](docs/releases/status/release-status-v1.10.0.md)
-- v1.11.0 release status: [docs/releases/status/release-status-v1.11.0.md](docs/releases/status/release-status-v1.11.0.md)
-- v1.12.0 release status: [docs/releases/status/release-status-v1.12.0.md](docs/releases/status/release-status-v1.12.0.md)
-- v1.7.0 release readiness: [docs/releases/readiness/release-readiness-v1.7.md](docs/releases/readiness/release-readiness-v1.7.md)
-- v1.11.0 release readiness: [docs/releases/readiness/release-readiness-v1.11.md](docs/releases/readiness/release-readiness-v1.11.md)
-- v1.12.0 release readiness: [docs/releases/readiness/release-readiness-v1.12.md](docs/releases/readiness/release-readiness-v1.12.md)
-- v1.10.0 release readiness: [docs/releases/readiness/release-readiness-v1.10.md](docs/releases/readiness/release-readiness-v1.10.md)
-- v1.9.0 release readiness: [docs/releases/readiness/release-readiness-v1.9.md](docs/releases/readiness/release-readiness-v1.9.md)
-- v1.8.0 release readiness: [docs/releases/readiness/release-readiness-v1.8.md](docs/releases/readiness/release-readiness-v1.8.md)
-- v1.11.0 release notes: [docs/releases/notes/release-notes-v1.11.0.md](docs/releases/notes/release-notes-v1.11.0.md)
-- v1.12.0 release notes: [docs/releases/notes/release-notes-v1.12.0.md](docs/releases/notes/release-notes-v1.12.0.md)
-- v1.10.0 release notes: [docs/releases/notes/release-notes-v1.10.0.md](docs/releases/notes/release-notes-v1.10.0.md)
-- v1.9.0 release notes: [docs/releases/notes/release-notes-v1.9.0.md](docs/releases/notes/release-notes-v1.9.0.md)
-- v1.8.0 release notes: [docs/releases/notes/release-notes-v1.8.0.md](docs/releases/notes/release-notes-v1.8.0.md)
-- v1.9.0 remaining issues: [docs/releases/remaining/v1.9-release-remaining-issues.md](docs/releases/remaining/v1.9-release-remaining-issues.md)
-- v1.10.0 remaining issues: [docs/releases/remaining/v1.10-release-remaining-issues.md](docs/releases/remaining/v1.10-release-remaining-issues.md)
-- v1.11.0 remaining issues: [docs/releases/remaining/v1.11-release-remaining-issues.md](docs/releases/remaining/v1.11-release-remaining-issues.md)
-- v1.12.0 remaining issues: [docs/releases/remaining/v1.12-release-remaining-issues.md](docs/releases/remaining/v1.12-release-remaining-issues.md)
-- v1.8.0 remaining issues: [docs/releases/remaining/v1.8-release-remaining-issues.md](docs/releases/remaining/v1.8-release-remaining-issues.md)
-- v1.11.0 smoke profile: [docs/releases/smoke/smoke-test-v1.11.md](docs/releases/smoke/smoke-test-v1.11.md)
-- v1.12.0 smoke profile: [docs/releases/smoke/smoke-test-v1.12.md](docs/releases/smoke/smoke-test-v1.12.md)
-- v1.10.0 smoke profile: [docs/releases/smoke/smoke-test-v1.10.md](docs/releases/smoke/smoke-test-v1.10.md)
-- v1.7.0 smoke profile: [docs/releases/smoke/smoke-test-v1.7.md](docs/releases/smoke/smoke-test-v1.7.md)
-- v1.9.0 smoke profile: [docs/releases/smoke/smoke-test-v1.9.md](docs/releases/smoke/smoke-test-v1.9.md)
-- v1.8.0 smoke profile: [docs/releases/smoke/smoke-test-v1.8.md](docs/releases/smoke/smoke-test-v1.8.md)
-- v1.7.0 release notes: [docs/releases/notes/release-notes-v1.7.0.md](docs/releases/notes/release-notes-v1.7.0.md)
-- v1.11.0 publication is complete and now serves as the immediate historical baseline.
-- `v1.12.0` is the active repository-side reviewer-boundary presentation-drilldown release lane.
+- release index: [docs/releases/README.md](docs/releases/README.md)
+- latest release notes pointer: [docs/releases/notes/release-notes-v1.164.0.md](docs/releases/notes/release-notes-v1.164.0.md)
+- latest release status pointer: [docs/releases/status/release-status-v1.164.0.md](docs/releases/status/release-status-v1.164.0.md)
+- latest release readiness pointer: [docs/releases/readiness/release-readiness-v1.133.md](docs/releases/readiness/release-readiness-v1.133.md)
+- latest smoke pointer: [docs/releases/smoke/smoke-test-v1.133.md](docs/releases/smoke/smoke-test-v1.133.md)
+- latest remaining-issues pointer: [docs/releases/remaining/v1.135-release-remaining-issues.md](docs/releases/remaining/v1.135-release-remaining-issues.md)
+- current operator/release entry points: [docs/releases/operations/README.md](docs/releases/operations/README.md)
+- release docs are maintained as per-directory current pointers instead of a fixed historical shortlist here
 
 ## ライセンス
 
