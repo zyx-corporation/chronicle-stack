@@ -8280,70 +8280,289 @@ class ChronicleUIDataService:
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Chronicle Stack ローカルUI — {title}</title>
 <style>
-body {{ font-family: -apple-system, BlinkMacSystemFont, sans-serif; max-width: 1280px; margin: 0 auto; padding: 20px; color: #1f2937; background: #ffffff; }}
-button {{ margin: 3px; padding: 6px 9px; cursor: pointer; white-space: nowrap; line-height: 1.25; vertical-align: top; }}
-select, input {{ margin: 3px; padding: 6px 8px; }}
-nav {{ display: flex; flex-wrap: wrap; gap: 4px; margin: 14px 0 16px; padding-bottom: 4px; }}
+:root {{
+  --chronicle-font-scale: 100%;
+  --chronicle-font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
+  --chronicle-font-family-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --chronicle-bg: #f5f4ef;
+  --chronicle-bg-accent: #ece9df;
+  --chronicle-panel: #fffdfa;
+  --chronicle-panel-strong: #ffffff;
+  --chronicle-border: #ddd8ca;
+  --chronicle-border-strong: #cbc3af;
+  --chronicle-text: #1f2937;
+  --chronicle-text-muted: #5f6673;
+  --chronicle-heading: #111827;
+  --chronicle-shadow: 0 1px 2px rgba(15, 23, 42, 0.05), 0 10px 24px rgba(148, 163, 184, 0.08);
+  --chronicle-shadow-soft: 0 1px 2px rgba(15, 23, 42, 0.04);
+  --chronicle-warning-bg: #fff7db;
+  --chronicle-warning-border: #d4a72c;
+  --chronicle-notice-bg: #edf5ff;
+  --chronicle-notice-border: #4d86d9;
+  --chronicle-accent: #205493;
+  --chronicle-accent-soft: #dbe9fb;
+  --chronicle-accent-strong: #163f70;
+  --chronicle-success-bg: #e6f7ea;
+  --chronicle-success-text: #1f6a3a;
+  --chronicle-neutral-bg: #ece8df;
+  --chronicle-neutral-text: #4b5563;
+  --chronicle-radius: 12px;
+}}
+html {{ font-size: var(--chronicle-font-scale); }}
+body {{
+  font-family: var(--chronicle-font-family-ui);
+  max-width: 1320px;
+  margin: 0 auto;
+  padding: 24px 20px 36px;
+  color: var(--chronicle-text);
+  background:
+    radial-gradient(circle at top left, rgba(255, 255, 255, 0.92), transparent 28rem),
+    linear-gradient(180deg, #faf8f2 0%, var(--chronicle-bg) 100%);
+}}
+button, select, input {{
+  font: inherit;
+}}
+button {{
+  margin: 0;
+  padding: 8px 11px;
+  cursor: pointer;
+  white-space: nowrap;
+  line-height: 1.25;
+  vertical-align: top;
+  border-radius: 999px;
+  border: 1px solid var(--chronicle-border);
+  background: var(--chronicle-panel-strong);
+  color: var(--chronicle-text);
+  transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease, box-shadow 120ms ease;
+}}
+button:hover {{ border-color: var(--chronicle-border-strong); background: #fffaf0; }}
+button:focus-visible, select:focus-visible, input:focus-visible {{
+  outline: 2px solid var(--chronicle-accent);
+  outline-offset: 2px;
+}}
+select, input {{
+  margin: 0;
+  padding: 7px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--chronicle-border);
+  background: var(--chronicle-panel-strong);
+  color: var(--chronicle-text);
+}}
+nav {{
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 18px 0 18px;
+  padding: 10px;
+  border: 1px solid var(--chronicle-border);
+  border-radius: var(--chronicle-radius);
+  background: rgba(255, 253, 250, 0.8);
+  box-shadow: var(--chronicle-shadow-soft);
+}}
+nav button {{
+  background: #f6f1e7;
+  border-color: #d9cfbc;
+  color: var(--chronicle-text-muted);
+}}
+nav button.active-nav {{
+  background: var(--chronicle-accent);
+  border-color: var(--chronicle-accent);
+  color: #ffffff;
+  box-shadow: 0 8px 18px rgba(32, 84, 147, 0.18);
+}}
 .shell-grid {{ display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(320px, 0.95fr); gap: 16px; align-items: start; }}
-.panel {{ border: 1px solid #e5e7eb; border-radius: 10px; padding: 14px; margin: 12px 0; background: #ffffff; overflow: auto; box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04); }}
+.panel {{
+  border: 1px solid var(--chronicle-border);
+  border-radius: var(--chronicle-radius);
+  padding: 16px;
+  margin: 12px 0;
+  background: var(--chronicle-panel);
+  overflow: auto;
+  box-shadow: var(--chronicle-shadow);
+}}
 .panel > :first-child {{ margin-top: 0; }}
 #view, #detail {{ min-width: 0; }}
 #detail {{ position: sticky; top: 16px; max-height: calc(100vh - 32px); }}
-.warning {{ background: #fefce8; border-left: 4px solid #eab308; padding: 10px 12px; }}
-.notice {{ background: #eff6ff; border-left: 4px solid #3b82f6; padding: 10px 12px; margin: 10px 0; }}
+.shell-header {{
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px;
+  padding: 6px 2px 4px;
+}}
+.shell-heading {{ min-width: 0; }}
+.shell-heading h1 {{
+  margin: 0 0 8px;
+  color: var(--chronicle-heading);
+  font-family: var(--chronicle-font-family);
+  font-size: clamp(1.8rem, 1.6rem + 0.8vw, 2.4rem);
+  line-height: 1.08;
+}}
+.shell-heading p {{
+  margin: 6px 0;
+  color: var(--chronicle-text-muted);
+}}
+.shell-heading strong {{ color: var(--chronicle-heading); }}
+.utility-bar {{ display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; align-items: center; }}
+ .utility-group {{
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  border: 1px solid var(--chronicle-border);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: var(--chronicle-shadow-soft);
+}}
+.utility-group label {{ font-size: 0.82rem; color: var(--chronicle-text-muted); font-weight: 700; letter-spacing: 0.01em; }}
+.utility-group select {{ min-width: 7rem; }}
+#settings-button {{
+  border-color: var(--chronicle-accent-soft);
+  background: var(--chronicle-panel-strong);
+  color: var(--chronicle-accent-strong);
+  font-weight: 700;
+}}
+#settings-button.active-nav {{
+  background: var(--chronicle-accent);
+  border-color: var(--chronicle-accent);
+  color: #ffffff;
+}}
+.settings-shell {{ display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.8fr); gap: 16px; }}
+.settings-card {{ border: 1px solid var(--chronicle-border); border-radius: var(--chronicle-radius); background: var(--chronicle-panel); padding: 18px; box-shadow: var(--chronicle-shadow-soft); }}
+.settings-card h2, .settings-card h3 {{ margin: 0 0 10px; color: var(--chronicle-heading); }}
+.settings-card p {{ color: var(--chronicle-text-muted); }}
+.hero-summary {{ display: grid; gap: 14px; }}
+.hero-kicker {{ margin: 0; color: var(--chronicle-text-muted); font-size: 0.82rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }}
+.hero-summary h3 {{ margin: 0; color: var(--chronicle-heading); font-family: var(--chronicle-font-family); font-size: clamp(1.5rem, 1.35rem + 0.5vw, 2rem); line-height: 1.15; }}
+.hero-summary p {{ margin: 0; color: var(--chronicle-text-muted); }}
+.hero-grid {{ display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }}
+.hero-stat {{
+  padding: 12px 14px;
+  border: 1px solid #e3dbc9;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #fffefd 0%, #f8f4ea 100%);
+}}
+.hero-stat-label {{ display: block; margin-bottom: 4px; color: var(--chronicle-text-muted); font-size: 0.82rem; font-weight: 700; }}
+.hero-stat-value {{ display: block; color: var(--chronicle-heading); font-size: 1.6rem; font-weight: 700; line-height: 1; }}
+.hero-actions {{ display: flex; flex-wrap: wrap; gap: 8px; }}
+.hero-summary .id {{ color: var(--chronicle-text-muted); }}
+.workbench-grid {{ display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 10px 0 14px; }}
+.workbench-card {{
+  padding: 12px 14px;
+  border: 1px solid #e4dccb;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #fffefb 0%, #f6f1e7 100%);
+}}
+.workbench-card strong {{ display: block; margin-bottom: 4px; color: var(--chronicle-heading); }}
+.workbench-card span {{ color: var(--chronicle-text-muted); font-size: 0.92rem; }}
+.warning {{
+  background: var(--chronicle-warning-bg);
+  border: 1px solid #efd89a;
+  border-left: 4px solid var(--chronicle-warning-border);
+  border-radius: var(--chronicle-radius);
+  padding: 12px 14px;
+  box-shadow: var(--chronicle-shadow-soft);
+}}
+.notice {{
+  background: var(--chronicle-notice-bg);
+  border: 1px solid #cbdcf6;
+  border-left: 4px solid var(--chronicle-notice-border);
+  border-radius: var(--chronicle-radius);
+  padding: 12px 14px;
+  margin: 10px 0;
+}}
 .notice-section {{ margin-top: 12px; padding-top: 10px; border-top: 1px solid #bfdbfe; }}
 .notice-section:first-of-type {{ margin-top: 0; padding-top: 0; border-top: none; }}
-.notice-section h4 {{ margin: 0 0 8px; font-size: 0.95rem; color: #1d4ed8; }}
+.notice-section h4 {{ margin: 0 0 8px; font-size: 0.95rem; color: var(--chronicle-accent-strong); }}
 .fold-section {{ margin: 12px 0 0; }}
-.fold-section summary {{ cursor: pointer; font-weight: 600; color: #1f2937; }}
+.fold-section summary {{ cursor: pointer; font-weight: 600; color: var(--chronicle-text); }}
 .fold-section[open] summary {{ margin-bottom: 8px; }}
 .badge {{ display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 0.85em; margin-right: 6px; white-space: nowrap; }}
-.badge-warning {{ background: #fef3c7; color: #92400e; }}
-.badge-ready {{ background: #dcfce7; color: #166534; }}
-.badge-neutral {{ background: #e5e7eb; color: #374151; }}
+.badge-warning {{ background: var(--chronicle-warning-bg); color: #8b5c00; }}
+.badge-ready {{ background: var(--chronicle-success-bg); color: var(--chronicle-success-text); }}
+.badge-neutral {{ background: var(--chronicle-neutral-bg); color: var(--chronicle-neutral-text); }}
 .fact-line {{ display: grid; grid-template-columns: minmax(132px, 220px) minmax(0, 1fr); gap: 8px 12px; align-items: start; margin: 8px 0; }}
-.fact-label {{ font-weight: 600; color: #374151; }}
+.fact-label {{ font-weight: 700; color: var(--chronicle-neutral-text); }}
 .fact-value {{ min-width: 0; overflow-wrap: anywhere; }}
 .fact-code {{ font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.9em; }}
-.cell-title {{ font-weight: 600; color: #111827; }}
-.cell-meta {{ color: #4b5563; font-size: 0.92em; }}
+.cell-title {{ font-weight: 700; color: var(--chronicle-heading); }}
+.cell-meta {{ color: var(--chronicle-text-muted); font-size: 0.92em; }}
 .cell-stack {{ display: flex; flex-direction: column; align-items: flex-start; gap: 4px; min-width: 11rem; }}
 .cell-stack > * {{ max-width: 100%; }}
 .detail-cell {{ display: flex; flex-direction: column; align-items: flex-start; gap: 4px; min-width: 8.5rem; }}
 .cell-details {{ margin-top: 6px; }}
 .cell-details {{ width: 100%; }}
-.cell-details summary {{ cursor: pointer; color: #1f2937; font-size: 0.9em; }}
+.cell-details summary {{ cursor: pointer; color: var(--chronicle-text); font-size: 0.9em; }}
 .cell-details[open] summary {{ margin-bottom: 6px; }}
 .cell-details-body > * + * {{ margin-top: 4px; }}
 .cell-actions {{ display: flex; flex-wrap: wrap; gap: 4px; }}
 .cell-code {{ font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.85em; }}
-.json-block {{ margin: 12px 0 0; border-top: 1px solid #e5e7eb; padding-top: 12px; }}
-.json-block summary {{ cursor: pointer; font-weight: 600; color: #111827; }}
+.json-block {{ margin: 12px 0 0; border-top: 1px solid var(--chronicle-border); padding-top: 12px; }}
+.json-block summary {{ cursor: pointer; font-weight: 700; color: var(--chronicle-heading); }}
 .json-block[open] summary {{ margin-bottom: 10px; }}
-pre {{ white-space: pre-wrap; word-break: break-word; background: #f9fafb; padding: 12px; border-radius: 8px; overflow-x: auto; }}
-table {{ width: max-content; min-width: 100%; border-collapse: collapse; display: block; overflow-x: auto; }}
+pre {{
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: #f8f7f2;
+  padding: 12px;
+  border-radius: 10px;
+  overflow-x: auto;
+  border: 1px solid #e6dfd0;
+}}
+table {{ width: max-content; min-width: 100%; border-collapse: separate; border-spacing: 0; display: block; overflow-x: auto; }}
 thead, tbody {{ width: 100%; }}
-th, td {{ padding: 6px; border-bottom: 1px solid #e5e7eb; vertical-align: top; }}
-th {{ position: sticky; top: 0; background: #ffffff; }}
+th, td {{ padding: 9px 8px; border-bottom: 1px solid #e8e1d4; vertical-align: top; }}
+th {{ position: sticky; top: 0; background: #f7f2e7; color: var(--chronicle-neutral-text); }}
 .id {{ font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.85em; }}
 @media (max-width: 980px) {{
   .shell-grid {{ grid-template-columns: 1fr; }}
+  .settings-shell {{ grid-template-columns: 1fr; }}
+  .hero-grid {{ grid-template-columns: 1fr; }}
+  .workbench-grid {{ grid-template-columns: 1fr; }}
   #detail {{ position: static; max-height: none; }}
+  .shell-header {{ flex-direction: column; }}
+  .utility-bar {{ justify-content: flex-start; }}
+}}
+@media (max-width: 720px) {{
+  body {{ padding-left: 14px; padding-right: 14px; }}
+  nav {{ gap: 6px; padding: 8px; }}
+  nav button {{ flex: 1 1 10rem; text-align: left; }}
+  .utility-group {{ width: 100%; justify-content: space-between; border-radius: 14px; }}
+  .utility-group select {{ min-width: 0; width: 9rem; }}
+  #settings-button {{ width: 100%; }}
 }}
 </style>
 </head>
 <body>
-<div class="notice">
-  <label for="locale-select" id="locale-label">表示言語</label>
-  <select id="locale-select">
-    <option value="ja">日本語</option>
-    <option value="en">English</option>
-    <option value="zh-CN">简体中文</option>
-  </select>
+<div class="shell-header">
+  <div class="shell-heading">
+    <h1 id="shell-title">Chronicle Stack ローカルUI</h1>
+    <p><strong>{title}</strong></p>
+    <p><span id="shell-root-label">ルート</span>: <span class="id">{root}</span></p>
+  </div>
+  <div class="utility-bar">
+    <div class="utility-group">
+      <label for="locale-select" id="locale-label">表示言語</label>
+      <select id="locale-select">
+        <option value="ja">日本語</option>
+        <option value="en">English</option>
+        <option value="zh-CN">简体中文</option>
+      </select>
+    </div>
+    <div class="utility-group">
+      <label for="font-scale-select" id="font-scale-label">表示フォント</label>
+      <select id="font-scale-select">
+        <option value="100">100%</option>
+        <option value="120">120%</option>
+        <option value="140">140%</option>
+        <option value="160">160%</option>
+        <option value="180">180%</option>
+        <option value="200">200%</option>
+      </select>
+    </div>
+    <button id="settings-button" type="button">設定</button>
+  </div>
 </div>
-<h1 id="shell-title">Chronicle Stack ローカルUI</h1>
-<p><strong>{title}</strong></p>
-<p><span id="shell-root-label">ルート</span>: <span class="id">{root}</span></p>
 <div class="warning" id="shell-warning">
   <p><strong id="shell-warning-title">読み取り専用の前景ローカルUIです。</strong> <span id="shell-warning-body">このUIはローカルの Chronicle ファイルを読み取りますが、レコードは書き込みません。</span></p>
   <p id="shell-boundary-body">daemon なし、自動起動なし、外部 model API なし、GraphRAG runtime なし、vector DB なし、graph DB なし。UI の可視化は correctness proof ではありません。</p>
@@ -8585,6 +8804,8 @@ function applyShellTranslations() {{
   document.documentElement.lang = currentLocale();
   const localeLabel = document.getElementById('locale-label');
   if (localeLabel) localeLabel.textContent = t('label.language');
+  const fontScaleLabel = document.getElementById('font-scale-label');
+  if (fontScaleLabel) fontScaleLabel.textContent = t('label.font_scale');
   const shellTitle = document.getElementById('shell-title');
   if (shellTitle) shellTitle.textContent = t('shell.title');
   const shellRootLabel = document.getElementById('shell-root-label');
@@ -8609,6 +8830,8 @@ function applyShellTranslations() {{
     }});
     localeSelect.value = currentLocale();
   }}
+  const settingsButton = document.getElementById('settings-button');
+  if (settingsButton) settingsButton.textContent = t('shell.settings');
 }}
 function applyLocaleToPage() {{
   applyShellTranslations();
@@ -8619,6 +8842,15 @@ function applyLocaleToPage() {{
   applyDynamicAttributeTranslations(view);
   applyDynamicAttributeTranslations(detail);
 }}
+function syncShellNavigation(endpoint) {{
+  document.querySelectorAll('nav button[data-endpoint]').forEach(button => {{
+    button.classList.toggle('active-nav', button.dataset.endpoint === endpoint);
+  }});
+  const settingsButton = document.getElementById('settings-button');
+  if (settingsButton) {{
+    settingsButton.classList.toggle('active-nav', endpoint === '__settings__');
+  }}
+}}
 function initialLocale() {{
   const params = new URLSearchParams(window.location.search);
   const queryLocale = params.get('locale');
@@ -8626,6 +8858,52 @@ function initialLocale() {{
   const storedLocale = window.localStorage.getItem('chronicle-ui-locale');
   if (storedLocale) return normalizeLocale(storedLocale);
   return normalizeLocale(navigator.language || defaultLocale);
+}}
+function normalizeFontScale(value) {{
+  const allowed = ['100', '120', '140', '160', '180', '200'];
+  const normalized = String(value || '').trim();
+  return allowed.includes(normalized) ? normalized : '100';
+}}
+function applyFontScale(scale) {{
+  const normalized = normalizeFontScale(scale);
+  document.documentElement.style.setProperty('--chronicle-font-scale', normalized + '%');
+  const select = document.getElementById('font-scale-select');
+  if (select) select.value = normalized;
+  window.__chronicleFontScale = normalized;
+  window.localStorage.setItem('chronicle-ui-font-scale', normalized);
+}}
+function initialFontScale() {{
+  const stored = window.localStorage.getItem('chronicle-ui-font-scale');
+  return normalizeFontScale(stored);
+}}
+function renderSettingsView() {{
+  const locale = currentLocale();
+  const fontScale = window.__chronicleFontScale || '100';
+  const localeName = t('locale.' + locale, locale);
+  return ''
+    + '<div class="settings-shell">'
+    +   '<section class="settings-card">'
+    +     '<h2>' + esc(t('settings.title')) + '</h2>'
+    +     '<p>' + esc(t('settings.description')) + '</p>'
+    +     '<div class="fact-line"><div class="fact-label">' + esc(t('label.current_locale')) + '</div><div class="fact-value">' + esc(localeName) + '</div></div>'
+    +     '<div class="fact-line"><div class="fact-label">' + esc(t('label.current_font_scale')) + '</div><div class="fact-value">' + esc(fontScale + '%') + '</div></div>'
+    +     '<div class="fact-line"><div class="fact-label">' + esc(t('label.language')) + '</div><div class="fact-value">' + esc(t('settings.language.help')) + '</div></div>'
+    +     '<div class="fact-line"><div class="fact-label">' + esc(t('label.font_scale')) + '</div><div class="fact-value">' + esc(t('settings.font_scale.help')) + '</div></div>'
+    +     '<div class="fact-line"><div class="fact-label">' + esc(t('label.appearance')) + '</div><div class="fact-value">' + esc(t('settings.appearance.light')) + ' — ' + esc(t('settings.appearance.help')) + '</div></div>'
+    +   '</section>'
+    +   '<aside class="settings-card">'
+    +     '<h3>' + esc(t('shell.settings')) + '</h3>'
+    +     '<p>' + esc(t('settings.description')) + '</p>'
+    +     '<p>' + esc(t('label.language')) + ': <strong>' + esc(localeName) + '</strong></p>'
+    +     '<p>' + esc(t('label.font_scale')) + ': <strong>' + esc(fontScale + '%') + '</strong></p>'
+    +     '<p>' + esc(t('settings.appearance.light')) + '</p>'
+    +   '</aside>'
+    + '</div>';
+}}
+function renderSettingsDetail() {{
+  return '<div class="notice"><strong>' + esc(t('shell.settings')) + '</strong><p>'
+    + esc(t('settings.language.help')) + ' '
+    + esc(t('settings.font_scale.help')) + '</p></div>';
 }}
 function setLocale(locale, rerender = true) {{
   window.__chronicleLocale = normalizeLocale(locale);
@@ -9834,6 +10112,12 @@ function renderAuditGovernanceSummary(summary) {{
     : (summary.boundary_note || '');
   return renderPanel(
     sectionTitle(label('section.audit_governance', 'Audit Governance'))
+    + summaryCardGrid([
+      {{ label: 'Audit events', value: summary.audit_event_count ?? 0 }},
+      {{ label: 'Boundary-linked audits', value: summary.linked_boundary_count ?? 0 }},
+      {{ label: 'Lifecycle-linked audits', value: summary.linked_lifecycle_count ?? 0 }},
+      {{ label: 'Consent records', value: summary.consent_record_count ?? 0 }},
+    ])
     + detailLine('Audit events', summary.audit_event_count ?? 0)
     + detailLine('Boundary-linked audits', summary.linked_boundary_count ?? 0)
     + detailLine('Lifecycle-linked audits', summary.linked_lifecycle_count ?? 0)
@@ -9940,6 +10224,12 @@ function renderBoundaryGovernanceSummary(rows) {{
   }}, {{}});
   return renderPanel(
     sectionTitle(label('section.boundary_governance', 'Boundary Governance'))
+    + summaryCardGrid([
+      {{ label: 'Boundary rules', value: rows.length }},
+      {{ label: 'Enabled rules', value: enabledCount }},
+      {{ label: 'Warn rules', value: warnCount }},
+      {{ label: 'Block rules', value: blockCount }},
+    ])
     + detailLine('Boundary rules', rows.length)
     + detailLine('Enabled rules', enabledCount)
     + detailLine('Warn rules', warnCount)
@@ -9998,6 +10288,12 @@ function renderLifecycleGovernanceSummary(rows) {{
   }}, {{}});
   return renderPanel(
     sectionTitle(label('section.lifecycle_governance', 'Lifecycle Governance'))
+    + summaryCardGrid([
+      {{ label: 'Lifecycle markers', value: rows.length }},
+      {{ label: 'Action kinds', value: Object.keys(actionCounts).length }},
+      {{ label: 'Reason classes', value: Object.keys(reasonClassCounts).length }},
+      {{ label: 'Latest target kind', value: latest.target_kind || '' }},
+    ])
     + detailLine('Lifecycle markers', rows.length)
     + summaryJsonLine('Actions', actionCounts)
     + summaryJsonLine('Reason classes', reasonClassCounts)
@@ -10043,6 +10339,12 @@ function renderLifecycleTable(endpoint, rows) {{
 function renderFederationWorkspaceSummary(summary, boxLabel) {{
   return renderPanel(
     sectionTitle(label('section.federation_workspace', 'Federation Workspace'))
+    + summaryCardGrid([
+      {{ label: 'Workspace', value: boxLabel }},
+      {{ label: 'Inbox preview-only', value: summary.inbox_preview_only_count ?? 0 }},
+      {{ label: 'Outbox preview-only', value: summary.outbox_preview_only_count ?? 0 }},
+      {{ label: 'Inbox audited', value: summary.inbox_audit_recorded_count ?? 0 }},
+    ])
     + detailLine('Workspace', boxLabel)
     + detailLine('Inbox preview-only', summary.inbox_preview_only_count ?? 0)
     + detailLine('Outbox preview-only', summary.outbox_preview_only_count ?? 0)
@@ -10050,6 +10352,11 @@ function renderFederationWorkspaceSummary(summary, boxLabel) {{
     + summaryJsonLine('Inbox type counts', summary.inbox_type_counts)
     + summaryJsonLine('Outbox type counts', summary.outbox_type_counts)
     + detailLine('Scope note', 'Federation workspace remains a local shipping-inspection surface; it does not ship, import, or authorize messages by itself.')
+    + navigationCluster([
+      openEndpointButton('/api/federation-inbox'),
+      openEndpointButton('/api/federation-outbox'),
+      openEndpointButton('/api/audit'),
+    ])
   );
 }}
 function renderFederationMessageRow(row, endpoint) {{
@@ -10114,6 +10421,12 @@ function renderTrustWorkspaceSummary(summary) {{
   const latestRelation = summary.latest_relation || {{}};
   return renderPanel(
     sectionTitle(label('section.trust_workspace', 'Trust Workspace'))
+    + summaryCardGrid([
+      {{ label: 'Trust nodes', value: summary.node_count ?? 0 }},
+      {{ label: 'Trust relations', value: summary.relation_count ?? 0 }},
+      {{ label: 'Delegated actors', value: summary.delegated_actor_count ?? 0 }},
+      {{ label: 'AI proxy relations', value: summary.ai_proxy_generation_count ?? 0 }},
+    ])
     + detailLine('Trust nodes', summary.node_count ?? 0)
     + detailLine('Trust relations', summary.relation_count ?? 0)
     + detailLine('Delegated actors', summary.delegated_actor_count ?? 0)
@@ -11523,6 +11836,13 @@ function messageParagraph(message) {{
 function buttonRow(buttons) {{
   return buttons.length > 0 ? '<p>' + buttons.join('') + '</p>' : '';
 }}
+function summaryCardGrid(items) {{
+  const cards = (Array.isArray(items) ? items : []).filter(item => item && (item.label || item.value !== undefined));
+  if (cards.length === 0) return '';
+  return '<div class="workbench-grid">' + cards.map(item =>
+    '<div class="workbench-card"><strong>' + esc(localizeTextValue(item.label || '')) + '</strong><span>' + esc(String(item.value ?? '')) + '</span></div>'
+  ).join('') + '</div>';
+}}
 function navigationCluster(buttons) {{
   const items = Array.isArray(buttons) ? buttons.filter(Boolean) : [];
   return items.length > 0 ? '<p>' + items.join('') + '</p>' : '';
@@ -11696,22 +12016,35 @@ function renderRuntimeWorkspaceNotice(record) {{
     : (handoff.boundary_note || '');
   return renderNotice(
     label('notice.runtime_workspace', 'Runtime Workspace'),
-    detailLine('Posture role', posture.status || '')
-      + detailLine('Posture note', posture.message || '')
-      + detailLine('Downstream boundary', boundary.status || '')
-      + detailLine('Boundary note', boundary.message || '')
-      + detailLine('Trial sufficiency', trial.status || '')
-      + detailLine('Trial message', trial.message || '')
-      + detailLine('Import ready', typeof trial.import_ready === 'boolean' ? String(trial.import_ready) : '')
-      + detailLine('Missing behavior', trial.missing_behavior || '')
-      + detailLine('Handoff status', handoff.status || '')
-      + detailLine('Handoff message', handoff.message || '')
-      + detailLine('Downstream commands', handoff.downstream_command_count ?? 0)
-      + detailLine('Referenced records', handoff.referenced_record_count ?? 0)
-      + detailLine('Eligible contexts', handoff.eligible_context_count ?? 0)
-      + detailLine('Reviewed files', handoff.reviewed_file_count ?? 0)
-      + detailLine('Import validation', handoff.import_validation_status || '')
-      + detailLine('Scope note', localizedPostureNote || localizedBoundaryNote || localizedTrialNote || localizedHandoffNote)
+    noticeSectionGroup([
+      noticeSection(
+        label('status.detail', 'Detail'),
+        summaryCardGrid([
+          {{ label: 'Posture role', value: posture.status || '' }},
+          {{ label: 'Trial sufficiency', value: trial.status || '' }},
+          {{ label: 'Handoff status', value: handoff.status || '' }},
+          {{ label: 'Import validation', value: handoff.import_validation_status || '' }},
+        ])
+      ),
+      noticeSection(
+        label('section.runtime_records_workspace', 'Runtime Records Workspace'),
+        detailLine('Posture note', posture.message || '')
+          + detailLine('Downstream boundary', boundary.status || '')
+          + detailLine('Boundary note', boundary.message || '')
+          + detailLine('Trial message', trial.message || '')
+          + detailLine('Import ready', typeof trial.import_ready === 'boolean' ? String(trial.import_ready) : '')
+          + detailLine('Missing behavior', trial.missing_behavior || '')
+      ),
+      noticeSection(
+        label('section.next_steps', 'Next Steps'),
+        detailLine('Handoff message', handoff.message || '')
+          + detailLine('Downstream commands', handoff.downstream_command_count ?? 0)
+          + detailLine('Referenced records', handoff.referenced_record_count ?? 0)
+          + detailLine('Eligible contexts', handoff.eligible_context_count ?? 0)
+          + detailLine('Reviewed files', handoff.reviewed_file_count ?? 0)
+          + detailLine('Scope note', localizedPostureNote || localizedBoundaryNote || localizedTrialNote || localizedHandoffNote)
+      ),
+    ])
   );
 }}
 function renderQueryEngineTrialPreviewNotice(record) {{
@@ -12203,14 +12536,27 @@ function renderSummaryJobWorkspaceNotice(record) {{
     : (identity.boundary_note || '');
   return renderNotice(
     label('notice.summary_job_workspace', 'Summary Job Workspace'),
-    detailLine('Package readiness', localizedReadiness)
-      + detailLine('Package note', readiness.message || '')
-      + detailLine('Auth advisory', authAdvisory.status || '')
-      + detailLine('Auth message', authAdvisory.message || '')
-      + detailLine('Auth blockers', authAdvisory.blocker_count ?? 0)
-      + detailLine('Identity assurance', identity.status || '')
-      + detailLine('Identity message', identity.message || '')
-      + detailLine('Scope note', localizedAuthNote || localizedIdentityNote)
+    noticeSectionGroup([
+      noticeSection(
+        label('status.detail', 'Detail'),
+        summaryCardGrid([
+          {{ label: 'Package readiness', value: localizedReadiness }},
+          {{ label: 'Auth advisory', value: authAdvisory.status || '' }},
+          {{ label: 'Identity assurance', value: identity.status || '' }},
+          {{ label: 'Auth blockers', value: authAdvisory.blocker_count ?? 0 }},
+        ])
+      ),
+      noticeSection(
+        label('section.summary_jobs_workspace', 'Summary Jobs Workspace'),
+        detailLine('Package note', readiness.message || '')
+          + detailLine('Auth message', authAdvisory.message || '')
+          + detailLine('Identity message', identity.message || '')
+      ),
+      noticeSection(
+        label('section.next_steps', 'Next Steps'),
+        detailLine('Scope note', localizedAuthNote || localizedIdentityNote)
+      ),
+    ])
   );
 }}
 function renderAuditGovernanceNotice(record) {{
@@ -12317,35 +12663,58 @@ function renderArtifactWorkbenchNotice(record) {{
   const localizedAuditBoundaryNote = auditSummary && auditSummary.boundary_note_key
     ? formatLabel(auditSummary.boundary_note_key, {{}}, auditSummary.boundary_note || '')
     : ((auditSummary && auditSummary.boundary_note) || '');
+  const summarySection = noticeSection(
+    label('status.detail', 'Detail'),
+    '<div class="workbench-grid">'
+      + '<div class="workbench-card"><strong>' + esc(label('section.contexts_workspace', 'Contexts Workspace')) + '</strong><span>' + esc(String(linkedContexts.length)) + '</span></div>'
+      + '<div class="workbench-card"><strong>' + esc(label('section.decisions_workspace', 'Decisions Workspace')) + '</strong><span>' + esc(String(linkedDecisions.length)) + '</span></div>'
+      + '<div class="workbench-card"><strong>' + esc(label('section.rde_workspace', 'RDE Workspace')) + '</strong><span>' + esc(String(linkedRdeRecords.length)) + '</span></div>'
+      + '</div>'
+      + detailLine('Artifact visibility', (boundarySummary && boundarySummary.visibility_hint) || record.visibility_hint || '')
+      + detailLine('Artifact source type', (boundarySummary && boundarySummary.source_type) || '')
+      + detailLine('Related audits', auditSummary ? (auditSummary.audit_event_count ?? 0) : 0)
+      + detailLine('Latest source event', sourceEventSummary ? (sourceEventSummary.latest_event_summary || sourceEventSummary.latest_event_id || '') : '')
+  );
+  const provenanceSection = noticeSection(
+    label('section.provenance', 'Provenance'),
+    (sourceEventSummary
+      ? detailLine('Source events', String(sourceEventSummary.event_count ?? 0) + ' / versions=' + String(sourceEventSummary.version_count ?? 0))
+        + detailLine('Source-event scope note', localizedSourceBoundaryNote)
+      : '')
+    + (boundarySummary
+      ? detailLine('Boundary visibility', boundarySummary.visibility_hint || '')
+        + detailLine('Boundary source type', boundarySummary.source_type || '')
+        + detailListLine('Allowed operations', boundarySummary.allowed_operations, ' | ')
+        + detailLine('Linked context count', boundarySummary.linked_context_count ?? 0)
+        + detailLine('Boundary scope note', localizedBoundaryNote)
+      : '')
+    + (auditSummary
+      ? detailLine('Latest audit summary', auditSummary.latest_summary || '')
+        + detailLine('Audit scope note', localizedAuditBoundaryNote)
+        + summaryJsonLine('Audit operations', auditSummary.operation_counts)
+        + summaryJsonLine('Audit results', auditSummary.result_counts)
+      : '')
+  );
+  const relatedActionsSection = noticeSection(
+    label('section.next_steps', 'Next Steps'),
+    detailListLine('Linked contexts', contextSummaries, ' | ')
+      + detailListLine('Linked decisions', decisionSummaries, ' | ')
+      + detailListLine('Linked RDE records', rdeSummaries, ' | ')
+      + navigationCluster([
+          ...contextButtons,
+          ...decisionButtons,
+          ...rdeButtons,
+          latestEventButton,
+          ...auditButtons,
+        ])
+  );
   return renderNotice(
     label('notice.artifact_workbench', 'Artifact Workbench'),
-    detailListLine('Linked contexts', contextSummaries, ' | ')
-      + (contextButtons.length > 0 ? '<p>' + contextButtons.join(' ') + '</p>' : '')
-      + detailListLine('Linked decisions', decisionSummaries, ' | ')
-      + (decisionButtons.length > 0 ? '<p>' + decisionButtons.join(' ') + '</p>' : '')
-      + detailListLine('Linked RDE records', rdeSummaries, ' | ')
-      + (rdeButtons.length > 0 ? '<p>' + rdeButtons.join(' ') + '</p>' : '')
-      + (sourceEventSummary
-        ? detailLine('Source events', String(sourceEventSummary.event_count ?? 0) + ' / versions=' + String(sourceEventSummary.version_count ?? 0))
-          + detailLine('Latest source event', sourceEventSummary.latest_event_summary || sourceEventSummary.latest_event_id || '')
-          + detailLine('Source-event scope note', localizedSourceBoundaryNote)
-          + (latestEventButton ? '<p>' + latestEventButton + '</p>' : '')
-        : '')
-      + (boundarySummary
-        ? detailLine('Boundary visibility', boundarySummary.visibility_hint || '')
-          + detailLine('Boundary source type', boundarySummary.source_type || '')
-          + detailListLine('Allowed operations', boundarySummary.allowed_operations, ' | ')
-          + detailLine('Linked context count', boundarySummary.linked_context_count ?? 0)
-          + detailLine('Boundary scope note', localizedBoundaryNote)
-        : '')
-      + (auditSummary
-        ? detailLine('Related audits', auditSummary.audit_event_count ?? 0)
-          + detailLine('Latest audit summary', auditSummary.latest_summary || '')
-          + detailLine('Audit scope note', localizedAuditBoundaryNote)
-          + summaryJsonLine('Audit operations', auditSummary.operation_counts)
-          + summaryJsonLine('Audit results', auditSummary.result_counts)
-          + (auditButtons.length > 0 ? '<p>' + auditButtons.join(' ') + '</p>' : '')
-        : '')
+    noticeSectionGroup([
+      summarySection,
+      provenanceSection,
+      relatedActionsSection,
+    ])
   );
 }}
 function renderRelatedLinksNotice(record) {{
@@ -12413,13 +12782,24 @@ function renderReviewStepSummaryNotice(record) {{
   ).join('');
   return renderNotice(
     label('notice.review_steps', 'Review Steps'),
-    statusMessageBody(summary.status, summary.message)
-      + detailLine('Current step', summary.current_step_label || '')
-      + detailLine('Next action', summary.next_action || '')
-      + detailLine('Suggested command', summary.next_action_command || '')
-      + (stepBadges ? '<p>' + stepBadges + '</p>' : '')
-      + detailListLine('Completed steps', summary.completed_steps, ' | ')
-      + detailListLine('Remaining steps', summary.remaining_steps, ' | ')
+    noticeSectionGroup([
+      noticeSection(
+        label('status.detail', 'Detail'),
+        statusMessageBody(summary.status, summary.message)
+          + summaryCardGrid([
+            {{ label: 'Current step', value: summary.current_step_label || '' }},
+            {{ label: 'Next action', value: summary.next_action || '' }},
+            {{ label: 'Suggested command', value: summary.next_action_command || '' }},
+            {{ label: 'Completed', value: (summary.completed_steps || []).length }},
+          ])
+      ),
+      noticeSection(
+        label('section.next_steps', 'Next Steps'),
+        (stepBadges ? '<p>' + stepBadges + '</p>' : '')
+          + detailListLine('Completed steps', summary.completed_steps, ' | ')
+          + detailListLine('Remaining steps', summary.remaining_steps, ' | ')
+      ),
+    ])
   );
 }}
 function renderIdentitySufficiencyNotice(record) {{
@@ -12847,6 +13227,37 @@ function renderOverviewCountsPanel(counts) {{
     + '<table><tbody>' + countRows + '</tbody></table>'
   );
 }}
+function renderOverviewHeroPanel(currentWork, triage, warningSummaries, runtimeRecords, summaryJobs) {{
+  const currentQuestion = currentWork.current_question || {{}};
+  const latestProposal = currentWork.latest_pending_proposal || {{}};
+  const latestObjection = currentWork.latest_objection || {{}};
+  const localizedBoundaryNote = currentWork.boundary_note_key
+    ? formatLabel(currentWork.boundary_note_key, {{}}, currentWork.boundary_note || '')
+    : (currentWork.boundary_note || '');
+  const heroTitle = currentQuestion.summary || latestProposal.summary || latestObjection.summary || label('status.not_found', 'Not found');
+  return renderPanel(
+    '<div class="hero-summary">'
+    + '<p class="hero-kicker">' + esc(label('nav./api/overview', 'Overview')) + '</p>'
+    + '<h3>' + esc(heroTitle) + '</h3>'
+    + '<p>' + esc(localizedBoundaryNote || localizedPayloadText(triage) || localizedPayloadText(currentWork)) + '</p>'
+    + '<div class="hero-grid">'
+    +   '<div class="hero-stat"><span class="hero-stat-label">' + esc(filterValueLabel('reviewQueue', 'review_requested')) + '</span><span class="hero-stat-value">' + esc(triage.needs_attention_reviews ?? 0) + '</span></div>'
+    +   '<div class="hero-stat"><span class="hero-stat-label">' + esc(label('section.runtime_records', 'Runtime Records')) + '</span><span class="hero-stat-value">' + esc(runtimeRecords.total ?? 0) + '</span></div>'
+    +   '<div class="hero-stat"><span class="hero-stat-label">' + esc(label('section.summary_jobs', 'Summary Jobs')) + '</span><span class="hero-stat-value">' + esc(summaryJobs.total ?? 0) + '</span></div>'
+    + '</div>'
+    + '<p>' + esc(label('overview.warning_priority', 'Warning priority')) + ': ' + overviewWarningPriorityBadges(warningSummaries) + '</p>'
+    + '<div class="hero-actions">'
+    +   navigationCluster([
+          currentQuestion.detail_path ? detailNavButton(currentQuestion.detail_path, label('button.open_current_question', 'Open current question')) : '',
+          latestProposal.detail_path ? detailNavButton(latestProposal.detail_path, label('button.open_pending_proposal', 'Open pending proposal')) : '',
+          openEndpointButton('/api/review-queue'),
+          openEndpointButton('/api/runtime-records'),
+          openEndpointButton('/api/summary-jobs'),
+        ])
+    + '</div>'
+    + '</div>'
+  );
+}}
 function renderOverviewRuntimeBoundaryPanel(runtime) {{
   const localizedReadOnly = runtime.read_only_summary_key
     ? formatLabel(runtime.read_only_summary_key, runtime.read_only_summary_params || {{}}, runtime.read_only_summary || String(runtime.read_only))
@@ -13187,7 +13598,13 @@ function renderOverviewFederationPanel(federationSummary, federationPreflight, f
 function renderRuntimeRecordsWorkspacePanel(summary) {{
   return renderWorkspaceSummaryPanel(
     label('section.runtime_records_workspace', 'Runtime Records Workspace'),
-    workspaceCountLine('Provider responses', summary.provider_response_present_count)
+    summaryCardGrid([
+      {{ label: 'Provider responses', value: summary.provider_response_present_count ?? 0 }},
+      {{ label: 'Response missing', value: summary.provider_response_absent_count ?? 0 }},
+      {{ label: 'Trial count', value: (summary.query_engine_trial_summary && summary.query_engine_trial_summary.total_count) ?? 0 }},
+      {{ label: 'Escalation cues', value: (summary.query_engine_trial_escalation_summary && summary.query_engine_trial_escalation_summary.active_count) ?? 0 }},
+    ])
+    + workspaceCountLine('Provider responses', summary.provider_response_present_count)
     + workspaceCountLine('Response missing', summary.provider_response_absent_count)
     + workspaceCountLine('Trial count', summary.query_engine_trial_summary && summary.query_engine_trial_summary.total_count)
     + workspaceCountLine('Escalation cues', summary.query_engine_trial_escalation_summary && summary.query_engine_trial_escalation_summary.active_count),
@@ -13204,7 +13621,13 @@ function renderRuntimeRecordsWorkspacePanel(summary) {{
 function renderSummaryJobsWorkspacePanel(summary) {{
   return renderWorkspaceSummaryPanel(
     label('section.summary_jobs_workspace', 'Summary Jobs Workspace'),
-    workspaceCountLine('Provider responses', summary.provider_response_present_count)
+    summaryCardGrid([
+      {{ label: 'Provider responses', value: summary.provider_response_present_count ?? 0 }},
+      {{ label: 'Response missing', value: summary.provider_response_absent_count ?? 0 }},
+      {{ label: 'Source refs total', value: summary.summary_source_total ?? 0 }},
+      {{ label: 'Runtime providers', value: Object.keys(summary.runtime_provider_counts || {{}}).length }},
+    ])
+    + workspaceCountLine('Provider responses', summary.provider_response_present_count)
     + workspaceCountLine('Response missing', summary.provider_response_absent_count)
     + workspaceCountLine('Source refs total', summary.summary_source_total),
     [
@@ -13221,7 +13644,13 @@ function renderSummaryJobsWorkspacePanel(summary) {{
 function renderArtifactsWorkspacePanel(summary) {{
   return renderWorkspaceSummaryPanel(
     label('section.artifacts_workspace', 'Artifacts Workspace'),
-    workspaceCountLine('Artifacts', summary.artifact_count)
+    summaryCardGrid([
+      {{ label: 'Artifacts', value: summary.artifact_count ?? 0 }},
+      {{ label: 'With proposals', value: summary.proposal_artifact_count ?? 0 }},
+      {{ label: 'Pending proposals', value: summary.pending_proposal_artifact_count ?? 0 }},
+      {{ label: 'Latest updated', value: summary.latest_artifact_updated_at || '' }},
+    ])
+    + workspaceCountLine('Artifacts', summary.artifact_count)
     + workspaceCountLine('With proposals', summary.proposal_artifact_count)
     + workspaceCountLine('Pending proposals', summary.pending_proposal_artifact_count)
     + workspaceCountLine('Latest updated', summary.latest_artifact_updated_at || ''),
@@ -13238,7 +13667,13 @@ function renderArtifactsWorkspacePanel(summary) {{
 function renderReviewQueueWorkspacePanel(summary) {{
   return renderWorkspaceSummaryPanel(
     label('section.review_queue_workspace', 'Review Queue Workspace'),
-    workspaceCountLine('Needs attention', summary.needs_attention_reviews)
+    summaryCardGrid([
+      {{ label: 'Needs attention', value: summary.needs_attention_reviews ?? 0 }},
+      {{ label: 'Ready now', value: summary.ready_now_reviews ?? 0 }},
+      {{ label: 'Advisory only', value: summary.advisory_only_reviews ?? 0 }},
+      {{ label: 'Package ready', value: summary.package_ready_reviews ?? 0 }},
+    ])
+    + workspaceCountLine('Needs attention', summary.needs_attention_reviews)
     + workspaceCountLine('Ready now', summary.ready_now_reviews)
     + workspaceCountLine('Advisory only', summary.advisory_only_reviews)
     + workspaceCountLine('Package ready', summary.package_ready_reviews),
@@ -13417,10 +13852,12 @@ function overviewTriageJumpButtons() {{
   ].join('');
 }}
 const overviewPanelRenderers = [
+  data => renderOverviewHeroPanel(data.currentWork, data.triage, data.warningSummaries, data.runtimeRecords, data.summaryJobs),
   data => renderOverviewHeaderPanel(data.chronicle),
-  data => renderOverviewCountsPanel(data.counts),
   data => renderOverviewCurrentWorkPanel(data.currentWork),
+  data => renderOverviewTriagePanel(data.triage, data.warningButtons, data.warningSummaries),
   data => renderOverviewEvidencePanel(data.overviewEvidence),
+  data => renderOverviewCountsPanel(data.counts),
   data => renderOverviewRuntimeBoundaryPanel(data.runtime),
   data => renderOverviewRuntimeConfigPanel(data.runtimeConfig, data.runtimeConfigContract),
   data => renderOverviewUiBoundaryPanel(data.uiBoundary),
@@ -13432,7 +13869,6 @@ const overviewPanelRenderers = [
   data => renderOverviewFederationPanel(data.federationSummary, data.federationPreflight, data.federationOverlap),
   data => renderOverviewRuntimeRecordsPanel(data.counts, data.runtimeRecords),
   data => renderOverviewSummaryJobsPanel(data.counts, data.summaryJobs),
-  data => renderOverviewTriagePanel(data.triage, data.warningButtons, data.warningSummaries),
 ];
 function renderOverviewPanels(data) {{
   return overviewPanelRenderers.map(renderer => renderer(data)).join('');
@@ -13923,6 +14359,13 @@ function detailBody(endpoint, payload) {{
 }}
 async function loadEndpoint(endpoint) {{
   window.__chronicleCurrentEndpoint = endpoint;
+  syncShellNavigation(endpoint);
+  if (endpoint === '__settings__') {{
+    document.getElementById('view').innerHTML = renderSettingsView();
+    document.getElementById('detail').innerHTML = renderSettingsDetail();
+    applyLocaleToPage();
+    return;
+  }}
   const response = await fetch(endpoint);
   const payload = await response.json();
   document.getElementById('view').innerHTML = endpointBody(endpoint, payload);
@@ -14003,6 +14446,7 @@ async function submitReviewAction(path, action, recordId, targetId = 'action-pre
   }}
 }}
 document.querySelectorAll('button[data-endpoint]').forEach(button => button.addEventListener('click', () => loadEndpoint(button.dataset.endpoint)));
+document.getElementById('settings-button').addEventListener('click', () => loadEndpoint('__settings__'));
 document.getElementById('view').addEventListener('click', handleViewClick);
 document.getElementById('detail').addEventListener('click', handleDetailClick);
 document.getElementById('view').addEventListener('click', handleViewPreviewPost);
@@ -14010,12 +14454,15 @@ window.__chronicleFilters = {{ runtimeRecords: '', reviewQueue: '', summaryJobs:
 window.__chronicleSorts = {{ runtimeRecords: 'latest', reviewQueue: 'attention', summaryJobs: 'latest' }};
 window.__chronicleDetailTrail = [];
 window.__chronicleLocale = initialLocale();
+window.__chronicleFontScale = initialFontScale();
 window.__chronicleMutationToken = {mutation_token_json};
 window.__chronicleMutationSessionId = {mutation_session_id_json};
 window.__chronicleMutationRequestSequence = 0;
 document.getElementById('view').addEventListener('input', handleViewInput);
 document.getElementById('view').addEventListener('change', handleViewChange);
 document.getElementById('locale-select').addEventListener('change', event => setLocale(event.target.value));
+document.getElementById('font-scale-select').addEventListener('change', event => applyFontScale(event.target.value));
+applyFontScale(window.__chronicleFontScale);
 applyLocaleToPage();
 loadEndpoint('/api/overview');
 </script>

@@ -1655,8 +1655,19 @@ def test_ui_html_filtering_includes_provider_response_metadata_fields(tmp_path, 
     assert 'id="locale-select"' in html
     assert "const uiI18nCatalog =" in html
     assert "function setLocale(locale, rerender = true)" in html
+    assert "function applyFontScale(scale)" in html
+    assert "function syncShellNavigation(endpoint)" in html
+    assert "function summaryCardGrid(items)" in html
+    assert "function renderOverviewHeroPanel(currentWork, triage, warningSummaries, runtimeRecords, summaryJobs)" in html
+    assert "function renderSettingsView()" in html
     assert "applyLocaleToPage();" in html
     assert "Chronicle Stack ローカルUI" in html
+    assert 'id="font-scale-select"' in html
+    assert 'id="settings-button"' in html
+    assert "--chronicle-bg:" in html
+    assert ".hero-summary {" in html
+    assert ".workbench-grid {" in html
+    assert "nav button.active-nav" in html
     assert "button.copy_recovery_cli" in html
     assert "rollback=" in html
     assert "transaction=" in html
@@ -2811,9 +2822,12 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "function renderRuntimeRecordsWorkspacePanel(summary)" in html
     assert "function renderReviewQueueWorkspacePanel(summary)" in html
     assert "function renderSummaryJobsWorkspacePanel(summary)" in html
+    assert "summaryCardGrid([" in html
     assert "function renderArtifactsWorkspacePanel(summary)" in html
     assert "function renderArtifactsTable(endpoint, rows)" in html
     assert "function renderArtifactRow(row, endpoint)" in html
+    assert "label('notice.artifact_workbench', 'Artifact Workbench')" in html
+    assert "label('section.provenance', 'Provenance')" in html
     assert "function renderGenericTable(endpoint, rows)" in html
     assert "const endpointRenderers =" in html
     assert "reviewerIdentityBadge" in html
@@ -3162,7 +3176,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "label('notice.related_links', 'Related Links')" in html
     assert "function renderReviewStepSummaryNotice(record)" in html
     assert "label('notice.review_steps', 'Review Steps')" in html
-    assert "detailLine('Current step', summary.current_step_label || '')" in html
+    assert "{ label: 'Current step', value: summary.current_step_label || '' }" in html
     assert "function renderIdentitySufficiencyNotice(record)" in html
     assert "label('notice.identity_sufficiency', 'Identity Sufficiency')" in html
     assert "detailLine('Assurance status', summary.assurance_status || '')" in html
@@ -3319,12 +3333,12 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "label('notice.query_engine_trial_preview', 'Query-Engine Trial Preview')" in html
     assert "function renderRuntimeWorkspaceNotice(record)" in html
     assert "label('notice.runtime_workspace', 'Runtime Workspace')" in html
-    assert "detailLine('Posture role', posture.status || '')" in html
-    assert "detailLine('Handoff status', handoff.status || '')" in html
+    assert "{ label: 'Posture role', value: posture.status || '' }" in html
+    assert "{ label: 'Handoff status', value: handoff.status || '' }" in html
     assert "function renderSummaryJobWorkspaceNotice(record)" in html
     assert "label('notice.summary_job_workspace', 'Summary Job Workspace')" in html
-    assert "detailLine('Auth advisory', authAdvisory.status || '')" in html
-    assert "detailLine('Identity assurance', identity.status || '')" in html
+    assert "{ label: 'Auth advisory', value: authAdvisory.status || '' }" in html
+    assert "{ label: 'Identity assurance', value: identity.status || '' }" in html
     assert "function renderAuditGovernanceNotice(record)" in html
     assert "label('notice.audit_governance', 'Audit Governance')" in html
     assert "detailLine('Operational status', implication.status || '')" in html
@@ -3403,7 +3417,7 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "overviewTriageJumpButtons()" in html
     assert "data-detail-nav" in html
     assert html.count("'<td>' + detailCell(button, path) + '</td>'") == 14
-    assert "table { width: max-content; min-width: 100%; border-collapse: collapse; display: block; overflow-x: auto; }" in html
+    assert "table { width: max-content; min-width: 100%; border-collapse: separate; border-spacing: 0; display: block; overflow-x: auto; }" in html
     assert "data-detail-trail" in html
     assert "data-back-view" in html
     assert "uiLabel('No matching runtime records for current filter.')" in html
