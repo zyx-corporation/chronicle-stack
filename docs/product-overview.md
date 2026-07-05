@@ -1,0 +1,81 @@
+# Chronicle Stack Product Overview
+
+## 解決したい課題
+
+AIを使った執筆、設計、調査、開発では、成果物だけが残りやすくなります。Chronicle Stack は、次のような情報の喪失を防ぐことを目指します。
+
+- どの文脈から生成されたのか
+- どの指示で変更されたのか
+- どの案が採用、棄却、保留されたのか
+- どの差分が意味を変えたのか
+- 出所や根拠がどこにあるのか
+- 注意が必要な文脈がいつ混入したのか
+- 人間が最終的に何を判断したのか
+
+## 目指すもの
+
+Chronicle Stack は、人間側が自分の文脈、問い、判断、生成物の来歴を保持し、必要に応じて選び直せるようにするための基盤です。
+
+主な価値:
+
+- **再構成可能性**: 後から生成過程と判断を辿れる
+- **文脈主権**: 文脈をAI任せにせず、人間側で保持・選択する
+- **Artifact履歴**: 成果物をバージョンとして追跡する
+- **Decision記録**: 採用、棄却、保留の理由を残す
+- **RDE Diff Record**: 意味変化を構造的に記録する
+- **Source Provenance**: 出所を記録する
+- **Boundary Rules**: 文脈の扱いに注意点と境界を与える
+
+## Chronicle Stack ではないもの
+
+Chronicle Stack は、汎用ベクトルデータベース、完成済みのGraphRAG、正しさを自動判定する仕組み、クラウド型AIメモリサービス、LLMエージェント実行基盤、ライブDashboardサーバーではありません。
+
+補足:
+
+- RDE は意味変化を構造的に記録する枠組みであり、正しさの証明ではありません
+- Boundary Rules は警告や分類を支援するもので、強制的な保護機構ではありません
+- graph export は GraphRAG 接続準備であり、GraphRAG engine ではありません
+- `chronicle ui` は明示起動型の read-only local web UI であり、daemon、hosted service、access control、correctness proof ではありません
+
+## システム全体像
+
+```mermaid
+flowchart TD
+    U[利用者] --> CLI[Chronicle CLI]
+    CLI --> S[Chronicle Services]
+    S --> E[Chronicle Events]
+    S --> C[Contexts]
+    S --> A[Artifacts]
+    S --> D[Decisions]
+    S --> R[RDE Diff Records]
+    S --> B[Boundary Rules]
+    S --> P[Injection Plans]
+    E --> J[(chronicle.jsonl 一次記録)]
+    J --> I[(派生Index)]
+    I --> Search[Search]
+    I --> Export[Export]
+    I --> UI[Explicit Local UI]
+    I --> History[Artifact History]
+    I --> Check[Boundary Check]
+    Check --> P
+    Export --> G[graph-json]
+    Export --> H[HTML Review Console]
+```
+
+`chronicle.jsonl` が一次記録です。派生Index、検索、エクスポート、履歴表示、Boundary Check、graph-json、HTML Review Console、Explicit Local UI は補助データまたは派生ビューです。
+
+## 現在の実装位置
+
+現在のプロダクト位置と残務順は次を参照してください。
+
+- [Overall Roadmap](./roadmaps/overall-roadmap.md)
+- [Local UI Implementation Roadmap](./roadmaps/local-ui-implementation-roadmap-2026-07.md)
+- [Release Status v2.0.0](./releases/status/release-status-v2.0.0.md)
+
+## 詳細参照
+
+- [Architecture](./architecture.md)
+- [Interface Contracts](./interface-contracts.md)
+- [Data Model](./data-model.md)
+- [Storage Format](./storage-format.md)
+- [Testing Strategy](./testing-strategy.md)

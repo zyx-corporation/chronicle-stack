@@ -14,6 +14,7 @@
   - `docs/releases/smoke/smoke-test-v2.0.md`
   - `docs/releases/remaining/v2.0-release-remaining-issues.md`
 - A coherent `v2.0.0` release trail that aligns roadmap position, release pointers, CLI version output, and validation records.
+- A README information-architecture pass that centers overview, usage, and operations while moving detailed reference content into dedicated `docs/` pages.
 
 ### Changed
 - Project version finalized as `2.0.0`.
