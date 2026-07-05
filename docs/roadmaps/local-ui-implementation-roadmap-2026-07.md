@@ -75,9 +75,17 @@ Chronicle Stack は Kazane そのものにはならない。
 - overview の question / proposal / warning priority
 - artifact workbench の multi-column composition
 
-## 3.1 Current Position (2026-07-03)
+## 3.1 Current Position (2026-07-05)
 
-現在地は `Phase 1` 完了直後、`Phase 2` 着手前とみなす。
+現在地は、文書初版時点の `Phase 1` 完了直後より前進している。
+repo truth ベースでは、次の補正が妥当である。
+
+- `Phase 0`: Completed
+- `Phase 1`: Completed
+- `Phase 2`: Substantially in progress
+- `Phase 3`: Substantially in progress
+- `Phase 4`: Partially started
+- `Phase 5`: Not closed
 
 今回までに完了したもの:
 
@@ -98,6 +106,14 @@ Chronicle Stack は Kazane そのものにはならない。
 - artifact workbench の multi-column 化
 - review / runtime / federation 各 workspace の final layout 化
 - manual validation / release docs の最終更新
+
+プロダクト完了へ向けた UI 残務順は、次の通りに固定する。
+
+1. security / boundary semantics と矛盾しない summary-first UI へ各 workspace を揃える
+2. review / runtime / federation / trust / audit workspace を final reading flow に寄せる
+3. federation package / manifest / verify の operator UX を一貫化する
+4. AI / retrieval boundary と handoff / escalation の見せ方を締める
+5. manual validation / release / roadmap 文書を current shell に同期する
 
 ローカル検証状況:
 
@@ -362,7 +378,7 @@ Status:
 
 Status:
 
-- Next
+- In progress
 
 - bright background
 - compact cards
@@ -372,7 +388,7 @@ Status:
 
 Status:
 
-- Priority
+- In progress
 
 - question-centric overview
 - multi-column artifact workbench
@@ -381,7 +397,7 @@ Status:
 
 Status:
 
-- Queued
+- Partially started
 
 - review progression
 - runtime posture
@@ -408,6 +424,14 @@ Status:
 6. runtime / retrieval posture renderer
 7. federation inspection-desk renderer
 8. docs + validation refresh
+
+現時点の product closeout 順では、これらの slice を次の 5 本へ束ね直して読む。
+
+1. security / boundary alignment and semantics closeout
+2. review / runtime / federation / trust / audit renderer closeout
+3. federation package and signed-manifest operator flow closeout
+4. AI / retrieval boundary and handoff flow closeout
+5. docs, smoke, release, and manual validation synchronization
 
 既に完了済みの slice:
 
@@ -462,7 +486,7 @@ Status:
 
 - 次は helper alignment ではなく feature-facing UI work に戻る
 - settings / locale / font scale / shell は基盤として完了した
-- 次の主戦場は light theme token 整理と overview / workbench 再編である
-- light theme と concise presentation を feature workspace の前段に置く
+- 次の主戦場は security / boundary semantics を壊さずに feature workspace を product-grade に閉じることである
+- light theme と concise presentation は基盤から feature workspace 全体へ拡張する段階に入っている
 - Kazane handoff は Chronicle UI を business OS に変えるためではなく、operator-first のレイアウト判断に使う
-- 実装順序は `light theme -> overview/workbench -> audit/trust -> review/runtime/federation -> validation` が現時点で最も安全
+- 実装順序は `boundary closeout -> feature workspace closeout -> package/manifest UX -> AI/retrieval flow closeout -> validation` が現時点で最も安全
