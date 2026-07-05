@@ -435,11 +435,11 @@ ruff check src/ tests/
 ## リリース
 
 - release index: [docs/releases/README.md](docs/releases/README.md)
-- latest release notes pointer: [docs/releases/notes/release-notes-v1.164.0.md](docs/releases/notes/release-notes-v1.164.0.md)
-- latest release status pointer: [docs/releases/status/release-status-v1.164.0.md](docs/releases/status/release-status-v1.164.0.md)
-- latest release readiness pointer: [docs/releases/readiness/release-readiness-v1.133.md](docs/releases/readiness/release-readiness-v1.133.md)
-- latest smoke pointer: [docs/releases/smoke/smoke-test-v1.133.md](docs/releases/smoke/smoke-test-v1.133.md)
-- latest remaining-issues pointer: [docs/releases/remaining/v1.135-release-remaining-issues.md](docs/releases/remaining/v1.135-release-remaining-issues.md)
+- latest release notes pointer: [docs/releases/notes/release-notes-v2.0.0.md](docs/releases/notes/release-notes-v2.0.0.md)
+- latest release status pointer: [docs/releases/status/release-status-v2.0.0.md](docs/releases/status/release-status-v2.0.0.md)
+- latest release readiness pointer: [docs/releases/readiness/release-readiness-v2.0.md](docs/releases/readiness/release-readiness-v2.0.md)
+- latest smoke pointer: [docs/releases/smoke/smoke-test-v2.0.md](docs/releases/smoke/smoke-test-v2.0.md)
+- latest remaining-issues pointer: [docs/releases/remaining/v2.0-release-remaining-issues.md](docs/releases/remaining/v2.0-release-remaining-issues.md)
 - current operator/release entry points: [docs/releases/operations/README.md](docs/releases/operations/README.md)
 - release docs are maintained as per-directory current pointers instead of a fixed historical shortlist here
 
