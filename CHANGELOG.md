@@ -4,6 +4,27 @@
 
 - No unreleased changes recorded.
 
+## v2.0.0 - 2026-07-05
+
+### Added
+- `v2.0.0` release-track documents:
+  - `docs/releases/status/release-status-v2.0.0.md`
+  - `docs/releases/readiness/release-readiness-v2.0.md`
+  - `docs/releases/notes/release-notes-v2.0.0.md`
+  - `docs/releases/smoke/smoke-test-v2.0.md`
+  - `docs/releases/remaining/v2.0-release-remaining-issues.md`
+- A coherent `v2.0.0` release trail that aligns roadmap position, release pointers, CLI version output, and validation records.
+
+### Changed
+- Project version finalized as `2.0.0`.
+- Current release pointers in `README.md` and `docs/releases/*/README.md` now consistently point at the `v2.0.0` release lane.
+- The current roadmap baseline now records the present implementation position and completion order as part of the active release trail.
+
+### Notes
+- `v2.0.0` is a local-first baseline release that consolidates the present product position and release evidence into one coherent versioned cut.
+- Repository-side release preparation is complete once `ruff`, `pytest`, `chronicle --version`, and `ui-smoke --json` pass for this checkout.
+- `v2.0.0` still does not imply hosted runtime, networked federation, default-on GUI mutation, external model execution, correctness proof, or security certification.
+
 ## v1.14.0 - 2026-06-24
 
 ### Added
