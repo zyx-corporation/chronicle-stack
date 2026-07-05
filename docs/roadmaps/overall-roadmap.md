@@ -246,6 +246,115 @@ Stage L Future Concept Graduation は全段階から独立した保留・昇格�
 
 長期優先は、Stage J / K である。文脈SNS UI と networked federation は魅力的だが、早すぎると既存SNSの模倣、中央化、注意経済化へ逸脱する。
 
+## 6.1 現在地と完了までの残務順
+
+2026-07-05 時点の repo truth ベースでは、Chronicle Stack は次の位置にある。
+
+- `Stage A: Core Baseline Preservation` は実装面では概ね通過済み
+- `Stage B: Operational Readiness Baseline` は実装面ではかなり進んでいる
+- 現在の主戦場は `Stage C: Security and Boundary Baseline`
+- 並行する次段として `Stage D: AI / Retrieval Boundary Expansion` と `Stage E: Federation Package Foundation` を product-grade に整える段階に入っている
+- `Stage F` 以降は surface や要求の素地はあるが、製品完了基準としては未到達
+
+したがって、プロダクトレベル完了までの残務は、次の順番で整理する。
+
+### Order 1: Stage C を完了する
+
+目的:
+
+- 連携や共有を増やしても文脈主権を壊さない安全境界を、仕様だけでなく operator workflow と UI guidance まで含めて閉じる
+
+主残務:
+
+- classification metadata と既存 context / export 実装の整合確認
+- `read / export / inject / reinterpret / publish` の allowed operation model の明文化
+- AI interpretation warning classification の固定化
+- redact / seal / tombstone / integrity metadata の surface 一貫化
+- doctor / readiness / export profile における security-aware check の同期
+
+完了条件:
+
+- 境界の区別が CLI / docs / UI の全てで一貫している
+- 外部AI投入や共有前に preview / dry-run / advisory check が必ず読める
+- classification, retention, masking, audit metadata が product surface 上で誤解なく扱える
+
+### Order 2: UI の主要 workspace を final reading flow に寄せる
+
+目的:
+
+- 既存 read-only local UI を、summary-first で一目で分かる product-grade workbench に仕上げる
+
+主残務:
+
+- Review Workspace の `step / blocker / outcome` 型再編
+- Runtime / Retrieval Workspace の `posture / trial / handoff / escalation` 型再編
+- Federation Workspace の package inspection desk 化
+- Audit / Boundary / Lifecycle Workspace の governance console 化
+- Trust Workspace の relation semantics inspector 化
+
+完了条件:
+
+- 各 workspace の役割が first viewport で分かる
+- raw detail より先に summary / implication / next safe action が読める
+- read-only guidance surface であることが見た目でも誤解されない
+
+### Order 3: Stage E / F の federation package + manifest UX を仕上げる
+
+目的:
+
+- `create / inspect / verify / preview / import-preview` を単発 command 群ではなく、一貫した operator flow にする
+
+主残務:
+
+- package purpose / consent / visibility / third-party sharing / retention の表示整流
+- verify 結果と trust / redaction / import implication の同一画面読解
+- unsigned / mismatch / expired / revoked の warning surface 統一
+- signed-manifest surface を docs / preview / review に同期
+
+完了条件:
+
+- package を作る前後の安全確認が迷わない
+- verify 結果が trust certification ではないことが明瞭
+- package review と import preview が operator handoff として成立する
+
+### Order 4: Stage D の AI / Retrieval boundary flow を締める
+
+目的:
+
+- AI 利用を便利機能としてではなく、境界制御と再構成可能性の下で扱う
+
+主残務:
+
+- runtime posture summary の簡潔化
+- AI response と user statement / primary record の分離表示強化
+- downstream boundary note / trial sufficiency / handoff summary の整流
+- RDE / decay / interpretation warning との接続明確化
+
+完了条件:
+
+- AI に何を渡したか、何を渡していないかが見える
+- AI 解釈が恒久属性や事実記録へ混入しない
+- trial, handoff, escalation の境界が operator に分かる
+
+### Order 5: 検証・文書・完了判定を同期する
+
+目的:
+
+- 実装済み surface と roadmap / release / validation 文書のズレをなくし、完了判定を出せる状態にする
+
+主残務:
+
+- `docs/roadmaps/*` の current position 更新
+- `README.md`, release readiness, remaining issues の同期
+- `chronicle ui-smoke` と manual walkthrough 手順の最終調整
+- locale / font scale / light theme / main workspaces の validation evidence 更新
+
+完了条件:
+
+- roadmap が現実装より遅れない
+- operator が chat memory なしで主要導線を検証できる
+- release closeout 文書が current UI shell と product boundary に一致する
+
 ## 7. 推奨Issue化
 
 ### Epic 1: Overall roadmap alignment
