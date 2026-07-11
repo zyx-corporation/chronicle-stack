@@ -91,6 +91,10 @@ pytest
 - [Product Overview](/Users/tomyuk/Projects/Chronicle/chronicle-stack/docs/product-overview.md)
 - [Usage Reference](/Users/tomyuk/Projects/Chronicle/chronicle-stack/docs/usage-reference.md)
 - [Overall Roadmap](/Users/tomyuk/Projects/Chronicle/chronicle-stack/docs/roadmaps/overall-roadmap.md)
+- [Stage 2 Basic Specification](docs/stage-2/basic-specification.md)
+- [Stage 2 Implementation Roadmap](docs/stage-2/roadmap.md)
+- [Stage 2 Milestones](docs/stage-2/milestones.md)
+- [Third-Party Notices](THIRD_PARTY_NOTICES.md)
 
 ## ライセンス
 

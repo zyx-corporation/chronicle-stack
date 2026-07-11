@@ -1,0 +1,114 @@
+schema_version: "1"
+project: zyx-corporation/chronicle-stack
+policy:
+  default_adoption_mode: conceptual_reimplementation
+  direct_source_reuse_requires_rights_review: true
+  commercial_edition_requires_separate_rights_review: true
+  update_notice_with_direct_reuse: true
+records:
+  - adoption_id: upstream-mulmoclaude-backend-separation
+    source_project: receptron/mulmoclaude
+    source_url: https://github.com/receptron/mulmoclaude
+    source_commit: 6fcf15f3d976ebb499d6946b791a95290dafbf1a
+    source_paths:
+      - server/agent/index.ts
+      - server/agent/backend/index.ts
+      - server/agent/backend/types.ts
+    source_license: MIT
+    source_copyright: Satoshi Nakajima and the members of Receptron
+    adoption_mode: conceptual_reimplementation
+    copied_source: false
+    target_paths:
+      - docs/stage-2/basic-specification.md
+      - docs/stage-2/roadmap.md
+    design_summary: >-
+      Separate provider-specific execution from orchestration through a Chronicle-specific
+      Runtime Backend Port. Chronicle recording, review, and provenance remain outside the backend.
+    notice_location: THIRD_PARTY_NOTICES.md
+    rights_review_status: reference_only
+    commercial_edition_status: independent_implementation_required
+
+  - adoption_id: upstream-mulmoclaude-capability-boundary
+    source_project: receptron/mulmoclaude
+    source_url: https://github.com/receptron/mulmoclaude
+    source_commit: 6fcf15f3d976ebb499d6946b791a95290dafbf1a
+    source_paths:
+      - docs/plugin-development.md
+      - docs/plugin-runtime.md
+      - CLAUDE.md
+    source_license: MIT
+    source_copyright: Satoshi Nakajima and the members of Receptron
+    adoption_mode: conceptual_reimplementation
+    copied_source: false
+    target_paths:
+      - docs/stage-2/basic-specification.md
+      - docs/stage-2/roadmap.md
+    design_summary: >-
+      Keep feature-specific integration outside Chronicle core, register capabilities explicitly,
+      reject identifier collisions, and expose only scoped Chronicle ports to adapters.
+    notice_location: THIRD_PARTY_NOTICES.md
+    rights_review_status: reference_only
+    commercial_edition_status: independent_implementation_required
+
+  - adoption_id: upstream-mulmoclaude-structured-plan-pattern
+    source_project: receptron/mulmoclaude
+    source_url: https://github.com/receptron/mulmoclaude
+    source_commit: 6fcf15f3d976ebb499d6946b791a95290dafbf1a
+    source_paths:
+      - MANIFEST.md
+      - docs/papers/arxiv/dsls-as-harnesses/main.tex
+    source_license: MIT
+    source_copyright: Satoshi Nakajima and the members of Receptron
+    adoption_mode: conceptual_reimplementation
+    copied_source: false
+    target_paths:
+      - docs/stage-2/basic-specification.md
+      - docs/stage-2/roadmap.md
+    design_summary: >-
+      Convert AI interpretation into a validated Chronicle Operation Plan, then use deterministic
+      proposal, review, and apply services instead of allowing the model to mutate records directly.
+    notice_location: THIRD_PARTY_NOTICES.md
+    rights_review_status: reference_only
+    commercial_edition_status: independent_implementation_required
+
+  - adoption_id: upstream-mulmoclaude-proposal-surface-pattern
+    source_project: receptron/mulmoclaude
+    source_url: https://github.com/receptron/mulmoclaude
+    source_commit: 6fcf15f3d976ebb499d6946b791a95290dafbf1a
+    source_paths:
+      - MANIFEST.md
+      - docs/plugin-runtime.md
+    source_license: MIT
+    source_copyright: Satoshi Nakajima and the members of Receptron
+    adoption_mode: conceptual_reimplementation
+    copied_source: false
+    target_paths:
+      - docs/stage-2/basic-specification.md
+      - docs/stage-2/milestones.md
+    design_summary: >-
+      Define a declarative Proposal Surface for review-oriented local UI. Do not adopt arbitrary
+      runtime GUI plugin execution or the upstream GUI protocol implementation.
+    notice_location: THIRD_PARTY_NOTICES.md
+    rights_review_status: reference_only
+    commercial_edition_status: independent_implementation_required
+
+  - adoption_id: upstream-mulmoclaude-transport-separation
+    source_project: receptron/mulmoclaude
+    source_url: https://github.com/receptron/mulmoclaude
+    source_commit: 6fcf15f3d976ebb499d6946b791a95290dafbf1a
+    source_paths:
+      - packages/README.md
+      - docs/mulmobridge-guide.md
+    source_license: MIT
+    source_copyright: Satoshi Nakajima and the members of Receptron
+    adoption_mode: conceptual_reimplementation
+    copied_source: false
+    target_paths:
+      - docs/stage-2/basic-specification.md
+      - docs/stage-2/roadmap.md
+    design_summary: >-
+      Keep messaging-platform adapters outside Chronicle core and normalize inbound messages into a
+      Chronicle-specific External Interaction Envelope before explicit command promotion.
+    notice_location: THIRD_PARTY_NOTICES.md
+    rights_review_status: reference_only
+    commercial_edition_status: independent_implementation_required
