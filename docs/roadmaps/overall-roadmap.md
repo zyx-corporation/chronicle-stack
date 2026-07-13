@@ -283,7 +283,7 @@ Status: Completed (`docs/security/stage-c-security-boundary-closeout.md`)
 
 ### Order 2: UI の主要 workspace を final reading flow に寄せる
 
-Status: Next
+Status: Completed for Review / Runtime / Federation (`docs/ui-phase-4-closeout.md`); automated validation complete, manual visual walkthrough remains in the UI validation lane
 
 目的:
 
@@ -304,6 +304,8 @@ Status: Next
 - read-only guidance surface であることが見た目でも誤解されない
 
 ### Order 3: Stage E / F の federation package + manifest UX を仕上げる
+
+Status: Next
 
 目的:
 

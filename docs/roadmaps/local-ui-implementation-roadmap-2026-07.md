@@ -293,7 +293,7 @@ read model 拡張の優先順:
 
 Status:
 
-- Queued
+- Completed (`../ui-phase-4-closeout.md`)
 
 目的:
 
@@ -327,7 +327,7 @@ read model 拡張の優先順:
 
 Status:
 
-- Queued
+- In progress: automated smoke complete; manual visual walkthrough remains
 
 目的:
 
