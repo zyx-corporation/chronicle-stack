@@ -4,10 +4,10 @@
 
 ## Current Pointer
 
-- latest smoke: `smoke-test-v2.0.md`
-- paired readiness: `../readiness/release-readiness-v2.0.md`
-- paired status: `../status/release-status-v2.0.0.md`
-- paired remaining: `../remaining/v2.0-release-remaining-issues.md`
+- latest smoke: `smoke-test-v2.1.md`
+- paired readiness: `../readiness/release-readiness-v2.1.md`
+- paired status: `../status/release-status-v2.1.0.md`
+- paired remaining: `../remaining/v2.1-release-remaining-issues.md`
 
 ## Naming
 
