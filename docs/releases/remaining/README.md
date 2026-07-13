@@ -4,10 +4,10 @@
 
 ## Current Pointer
 
-- latest remaining: `v2.1-release-remaining-issues.md`
-- paired notes: `../notes/release-notes-v2.1.0.md`
-- paired status: `../status/release-status-v2.1.0.md`
-- paired readiness: `../readiness/release-readiness-v2.1.md`
+- latest remaining: `v2.2-release-remaining-issues.md`
+- paired notes: `../notes/release-notes-v2.2.0.md`
+- paired status: `../status/release-status-v2.2.0.md`
+- paired readiness: `../readiness/release-readiness-v2.2.md`
 
 ## Naming
 
