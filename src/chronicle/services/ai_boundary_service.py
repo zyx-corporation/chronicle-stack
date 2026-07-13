@@ -8,6 +8,9 @@ from pathlib import Path
 from chronicle.models.ai_boundary import (
     AiBoundaryPersistencePolicy,
     AiBoundaryPreview,
+    AiInterpretationWarning,
+    AiInterpretationWarningCode,
+    AiInterpretationWarningSeverity,
     SayaneAdapterContract,
 )
 from chronicle.models.event import Actor, Confidence, ReviewStatus
@@ -70,6 +73,10 @@ class AiBoundaryService:
         ]
         if response_text and not persistence.persist_response:
             notes.append("Response text supplied but marked non-persistent by policy.")
+        interpretation_warnings = self._interpretation_warnings(
+            included_context_ids=included_context_ids,
+            persistence=persistence,
+        )
         preview = AiBoundaryPreview(
             task=task,
             model_id=model_id,
@@ -80,6 +87,7 @@ class AiBoundaryService:
             excluded_context_ids=excluded_context_ids,
             redaction_candidates=redaction_candidates,
             package_warnings=package.manifest.warnings,
+            interpretation_warnings=interpretation_warnings,
             persistence_policy=persistence,
             prompt_text=prompt_text if persistence.persist_prompt else None,
             response_text=response_text if persistence.persist_response else None,
@@ -110,6 +118,52 @@ class AiBoundaryService:
             confidence=Confidence.LOW,
         )
         return preview.model_copy(update={"recorded": True, "event_id": event.event_id})
+
+    @staticmethod
+    def _interpretation_warnings(
+        *,
+        included_context_ids: list[str],
+        persistence: AiBoundaryPersistencePolicy,
+    ) -> list[AiInterpretationWarning]:
+        warnings = [
+            AiInterpretationWarning(
+                code=AiInterpretationWarningCode.NOT_PRIMARY_FACT,
+                severity=AiInterpretationWarningSeverity.WARNING,
+                message="AI output and interpretation are derived content, not primary Chronicle facts.",
+                next_safe_action="Review provenance and record accepted meaning through proposal, RDE, or decision workflows.",
+            ),
+            AiInterpretationWarning(
+                code=AiInterpretationWarningCode.REVIEW_REQUIRED,
+                severity=AiInterpretationWarningSeverity.WARNING,
+                message="AI-derived content requires explicit human review before trust or apply.",
+                next_safe_action="Keep the result in needs-review state until a named reviewer records a disposition.",
+            ),
+            AiInterpretationWarning(
+                code=AiInterpretationWarningCode.DECAY_CANDIDATE,
+                severity=AiInterpretationWarningSeverity.ADVISORY,
+                message="AI interpretation may become stale as source context or model behavior changes.",
+                next_safe_action="Record interpretation as a hypothesis or decay-target and schedule later review.",
+            ),
+        ]
+        if included_context_ids:
+            warnings.append(
+                AiInterpretationWarning(
+                    code=AiInterpretationWarningCode.EXTERNAL_CONTEXT_DISCLOSURE,
+                    severity=AiInterpretationWarningSeverity.WARNING,
+                    message="Selected Chronicle context is being prepared for an external AI boundary.",
+                    next_safe_action="Confirm classification, masking, purpose, and every included context before sending.",
+                )
+            )
+        if persistence.persist_prompt or persistence.persist_response:
+            warnings.append(
+                AiInterpretationWarning(
+                    code=AiInterpretationWarningCode.DERIVED_CONTENT_PERSISTED,
+                    severity=AiInterpretationWarningSeverity.WARNING,
+                    message="Prompt or response text is configured for persistence in the boundary preview.",
+                    next_safe_action="Confirm retention, sensitivity, and masking before recording the preview.",
+                )
+            )
+        return warnings
 
     def _sayane_contract(
         self,

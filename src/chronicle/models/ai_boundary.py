@@ -1,8 +1,33 @@
 """AI boundary preview models for external adapter review."""
 
 from datetime import datetime
+from enum import StrEnum
 
 from pydantic import BaseModel, Field
+
+
+class AiInterpretationWarningCode(StrEnum):
+    """Stable warning categories for generated or interpreted AI content."""
+
+    NOT_PRIMARY_FACT = "not_primary_fact"
+    REVIEW_REQUIRED = "review_required"
+    DECAY_CANDIDATE = "decay_candidate"
+    EXTERNAL_CONTEXT_DISCLOSURE = "external_context_disclosure"
+    DERIVED_CONTENT_PERSISTED = "derived_content_persisted"
+
+
+class AiInterpretationWarningSeverity(StrEnum):
+    ADVISORY = "advisory"
+    WARNING = "warning"
+
+
+class AiInterpretationWarning(BaseModel):
+    """Structured guidance kept separate from provider output text."""
+
+    code: AiInterpretationWarningCode
+    severity: AiInterpretationWarningSeverity
+    message: str
+    next_safe_action: str
 
 
 class AiBoundaryPersistencePolicy(BaseModel):
@@ -31,6 +56,7 @@ class AiBoundaryPreview(BaseModel):
     excluded_context_ids: list[str] = Field(default_factory=list)
     redaction_candidates: list[str] = Field(default_factory=list)
     package_warnings: list[str] = Field(default_factory=list)
+    interpretation_warnings: list[AiInterpretationWarning] = Field(default_factory=list)
     persistence_policy: AiBoundaryPersistencePolicy = Field(
         default_factory=AiBoundaryPersistencePolicy
     )
@@ -41,4 +67,3 @@ class AiBoundaryPreview(BaseModel):
     sayane_contract: SayaneAdapterContract
     recorded: bool = False
     event_id: str | None = None
-

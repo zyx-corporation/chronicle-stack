@@ -454,7 +454,13 @@ class RuntimeService:
                 },
                 referenced_record_ids=preview.included_context_ids,
                 suggested_cli_family="chronicle ai-boundary preview --record",
-                boundary_notes=preview.notes,
+                boundary_notes=(
+                    preview.notes
+                    + [
+                        f"[{warning.severity.value}] {warning.message} Next: {warning.next_safe_action}"
+                        for warning in preview.interpretation_warnings
+                    ]
+                ),
             )
         if "query_engine_trial_record" in payload:
             trial = payload["query_engine_trial_record"]
