@@ -71,6 +71,8 @@ chronicle-context
 chronicle-export
 chronicle-package
 chronicle-graph
+chronicle-backup-local
+chronicle-restore-local
 ```
 
 Primary CLI aliases are available under `chronicle`:
@@ -153,6 +155,8 @@ chronicle package --help
 chronicle context --help
 chronicle graph --help
 chronicle export --help
+chronicle-backup-local --help
+chronicle-restore-local --help
 ```
 
 If `chronicle` is not found, add the bin directory to `PATH`:
@@ -170,6 +174,13 @@ After the CLI is installed:
 - day-to-day local operation: `docs/releases/operations/local-operator-runbook.md`
 - local backup / restore: `docs/releases/operations/local-backup-and-restore.md`
 - local UI validation walkthrough: `docs/releases/operations/local-web-ui-operator-validation-v1.0.md`
+
+The installed helper commands are intended for operator use from any Chronicle root:
+
+```bash
+chronicle-backup-local
+chronicle-restore-local /path/to/chronicle-backup-....tar.gz
+```
 
 ## Create a Local Chronicle
 
@@ -210,6 +221,8 @@ rm -f "$HOME/.local/bin/chronicle-context"
 rm -f "$HOME/.local/bin/chronicle-export"
 rm -f "$HOME/.local/bin/chronicle-package"
 rm -f "$HOME/.local/bin/chronicle-graph"
+rm -f "$HOME/.local/bin/chronicle-backup-local"
+rm -f "$HOME/.local/bin/chronicle-restore-local"
 ```
 
 This removes the installed application checkout and command symlinks. It does not remove Chronicle project data you created elsewhere, such as `.chronicle/` directories inside your projects.

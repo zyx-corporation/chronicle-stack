@@ -93,16 +93,18 @@ chronicle doctor --json
 Create a local backup of `.chronicle/`:
 
 ```bash
-scripts/backup-local.sh
+chronicle-backup-local
 ```
 
 Custom output directory:
 
 ```bash
-scripts/backup-local.sh "$PWD" "$HOME/.chronicle-backups"
+chronicle-backup-local "$PWD" "$HOME/.chronicle-backups"
 ```
 
 This backup is local, file-based, and read-only with respect to the source Chronicle root.
+
+If you are operating from a source checkout instead of an installed CLI environment, `scripts/backup-local.sh` remains equivalent.
 
 ## 5. Routine Operation
 
@@ -130,7 +132,7 @@ Before bulk edits, imports, or review actions:
 ```bash
 chronicle doctor --json
 chronicle ui-smoke --json
-scripts/backup-local.sh
+chronicle-backup-local
 ```
 
 If you need browser-side review-route validation, use:
@@ -143,7 +145,7 @@ Minimum close-out:
 
 ```bash
 chronicle doctor --json
-scripts/backup-local.sh
+chronicle-backup-local
 ```
 
 Recommended operator note:
@@ -157,7 +159,7 @@ chronicle record --type user_input --actor user --summary "Operator session clos
 Restore the latest known-good backup when local Chronicle state needs rollback:
 
 ```bash
-scripts/restore-local.sh /path/to/chronicle-backup-....tar.gz
+chronicle-restore-local /path/to/chronicle-backup-....tar.gz
 chronicle doctor --json
 chronicle ui-smoke --json
 ```

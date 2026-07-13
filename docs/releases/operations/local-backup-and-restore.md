@@ -46,7 +46,7 @@ Artifact source files outside `.chronicle/` may still matter operationally. If y
 From the Chronicle root:
 
 ```bash
-scripts/backup-local.sh
+chronicle-backup-local
 ```
 
 Example output:
@@ -58,14 +58,16 @@ Example output:
 Custom destination:
 
 ```bash
-scripts/backup-local.sh "$PWD" "$HOME/.chronicle-backups"
+chronicle-backup-local "$PWD" "$HOME/.chronicle-backups"
 ```
 
 Dry run:
 
 ```bash
-DRY_RUN=1 scripts/backup-local.sh "$PWD" "$HOME/.chronicle-backups"
+DRY_RUN=1 chronicle-backup-local "$PWD" "$HOME/.chronicle-backups"
 ```
+
+If you are operating directly from a source checkout, `scripts/backup-local.sh` is the equivalent helper.
 
 ## Recommended Backup Moments
 
@@ -79,7 +81,7 @@ DRY_RUN=1 scripts/backup-local.sh "$PWD" "$HOME/.chronicle-backups"
 Helper-based restore:
 
 ```bash
-scripts/restore-local.sh /path/to/chronicle-backup-....tar.gz
+chronicle-restore-local /path/to/chronicle-backup-....tar.gz
 ```
 
 By default this preserves the current `.chronicle/` as `.chronicle.pre-restore.<timestamp>` before extraction.
@@ -99,8 +101,10 @@ tar -C "$PWD" -xzf /path/to/chronicle-backup-....tar.gz
 If you intentionally want replacement without a preserved pre-restore directory:
 
 ```bash
-PRESERVE_EXISTING=0 scripts/restore-local.sh /path/to/chronicle-backup-....tar.gz
+PRESERVE_EXISTING=0 chronicle-restore-local /path/to/chronicle-backup-....tar.gz
 ```
+
+If you are operating directly from a source checkout, `scripts/restore-local.sh` remains equivalent.
 
 ## Verify After Restore
 

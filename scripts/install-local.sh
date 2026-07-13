@@ -18,6 +18,11 @@ COMMANDS=(
   chronicle-graph
 )
 
+HELPER_SCRIPTS=(
+  chronicle-backup-local:scripts/backup-local.sh
+  chronicle-restore-local:scripts/restore-local.sh
+)
+
 log() {
   printf '[chronicle-install] %s\n' "$*"
 }
@@ -136,6 +141,21 @@ link_commands() {
   done
 }
 
+link_helper_scripts() {
+  log "Linking helper scripts into $BIN_DIR"
+  for helper_spec in "${HELPER_SCRIPTS[@]}"; do
+    helper_name="${helper_spec%%:*}"
+    relative_source_path="${helper_spec#*:}"
+    source_path="$INSTALL_DIR/$relative_source_path"
+    target_path="$BIN_DIR/$helper_name"
+    if [ ! -e "$source_path" ] && [ "$DRY_RUN" != "1" ]; then
+      printf '[chronicle-install] error: expected helper script not found after install: %s\n' "$source_path" >&2
+      exit 1
+    fi
+    run ln -sfn "$source_path" "$target_path"
+  done
+}
+
 print_post_install() {
   cat <<EOF
 
@@ -160,10 +180,13 @@ Installed commands:
   chronicle-export
   chronicle-package
   chronicle-graph
+  chronicle-backup-local
+  chronicle-restore-local
 
 Notes:
   - This installer does not install a daemon, service, web server, or HTTP runtime.
   - It does not call external model APIs, GraphRAG engines, vector DBs, or graph DBs.
+  - Backup/restore helper commands operate on local .chronicle directories only.
   - Existing checkout installs refresh requested branch/tag refs before checkout.
   - Set CHRONICLE_STACK_ALLOW_MOVED_TAG=0 to disable forced local tag refresh.
   - Inspect the script before piping it to bash in production-like environments.
@@ -184,6 +207,7 @@ main() {
   clone_or_update_repo
   create_venv_and_install
   link_commands
+  link_helper_scripts
   print_post_install
 }
 
