@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 from typer.testing import CliRunner
 
 from chronicle.cli import app
+from chronicle.services.runtime_config_service import RuntimeConfigService
 
 
 def _run(tmp_path, *args):
@@ -48,6 +49,9 @@ def test_doctor_initialized_chronicle_json_output(tmp_path):
         "security_context_classification_present",
         "security_audit_log_parseable",
         "security_lifecycle_log_parseable",
+        "runtime_capability_registry_unique_ids",
+        "runtime_capability_registry_runtime_present",
+        "runtime_external_network_disabled",
     }
 
 
@@ -108,6 +112,41 @@ def test_doctor_does_not_mutate_jsonl(tmp_path):
 
     after = events_file.read_text(encoding="utf-8")
     assert after == before
+
+
+def test_doctor_warns_for_explicit_external_runtime_network(tmp_path):
+    assert _run(tmp_path, "init", "--title", "Runtime Doctor").exit_code == 0
+    RuntimeConfigService(tmp_path).set_http(
+        base_url="https://runtime.example.test/v1",
+        model_name="test-model",
+        api_key_env="TEST_RUNTIME_API_KEY",
+        allow_network=True,
+    )
+
+    result = _run(tmp_path, "doctor", "--json")
+    payload = json.loads(result.stdout)
+    checks = {check["check_id"]: check for check in payload["checks"]}
+
+    assert checks["runtime_external_network_disabled"]["severity"] == "warning"
+    assert checks["runtime_http_transport_secure"]["severity"] == "ok"
+    assert checks["runtime_generated_output_review"]["severity"] == "ok"
+
+
+def test_doctor_rejects_non_tls_external_runtime(tmp_path):
+    assert _run(tmp_path, "init", "--title", "Unsafe Runtime").exit_code == 0
+    RuntimeConfigService(tmp_path).set_http(
+        base_url="http://runtime.example.test/v1",
+        model_name="test-model",
+        api_key_env="TEST_RUNTIME_API_KEY",
+        allow_network=True,
+    )
+
+    result = _run(tmp_path, "doctor", "--json")
+    payload = json.loads(result.stdout)
+    checks = {check["check_id"]: check for check in payload["checks"]}
+
+    assert result.exit_code != 0
+    assert checks["runtime_http_transport_secure"]["severity"] == "error"
 
 
 def test_doctor_recorded_injection_plan_missing_context_warning(tmp_path):
