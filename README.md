@@ -13,7 +13,7 @@ Chronicle Stack が重視する中心価値は **再構成可能性** です。�
 - read-only local web UI と静的 export による inspect-first 運用
 - federation package / trust / runtime を preview-first で扱う境界重視の設計
 
-Chronicle Stack は、クラウド型AIメモリ、ホステッド実行基盤、完成済み GraphRAG runtime、default-on GUI mutation ではありません。詳細な境界と現状は [Product Overview](/Users/tomyuk/Projects/Chronicle/chronicle-stack/docs/product-overview.md) を参照してください。
+Chronicle Stack は、クラウド型AIメモリ、ホステッド実行基盤、完成済み GraphRAG runtime、default-on GUI mutation ではありません。詳細な境界と現状は [Product Overview](docs/product-overview.md) を参照してください。
 
 ## 利用方法
 
@@ -33,7 +33,7 @@ less /tmp/chronicle-install-local.sh
 bash /tmp/chronicle-install-local.sh
 ```
 
-詳細は [Local Deployment Guide](/Users/tomyuk/Projects/Chronicle/chronicle-stack/docs/local-deployment-curl.md) を参照してください。
+詳細は [Local Deployment Guide](docs/local-deployment-curl.md) を参照してください。
 
 ### クイックスタート
 
@@ -57,16 +57,16 @@ chronicle ui
 - 状態確認: `chronicle doctor`, `chronicle show`, `chronicle ui`, `chronicle ui-smoke`
 - 共有前確認: `chronicle boundary`, `chronicle audit`, `chronicle lifecycle`, `chronicle federation package`
 
-より広い CLI 例、UI endpoint、運用境界、extended quickstart は [Usage Reference](/Users/tomyuk/Projects/Chronicle/chronicle-stack/docs/usage-reference.md) を参照してください。
+より広い CLI 例、UI endpoint、運用境界、extended quickstart は [Usage Reference](docs/usage-reference.md) を参照してください。
 
 ## 運用方法
 
 ローカル運用の入口:
 
-- [Local Operator Runbook](/Users/tomyuk/Projects/Chronicle/chronicle-stack/docs/releases/operations/local-operator-runbook.md)
-- [Local Backup And Restore](/Users/tomyuk/Projects/Chronicle/chronicle-stack/docs/releases/operations/local-backup-and-restore.md)
-- [Local UI Validation Checklist](/Users/tomyuk/Projects/Chronicle/chronicle-stack/docs/ui-local-validation-checklist.ja.md)
-- [Release Operations](/Users/tomyuk/Projects/Chronicle/chronicle-stack/docs/releases/operations/README.md)
+- [Local Operator Runbook](docs/releases/operations/local-operator-runbook.md)
+- [Local Backup And Restore](docs/releases/operations/local-backup-and-restore.md)
+- [Local UI Validation Checklist](docs/ui-local-validation-checklist.ja.md)
+- [Release Operations](docs/releases/operations/README.md)
 
 確認の基本コマンド:
 
@@ -80,18 +80,18 @@ pytest
 
 現在の release lane とリリース文書:
 
-- [Releases Index](/Users/tomyuk/Projects/Chronicle/chronicle-stack/docs/releases/README.md)
-- [Release Notes v2.0.0](/Users/tomyuk/Projects/Chronicle/chronicle-stack/docs/releases/notes/release-notes-v2.0.0.md)
-- [Release Readiness v2.0](/Users/tomyuk/Projects/Chronicle/chronicle-stack/docs/releases/readiness/release-readiness-v2.0.md)
+- [Releases Index](docs/releases/README.md)
+- [Release Notes v2.1.0](docs/releases/notes/release-notes-v2.1.0.md)
+- [Release Readiness v2.1](docs/releases/readiness/release-readiness-v2.1.md)
 
 ## 関連文書
 
-- [Architecture](/Users/tomyuk/Projects/Chronicle/chronicle-stack/docs/architecture.md)
-- [Interface Contracts](/Users/tomyuk/Projects/Chronicle/chronicle-stack/docs/interface-contracts.md)
-- [CLI Reference](/Users/tomyuk/Projects/Chronicle/chronicle-stack/docs/cli-reference.md)
-- [Product Overview](/Users/tomyuk/Projects/Chronicle/chronicle-stack/docs/product-overview.md)
-- [Usage Reference](/Users/tomyuk/Projects/Chronicle/chronicle-stack/docs/usage-reference.md)
-- [Overall Roadmap](/Users/tomyuk/Projects/Chronicle/chronicle-stack/docs/roadmaps/overall-roadmap.md)
+- [Architecture](docs/architecture.md)
+- [Interface Contracts](docs/interface-contracts.md)
+- [CLI Reference](docs/cli-reference.md)
+- [Product Overview](docs/product-overview.md)
+- [Usage Reference](docs/usage-reference.md)
+- [Overall Roadmap](docs/roadmaps/overall-roadmap.md)
 - [Stage 2 Basic Specification](docs/stage-2/basic-specification.md)
 - [Stage 2 Implementation Roadmap](docs/stage-2/roadmap.md)
 - [Stage 2 Milestones](docs/stage-2/milestones.md)
@@ -101,6 +101,6 @@ pytest
 
 ## ライセンス
 
-AGPL-3.0-or-later. 詳細は [LICENSE](/Users/tomyuk/Projects/Chronicle/chronicle-stack/LICENSE) を参照してください。
+AGPL-3.0-or-later. 詳細は [LICENSE](LICENSE) を参照してください。
 
-商用利用、クローズドソース製品への組み込み、SaaS/ホステッドサービスでの利用については、別途商用ライセンスを検討します。詳細は [Commercial-SaaS-License.md](/Users/tomyuk/Projects/Chronicle/chronicle-stack/Commercial-SaaS-License.md) と [Contributor License Policy](/Users/tomyuk/Projects/Chronicle/chronicle-stack/docs/contributor-license-policy.md) を参照してください。
+商用利用、クローズドソース製品への組み込み、SaaS/ホステッドサービスでの利用については、別途商用ライセンスを検討します。詳細は [Commercial-SaaS-License.md](Commercial-SaaS-License.md) と [Contributor License Policy](docs/contributor-license-policy.md) を参照してください。

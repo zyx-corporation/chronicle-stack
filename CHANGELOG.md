@@ -4,6 +4,32 @@
 
 - No unreleased changes recorded.
 
+## v2.1.0 - 2026-07-13
+
+### Added
+
+- provider-neutral runtime backends and orchestration with separate Chronicle recording
+- static capability manifests, scoped record access, proposal-only writes, and deny-by-default network authorization
+- preview-first operation plans with stale-target and duplicate-conversion protection
+- guarded local proposal surfaces shared with CLI review and apply services
+- transport-neutral external interaction envelopes, identity evidence, bounded attachment references, and a mock adapter
+- Stage 2 architecture decisions, operator guidance, security/rights/migration reviews, release readiness, and Exit RDE evidence
+- installed `chronicle-backup-local` and `chronicle-restore-local` helper commands
+
+### Changed
+
+- project and CLI version advanced to `2.1.0`
+- runtime execution delegates provider-specific work to local, HTTP, disabled, or fake backends
+- doctor now reports capability-registry integrity and dangerous HTTP runtime configurations
+- Stage 2 specifications, roadmap, and milestones are marked complete
+
+### Notes
+
+- `v2.1.0` remains local-first, explicit-execution, review-required, and fail-closed
+- external runtime configuration does not itself execute a provider
+- external message receipt never executes a capability; command promotion remains a separate review-required operation
+- dynamic plugins, hosted runtime, production messaging adapters, autonomous remote execution, and OS-level sandboxing remain outside this release
+
 ## v2.0.0 - 2026-07-05
 
 ### Added
