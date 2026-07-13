@@ -4,6 +4,27 @@
 
 - No unreleased changes recorded.
 
+## v2.2.0 - 2026-07-13
+
+### Added
+
+- stable AI interpretation warning codes for primary-fact separation, review, decay, external disclosure, and derived-content persistence
+- structured warning severity, message, and next-safe-action fields in AI boundary previews
+- warning visibility in CLI output and runtime/UI boundary notes
+- Stage C Security and Boundary Baseline acceptance matrix and closeout evidence
+
+### Changed
+
+- project and CLI version advanced to `2.2.0`
+- overall roadmap current position now records Stage C as complete and workspace reading flow as the next product slice
+- v0.5 security roadmap now points to its completed implementation evidence
+
+### Notes
+
+- warnings remain advisory guidance rather than access control or correctness proof
+- AI preview still performs no external send
+- accepted meaning still enters Chronicle through proposal, review, decision, or RDE workflows
+
 ## v2.1.0 - 2026-07-13
 
 ### Added

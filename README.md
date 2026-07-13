@@ -81,8 +81,8 @@ pytest
 現在の release lane とリリース文書:
 
 - [Releases Index](docs/releases/README.md)
-- [Release Notes v2.1.0](docs/releases/notes/release-notes-v2.1.0.md)
-- [Release Readiness v2.1](docs/releases/readiness/release-readiness-v2.1.md)
+- [Release Notes v2.2.0](docs/releases/notes/release-notes-v2.2.0.md)
+- [Release Readiness v2.2](docs/releases/readiness/release-readiness-v2.2.md)
 
 ## 関連文書
 
