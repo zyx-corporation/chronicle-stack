@@ -16,6 +16,7 @@ from chronicle.cli_context import context_app
 from chronicle.cli_graph import graph_app
 from chronicle.cli_lifecycle import lifecycle_app
 from chronicle.cli_package import package_app
+from chronicle.cli_plan import plan_app
 from chronicle.cli_review import review_app
 from chronicle.cli_runtime import runtime_app
 from chronicle.cli_summary import summary_app
@@ -218,6 +219,7 @@ app.add_typer(index_app, name="index")
 app.add_typer(boundary_app, name="boundary")
 app.add_typer(injection_app, name="injection")
 app.add_typer(package_app, name="package")
+app.add_typer(plan_app, name="plan")
 app.add_typer(context_app, name="context")
 app.add_typer(audit_app, name="audit")
 app.add_typer(lifecycle_app, name="lifecycle")

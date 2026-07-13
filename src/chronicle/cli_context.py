@@ -185,7 +185,10 @@ def context_apply_proposal_cmd(
 ) -> None:
     """Apply an approved context proposal through a new append-only Context snapshot."""
     try:
-        context = ProposalService().apply_context_proposal(
+        proposal_service = ProposalService()
+        proposal_event = proposal_service._proposal_event(event_id)
+        operation_plan = proposal_event.payload.get("proposal", {}).get("operation_plan")
+        context = proposal_service.apply_context_proposal(
             proposal_event_id=event_id,
             summary=summary,
         )
@@ -195,6 +198,9 @@ def context_apply_proposal_cmd(
                     {
                         "context": context.model_dump(mode="json"),
                         "applied_from_proposal_event_id": event_id,
+                        "operation_plan_id": (
+                            operation_plan.get("plan_id") if isinstance(operation_plan, dict) else None
+                        ),
                     },
                     ensure_ascii=False,
                     indent=2,

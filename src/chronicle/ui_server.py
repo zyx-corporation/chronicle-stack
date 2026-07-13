@@ -37,6 +37,7 @@ from chronicle.services.graph_index_service import GraphIndexService
 from chronicle.services.graph_export_service import GraphExportService
 from chronicle.services.integration_package_service import IntegrationPackageService
 from chronicle.services.lifecycle_service import LifecycleService
+from chronicle.services.operation_plan_service import OperationPlanService
 from chronicle.services.package_review_service import PackageReviewService
 from chronicle.services.proposal_service import ProposalService
 from chronicle.services.reaction_service import ReactionService
@@ -2271,6 +2272,7 @@ class ChronicleUIDataService:
         self.lifecycle = LifecycleService(self.root)
         self.packages = IntegrationPackageService(self.root)
         self.package_review = PackageReviewService(self.root)
+        self.operation_plan_service = OperationPlanService(self.root)
         self.review = ReviewService(self.root)
         self.proposals = ProposalService(self.root)
         self.reactions = ReactionService(self.root)
@@ -4319,12 +4321,179 @@ class ChronicleUIDataService:
             proposal = row.get("proposal", {})
             target_kind = str(proposal.get("target_kind", ""))
             event_id = str(row.get("event_id", ""))
+            row["related_links"] = self._proposal_related_links(row)
             if row.get("apply_ready") is True:
                 if target_kind == "artifact":
                     row["cli_apply_hint"] = f"chronicle artifact apply-proposal --event {event_id}"
                 elif target_kind == "context":
                     row["cli_apply_hint"] = f"chronicle context apply-proposal --event {event_id}"
         return {"proposals": rows, "proposals_summary": self.proposals_route_summary(rows)}
+
+    def operation_plans(self, *, limit: int = 100) -> dict[str, Any]:
+        self.chronicle.require_initialized()
+        rows: list[dict[str, Any]] = []
+        for row in reversed(self.operation_plan_service.list_plans()[-limit:]):
+            plan_payload = row["plan"].model_dump(mode="json")
+            payload = {
+                **row,
+                "plan": plan_payload,
+                "suggested_cli_family": "chronicle plan",
+                "related_links": self._operation_plan_related_links(
+                    {
+                        **row,
+                        "plan": plan_payload,
+                    }
+                ),
+            }
+            rows.append(payload)
+        return {"operation_plans": rows, "operation_plans_summary": self.operation_plans_route_summary(rows)}
+
+    def operation_plans_route_summary(
+        self, plan_rows: list[dict[str, Any]] | None = None
+    ) -> dict[str, Any]:
+        rows = list(plan_rows) if plan_rows is not None else list(self.operation_plans()["operation_plans"])
+        status_counts: dict[str, int] = {}
+        preview_only_count = 0
+        converted_count = 0
+        applied_count = 0
+        stale_count = 0
+        latest_plan_detail_path: str | None = None
+        latest_timestamp = ""
+
+        for row in rows:
+            status = str(row.get("action_preview_summary", {}).get("status", "unknown"))
+            status_counts[status] = status_counts.get(status, 0) + 1
+            if bool(row.get("preview_only")):
+                preview_only_count += 1
+            if bool(row.get("converted")):
+                converted_count += 1
+            if bool(row.get("applied")):
+                applied_count += 1
+            if status.startswith("stale"):
+                stale_count += 1
+            timestamp = str(row.get("timestamp", "") or "")
+            if timestamp >= latest_timestamp:
+                latest_timestamp = timestamp
+                plan_id = str(row.get("plan", {}).get("plan_id", "") or "")
+                latest_plan_detail_path = f"/api/operation-plans/{plan_id}" if plan_id else None
+
+        return {
+            "plan_count": len(rows),
+            "status_counts": status_counts,
+            "preview_only_count": preview_only_count,
+            "converted_count": converted_count,
+            "applied_count": applied_count,
+            "stale_count": stale_count,
+            "latest_plan_detail_path": latest_plan_detail_path,
+            "latest_timestamp": latest_timestamp,
+        }
+
+    @staticmethod
+    def _operation_plan_related_links(row: dict[str, Any]) -> list[str]:
+        links: list[str] = []
+        target_refs = row.get("plan", {}).get("target_refs", [])
+        if isinstance(target_refs, list):
+            for target in target_refs:
+                if not isinstance(target, dict):
+                    continue
+                record_id = str(target.get("record_id", "") or "")
+                record_type = str(target.get("record_type", "") or "")
+                if record_type == "artifact" and record_id:
+                    links.append(f"/api/artifacts/{record_id}")
+                elif record_type == "context" and record_id:
+                    links.append(f"/api/contexts/{record_id}")
+        proposal_event_id = str(row.get("proposal_event_id", "") or "")
+        if proposal_event_id:
+            links.append(f"/api/review-queue/{proposal_event_id}")
+        applied_event_id = str(row.get("applied_event_id", "") or "")
+        if applied_event_id:
+            links.append(f"/api/events/{applied_event_id}")
+        return links
+
+    @staticmethod
+    def _proposal_operation_plan_id(row: dict[str, Any]) -> str:
+        proposal = row.get("proposal", {}) or {}
+        operation_plan = proposal.get("operation_plan")
+        if isinstance(operation_plan, dict):
+            plan_id = str(operation_plan.get("plan_id", "") or "")
+            return plan_id
+        return ""
+
+    def _proposal_related_links(self, row: dict[str, Any]) -> list[dict[str, Any]]:
+        links: list[dict[str, Any]] = []
+        proposal = row.get("proposal", {}) or {}
+        target_kind = str(proposal.get("target_kind", "") or "")
+        target_id = str(proposal.get("target_id", "") or "")
+        if target_kind == "artifact" and target_id:
+            links.append(
+                _related_link(
+                    f"/api/artifacts/{target_id}",
+                    _open_detail_label("artifacts", target_id),
+                    label_key=_open_detail_label_key("artifacts"),
+                    label_params={"record_id": target_id},
+                )
+            )
+        elif target_kind == "context" and target_id:
+            links.append(
+                _related_link(
+                    f"/api/contexts/{target_id}",
+                    _open_detail_label("contexts", target_id),
+                    label_key=_open_detail_label_key("contexts"),
+                    label_params={"record_id": target_id},
+                )
+            )
+        plan_id = self._proposal_operation_plan_id(row)
+        if plan_id:
+            links.append(
+                _related_link(
+                    f"/api/operation-plans/{plan_id}",
+                    f"Open operation plan {plan_id}",
+                    label_key="ui.template.related_link.open_operation_plan",
+                    label_params={"plan_id": plan_id},
+                )
+            )
+        return links
+
+    def _operation_plan_summary_from_plan_id(self, plan_id: str) -> dict[str, Any] | None:
+        if not plan_id:
+            return None
+        try:
+            row = self.operation_plan_service.get_plan(plan_id)
+        except ChronicleError:
+            return None
+        plan = row["plan"]
+        target_status = row.get("target_status", {})
+        action_preview_summary = row.get("action_preview_summary", {})
+        return {
+            "plan_id": plan.plan_id,
+            "operation": plan.operation,
+            "status": action_preview_summary.get("status", "unknown"),
+            "message": action_preview_summary.get("message", ""),
+            "next_action_command": action_preview_summary.get("next_action_command", ""),
+            "target_stale": bool(target_status.get("stale", False)),
+            "detail_path": f"/api/operation-plans/{plan.plan_id}",
+            "boundary_note": (
+                "Operation plan summary is a read-only proposal-surface projection; it does not execute review or apply steps."
+            ),
+            "boundary_note_key": "ui.operation_plan_summary.note.read_only_surface",
+        }
+
+    def _operation_plan_summary_from_proposal_row(self, row: dict[str, Any]) -> dict[str, Any] | None:
+        plan_id = self._proposal_operation_plan_id(row)
+        return self._operation_plan_summary_from_plan_id(plan_id)
+
+    def _operation_plan_summary_from_event_id(self, event_id: str) -> dict[str, Any] | None:
+        event = self._event_by_id(event_id)
+        if event is None:
+            return None
+        proposal = getattr(event, "payload", {}).get("proposal", {})
+        if not isinstance(proposal, dict):
+            return None
+        operation_plan = proposal.get("operation_plan")
+        if not isinstance(operation_plan, dict):
+            return None
+        plan_id = str(operation_plan.get("plan_id", "") or "")
+        return self._operation_plan_summary_from_plan_id(plan_id)
 
     def proposals_route_summary(
         self, proposal_rows: list[dict[str, Any]] | None = None
@@ -6097,6 +6266,22 @@ class ChronicleUIDataService:
                         label_params={"record_id": context_id},
                     )
                 )
+        proposal_event = self._event_by_id(target_event_id)
+        if proposal_event is not None:
+            proposal = getattr(proposal_event, "payload", {}).get("proposal", {})
+            if isinstance(proposal, dict):
+                operation_plan = proposal.get("operation_plan")
+                if isinstance(operation_plan, dict):
+                    plan_id = str(operation_plan.get("plan_id", "") or "")
+                    if plan_id:
+                        links.append(
+                            _related_link(
+                                f"/api/operation-plans/{plan_id}",
+                                f"Open operation plan {plan_id}",
+                                label_key="ui.template.related_link.open_operation_plan",
+                                label_params={"plan_id": plan_id},
+                            )
+                        )
         return links
 
     def summary_job_related_links(self, summary_job_id: str, job: dict[str, Any]) -> list[dict[str, Any]]:
@@ -6143,6 +6328,12 @@ class ChronicleUIDataService:
                 )
             )
         return links
+
+    def _event_by_id(self, event_id: str):
+        for event in self.chronicle.jsonl.read_all():
+            if event.event_id == event_id:
+                return event
+        return None
 
     def runtime_boundary(self) -> dict[str, Any]:
         read_only_key, read_only_summary = _boolean_summary_payload(True)
@@ -7521,6 +7712,7 @@ class ChronicleUIDataService:
             boundary = self.ui_boundary()["ui_boundary"]
             for row in self.review_queue()["review_queue"]:
                 if row.get("target_event_id") == parts[2]:
+                    row["operation_plan_summary"] = self._operation_plan_summary_from_event_id(parts[2])
                     row["history"] = [
                         self._history_row(item, boundary)
                         for item in self.review.history(event_id=parts[2])
@@ -7672,6 +7864,22 @@ class ChronicleUIDataService:
             job["related_links"] = self.summary_job_related_links(parts[2], job)
             return {"record": job}
 
+        if len(parts) == 3 and parts[0] == "api" and parts[1] == "operation-plans":
+            row = self.operation_plan_service.get_plan(parts[2])
+            plan_payload = row["plan"].model_dump(mode="json")
+            payload = {
+                **row,
+                "plan": plan_payload,
+                "suggested_cli_family": "chronicle plan",
+                "related_links": self._operation_plan_related_links(
+                    {
+                        **row,
+                        "plan": plan_payload,
+                    }
+                ),
+            }
+            return {"record": payload}
+
         if len(parts) != 3 or parts[0] != "api":
             return None
         resource, record_id = parts[1], parts[2]
@@ -7683,6 +7891,11 @@ class ChronicleUIDataService:
             record = _dump_model(contexts[record_id]) if record_id in contexts else None
             if record is not None:
                 proposals = self.proposals.proposals_for_target(target_kind="context", target_id=record_id)
+                for proposal in proposals:
+                    proposal["related_links"] = self._proposal_related_links(proposal)
+                    proposal["operation_plan_summary"] = self._operation_plan_summary_from_proposal_row(
+                        proposal
+                    )
                 record["proposals"] = proposals
                 record["proposal_summary"] = {
                     "count": len(proposals),
@@ -7718,6 +7931,11 @@ class ChronicleUIDataService:
                     source_event_ids,
                 )
                 proposals = self.proposals.proposals_for_target(target_kind="artifact", target_id=record_id)
+                for proposal in proposals:
+                    proposal["related_links"] = self._proposal_related_links(proposal)
+                    proposal["operation_plan_summary"] = self._operation_plan_summary_from_proposal_row(
+                        proposal
+                    )
                 record["proposals"] = proposals
                 record["proposal_summary"] = {
                     "count": len(proposals),
@@ -7827,6 +8045,7 @@ class ChronicleUIDataService:
             "/api/review-queue": self.review_queue,
             "/api/summary-jobs": self.summary_jobs_list,
             "/api/proposals": self.proposal_records,
+            "/api/operation-plans": self.operation_plans,
             "/api/ui-boundary": self.ui_boundary,
             "/api/runtime-config": self.runtime_config_state,
             "/api/package-review": lambda: {"package_review": self.package_review_snapshot()},

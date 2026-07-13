@@ -44,6 +44,7 @@ class ProposalService:
         content: str | None = None,
         proposed_title: str = "",
         actor: Actor = Actor.USER,
+        extra_payload: dict[str, Any] | None = None,
     ):
         self.chronicle.require_initialized()
         artifacts, _versions = self.chronicle.index.load_artifacts()
@@ -85,6 +86,8 @@ class ProposalService:
                 "content": proposed_content,
                 "source_file": str(source_file) if source_file is not None else None,
             }
+        if extra_payload:
+            payload["proposal"].update(extra_payload)
 
         event = self.chronicle.record_event(
             event_type=EventType.PROPOSAL_RECORDED,
@@ -107,6 +110,7 @@ class ProposalService:
         proposed_scope: ContextScope | None = None,
         proposed_tags: list[str] | None = None,
         actor: Actor = Actor.USER,
+        extra_payload: dict[str, Any] | None = None,
     ):
         self.chronicle.require_initialized()
         contexts = self.chronicle.index.load_contexts()
@@ -140,6 +144,8 @@ class ProposalService:
                 "boundary_note": "Proposal records are append-only Chronicle events; approval does not apply the target change automatically.",
             }
         }
+        if extra_payload:
+            payload["proposal"].update(extra_payload)
 
         event = self.chronicle.record_event(
             event_type=EventType.PROPOSAL_RECORDED,
@@ -171,6 +177,7 @@ class ProposalService:
         artifact_id = str(proposal.get("target_id", ""))
         proposed_fields = proposal.get("proposed_fields", {})
         proposed_content = proposal.get("proposed_content", {})
+        operation_plan = proposal.get("operation_plan")
         content = proposed_content.get("content")
         if not isinstance(content, str):
             content = ArtifactService(self.chronicle.paths.root).chronicle.artifact_store.read_current(artifact_id)
@@ -186,6 +193,12 @@ class ProposalService:
                     "proposal_kind": "artifact_update",
                     "target_kind": "artifact",
                     "target_id": artifact_id,
+                    "operation_plan_id": (
+                        operation_plan.get("plan_id")
+                        if isinstance(operation_plan, dict)
+                        else None
+                    ),
+                    "operation_plan": operation_plan if isinstance(operation_plan, dict) else None,
                 }
             },
             source=SourceProvenance(
@@ -215,6 +228,7 @@ class ProposalService:
         self._require_approved_and_unapplied(proposal_event_id)
         context_id = str(proposal.get("target_id", ""))
         proposed_fields = proposal.get("proposed_fields", {})
+        operation_plan = proposal.get("operation_plan")
         updated = ContextService(self.chronicle.paths.root).update_context(
             context_id=context_id,
             title=str(proposed_fields.get("title", "") or "") or None,
@@ -229,6 +243,12 @@ class ProposalService:
                     "proposal_kind": "context_update",
                     "target_kind": "context",
                     "target_id": context_id,
+                    "operation_plan_id": (
+                        operation_plan.get("plan_id")
+                        if isinstance(operation_plan, dict)
+                        else None
+                    ),
+                    "operation_plan": operation_plan if isinstance(operation_plan, dict) else None,
                 }
             },
             source=SourceProvenance(
