@@ -1,9 +1,11 @@
 # Chronicle Stack Stage 2 マイルストーン
 
-Status: Draft  
-Author: Tomoyuki Kano  
-Specification: `docs/stage-2/basic-specification.md`  
+Status: Completed
+Author: Tomoyuki Kano
+Specification: `docs/stage-2/basic-specification.md`
 Roadmap: `docs/stage-2/roadmap.md`
+
+Completion evidence: `docs/stage-2/release-readiness.md`, `docs/stage-2/stage-exit-rde.md`
 
 ## 1. マイルストーン運用
 
