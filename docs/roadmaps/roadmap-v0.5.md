@@ -1,7 +1,9 @@
 # Chronicle Stack v0.5 Roadmap
 
-Status: Initial security-first planning draft  
+Status: Completed security and boundary baseline
 Theme: Security-aware Composition and Integration Layer
+
+Completion evidence: `../security/stage-c-security-boundary-closeout.md`
 
 ## Theme
 

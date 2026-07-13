@@ -60,6 +60,10 @@ def ai_boundary_preview_cmd(
         typer.echo(f"Model: {preview.model_id}")
         typer.echo(f"Included contexts: {len(preview.included_context_ids)}")
         typer.echo(f"Redaction candidates: {len(preview.redaction_candidates)}")
+        typer.echo(f"Interpretation warnings: {len(preview.interpretation_warnings)}")
+        for warning in preview.interpretation_warnings:
+            typer.echo(f"  [{warning.severity.value}] {warning.code.value}: {warning.message}")
+            typer.echo(f"    Next: {warning.next_safe_action}")
         typer.echo(f"Recorded: {preview.recorded}")
         if preview.event_id:
             typer.echo(f"Event: {preview.event_id}")
@@ -72,4 +76,3 @@ def ai_boundary_preview_cmd(
                 hint="Example: 2026-06-28T12:34:56+09:00",
             )
         handle_error(exc, json_output)
-

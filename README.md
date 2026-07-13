@@ -92,6 +92,7 @@ pytest
 - [Product Overview](docs/product-overview.md)
 - [Usage Reference](docs/usage-reference.md)
 - [Overall Roadmap](docs/roadmaps/overall-roadmap.md)
+- [Stage C Security and Boundary Closeout](docs/security/stage-c-security-boundary-closeout.md)
 - [Stage 2 Basic Specification](docs/stage-2/basic-specification.md)
 - [Stage 2 Implementation Roadmap](docs/stage-2/roadmap.md)
 - [Stage 2 Milestones](docs/stage-2/milestones.md)

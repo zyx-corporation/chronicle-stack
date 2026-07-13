@@ -10,6 +10,7 @@
 - [Local UI Validation Checklist](../ui-local-validation-checklist.ja.md): 現行 local UI の shell、overview、workbench、workspace、boundary を短時間で確認する実施チェック。
 - [v0.4 Roadmap](roadmap-v0.4.md): Operational Readiness Layer の計画。
 - [v0.5 Roadmap](roadmap-v0.5.md): Security-aware Composition and Integration Layer の計画。
+- [Stage C Closeout](../security/stage-c-security-boundary-closeout.md): classification、operation、LLM policy、audit、lifecycle、integrity、AI interpretation warning の完了証跡。
 
 ## Classification
 

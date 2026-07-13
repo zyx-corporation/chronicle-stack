@@ -1,8 +1,8 @@
 # Chronicle Stack 全体ロードマップ
 
-Status: Draft  
-Scope: Integrated roadmap across existing `docs/` roadmap documents  
-Author: Tomoyuki Kano  
+Status: Active
+Scope: Integrated roadmap across existing `docs/` roadmap documents
+Author: Tomoyuki Kano
 Related:
 
 - `docs/specs/roadmap-linkage-v0.1.md`
@@ -248,17 +248,20 @@ Stage L Future Concept Graduation は全段階から独立した保留・昇格�
 
 ## 6.1 現在地と完了までの残務順
 
-2026-07-05 時点の repo truth ベースでは、Chronicle Stack は次の位置にある。
+2026-07-13 時点の repo truth ベースでは、Chronicle Stack は次の位置にある。
 
-- `Stage A: Core Baseline Preservation` は実装面では概ね通過済み
-- `Stage B: Operational Readiness Baseline` は実装面ではかなり進んでいる
-- 現在の主戦場は `Stage C: Security and Boundary Baseline`
-- 並行する次段として `Stage D: AI / Retrieval Boundary Expansion` と `Stage E: Federation Package Foundation` を product-grade に整える段階に入っている
-- `Stage F` 以降は surface や要求の素地はあるが、製品完了基準としては未到達
+- `Stage A: Core Baseline Preservation` は通過済み
+- `Stage B: Operational Readiness Baseline` は通過済み
+- `Stage C: Security and Boundary Baseline` は `docs/security/stage-c-security-boundary-closeout.md` の受入表をもって完了
+- Stage 2 / `v2.1.0` により、`Stage D` のruntime境界、Capability、Operation Plan、Proposal Surface、およびTransport Skeletonの基礎を実装済み
+- 現在の次順は、主要workspaceのfinal reading flow、続いて `Stage E / F` のfederation package + manifest operator flowである
+- `Stage K: Networked Federation` は依然として未着手の長期段階であり、Transport Skeletonを実通信完成とみなさない
 
 したがって、プロダクトレベル完了までの残務は、次の順番で整理する。
 
 ### Order 1: Stage C を完了する
+
+Status: Completed (`docs/security/stage-c-security-boundary-closeout.md`)
 
 目的:
 
@@ -279,6 +282,8 @@ Stage L Future Concept Graduation は全段階から独立した保留・昇格�
 - classification, retention, masking, audit metadata が product surface 上で誤解なく扱える
 
 ### Order 2: UI の主要 workspace を final reading flow に寄せる
+
+Status: Next
 
 目的:
 
