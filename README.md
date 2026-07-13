@@ -66,6 +66,7 @@ chronicle ui
 - [Local Operator Runbook](docs/releases/operations/local-operator-runbook.md)
 - [Local Backup And Restore](docs/releases/operations/local-backup-and-restore.md)
 - [Local UI Validation Checklist](docs/ui-local-validation-checklist.ja.md)
+- [Local UI Phase 4 Closeout](docs/ui-phase-4-closeout.md)
 - [Release Operations](docs/releases/operations/README.md)
 
 確認の基本コマンド:
