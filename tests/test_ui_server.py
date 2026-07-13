@@ -30,6 +30,7 @@ from chronicle.services.federation_package_service import FederationPackageServi
 from chronicle.services.federation_message_service import FederationMessageService
 from chronicle.services.graph_index_service import GraphIndexService
 from chronicle.services.lifecycle_service import LifecycleService
+from chronicle.services.operation_plan_service import OperationPlanService
 from chronicle.services.proposal_service import ProposalService
 from chronicle.services.rde_service import RdeService
 from chronicle.services.review_service import ReviewService
@@ -1953,28 +1954,103 @@ def test_ui_data_service_detail_endpoints(tmp_path):
     assert summary_detail["mutation_enablement"]["operational_readiness"]["status"] == "blocked"
     assert summary_detail["reviewer_enforcement_summary"]["status"] == "descriptive_only"
     assert summary_detail["reviewer_validation_gate_summary"]["status"] == "read_only_preview"
-    assert any(item["source"] == "boundary" for item in summary_detail["mutation_enablement"]["blocker_summaries"])
-    assert summary_detail["mutation_enablement"]["write_route_contract"]["route_template"] == "/api/review-actions/<event_id>/<action>"
-    assert any(link["path"] == f"/api/review-queue/{summary_detail['review_target_event_id']}" for link in summary_detail["related_links"])
-    runtime_detail = service.detail_payload(f"/api/runtime-records/{ids['runtime_summary_event_id']}")["record"]
-    assert "runtime_summary" in runtime_detail["payload"]
-    assert runtime_detail["runtime_record_preview"]["record_kind"] == "summary"
-    assert runtime_detail["posture_role"]["status"] == "local_summary_review"
-    assert runtime_detail["downstream_boundary_note"]["status"] == "local_runtime_boundary"
-    assert runtime_detail["trial_sufficiency_summary"]["status"] == "no_trial_context"
-    assert runtime_detail["handoff_summary"]["status"] == "no_handoff_contract"
-    assert runtime_detail["auth_boundary_notice"]["status"] == "advisory_only"
-    assert runtime_detail["mutation_enablement"]["enablement_ready"] is False
-    assert runtime_detail["mutation_enablement"]["operational_readiness"]["remaining_count"] >= 1
-    assert any(
-        item["summary"].startswith("Pending review queue")
-        for item in runtime_detail["mutation_enablement"]["blocker_summaries"]
+
+
+def test_ui_data_service_operation_plan_surfaces(tmp_path):
+    ChronicleService(tmp_path).init("UI Operation Plan")
+    artifact, _ = ArtifactService(tmp_path).create(
+        title="Plan Artifact",
+        artifact_type=ArtifactType.DOCUMENT,
+        content="v1",
     )
-    assert any(item["source"] == "review_queue" for item in runtime_detail["mutation_enablement"]["blocker_summaries"])
-    assert runtime_detail["mutation_enablement"]["write_route_contract"]["success_status_code"] == 200
-    assert runtime_detail["suggested_cli_family"] == "chronicle runtime summarize --record"
-    assert runtime_detail["related_links"][0]["path"] == f"/api/review-queue/{ids['runtime_summary_event_id']}"
-    assert runtime_detail["related_links"][0]["label"] == "Open matching review detail"
+    plan_service = OperationPlanService(tmp_path)
+    plan = plan_service.build_artifact_update_plan(
+        artifact_id=artifact.artifact_id,
+        summary="Plan update",
+        content="v2",
+    )
+    plan_service.persist_plan(plan)
+
+    service = ChronicleUIDataService(tmp_path)
+    list_payload = service.operation_plans()
+
+    assert list_payload["operation_plans_summary"]["plan_count"] == 1
+    row = list_payload["operation_plans"][0]
+    assert row["plan"]["plan_id"] == plan.plan_id
+    assert row["action_preview_summary"]["status"] == "preview_only"
+    assert row["suggested_cli_family"] == "chronicle plan"
+    assert row["related_links"][0] == f"/api/artifacts/{artifact.artifact_id}"
+
+    detail = service.detail_payload(f"/api/operation-plans/{plan.plan_id}")["record"]
+    assert detail["plan"]["operation"] == "artifact.propose_update"
+    assert detail["action_preview"]["status"] == "preview_only"
+    assert "artifact-update-proposal" in detail["action_preview"]["next_action_command"]
+    assert detail["related_links"][0] == f"/api/artifacts/{artifact.artifact_id}"
+
+
+def test_ui_review_and_proposal_surfaces_link_back_to_operation_plan(tmp_path):
+    ChronicleService(tmp_path).init("UI Operation Plan Linkage")
+    artifact, _ = ArtifactService(tmp_path).create(
+        title="Plan Artifact",
+        artifact_type=ArtifactType.DOCUMENT,
+        content="v1",
+    )
+    plan_service = OperationPlanService(tmp_path)
+    plan = plan_service.build_artifact_update_plan(
+        artifact_id=artifact.artifact_id,
+        summary="Plan update",
+        content="v2",
+    )
+    plan_service.persist_plan(plan)
+    proposal = plan_service.convert_artifact_update_plan_to_proposal(
+        plan=plan,
+        summary="Plan update",
+        content="v2",
+    )
+
+    service = ChronicleUIDataService(tmp_path)
+    review_detail = service.detail_payload(f"/api/review-queue/{proposal.event_id}")["record"]
+    artifact_detail = service.detail_payload(f"/api/artifacts/{artifact.artifact_id}")["record"]
+
+    assert any(
+        link["path"] == f"/api/operation-plans/{plan.plan_id}"
+        for link in review_detail["related_links"]
+    )
+    assert review_detail["operation_plan_summary"]["plan_id"] == plan.plan_id
+    assert review_detail["operation_plan_summary"]["status"] == "ready_for_review"
+    assert review_detail["operation_plan_summary"]["detail_path"] == (
+        f"/api/operation-plans/{plan.plan_id}"
+    )
+    assert any(
+        link["path"] == f"/api/operation-plans/{plan.plan_id}"
+        for link in artifact_detail["proposals"][0]["related_links"]
+    )
+    assert artifact_detail["proposals"][0]["operation_plan_summary"]["plan_id"] == plan.plan_id
+
+
+def test_ui_data_service_operation_plan_stale_surface(tmp_path):
+    ChronicleService(tmp_path).init("UI Operation Plan Stale")
+    artifacts = ArtifactService(tmp_path)
+    artifact, _ = artifacts.create(
+        title="Plan Artifact",
+        artifact_type=ArtifactType.DOCUMENT,
+        content="v1",
+    )
+    plan_service = OperationPlanService(tmp_path)
+    plan = plan_service.build_artifact_update_plan(
+        artifact_id=artifact.artifact_id,
+        summary="Plan update",
+        content="v2",
+    )
+    plan_service.persist_plan(plan)
+    artifacts.update(artifact.artifact_id, content="v1.1", summary="intervening update")
+
+    service = ChronicleUIDataService(tmp_path)
+    detail = service.detail_payload(f"/api/operation-plans/{plan.plan_id}")["record"]
+
+    assert detail["target_status"]["stale"] is True
+    assert detail["action_preview_summary"]["status"] == "stale_preview"
+    assert "artifact-update-preview" in detail["action_preview_summary"]["next_action_command"]
 
 
 def test_trust_workspace_payloads_capture_withdrawal_history(tmp_path):

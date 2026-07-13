@@ -258,6 +258,57 @@ class RuntimeProviderResponseError(ChronicleError):
         )
 
 
+class CapabilityAccessDeniedError(ChronicleError):
+    def __init__(self, *, resource_kind: str, resource_id: str) -> None:
+        super().__init__(
+            code="CAPABILITY_ACCESS_DENIED",
+            message=f"Scoped capability access denied for {resource_kind}: {resource_id}",
+            hint="Only preselected Chronicle records may be read or proposed through the scoped capability runtime.",
+        )
+
+
+class CapabilityNetworkAccessDeniedError(ChronicleError):
+    def __init__(self, *, capability_id: str, destination: str, operation: str) -> None:
+        super().__init__(
+            code="CAPABILITY_NETWORK_ACCESS_DENIED",
+            message=(
+                f"Scoped capability `{capability_id}` is not allowed to access "
+                f"`{destination}` for `{operation}`."
+            ),
+            hint="Enable the capability's explicit network policy and allow the exact destination and operation first.",
+        )
+
+
+class OperationPlanStaleTargetError(ChronicleError):
+    def __init__(self, *, artifact_id: str, expected_version_id: str, actual_version_id: str) -> None:
+        super().__init__(
+            code="OPERATION_PLAN_STALE_TARGET",
+            message=(
+                f"Operation plan target is stale for {artifact_id}: "
+                f"expected {expected_version_id}, actual {actual_version_id}"
+            ),
+            hint="Rebuild the preview plan against the latest artifact version before creating a proposal.",
+        )
+
+
+class OperationPlanAlreadyConvertedError(ChronicleError):
+    def __init__(self, plan_id: str) -> None:
+        super().__init__(
+            code="OPERATION_PLAN_ALREADY_CONVERTED",
+            message=f"Operation plan has already been converted to a proposal: {plan_id}",
+            hint="Use the existing proposal event or build a fresh preview plan if the target has changed.",
+        )
+
+
+class OperationPlanNotFoundError(ChronicleError):
+    def __init__(self, plan_id: str) -> None:
+        super().__init__(
+            code="OPERATION_PLAN_NOT_FOUND",
+            message=f"Operation plan not found: {plan_id}",
+            hint="Use `chronicle plan list` to inspect recorded preview plans.",
+        )
+
+
 class RuntimeProviderTransportError(ChronicleError):
     def __init__(self, detail: str) -> None:
         super().__init__(

@@ -11,6 +11,7 @@ from chronicle.models.artifact import ArtifactType
 from chronicle.services.artifact_service import ArtifactService
 from chronicle.services.chronicle_service import ChronicleService
 from chronicle.services.context_service import ContextService
+from chronicle.services.operation_plan_service import OperationPlanService
 from chronicle.services.proposal_service import ProposalService
 from chronicle.services.review_service import ReviewService
 
@@ -84,6 +85,38 @@ def test_apply_artifact_proposal_after_approval_updates_artifact(chronicle_root,
     proposals = ProposalService(chronicle_root).list_proposals()
     assert proposals[0]["apply_ready"] is False
     assert proposals[0]["applied"] is True
+
+
+def test_apply_artifact_proposal_carries_operation_plan_linkage(chronicle_root, tmp_path):
+    source = tmp_path / "artifact.md"
+    source.write_text("artifact v1", encoding="utf-8")
+    artifact, _version = ArtifactService(chronicle_root).create(
+        title="Proposal Artifact",
+        artifact_type=ArtifactType.DOCUMENT,
+        source_file=source,
+    )
+    plan = OperationPlanService(chronicle_root).build_artifact_update_plan(
+        artifact_id=artifact.artifact_id,
+        summary="Approved artifact proposal",
+        content="artifact v2 proposal",
+    )
+    proposal = ProposalService(chronicle_root).propose_artifact_update(
+        artifact_id=artifact.artifact_id,
+        summary="Approved artifact proposal",
+        content="artifact v2 proposal",
+        extra_payload={"operation_plan": plan.model_dump(mode="json")},
+    )
+    ReviewService(chronicle_root).approve(event_id=proposal.event_id, reviewer="alice")
+
+    ProposalService(chronicle_root).apply_artifact_proposal(proposal_event_id=proposal.event_id)
+
+    events = ChronicleService(chronicle_root).jsonl.read_all()
+    apply_payloads = [
+        event.payload["proposal_apply"]
+        for event in events
+        if isinstance(event.payload.get("proposal_apply"), dict)
+    ]
+    assert any(payload.get("operation_plan_id") == plan.plan_id for payload in apply_payloads)
 
 
 def test_apply_context_proposal_after_approval_updates_context(chronicle_root):

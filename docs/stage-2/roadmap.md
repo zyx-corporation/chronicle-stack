@@ -1,9 +1,11 @@
 # Chronicle Stack Stage 2 実装ロードマップ
 
-Status: Draft  
-Author: Tomoyuki Kano  
-Parent specification: `docs/stage-2/basic-specification.md`  
+Status: Completed
+Author: Tomoyuki Kano
+Parent specification: `docs/stage-2/basic-specification.md`
 Milestones: `docs/stage-2/milestones.md`
+
+Completion evidence: `docs/stage-2/release-readiness.md`, `docs/stage-2/stage-exit-rde.md`
 
 ## 1. 目的
 

@@ -9,12 +9,14 @@ from chronicle.errors import ChronicleError
 from chronicle.models.artifact import ArtifactType
 from chronicle.models.summary_job import SummarySourceRef
 from chronicle.interfaces.cli.common import handle_error
+from chronicle.services.capability_registry_service import CapabilityNotFoundError, CapabilityRegistryService
 from chronicle.services.runtime_config_service import RuntimeConfigService
 from chronicle.services.runtime_service import RuntimeService
 
 
 runtime_app = typer.Typer(help="Explicit local runtime commands.", no_args_is_help=True)
 runtime_config_app = typer.Typer(help="Stored runtime provider configuration.", no_args_is_help=True)
+runtime_capability_app = typer.Typer(help="Static runtime capability registry.", no_args_is_help=True)
 
 
 def _dump_json(value: object) -> None:
@@ -36,6 +38,55 @@ def _parse_key_value(value: str) -> tuple[str, str]:
     if not key:
         raise typer.BadParameter("Expected non-empty key in key=value.")
     return key, raw_value
+
+
+@runtime_capability_app.command("list")
+def runtime_capability_list_cmd(
+    json_output: Annotated[bool, typer.Option("--json")] = False,
+) -> None:
+    """List statically registered Stage 2 capabilities."""
+    service = CapabilityRegistryService()
+    manifests = service.list_capabilities()
+    if json_output:
+        _dump_json([manifest.model_dump(mode="json") for manifest in manifests])
+        return
+
+    typer.echo("Chronicle Runtime Capabilities")
+    for manifest in manifests:
+        typer.echo(
+            f"{manifest.capability_id} [{manifest.operation_family}] "
+            f"network={manifest.uses_network} review={manifest.review_required}"
+        )
+        typer.echo(f"  {manifest.summary}")
+
+
+@runtime_capability_app.command("show")
+def runtime_capability_show_cmd(
+    capability_id: Annotated[str, typer.Option("--id", help="Registered capability ID.")],
+    json_output: Annotated[bool, typer.Option("--json")] = False,
+) -> None:
+    """Show one statically registered Stage 2 capability manifest."""
+    try:
+        manifest = CapabilityRegistryService().get_capability(capability_id)
+    except CapabilityNotFoundError:
+        raise typer.BadParameter(f"Unknown capability: {capability_id}") from None
+
+    if json_output:
+        _dump_json(manifest.model_dump(mode="json"))
+        return
+
+    typer.echo("Chronicle Runtime Capability")
+    typer.echo(f"ID: {manifest.capability_id}")
+    typer.echo(f"Title: {manifest.title}")
+    typer.echo(f"Family: {manifest.operation_family}")
+    typer.echo(f"Exposure: {manifest.exposure.value}")
+    typer.echo(f"Uses network: {manifest.uses_network}")
+    typer.echo(f"Review required: {manifest.review_required}")
+    typer.echo(f"Mutates primary record: {manifest.mutates_primary_record}")
+    typer.echo(f"Summary: {manifest.summary}")
+    if manifest.notes:
+        for note in manifest.notes:
+            typer.echo(f"Note: {note}")
 
 
 @runtime_app.command("status")
@@ -419,6 +470,7 @@ def runtime_config_disable_cmd(
 
 
 runtime_app.add_typer(runtime_config_app, name="config")
+runtime_app.add_typer(runtime_capability_app, name="capability")
 
 
 if __name__ == "__main__":

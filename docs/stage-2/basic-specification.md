@@ -1,8 +1,8 @@
 # Chronicle Stack Stage 2 基本仕様
 
-Status: Draft  
-Author: Tomoyuki Kano  
-Scope: Runtime Composition and Capability Integration  
+Status: Accepted
+Author: Tomoyuki Kano
+Scope: Runtime Composition and Capability Integration
 Related:
 
 - `docs/architecture.md`

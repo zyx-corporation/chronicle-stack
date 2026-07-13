@@ -9,6 +9,7 @@ from chronicle.doctor.artifact_checks import check_artifact_files
 from chronicle.doctor.audit_lifecycle_checks import check_audit_lifecycle_surfaces
 from chronicle.doctor.export_checks import check_exports
 from chronicle.doctor.injection_checks import check_injection_plan_refs
+from chronicle.doctor.runtime_checks import check_capability_registry, check_runtime_configuration
 from chronicle.doctor.security_checks import check_security_metadata
 from chronicle.doctor.storage_checks import check_indexes, check_known_event_types, check_required_files
 from chronicle.models.doctor import DoctorCheck, DoctorReport, DoctorSeverity
@@ -37,6 +38,8 @@ class DoctorService:
         checks.append(check_injection_plan_refs(events))
         checks.extend(check_security_metadata(events))
         checks.extend(check_audit_lifecycle_surfaces(self.paths))
+        checks.extend(check_capability_registry())
+        checks.extend(check_runtime_configuration(self.root))
         checks.extend(check_exports(self.paths, self.root))
 
         return DoctorReport.from_checks(checks, chronicle_id=chronicle_id)

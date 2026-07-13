@@ -1,24 +1,13 @@
 """Explicit local runtime service with placeholder summarization."""
 
-import json
-import os
 import re
 from pathlib import Path
-from urllib import error as urllib_error
-from urllib import request as urllib_request
 
 from chronicle.errors import (
     RuntimeInvocationPlanExecutionRequestMissingError,
     RuntimeInvocationPlanNotFoundError,
-    RuntimeProviderCredentialMissingError,
-    RuntimeProviderExternalContextNotAllowedError,
-    RuntimeProviderExecutionNotEnabledError,
-    RuntimeProviderNotReadyError,
-    RuntimeProviderResponseError,
-    RuntimeProviderTransportError,
 )
 from chronicle.models.ai_boundary import AiBoundaryPreview
-from chronicle.models.event import Actor, Confidence, ReviewStatus
 from chronicle.models.artifact import ArtifactType
 from chronicle.models.runtime import (
     RuntimeComposedRetrievalHit,
@@ -39,12 +28,15 @@ from chronicle.models.runtime import (
     RuntimeSummaryResult,
 )
 from chronicle.models.summary_job import SummarySourceRef
-from chronicle.models.source import SourceProvenance
+from chronicle.runtime.backends.http import HttpRuntimeBackend
+from chronicle.runtime.backends.local import LocalRuntimeBackend
+from chronicle.runtime.orchestrator import RuntimeOrchestrator
 from chronicle.services.chronicle_service import ChronicleService
 from chronicle.services.artifact_service import ArtifactService
 from chronicle.services.graph_export_service import GraphExportService
 from chronicle.services.local_graph_retrieval_adapter import LocalGraphRetrievalAdapter
 from chronicle.services.runtime_config_service import RuntimeConfigService
+from chronicle.services.runtime_recording_service import RuntimeRecordingService
 from chronicle.services.search_service import SearchService
 from chronicle.services.summary_job_service import SummaryJobService
 from chronicle.services.vector_index_service import VectorIndexService
@@ -62,6 +54,8 @@ class RuntimeService:
         self.summary_jobs = SummaryJobService(root)
         self.runtime_config = RuntimeConfigService(root)
         self.artifacts = ArtifactService(root)
+        self.recording = RuntimeRecordingService(root)
+        self.orchestrator = RuntimeOrchestrator(_RuntimeServiceBackendFactory(self))
 
     def status(self) -> RuntimeStatus:
         config_state = self.runtime_config.show()
@@ -85,25 +79,31 @@ class RuntimeService:
     ) -> RuntimeSummaryResult:
         config_state = self.runtime_config.show()
         config = config_state.config
-        result = self._summarize_with_active_boundary(
+        backend_result = self.orchestrator.summarize(
             config=config,
             text=text,
             max_sentences=max_sentences,
             execute_configured_provider=execute_configured_provider,
         )
+        result = RuntimeSummaryResult(
+            provider_kind=backend_result.provider_kind,
+            provider_name=backend_result.provider_name,
+            model_name=backend_result.model_name,
+            invocation_mode=backend_result.invocation_mode,
+            external_call_made=backend_result.external_call_made,
+            source_text_length=len(text),
+            generated_text=backend_result.output_text,
+            response_metadata=backend_result.response_metadata,
+            response_keys=backend_result.response_keys,
+        )
         result.recorded = record
         if draft_title:
-            draft_job = self.summary_jobs.create_runtime_draft(
+            draft_job = self.recording.create_summary_draft(
                 title=draft_title,
-                summary_text=result.generated_text,
+                result=result,
                 runtime_config=config if result.external_call_made else self._local_runtime_config(),
-                invocation_mode=result.invocation_mode,
-                external_call_made=result.external_call_made,
-                generated_by="runtime_http_manual" if result.external_call_made else "runtime_manual",
                 prompt=prompt,
                 operator=operator,
-                response_metadata=getattr(result, "response_metadata", {}),
-                response_keys=getattr(result, "response_keys", []),
                 source_refs=source_refs or [],
                 tags=["runtime-summary-draft", *(tags or [])],
             )
@@ -114,25 +114,9 @@ class RuntimeService:
         if not record:
             return result
 
-        event = self.chronicle.record_event(
-            event_type=self._assistant_output_event_type(),
-            actor=Actor.ASSISTANT,
-            summary=f"Runtime summary generated: {_truncate_summary(result.generated_text)}",
-            payload={
-                "runtime_summary": result.model_dump(mode="json"),
-                "runtime_provider": result.provider_kind.value,
-            },
-            source=SourceProvenance(
-                source_type="runtime",
-                source_ref="configured-provider-summary" if result.external_call_made else "local-placeholder-summary",
-                source_tool="chronicle-runtime",
-                source_model=result.model_name,
-            ),
-            review_status=ReviewStatus.NEEDS_REVIEW,
-            confidence=Confidence.LOW,
-        )
+        event_id = self.recording.persist_summary_result(result)
         result.recorded = True
-        result.event_id = event.event_id
+        result.event_id = event_id
         return result
 
     def invoke(
@@ -151,94 +135,58 @@ class RuntimeService:
     ) -> RuntimeExecutionResult:
         config_state = self.runtime_config.show()
         config = config_state.config
-        if not execute_configured_provider:
-            raise RuntimeProviderExecutionNotEnabledError()
         source_refs = source_refs or []
         extra_params = extra_params or {}
-        if source_refs and not config.allow_external_context:
-            raise RuntimeProviderExternalContextNotAllowedError()
-        self._require_ready_http_config(config)
-        response_payload = self._invoke_http_operation(
+        backend_result = self.orchestrator.invoke(
             config=config,
             text=text,
             operation=operation,
-            max_sentences=None,
+            execute_configured_provider=execute_configured_provider,
             source_refs=source_refs,
             prompt=prompt,
             extra_params=extra_params,
         )
-        output_text, response_metadata, response_keys = self._extract_http_response_details(response_payload)
         result = RuntimeExecutionResult(
-            provider_kind=config.provider_kind,
-            provider_name=config.provider_name,
-            model_name=config.model_name,
+            provider_kind=backend_result.provider_kind,
+            provider_name=backend_result.provider_name,
+            model_name=backend_result.model_name,
             operation=operation,
-            invocation_mode="explicit-http-manual",
-            external_call_made=True,
+            invocation_mode=backend_result.invocation_mode,
+            external_call_made=backend_result.external_call_made,
             source_text_length=len(text),
-            output_text=output_text,
+            output_text=backend_result.output_text,
             source_refs=[ref.model_dump(mode="json") for ref in source_refs],
             prompt=prompt,
             params=extra_params,
-            response_metadata=response_metadata,
-            response_keys=response_keys,
+            response_metadata=backend_result.response_metadata,
+            response_keys=backend_result.response_keys,
             recorded=record,
         )
         if draft_summary_title:
-            draft_job = self.summary_jobs.create_runtime_draft(
+            draft_job = self.recording.create_execution_draft_summary(
                 title=draft_summary_title,
-                summary_text=output_text,
+                result=result,
                 runtime_config=config,
-                invocation_mode="explicit-http-manual",
-                external_call_made=True,
-                generated_by="runtime_http_manual",
                 prompt=prompt,
                 operator=f"runtime-invoke:{operation}",
-                response_metadata=response_metadata,
-                response_keys=response_keys,
                 source_refs=source_refs,
-                tags=["runtime-invoke-summary", operation, config.provider_kind.value],
+                tags=["runtime-invoke-summary", operation, backend_result.provider_kind.value],
             )
             result.draft_summary_job_id = draft_job.summary_job_id
         if artifact_title:
-            artifact, version = self.artifacts.create(
+            artifact, version = self.recording.create_execution_artifact(
                 title=artifact_title,
                 artifact_type=artifact_type,
-                content=output_text,
-                tags=["runtime-output", operation, config.provider_kind.value],
-                source=SourceProvenance(
-                    source_type="runtime",
-                    source_ref=f"configured-provider-{operation}",
-                    source_tool="chronicle-runtime",
-                    source_model=result.model_name,
-                    source_url=config.base_url,
-                ),
-                actor=Actor.ASSISTANT,
+                result=result,
             )
             result.artifact_id = artifact.artifact_id
             result.version_id = version.version_id
         if not record:
             return result
 
-        event = self.chronicle.record_event(
-            event_type=self._assistant_output_event_type(),
-            actor=Actor.ASSISTANT,
-            summary=f"Runtime {operation} generated: {_truncate_summary(output_text)}",
-            payload={
-                "runtime_execution": result.model_dump(mode="json"),
-                "runtime_provider": result.provider_kind.value,
-            },
-            source=SourceProvenance(
-                source_type="runtime",
-                source_ref=f"configured-provider-{operation}",
-                source_tool="chronicle-runtime",
-                source_model=result.model_name,
-            ),
-            review_status=ReviewStatus.NEEDS_REVIEW,
-            confidence=Confidence.LOW,
-        )
+        event_id = self.recording.persist_execution_result(result)
         result.recorded = True
-        result.event_id = event.event_id
+        result.event_id = event_id
         return result
 
     def _local_runtime_config(self):
@@ -308,25 +256,9 @@ class RuntimeService:
         if not record:
             return plan
 
-        event = self.chronicle.record_event(
-            event_type=self._assistant_output_event_type(),
-            actor=Actor.ASSISTANT,
-            summary=f"Runtime retrieval plan generated: {_truncate_summary(query)}",
-            payload={
-                "runtime_retrieval_plan": plan.model_dump(mode="json"),
-                "runtime_provider": RuntimeProviderKind.LOCAL.value,
-            },
-            source=SourceProvenance(
-                source_type="runtime",
-                source_ref="local-placeholder-retrieve-plan",
-                source_tool="chronicle-runtime",
-                source_model="local-placeholder",
-            ),
-            review_status=ReviewStatus.NEEDS_REVIEW,
-            confidence=Confidence.LOW,
-        )
+        event_id = self.recording.persist_retrieval_plan(plan)
         plan.recorded = True
-        plan.event_id = event.event_id
+        plan.event_id = event_id
         return plan
 
     def invocation_plan(
@@ -442,31 +374,11 @@ class RuntimeService:
         if not record:
             return plan
 
-        event = self.chronicle.record_event(
-            event_type=self._assistant_output_event_type(),
-            actor=Actor.ASSISTANT,
-            summary=(
-                f"Runtime invocation plan generated: {summary_label}"
-                if summary_label
-                else f"Runtime invocation plan generated: {config.provider_kind.value} {operation}"
-            ),
-            payload={
-                "runtime_invocation_plan": plan.model_dump(mode="json"),
-                "runtime_provider": config.provider_kind.value,
-            },
-            source=SourceProvenance(
-                source_type="runtime",
-                source_ref="runtime-invocation-plan",
-                source_tool="chronicle-runtime",
-                source_model=config.model_name,
-            ),
-            review_status=ReviewStatus.NEEDS_REVIEW,
-            confidence=Confidence.LOW,
-        )
+        event_id = self.recording.persist_invocation_plan(plan, summary_label=summary_label)
         plan.recorded = True
-        plan.event_id = event.event_id
+        plan.event_id = event_id
         plan.downstream_commands = self._recorded_plan_downstream_commands(
-            event_id=event.event_id,
+            event_id=event_id,
             operation=plan.operation,
             invocation_ready=plan.invocation_ready,
             commands=plan.downstream_commands,
@@ -739,67 +651,6 @@ class RuntimeService:
                 return event
         raise RuntimeInvocationPlanNotFoundError(event_id)
 
-    def _summarize_with_active_boundary(
-        self,
-        *,
-        config: RuntimeConfig,
-        text: str,
-        max_sentences: int,
-        execute_configured_provider: bool,
-    ) -> RuntimeSummaryResult:
-        if config.provider_kind == RuntimeProviderKind.HTTP:
-            if not execute_configured_provider:
-                raise RuntimeProviderExecutionNotEnabledError()
-            self._require_ready_http_config(config)
-            response_payload = self._invoke_http_operation(
-                config=config,
-                text=text,
-                operation="summarize",
-                max_sentences=max_sentences,
-            )
-            generated_text, response_metadata, response_keys = self._extract_http_response_details(response_payload)
-            return RuntimeSummaryResult(
-                provider_kind=config.provider_kind,
-                provider_name=config.provider_name,
-                model_name=config.model_name,
-                invocation_mode="explicit-http-manual",
-                external_call_made=True,
-                source_text_length=len(text),
-                generated_text=generated_text,
-                response_metadata=response_metadata,
-                response_keys=response_keys,
-            )
-
-        generated_text = _summarize_text(text, max_sentences=max_sentences)
-        return RuntimeSummaryResult(
-            provider_kind=RuntimeProviderKind.LOCAL,
-            provider_name="local-placeholder",
-            model_name="local-placeholder",
-            invocation_mode="explicit-manual",
-            external_call_made=False,
-            source_text_length=len(text),
-            generated_text=generated_text,
-            response_metadata={},
-            response_keys=[],
-        )
-
-    def _require_ready_http_config(self, config: RuntimeConfig) -> None:
-        blocking_reasons: list[str] = []
-        if config.provider_kind != RuntimeProviderKind.HTTP:
-            blocking_reasons.append("configured_provider_is_not_http")
-        if not config.allow_network:
-            blocking_reasons.append("network_not_allowed_by_contract")
-        if not config.base_url:
-            blocking_reasons.append("base_url_not_configured")
-        if not config.model_name or config.model_name == "disabled":
-            blocking_reasons.append("model_not_configured")
-        if not config.api_key_env:
-            blocking_reasons.append("api_key_env_not_configured")
-        if blocking_reasons:
-            raise RuntimeProviderNotReadyError(blocking_reasons)
-        if not os.environ.get(config.api_key_env or ""):
-            raise RuntimeProviderCredentialMissingError(config.api_key_env or "")
-
     @staticmethod
     def _invoke_http_operation(
         *,
@@ -811,99 +662,26 @@ class RuntimeService:
         prompt: str = "",
         extra_params: dict[str, str] | None = None,
     ) -> dict[str, object]:
-        payload = {
-            "operation": operation,
-            "model": config.model_name,
-            "input_text": text,
-        }
-        if max_sentences is not None:
-            payload["max_sentences"] = max_sentences
-        if source_refs:
-            payload["source_refs"] = [ref.model_dump(mode="json") for ref in source_refs]
-        if prompt:
-            payload["prompt"] = prompt
-        if extra_params:
-            payload["params"] = extra_params
-        body = json.dumps(payload).encode("utf-8")
-        headers = {
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {os.environ[config.api_key_env or '']}",
-        }
-        request = urllib_request.Request(
-            config.base_url or "",
-            data=body,
-            headers=headers,
-            method="POST",
+        return HttpRuntimeBackend._invoke_http_operation(
+            config=config,
+            text=text,
+            operation=operation,
+            max_sentences=max_sentences,
+            source_refs=source_refs,
+            prompt=prompt,
+            extra_params=extra_params,
         )
-        try:
-            with urllib_request.urlopen(request, timeout=30) as response:
-                payload = json.loads(response.read().decode("utf-8"))
-        except urllib_error.HTTPError as exc:
-            detail = exc.read().decode("utf-8", errors="replace").strip() or f"HTTP {exc.code}"
-            raise RuntimeProviderTransportError(detail) from exc
-        except urllib_error.URLError as exc:
-            raise RuntimeProviderTransportError(str(exc.reason)) from exc
-        except OSError as exc:
-            raise RuntimeProviderTransportError(str(exc)) from exc
-        except json.JSONDecodeError as exc:
-            raise RuntimeProviderResponseError(f"invalid JSON: {exc}") from exc
-
-        if not isinstance(payload, dict):
-            raise RuntimeProviderResponseError("response JSON must be an object")
-        return payload
-
-    @staticmethod
-    def _extract_http_response_details(
-        payload: dict[str, object] | str,
-    ) -> tuple[str, dict[str, str | int | float | bool], list[str]]:
-        if isinstance(payload, str):
-            return payload, {}, []
-        generated_text = ""
-        for key in ("output_text", "generated_text", "summary"):
-            value = payload.get(key)
-            if isinstance(value, str) and value.strip():
-                generated_text = value.strip()
-                break
-        if not generated_text:
-            raise RuntimeProviderResponseError("missing textual output field")
-
-        metadata: dict[str, str | int | float | bool] = {}
-        for key in ("response_id", "finish_reason", "provider_status"):
-            value = payload.get(key)
-            if isinstance(value, (str, int, float, bool)):
-                metadata[key] = value
-        usage = payload.get("usage")
-        if isinstance(usage, dict):
-            for key, value in usage.items():
-                if isinstance(value, (str, int, float, bool)):
-                    metadata[f"usage_{key}"] = value
-        return generated_text, metadata, sorted(payload.keys())
 
 
-def _summarize_text(text: str, *, max_sentences: int) -> str:
-    cleaned = " ".join(part.strip() for part in text.splitlines() if part.strip())
-    if not cleaned:
-        return ""
-
-    sentences = [sentence.strip() for sentence in re.split(r"(?<=[.!?。！？])\s+", cleaned) if sentence.strip()]
-    if sentences:
-        return " ".join(sentences[:max_sentences])
-
-    words = cleaned.split()
-    if len(words) <= 30:
-        return cleaned
-    return " ".join(words[:30]) + "..."
+def _sentence_count(text: str) -> int:
+    sentences = [sentence for sentence in re.split(r"(?<=[.!?。！？])\s+", text.strip()) if sentence]
+    return len(sentences)
 
 
 def _truncate_summary(text: str, limit: int = 80) -> str:
     if len(text) <= limit:
         return text
     return text[: limit - 3].rstrip() + "..."
-
-
-def _sentence_count(text: str) -> int:
-    sentences = [sentence for sentence in re.split(r"(?<=[.!?。！？])\s+", text.strip()) if sentence]
-    return len(sentences)
 
 
 def _unique_identifiers(plan: RuntimeRetrievalPlan) -> list[str]:
@@ -922,6 +700,22 @@ def _unique_identifiers_from_hits(
             identifiers.append(hit.identifier)
             seen.add(hit.identifier)
     return identifiers
+
+
+class _RuntimeServiceBackendFactory:
+    """Backend factory that preserves RuntimeService compatibility seams."""
+
+    def __init__(self, service: RuntimeService) -> None:
+        self.service = service
+
+    def get_backend(self, *, role: str, config: RuntimeConfig):
+        if role == "summarize":
+            if config.provider_kind == RuntimeProviderKind.HTTP:
+                return HttpRuntimeBackend(invoker=self.service._invoke_http_operation)
+            return LocalRuntimeBackend()
+        if role == "invoke":
+            return HttpRuntimeBackend(invoker=self.service._invoke_http_operation)
+        raise ValueError(f"Unknown runtime backend role: {role}")
 
 
 def _compose_retrieval_hits(

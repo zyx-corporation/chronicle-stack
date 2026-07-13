@@ -158,7 +158,10 @@ def artifact_apply_proposal_cmd(
 ) -> None:
     """Apply an approved artifact proposal through the normal versioned artifact write path."""
     try:
-        updated, version = ProposalService().apply_artifact_proposal(
+        proposal_service = ProposalService()
+        proposal_event = proposal_service._proposal_event(event_id)
+        operation_plan = proposal_event.payload.get("proposal", {}).get("operation_plan")
+        updated, version = proposal_service.apply_artifact_proposal(
             proposal_event_id=event_id,
             summary=summary,
         )
@@ -169,6 +172,9 @@ def artifact_apply_proposal_cmd(
                         "artifact": updated.model_dump(mode="json"),
                         "version": version.model_dump(mode="json"),
                         "applied_from_proposal_event_id": event_id,
+                        "operation_plan_id": (
+                            operation_plan.get("plan_id") if isinstance(operation_plan, dict) else None
+                        ),
                     },
                     ensure_ascii=False,
                     indent=2,
