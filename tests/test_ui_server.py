@@ -3872,6 +3872,78 @@ def test_http_review_action_enabled_route_applies_decision(tmp_path):
         thread.join(timeout=5)
 
 
+def test_http_review_mutation_mode_does_not_enable_workspace_routes(tmp_path):
+    _populate(tmp_path)
+    try:
+        server = make_server(
+            host="127.0.0.1",
+            port=0,
+            root=tmp_path,
+            mutation_capability_flag=True,
+            enable_ui_mutation=True,
+            auth_mode=UIAuthMode.LOOPBACK_LOCAL,
+            authorization_mode=UIAuthorizationMode.REVIEWER_DECLARED,
+        )
+    except PermissionError as exc:
+        pytest.skip(f"local socket bind unavailable in this environment: {exc}")
+    host, port = server.server_address
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        status, body = _http_post(host, port, "/api/capture", {"content": "blocked"})
+
+        assert status == 403
+        assert json.loads(body)["error"] == "workspace_disabled"
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=5)
+
+
+def test_http_workspace_route_uses_existing_session_gates(tmp_path):
+    _populate(tmp_path)
+    try:
+        server = make_server(
+            host="127.0.0.1",
+            port=0,
+            root=tmp_path,
+            mutation_capability_flag=True,
+            enable_ui_mutation=True,
+            auth_mode=UIAuthMode.LOOPBACK_LOCAL,
+            authorization_mode=UIAuthorizationMode.REVIEWER_DECLARED,
+            workspace_enabled=True,
+        )
+    except PermissionError as exc:
+        pytest.skip(f"local socket bind unavailable in this environment: {exc}")
+    host, port = server.server_address
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        token = _http_mutation_token(host, port)
+        mutation_session_id = _http_mutation_session_id(host, port)
+        status, body = _http_post(
+            host,
+            port,
+            "/api/capture",
+            {
+                "kind": "note",
+                "content": "workspace route test",
+                "mutation_session_id": mutation_session_id,
+                "mutation_request_id": "mrq-workspace-capture-1",
+            },
+            headers={"X-Chronicle-UI-Mutation-Token": token},
+        )
+
+        payload = json.loads(body)
+        assert status == 201
+        assert payload["ok"] is True
+        assert payload["event_id"].startswith("evt_")
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=5)
+
+
 def test_http_review_action_enabled_route_rejects_missing_mutation_token(tmp_path):
     ids = _populate(tmp_path)
     try:

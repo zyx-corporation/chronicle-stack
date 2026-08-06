@@ -1,9 +1,4 @@
-"""Explicit foreground local web UI for Chronicle Stack.
-
-This module intentionally uses Python stdlib only. It serves read-only views over
-local Chronicle files and must not be confused with a daemon, hosted service,
-model runtime, GraphRAG engine, vector DB, or graph DB.
-"""
+"""Foreground local UI for Chronicle reading, writing, and GraphRAG assistance."""
 
 from __future__ import annotations
 
@@ -23,17 +18,21 @@ from urllib.parse import parse_qs, quote, unquote, urlparse
 from chronicle.errors import ChronicleError, UIHostNotLoopbackError
 from chronicle.exporters.html_exporter import HtmlDashboardExporter
 from chronicle.models.ai_boundary import AiBoundaryPreview
+from chronicle.models.artifact import ArtifactType
 from chronicle.models.audit import AuditOperation
+from chronicle.models.event import Actor, EventType
 from chronicle.models.federation_message import FederationMessageBox
 from chronicle.models.reaction import ChronicleReactionType
 from chronicle.models.runtime import RuntimeExecutionResult, RuntimeInvocationPlan, RuntimeRetrievalPlan
 from chronicle.models.review import ReviewerIdentity, ReviewerIdentityKind
 from chronicle.services.audit_service import AuditService
+from chronicle.services.artifact_service import ArtifactService
 from chronicle.services.chronicle_service import ChronicleService
 from chronicle.services.chronicle_object_service import ChronicleObjectService
 from chronicle.services.federation_package_service import FederationPackageService
 from chronicle.services.federation_message_service import FederationMessageService
 from chronicle.services.graph_index_service import GraphIndexService
+from chronicle.services.graphrag_runtime_service import GraphRagRuntimeError, GraphRagRuntimeService
 from chronicle.services.graph_export_service import GraphExportService
 from chronicle.services.integration_package_service import IntegrationPackageService
 from chronicle.services.lifecycle_service import LifecycleService
@@ -2068,6 +2067,7 @@ class UIStartupMetadata:
     mutation_capability_flag: bool = False
     auth_mode: str = UIAuthMode.NOT_ENABLED
     authorization_mode: str = UIAuthorizationMode.NOT_ENABLED
+    workspace_enabled: bool = False
     ui_boundary: UIBoundaryMetadata | None = None
 
     def to_json(self) -> str:
@@ -2083,6 +2083,7 @@ def build_startup_metadata(
     enable_ui_mutation: bool = False,
     auth_mode: str = UIAuthMode.NOT_ENABLED,
     authorization_mode: str = UIAuthorizationMode.NOT_ENABLED,
+    workspace_enabled: bool = False,
 ) -> UIStartupMetadata:
     """Build local UI startup metadata without starting the server."""
     ui_boundary = build_ui_boundary_metadata(
@@ -2102,6 +2103,7 @@ def build_startup_metadata(
         mutation_capability_flag=ui_boundary.mutation_capability_flag,
         auth_mode=ui_boundary.auth_mode,
         authorization_mode=ui_boundary.authorization_mode,
+        workspace_enabled=workspace_enabled,
         ui_boundary=ui_boundary,
     )
 
@@ -2255,6 +2257,7 @@ class ChronicleUIDataService:
         authorization_mode: str = UIAuthorizationMode.NOT_ENABLED,
         mutation_session_token: str = "",
         mutation_session_id: str = "",
+        workspace_enabled: bool = False,
     ) -> None:
         self.root = root or Path.cwd()
         self.host = host
@@ -2264,7 +2267,10 @@ class ChronicleUIDataService:
         self.authorization_mode = authorization_mode
         self.mutation_session_token = mutation_session_token
         self.mutation_session_id = mutation_session_id
+        self.workspace_enabled = workspace_enabled
         self.chronicle = ChronicleService(self.root)
+        self.artifact_service = ArtifactService(self.root)
+        self.graphrag = GraphRagRuntimeService(self.root)
         self.chronicle_objects = ChronicleObjectService(self.root)
         self.federation_packages = FederationPackageService(self.root)
         self.federation_messages = FederationMessageService(self.root)
@@ -2282,6 +2288,54 @@ class ChronicleUIDataService:
         self.trust = TrustService(self.root)
         self.vector_index = VectorIndexService(self.root)
         self.graph_index = GraphIndexService(self.root)
+
+    def capture_response(self, payload: dict[str, Any]) -> tuple[HTTPStatus, dict[str, Any]]:
+        """Persist a user-authored note or artifact through the guarded local UI."""
+        kind = str(payload.get("kind", "note")).strip().lower()
+        title = str(payload.get("title", "")).strip()
+        content = str(payload.get("content", "")).strip()
+        if not content:
+            return HTTPStatus.BAD_REQUEST, {"ok": False, "error": "content_required"}
+        if kind == "artifact":
+            artifact, version = self.artifact_service.create(
+                title=title or content.splitlines()[0][:100] or "Untitled",
+                artifact_type=ArtifactType.DOCUMENT,
+                content=content,
+                actor=Actor.USER,
+            )
+            return HTTPStatus.CREATED, {
+                "ok": True,
+                "kind": "artifact",
+                "artifact_id": artifact.artifact_id,
+                "version_id": version.version_id,
+                "detail_path": f"/api/artifacts/{artifact.artifact_id}",
+                "runtime_index_status": "needs_rebuild",
+            }
+        event = self.chronicle.record_event(
+            EventType.NOTE_ADDED,
+            Actor.USER,
+            title or content.splitlines()[0][:100],
+            payload={"content": content, "source": "local_ui_quick_capture"},
+        )
+        self.chronicle.rebuild_indexes()
+        return HTTPStatus.CREATED, {
+            "ok": True,
+            "kind": "note",
+            "event_id": event.event_id,
+            "detail_path": f"/api/events/{event.event_id}",
+            "runtime_index_status": "needs_rebuild",
+        }
+
+    def graphrag_response(self, path: str, payload: dict[str, Any]) -> tuple[HTTPStatus, dict[str, Any]] | None:
+        try:
+            if path == "/api/graphrag/rebuild":
+                return HTTPStatus.OK, {"ok": True, "runtime": self.graphrag.rebuild()}
+            if path == "/api/graphrag/query":
+                question = str(payload.get("question", "")).strip()
+                return HTTPStatus.OK, {"ok": True, **self.graphrag.query(question)}
+        except GraphRagRuntimeError as exc:
+            return HTTPStatus.BAD_GATEWAY, {"ok": False, "error": "graphrag_runtime_error", "detail": str(exc)}
+        return None
 
     def overview(self) -> dict[str, Any]:
         metadata = self.chronicle.require_initialized()
@@ -6336,28 +6390,33 @@ class ChronicleUIDataService:
         return None
 
     def runtime_boundary(self) -> dict[str, Any]:
-        read_only_key, read_only_summary = _boolean_summary_payload(True)
-        external_model_api_key, external_model_api_summary = _boolean_summary_payload(False)
-        graphrag_runtime_key, graphrag_runtime_summary = _boolean_summary_payload(False)
-        vector_db_key, vector_db_summary = _boolean_summary_payload(False)
-        graph_db_key, graph_db_summary = _boolean_summary_payload(False)
+        read_only = not self.workspace_enabled
+        read_only_key, read_only_summary = _boolean_summary_payload(read_only)
+        external_model_api_key, external_model_api_summary = _boolean_summary_payload(
+            self.workspace_enabled
+        )
+        graphrag_runtime_key, graphrag_runtime_summary = _boolean_summary_payload(
+            self.workspace_enabled
+        )
+        vector_db_key, vector_db_summary = _boolean_summary_payload(self.workspace_enabled)
+        graph_db_key, graph_db_summary = _boolean_summary_payload(self.workspace_enabled)
         return {
-            "read_only": True,
+            "read_only": read_only,
             "read_only_summary_key": read_only_key,
             "read_only_summary": read_only_summary,
             "foreground_process": True,
             "daemon": False,
             "server_default_host": DEFAULT_UI_HOST,
-            "external_model_api": False,
+            "external_model_api": self.workspace_enabled,
             "external_model_api_summary_key": external_model_api_key,
             "external_model_api_summary": external_model_api_summary,
-            "graphrag_runtime": False,
+            "graphrag_runtime": self.workspace_enabled,
             "graphrag_runtime_summary_key": graphrag_runtime_key,
             "graphrag_runtime_summary": graphrag_runtime_summary,
-            "vector_db": False,
+            "vector_db": self.workspace_enabled,
             "vector_db_summary_key": vector_db_key,
             "vector_db_summary": vector_db_summary,
-            "graph_db": False,
+            "graph_db": self.workspace_enabled,
             "graph_db_summary_key": graph_db_key,
             "graph_db_summary": graph_db_summary,
             "correctness_proof": False,
@@ -8048,6 +8107,7 @@ class ChronicleUIDataService:
             "/api/operation-plans": self.operation_plans,
             "/api/ui-boundary": self.ui_boundary,
             "/api/runtime-config": self.runtime_config_state,
+            "/api/graphrag-status": lambda: {"graphrag_runtime": self.graphrag.status()},
             "/api/package-review": lambda: {"package_review": self.package_review_snapshot()},
             "/api/federation-package-preview": lambda: {
                 "federation_package_preview": self.federation_package_preview_snapshot(
@@ -8492,6 +8552,8 @@ class ChronicleUIDataService:
         ui_i18n_catalog_json = json.dumps(UI_I18N_CATALOG, ensure_ascii=False)
         mutation_token_json = json.dumps(self.mutation_session_token, ensure_ascii=False)
         mutation_session_id_json = json.dumps(self.mutation_session_id, ensure_ascii=False)
+        mutation_enabled = self.ui_boundary()["ui_boundary"]["mutation_enabled"]
+        workspace_enabled = self.workspace_enabled
         return f"""<!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -8538,7 +8600,7 @@ body {{
     radial-gradient(circle at top left, rgba(255, 255, 255, 0.92), transparent 28rem),
     linear-gradient(180deg, #faf8f2 0%, var(--chronicle-bg) 100%);
 }}
-button, select, input {{
+button, select, input, textarea {{
   font: inherit;
 }}
 button {{
@@ -8559,7 +8621,7 @@ button:focus-visible, select:focus-visible, input:focus-visible {{
   outline: 2px solid var(--chronicle-accent);
   outline-offset: 2px;
 }}
-select, input {{
+select, input, textarea {{
   margin: 0;
   padding: 7px 10px;
   border-radius: 10px;
@@ -8567,6 +8629,17 @@ select, input {{
   background: var(--chronicle-panel-strong);
   color: var(--chronicle-text);
 }}
+textarea {{ width: 100%; min-height: 7rem; resize: vertical; box-sizing: border-box; }}
+.task-workspace {{ display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 18px 0; }}
+.task-card {{ border: 1px solid var(--chronicle-border); border-radius: 18px; padding: 18px; background: var(--chronicle-panel-strong); box-shadow: var(--chronicle-shadow); }}
+.task-card h2 {{ margin: 0 0 6px; font-family: var(--chronicle-font-family); color: var(--chronicle-heading); }}
+.task-card p {{ margin: 0 0 14px; color: var(--chronicle-text-muted); }}
+.task-card form {{ display: grid; gap: 10px; }}
+.task-card .primary {{ background: var(--chronicle-accent); border-color: var(--chronicle-accent); color: white; font-weight: 700; }}
+.task-result {{ min-height: 1.5rem; margin-top: 10px; color: var(--chronicle-text-muted); white-space: pre-wrap; }}
+.nav-group {{ border: 1px solid var(--chronicle-border); border-radius: 12px; background: rgba(255,255,255,.72); padding: 8px 10px; }}
+.nav-group summary {{ cursor: pointer; font-weight: 700; color: var(--chronicle-text-muted); }}
+.nav-items {{ display: flex; flex-wrap: wrap; gap: 7px; margin-top: 8px; }}
 nav {{
   display: flex;
   flex-wrap: wrap;
@@ -8738,6 +8811,7 @@ th {{ position: sticky; top: 0; background: #f7f2e7; color: var(--chronicle-neut
   .settings-shell {{ grid-template-columns: 1fr; }}
   .hero-grid {{ grid-template-columns: 1fr; }}
   .workbench-grid {{ grid-template-columns: 1fr; }}
+  .task-workspace {{ grid-template-columns: 1fr; }}
   #detail {{ position: static; max-height: none; }}
   .shell-header {{ flex-direction: column; }}
   .utility-bar {{ justify-content: flex-start; }}
@@ -8782,18 +8856,44 @@ th {{ position: sticky; top: 0; background: #f7f2e7; color: var(--chronicle-neut
     <button id="settings-button" type="button">設定</button>
   </div>
 </div>
-<div class="warning" id="shell-warning">
-  <p><strong id="shell-warning-title">読み取り専用の前景ローカルUIです。</strong> <span id="shell-warning-body">このUIはローカルの Chronicle ファイルを読み取りますが、レコードは書き込みません。</span></p>
-  <p id="shell-boundary-body">daemon なし、自動起動なし、外部 model API なし、GraphRAG runtime なし、vector DB なし、graph DB なし。UI の可視化は correctness proof ではありません。</p>
+<div class="{'notice' if mutation_enabled else 'warning'}" id="shell-warning">
+  <p><strong id="shell-warning-title">{'ローカルworkspace有効' if workspace_enabled else ('レビュー書き込み有効' if mutation_enabled else '読み取り専用')}</strong> <span id="shell-warning-body">{'このセッションでは Chronicle への記録とAI検索を利用できます。' if workspace_enabled else ('このセッションでは明示的なローカルレビュー操作だけが有効です。' if mutation_enabled else '書き込み機能を使うにはローカル書き込みモードで起動してください。')}</span></p>
+  <p id="shell-boundary-body">{'Chronicle JSONL が正本です。Vector DB と Graph DB はいつでも再構築できる派生データです。' if workspace_enabled else 'Chronicle JSONL が正本です。通常UIは外部モデルやGraphRAG runtimeを起動しません。'}</p>
 </div>
+<section class="task-workspace" aria-label="Chronicle workspace" {'hidden' if not workspace_enabled else ''}>
+  <article class="task-card">
+    <h2>記録する</h2>
+    <p>考え、メモ、成果物をChronicleへ残します。</p>
+    <form id="capture-form">
+      <select id="capture-kind" aria-label="記録の種類"><option value="note">メモ</option><option value="artifact">成果物</option></select>
+      <input id="capture-title" type="text" placeholder="タイトル（省略可）">
+      <textarea id="capture-content" placeholder="残したい内容" required></textarea>
+      <button class="primary" type="submit">Chronicleに保存</button>
+    </form>
+    <div id="capture-result" class="task-result" role="status"></div>
+  </article>
+  <article class="task-card">
+    <h2>Chronicleに聞く</h2>
+    <p>Vector検索とGraph展開を組み合わせ、外部モデルが根拠付きで回答します。</p>
+    <form id="assistant-form">
+      <textarea id="assistant-question" placeholder="例: このプロジェクトで未解決の判断は？" required></textarea>
+      <div class="hero-actions"><button class="primary" type="submit">調べる</button><button id="rebuild-runtime" type="button">検索データを更新</button></div>
+    </form>
+    <div id="assistant-result" class="task-result" role="status"></div>
+  </article>
+</section>
 <nav>
-  <button data-endpoint="/api/overview">概要</button>
-  <button data-endpoint="/api/events">イベント</button>
+  <details class="nav-group" open><summary>日常の記録</summary><div class="nav-items">
+  <button data-endpoint="/api/overview">ホーム</button>
+  <button data-endpoint="/api/events">履歴</button>
   <button data-endpoint="/api/contexts">コンテキスト</button>
+  <button data-endpoint="/api/artifacts">成果物</button>
+  <button data-endpoint="/api/decisions">判断</button>
+  <button data-endpoint="/api/review-queue">要確認</button>
+  </div></details>
+  <details class="nav-group"><summary>分析とつながり</summary><div class="nav-items">
   <button data-endpoint="/api/chronicle-objects">Chronicle Objects</button>
   <button data-endpoint="/api/reactions">Reactions</button>
-  <button data-endpoint="/api/federation-inbox">Federation Inbox</button>
-  <button data-endpoint="/api/federation-outbox">Federation Outbox</button>
   <button data-endpoint="/api/lineage-view">Lineage View</button>
   <button data-endpoint="/api/delta-view">Delta View</button>
   <button data-endpoint="/api/context-boundary-view">Context Boundary View</button>
@@ -8804,24 +8904,27 @@ th {{ position: sticky; top: 0; background: #f7f2e7; color: var(--chronicle-neut
   <button data-endpoint="/api/context-sns-contract">Context SNS Contract</button>
   <button data-endpoint="/api/trust-nodes">Trust Nodes</button>
   <button data-endpoint="/api/trust-relations">Trust Relations</button>
-  <button data-endpoint="/api/artifacts">成果物</button>
-  <button data-endpoint="/api/decisions">判断</button>
   <button data-endpoint="/api/rde">RDE</button>
+  <button data-endpoint="/api/graph-summary">Graph Summary</button>
+  <button data-endpoint="/api/graphrag-status">GraphRAG Status</button>
+  </div></details>
+  <details class="nav-group"><summary>運用と詳細</summary><div class="nav-items">
+  <button data-endpoint="/api/federation-inbox">Federation Inbox</button>
+  <button data-endpoint="/api/federation-outbox">Federation Outbox</button>
   <button data-endpoint="/api/boundary">境界</button>
   <button data-endpoint="/api/audit">監査</button>
   <button data-endpoint="/api/lifecycle">ライフサイクル</button>
   <button data-endpoint="/api/runtime-records">Runtime Records</button>
-  <button data-endpoint="/api/review-queue">Review Queue</button>
   <button data-endpoint="/api/summary-jobs">Summary Jobs</button>
   <button data-endpoint="/api/proposals">Proposals</button>
   <button data-endpoint="/api/ui-boundary">UI Boundary</button>
   <button data-endpoint="/api/runtime-config">Runtime Config</button>
   <button data-endpoint="/api/package-review">Package Review</button>
-  <button data-endpoint="/api/graph-summary">Graph Summary</button>
   <button data-endpoint="/api/ai-index-status">AI Index Status</button>
   <button data-endpoint="/api/ai-index-vector">AI Index Vector</button>
   <button data-endpoint="/api/ai-index-graph-nodes">AI Index Graph Nodes</button>
   <button data-endpoint="/api/ai-index-graph-edges">AI Index Graph Edges</button>
+  </div></details>
 </nav>
 <div class="shell-grid">
   <section id="view" class="panel"><p id="shell-loading-overview">概要を読み込み中...</p></section>
@@ -8829,6 +8932,9 @@ th {{ position: sticky; top: 0; background: #f7f2e7; color: var(--chronicle-neut
 </div>
 <script>
 const idFields = ['event_id', 'context_id', 'artifact_id', 'decision_id', 'rde_record_id', 'rule_id', 'audit_id', 'lifecycle_id', 'record_id', 'node_id', 'summary_job_id', 'reaction_id'];
+const uiMutationEnabled = {json.dumps(bool(mutation_enabled))};
+const workspaceEnabled = {json.dumps(bool(workspace_enabled))};
+const workspaceMutationEnabled = workspaceEnabled && uiMutationEnabled;
 const reviewWarningLabels = {review_warning_labels_json};
 const uiLabelKeys = {{
   'Action': 'ui.label.action',
@@ -9030,11 +9136,17 @@ function applyShellTranslations() {{
   const shellRootLabel = document.getElementById('shell-root-label');
   if (shellRootLabel) shellRootLabel.textContent = t('shell.root');
   const warningTitle = document.getElementById('shell-warning-title');
-  if (warningTitle) warningTitle.textContent = t('shell.warning_title');
+  if (warningTitle) warningTitle.textContent = workspaceEnabled
+    ? 'ローカルworkspace有効'
+    : (uiMutationEnabled ? 'レビュー書き込み有効' : t('shell.warning_title'));
   const warningBody = document.getElementById('shell-warning-body');
-  if (warningBody) warningBody.textContent = t('shell.warning_body');
+  if (warningBody) warningBody.textContent = workspaceEnabled
+    ? 'このセッションでは Chronicle への記録とAI検索を利用できます。'
+    : (uiMutationEnabled ? 'このセッションでは明示的なローカルレビュー操作だけが有効です。' : t('shell.warning_body'));
   const boundaryBody = document.getElementById('shell-boundary-body');
-  if (boundaryBody) boundaryBody.textContent = t('shell.boundary_body');
+  if (boundaryBody) boundaryBody.textContent = workspaceEnabled
+    ? 'Chronicle JSONL が正本です。Vector DB と Graph DB は再構築可能な派生データです。'
+    : 'Chronicle JSONL が正本です。通常UIは外部モデルやGraphRAG runtimeを起動しません。';
   const loadingOverview = document.getElementById('shell-loading-overview');
   if (loadingOverview) loadingOverview.textContent = t('shell.loading_overview');
   const selectJson = document.getElementById('shell-select-json');
@@ -14667,6 +14779,64 @@ async function submitReviewAction(path, action, recordId, targetId = 'action-pre
 document.querySelectorAll('button[data-endpoint]').forEach(button => button.addEventListener('click', () => loadEndpoint(button.dataset.endpoint)));
 document.getElementById('settings-button').addEventListener('click', () => loadEndpoint('__settings__'));
 document.getElementById('view').addEventListener('click', handleViewClick);
+function nextMutationRequestId(prefix) {{
+  window.__chronicleMutationRequestSequence = (window.__chronicleMutationRequestSequence || 0) + 1;
+  const random = (window.crypto && window.crypto.randomUUID) ? window.crypto.randomUUID() : String(Date.now());
+  return prefix + ':' + random + ':' + String(window.__chronicleMutationRequestSequence);
+}}
+async function postWorkspace(path, payload, prefix) {{
+  const body = Object.assign({{}}, payload, {{
+    mutation_session_id: window.__chronicleMutationSessionId || '',
+    mutation_request_id: nextMutationRequestId(prefix),
+  }});
+  const response = await fetch(path, {{
+    method: 'POST',
+    headers: {{
+      'Content-Type': 'application/json',
+      'X-Chronicle-UI-Mutation-Token': window.__chronicleMutationToken || '',
+    }},
+    body: JSON.stringify(body),
+  }});
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.detail || data.error || ('HTTP ' + response.status));
+  return data;
+}}
+async function handleCapture(event) {{
+  event.preventDefault();
+  const result = document.getElementById('capture-result');
+  result.textContent = '保存中…';
+  try {{
+    const data = await postWorkspace('/api/capture', {{
+      kind: document.getElementById('capture-kind').value,
+      title: document.getElementById('capture-title').value,
+      content: document.getElementById('capture-content').value,
+    }}, 'capture');
+    result.textContent = '保存しました: ' + (data.artifact_id || data.event_id || 'Chronicle record');
+    document.getElementById('capture-content').value = '';
+    loadEndpoint(data.kind === 'artifact' ? '/api/artifacts' : '/api/events');
+  }} catch (error) {{ result.textContent = '保存できませんでした: ' + error.message; }}
+}}
+async function handleAssistant(event) {{
+  event.preventDefault();
+  const result = document.getElementById('assistant-result');
+  result.textContent = 'Chronicleを検索し、回答を作成しています…';
+  try {{
+    const data = await postWorkspace('/api/graphrag/query', {{
+      question: document.getElementById('assistant-question').value,
+    }}, 'query');
+    const sources = (data.sources || []).map(item => '[' + item.record_id + '] ' + Number(item.score || 0).toFixed(3)).join('\\n');
+    result.textContent = data.answer + (sources ? '\\n\\n根拠\\n' + sources : '');
+  }} catch (error) {{ result.textContent = '回答を作成できませんでした: ' + error.message; }}
+}}
+async function handleRuntimeRebuild() {{
+  const result = document.getElementById('assistant-result');
+  result.textContent = '検索データを更新しています…';
+  try {{
+    const data = await postWorkspace('/api/graphrag/rebuild', {{}}, 'rebuild');
+    const runtime = data.runtime || {{}};
+    result.textContent = '更新しました: ' + String(runtime.document_count || 0) + ' records / ' + String(runtime.edge_count || 0) + ' links';
+  }} catch (error) {{ result.textContent = '更新できませんでした: ' + error.message; }}
+}}
 document.getElementById('detail').addEventListener('click', handleDetailClick);
 document.getElementById('view').addEventListener('click', handleViewPreviewPost);
 window.__chronicleFilters = {{ runtimeRecords: '', reviewQueue: '', summaryJobs: '' }};
@@ -14677,6 +14847,9 @@ window.__chronicleFontScale = initialFontScale();
 window.__chronicleMutationToken = {mutation_token_json};
 window.__chronicleMutationSessionId = {mutation_session_id_json};
 window.__chronicleMutationRequestSequence = 0;
+document.getElementById('capture-form').addEventListener('submit', handleCapture);
+document.getElementById('assistant-form').addEventListener('submit', handleAssistant);
+document.getElementById('rebuild-runtime').addEventListener('click', handleRuntimeRebuild);
 document.getElementById('view').addEventListener('input', handleViewInput);
 document.getElementById('view').addEventListener('change', handleViewChange);
 document.getElementById('locale-select').addEventListener('change', event => setLocale(event.target.value));
@@ -14700,6 +14873,7 @@ def create_handler(
     enable_ui_mutation: bool = False,
     auth_mode: str = UIAuthMode.NOT_ENABLED,
     authorization_mode: str = UIAuthorizationMode.NOT_ENABLED,
+    workspace_enabled: bool = False,
 ) -> type[BaseHTTPRequestHandler]:
     mutation_session_token = secrets.token_urlsafe(24)
     mutation_session_id = f"msn-{secrets.token_hex(8)}"
@@ -14713,6 +14887,7 @@ def create_handler(
         authorization_mode=authorization_mode,
         mutation_session_token=mutation_session_token,
         mutation_session_id=mutation_session_id,
+        workspace_enabled=workspace_enabled,
     )
 
     class ChronicleUIRequestHandler(BaseHTTPRequestHandler):
@@ -14735,7 +14910,22 @@ def create_handler(
         def do_POST(self) -> None:  # noqa: N802 - stdlib API
             parsed = urlparse(self.path)
             boundary = service.ui_boundary()["ui_boundary"]
-            if parsed.path.startswith("/api/review-actions/") and boundary.get("mutation_enabled", False):
+            review_write = parsed.path.startswith("/api/review-actions/")
+            workspace_write = parsed.path == "/api/capture" or parsed.path.startswith("/api/graphrag/")
+            guarded_write = review_write or workspace_write
+            if workspace_write and not service.workspace_enabled:
+                self._send_json(
+                    {"ok": False, "error": "workspace_disabled", "detail": "Start the loopback UI with --workspace."},
+                    status=HTTPStatus.FORBIDDEN,
+                )
+                return
+            if workspace_write and not boundary.get("mutation_enabled", False):
+                self._send_json(
+                    {"ok": False, "error": "mutation_disabled", "detail": "Start the loopback UI with local write enablement."},
+                    status=HTTPStatus.FORBIDDEN,
+                )
+                return
+            if guarded_write and boundary.get("mutation_enabled", False):
                 supplied_token = str(self.headers.get(MUTATION_TOKEN_HEADER, "") or "")
                 if supplied_token != mutation_session_token:
                     self._send_json(
@@ -14781,7 +14971,7 @@ def create_handler(
                     status=HTTPStatus.BAD_REQUEST,
                 )
                 return
-            if parsed.path.startswith("/api/review-actions/") and boundary.get("mutation_enabled", False):
+            if guarded_write and boundary.get("mutation_enabled", False):
                 mutation_session_id = str(body.get("mutation_session_id", "") or "").strip()
                 mutation_request_id = str(body.get("mutation_request_id", "") or "").strip()
                 if mutation_session_id != service.mutation_session_id:
@@ -14857,6 +15047,15 @@ def create_handler(
                     )
                     return
                 mutation_request_ids_seen.add(mutation_request_id)
+            if parsed.path == "/api/capture":
+                status, payload = service.capture_response(body)
+                self._send_json(payload, status=status)
+                return
+            graphrag_result = service.graphrag_response(parsed.path, body)
+            if graphrag_result is not None:
+                status, payload = graphrag_result
+                self._send_json(payload, status=status)
+                return
             result = service.review_action_response(parsed.path, body)
             if result is not None:
                 status, payload = result
@@ -14895,6 +15094,7 @@ def make_server(
     enable_ui_mutation: bool = False,
     auth_mode: str = UIAuthMode.NOT_ENABLED,
     authorization_mode: str = UIAuthorizationMode.NOT_ENABLED,
+    workspace_enabled: bool = False,
 ) -> ThreadingHTTPServer:
     return ThreadingHTTPServer(
         (host, port),
@@ -14905,6 +15105,7 @@ def make_server(
             enable_ui_mutation=enable_ui_mutation,
             auth_mode=auth_mode,
             authorization_mode=authorization_mode,
+            workspace_enabled=workspace_enabled,
         ),
     )
 
@@ -14919,6 +15120,7 @@ def serve_ui(
     enable_ui_mutation: bool = False,
     auth_mode: str = UIAuthMode.NOT_ENABLED,
     authorization_mode: str = UIAuthorizationMode.NOT_ENABLED,
+    workspace_enabled: bool = False,
 ) -> UIStartupMetadata:
     root_path = root or Path.cwd()
     service = ChronicleService(root_path)
@@ -14931,6 +15133,7 @@ def serve_ui(
         enable_ui_mutation=enable_ui_mutation,
         auth_mode=auth_mode,
         authorization_mode=authorization_mode,
+        workspace_enabled=workspace_enabled,
     )
     server = make_server(
         host=host,
@@ -14940,6 +15143,7 @@ def serve_ui(
         enable_ui_mutation=enable_ui_mutation,
         auth_mode=auth_mode,
         authorization_mode=authorization_mode,
+        workspace_enabled=workspace_enabled,
     )
     if open_browser:
         webbrowser.open(metadata.url)

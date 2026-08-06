@@ -4,6 +4,29 @@
 
 - No unreleased changes recorded.
 
+## v2.3.0 - 2026-08-07
+
+### Added
+
+- loopback-local `chronicle ui --workspace` entry point for guarded note and artifact capture
+- rebuildable SQLite vector and graph projections under `.chronicle/runtime/`
+- OpenAI Embeddings and Responses API integration for grounded Chronicle questions
+- `runtime graphrag-status`, `runtime graphrag-rebuild`, and `runtime ask` commands
+- ADR and operator documentation for the optional local GraphRAG workspace boundary
+
+### Changed
+
+- project and CLI version advanced to `2.3.0`
+- local UI now distinguishes default read-only, review-mutation, and GraphRAG workspace modes
+- product, architecture, and GraphRAG boundary docs distinguish the optional local runtime from hosted or multi-user query services
+
+### Notes
+
+- `.chronicle/chronicle.jsonl` remains authoritative; local SQLite files are derived and rebuildable
+- external model calls occur only on explicit workspace rebuild or query actions
+- workspace writes retain loopback, mutation-token, session-id, and request-id gates
+- hosted runtime, managed vector/graph databases, daemon execution, and multi-user authorization remain outside this release
+
 ## v2.2.0 - 2026-07-13
 
 ### Added

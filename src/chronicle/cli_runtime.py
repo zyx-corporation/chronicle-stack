@@ -10,6 +10,7 @@ from chronicle.models.artifact import ArtifactType
 from chronicle.models.summary_job import SummarySourceRef
 from chronicle.interfaces.cli.common import handle_error
 from chronicle.services.capability_registry_service import CapabilityNotFoundError, CapabilityRegistryService
+from chronicle.services.graphrag_runtime_service import GraphRagRuntimeService
 from chronicle.services.runtime_config_service import RuntimeConfigService
 from chronicle.services.runtime_service import RuntimeService
 
@@ -109,6 +110,60 @@ def runtime_status_cmd(
         )
         typer.echo(f"Capabilities: {', '.join(capability.value for capability in status.capabilities)}")
         typer.echo("Boundary: explicit invocation only, no external calls, generated output requires review.")
+    except ChronicleError as exc:
+        handle_error(exc, json_output)
+
+
+@runtime_app.command("graphrag-status")
+def graphrag_status_cmd(
+    json_output: Annotated[bool, typer.Option("--json")] = False,
+) -> None:
+    """Show the local vector/graph database status."""
+    try:
+        status = GraphRagRuntimeService().status()
+        if json_output:
+            _dump_json(status)
+            return
+        typer.echo("Chronicle GraphRAG Runtime")
+        typer.echo(f"Status: {status['status']}")
+        typer.echo(f"Vector records: {status['vector_db']['documents']}")
+        typer.echo(f"Graph nodes: {status['graph_db']['nodes']}")
+        typer.echo(f"Graph edges: {status['graph_db']['edges']}")
+    except ChronicleError as exc:
+        handle_error(exc, json_output)
+
+
+@runtime_app.command("graphrag-rebuild")
+def graphrag_rebuild_cmd(
+    json_output: Annotated[bool, typer.Option("--json")] = False,
+) -> None:
+    """Rebuild vector and graph databases from Chronicle JSONL."""
+    try:
+        result = GraphRagRuntimeService().rebuild()
+        if json_output:
+            _dump_json(result)
+            return
+        typer.echo(f"Indexed {result['document_count']} records and {result['edge_count']} links.")
+    except ChronicleError as exc:
+        handle_error(exc, json_output)
+
+
+@runtime_app.command("ask")
+def graphrag_ask_cmd(
+    question: Annotated[str, typer.Argument(help="Question about the current Chronicle.")],
+    json_output: Annotated[bool, typer.Option("--json")] = False,
+) -> None:
+    """Ask the external model using local vector and graph retrieval."""
+    try:
+        result = GraphRagRuntimeService().query(question)
+        if json_output:
+            _dump_json(result)
+            return
+        typer.echo(result["answer"])
+        if result["sources"]:
+            typer.echo("\nSources:")
+            for source in result["sources"]:
+                typer.echo(f"- {source['record_id']} ({source['score']:.3f})")
     except ChronicleError as exc:
         handle_error(exc, json_output)
 

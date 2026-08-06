@@ -26,10 +26,10 @@
 
 ## Current Pointer
 
-- latest notes: `notes/release-notes-v2.2.0.md`
-- latest status: `status/release-status-v2.2.0.md`
-- latest readiness: `readiness/release-readiness-v2.2.md`
-- latest smoke: `smoke/smoke-test-v2.2.md`
-- latest remaining: `remaining/v2.2-release-remaining-issues.md`
+- latest notes: `notes/release-notes-v2.3.0.md`
+- latest status: `status/release-status-v2.3.0.md`
+- latest readiness: `readiness/release-readiness-v2.3.md`
+- latest smoke: `smoke/smoke-test-v2.3.md`
+- latest remaining: `remaining/v2.3-release-remaining-issues.md`
 - operator validation guide: `operations/local-web-ui-operator-validation-v1.0.md`
 - release operator guide: `operations/release-operator-guide.md`

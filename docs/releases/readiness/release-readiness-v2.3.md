@@ -1,0 +1,21 @@
+# Release Readiness v2.3
+
+- status: ready
+- checks:
+  - `./.venv/bin/ruff check src/ tests/`
+  - `./.venv/bin/pytest -q`
+  - `./.venv/bin/python -m chronicle.cli --version`
+  - `./.venv/bin/python -m chronicle.cli ui-smoke --json`
+  - `act pull_request -j test --matrix python-version:3.11 -P ubuntu-latest=catthehacker/ubuntu:act-latest`
+  - manual in-app browser validation for default and workspace modes
+- evidence:
+  - source metadata and CLI output report `2.3.0`
+  - 519 tests cover GraphRAG projections, guarded capture, and workspace-mode separation
+  - UI smoke remains read-only and does not start an external runtime
+  - the complete GitHub Actions workflow passes locally under `act` on Linux arm64
+  - browser validation shows no console errors and hides workspace controls in default mode
+- publication:
+  - merge the validated release branch to `main`
+  - cut annotated tag `v2.3.0` from merged main
+  - verify tag dereference equals `origin/main`
+  - publish GitHub Release from `release-notes-v2.3.0.md`
