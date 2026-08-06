@@ -95,6 +95,8 @@ pytest
 
 ## 関連文書
 
+- [Documentation Index](docs/README.md)
+- [Roadmap Map](roadmap.md)
 - [Architecture](docs/architecture.md)
 - [Interface Contracts](docs/interface-contracts.md)
 - [CLI Reference](docs/cli-reference.md)
@@ -107,6 +109,8 @@ pytest
 - [Stage 2 Milestones](docs/stage-2/milestones.md)
 - [Stage 2 Operator Runbook](docs/stage-2/operator-runbook.md)
 - [Stage 2 Release Readiness](docs/stage-2/release-readiness.md)
+- [Project Chronicles](docs/chronicles/README.md)
+- [Workspace Chronicle](chronicle.md)
 - [Third-Party Notices](THIRD_PARTY_NOTICES.md)
 
 ## ライセンス
