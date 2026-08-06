@@ -10,10 +10,11 @@ Chronicle Stack が重視する中心価値は **再構成可能性** です。�
 
 - `chronicle.jsonl` を一次記録とする local-first 設計
 - Context / Artifact / Decision / RDE / Audit / Lifecycle の記録
-- read-only local web UI と静的 export による inspect-first 運用
-- federation package / trust / runtime を preview-first で扱う境界重視の設計
+- 記録と質問を中心にした loopback-local web workspace
+- OpenAI Responses / Embeddings API と、再構築可能な SQLite vector / graph DB
+- federation package / trust / review を境界付きで扱う設計
 
-Chronicle Stack は、クラウド型AIメモリ、ホステッド実行基盤、完成済み GraphRAG runtime、default-on GUI mutation ではありません。詳細な境界と現状は [Product Overview](docs/product-overview.md) を参照してください。
+Chronicle Stack はホステッド実行基盤ではありません。外部モデル呼び出しは明示操作時だけ行い、`.chronicle/chronicle.jsonl` を正本、SQLite DBを削除・再構築可能な派生データとして扱います。
 
 ## 利用方法
 
@@ -47,7 +48,14 @@ chronicle artifact create --title "Basic Spec" --type specification --file docs/
 chronicle decision record --artifact <ARTIFACT_ID> --type accepted --reason "採用理由"
 chronicle export --format yaml
 chronicle ui-smoke --json
-chronicle ui
+chronicle ui --workspace
+```
+
+`--workspace` は loopback-local のセッショントークン境界内で、メモ・成果物の保存とGraphRAG質問を有効にします。OpenAIキーはリポジトリのignore対象 `.env` に `OPENAI_API_KEY` として置きます。
+
+```bash
+chronicle runtime graphrag-rebuild
+chronicle runtime ask "このプロジェクトで未解決の判断は？"
 ```
 
 日常利用でよく使う導線:
@@ -82,8 +90,8 @@ pytest
 現在の release lane とリリース文書:
 
 - [Releases Index](docs/releases/README.md)
-- [Release Notes v2.2.0](docs/releases/notes/release-notes-v2.2.0.md)
-- [Release Readiness v2.2](docs/releases/readiness/release-readiness-v2.2.md)
+- [Release Notes v2.3.0](docs/releases/notes/release-notes-v2.3.0.md)
+- [Release Readiness v2.3](docs/releases/readiness/release-readiness-v2.3.md)
 
 ## 関連文書
 

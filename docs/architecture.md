@@ -14,7 +14,7 @@ Chronicle Stack は、AIとの共同作業で発生する文脈、判断、成�
 - Decisionを成果物と結びつける
 - RDEで意味変化を構造化して記録する
 - Contextのscope、visibility、source、boundaryを扱う
-- local placeholder AI index surface を派生面として扱う
+- deterministic graph export と任意のローカルGraphRAG projectionを派生面として扱う
 
 ## 全体構造
 
@@ -28,7 +28,7 @@ flowchart TD
     S --> D[Decisions]
     S --> R[RDE Diff Records]
     S --> B[Boundary Rules]
-    S --> AI[Placeholder AI Index]
+    S --> AI[AI / Retrieval Boundary]
     E --> J[(chronicle.jsonl 一次記録)]
     J --> IDX[(派生Index)]
     IDX --> Search[Search]
@@ -37,10 +37,12 @@ flowchart TD
     IDX --> History[Artifact History]
     IDX --> Check[Boundary Check]
     AI --> AIDX[(ai_indexes placeholder)]
+    J --> GR[(optional local vector / graph SQLite)]
+    GR --> W[Loopback Workspace]
     Check --> Plan[次段階: Context Injection Plan]
 ```
 
-`chronicle.jsonl` が一次記録です。Indexは検索や表示のための派生データであり、再構築できます。
+`chronicle.jsonl` が一次記録です。Indexと任意のローカルvector / graph SQLiteは検索や表示のための派生データであり、再構築できます。
 
 ## レイヤ構造
 
@@ -128,6 +130,6 @@ v0.2では、Boundary Rule 評価に基づいて Context Injection Plan を生�
 
 Chronicle Stack は、まず local-first な記録と再構成可能性を優先します。
 
-GraphRAG、Dashboard、外部連携、より高度な文脈選択は将来の拡張対象です。
+Hosted GraphRAG、外部DB統合、networked federation、より高度な文脈選択は将来の拡張対象です。
 
-ただし、v1.7 の足場として local file-backed placeholder AI index surface を追加できます。これは GraphRAG 実行や vector / graph DB の導入ではなく、将来の adapter contract を先に明示する補助面です。
+v1.7 の local file-backed placeholder AI index surface は、将来の adapter contract を先に明示する補助面として維持します。加えてv2.3以降は、明示的な `--workspace` モードに限り、OpenAI APIと再構築可能なローカルSQLite projectionを使えます。通常UI、deterministic export、外部runtime handoffはこの任意runtimeへ依存しません。

@@ -28,14 +28,17 @@ Chronicle Stack は、人間側が自分の文脈、問い、判断、生成物�
 
 ## Chronicle Stack ではないもの
 
-Chronicle Stack は、汎用ベクトルデータベース、完成済みのGraphRAG、正しさを自動判定する仕組み、クラウド型AIメモリサービス、LLMエージェント実行基盤、ライブDashboardサーバーではありません。
+Chronicle Stack は、汎用ベクトルデータベース、hosted / multi-user GraphRAG、正しさを自動判定する仕組み、クラウド型AIメモリサービス、LLMエージェント実行基盤、常駐Dashboardサーバーではありません。
 
 補足:
 
 - RDE は意味変化を構造的に記録する枠組みであり、正しさの証明ではありません
 - Boundary Rules は警告や分類を支援するもので、強制的な保護機構ではありません
-- graph export は GraphRAG 接続準備であり、GraphRAG engine ではありません
-- `chronicle ui` は明示起動型の read-only local web UI であり、daemon、hosted service、access control、correctness proof ではありません
+- graph export は依存なしの接続契約であり、外部モデルAPIを呼びません
+- `chronicle ui` は明示起動型の read-only local web UI です
+- `chronicle ui --workspace` はloopback-localの明示セッション内だけで、記録とモデル支援質問を有効にします
+- workspaceのSQLite vector / graph DBは派生データであり、JSONLを正本として再構築できます
+- どちらのUIモードもdaemon、hosted service、multi-user access control、correctness proofではありません
 
 ## システム全体像
 
@@ -55,6 +58,8 @@ flowchart TD
     I --> Search[Search]
     I --> Export[Export]
     I --> UI[Explicit Local UI]
+    J --> LR[Optional Local GraphRAG Projection]
+    LR --> W[Loopback Workspace]
     I --> History[Artifact History]
     I --> Check[Boundary Check]
     Check --> P
@@ -62,7 +67,7 @@ flowchart TD
     Export --> H[HTML Review Console]
 ```
 
-`chronicle.jsonl` が一次記録です。派生Index、検索、エクスポート、履歴表示、Boundary Check、graph-json、HTML Review Console、Explicit Local UI は補助データまたは派生ビューです。
+`chronicle.jsonl` が一次記録です。派生Index、検索、エクスポート、履歴表示、Boundary Check、graph-json、HTML Review Console、Explicit Local UI、ローカルGraphRAG projectionは補助データまたは派生ビューです。
 
 ## 現在の実装位置
 
@@ -70,7 +75,7 @@ flowchart TD
 
 - [Overall Roadmap](./roadmaps/overall-roadmap.md)
 - [Local UI Implementation Roadmap](./roadmaps/local-ui-implementation-roadmap-2026-07.md)
-- [Release Status v2.0.0](./releases/status/release-status-v2.0.0.md)
+- [Release Status v2.3.0](./releases/status/release-status-v2.3.0.md)
 
 ## 詳細参照
 

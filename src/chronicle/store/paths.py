@@ -16,6 +16,7 @@ REPORTS_DIR = "reports/rde"
 SUMMARY_JOBS_DIR = "summary_jobs"
 REVIEWS_DIR = "reviews"
 RUNTIME_CONFIG_FILE = "runtime.yaml"
+RUNTIME_DIR = "runtime"
 
 
 class ChroniclePaths:
@@ -40,6 +41,9 @@ class ChroniclePaths:
         self.summary_jobs_dir = self.chronicle_dir / SUMMARY_JOBS_DIR
         self.reviews_dir = self.chronicle_dir / REVIEWS_DIR
         self.runtime_config_file = self.chronicle_dir / RUNTIME_CONFIG_FILE
+        self.runtime_dir = self.chronicle_dir / RUNTIME_DIR
+        self.vector_db_file = self.runtime_dir / "vector.sqlite3"
+        self.graph_db_file = self.runtime_dir / "graph.sqlite3"
         self.artifact_index_file = self.indexes_dir / "artifact_index.json"
         self.context_index_file = self.indexes_dir / "context_index.json"
         self.decision_index_file = self.indexes_dir / "decision_index.json"

@@ -86,19 +86,20 @@ def _emit_ui_startup_output(*, metadata, enable_ui_mutation: bool, json_output: 
     _emit_stdout_line(f"Root: {metadata.root}")
     _emit_stdout_line(f"Serving: {metadata.url}")
     _emit_stdout_line(f"Bind scope: {metadata.bind_scope}")
-    _emit_stdout_line(
-        "Mode: mutation enabled for loopback-local review"
-        if metadata.mutation_enabled
-        else "Mode: read-only, mutation disabled"
-    )
+    if metadata.workspace_enabled:
+        _emit_stdout_line("Mode: local writing and GraphRAG workspace")
+    else:
+        _emit_stdout_line(
+            "Mode: mutation enabled for loopback-local review"
+            if metadata.mutation_enabled
+            else "Mode: read-only, mutation disabled"
+        )
     _emit_stdout_line(
         f"Mutation capability flag: {metadata.mutation_capability_flag} (preview intent only)"
     )
     _emit_stdout_line(f"Enable UI mutation: {enable_ui_mutation}")
     _emit_stdout_line(f"Auth: {metadata.auth_mode}; Authorization: {metadata.authorization_mode}")
-    _emit_stdout_line(
-        "Boundary: no daemon, no external model API, no GraphRAG runtime, no vector DB, no graph DB"
-    )
+    _emit_stdout_line("Boundary: loopback foreground UI; Chronicle JSONL remains authoritative")
     _emit_stdout_line("Press Ctrl-C to stop.")
 
 
@@ -137,6 +138,13 @@ def ui_cmd(
             help="Enable loopback-local GUI review mutation when auth/authorization gates are configured.",
         ),
     ] = False,
+    workspace: Annotated[
+        bool,
+        typer.Option(
+            "--workspace",
+            help="Enable the loopback-local writing and GraphRAG workspace with safe session gates.",
+        ),
+    ] = False,
     auth_mode: Annotated[
         str,
         typer.Option("--auth-mode", help="UI boundary auth-mode placeholder metadata."),
@@ -147,8 +155,13 @@ def ui_cmd(
     ] = UIAuthorizationMode.NOT_ENABLED,
     json_output: Annotated[bool, typer.Option("--json", help="Print startup metadata as JSON and exit.")] = False,
 ) -> None:
-    """Start an explicit foreground read-only local web UI."""
+    """Start the foreground local Chronicle workspace."""
     try:
+        if workspace:
+            mutation_capability_flag = True
+            enable_ui_mutation = True
+            auth_mode = UIAuthMode.LOOPBACK_LOCAL
+            authorization_mode = UIAuthorizationMode.REVIEWER_DECLARED
         validate_ui_root(root)
         validate_ui_host(host)
         metadata = build_startup_metadata(
@@ -159,6 +172,7 @@ def ui_cmd(
             enable_ui_mutation=enable_ui_mutation,
             auth_mode=auth_mode,
             authorization_mode=authorization_mode,
+            workspace_enabled=workspace,
         )
         _emit_ui_startup_output(
             metadata=metadata,
@@ -178,6 +192,7 @@ def ui_cmd(
             enable_ui_mutation=enable_ui_mutation,
             auth_mode=auth_mode,
             authorization_mode=authorization_mode,
+            workspace_enabled=workspace,
         )
     except ChronicleError as exc:
         handle_error(exc, json_output)

@@ -324,6 +324,7 @@ Related: `docs/adr/0018-local-ui-read-only-navigation-boundary.md`
 
 ```bash
 chronicle ui
+chronicle ui --workspace
 chronicle ui --host 127.0.0.1 --port 8765
 chronicle ui --mutation-capability-flag
 chronicle ui --mutation-capability-flag --enable-ui-mutation --auth-mode loopback_local --authorization-mode reviewer_declared
@@ -333,7 +334,7 @@ chronicle ui-smoke
 chronicle ui-smoke --json
 ```
 
-`chronicle ui` は明示起動型 foreground local web UI です。既定では read-only であり、daemon、autostart、hosted service ではありません。`chronicle ui --json` は起動 metadata を JSON で出力して終了するため、URL 確認や wrapper script からの呼び出しに使えます。
+`chronicle ui` は明示起動型 foreground local web UI です。既定は read-only です。`chronicle ui --workspace` は既存のloopback/auth/authz/session-token条件をまとめて有効化し、メモ・成果物の保存とGraphRAG質問を利用できる日常用モードです。daemon、autostart、hosted serviceにはなりません。
 
 現段階でも bind host は loopback (`127.0.0.1`, `localhost`, `::1`) のみ許可されます。`--auth-mode` と `--authorization-mode` は boundary config であり、UI review detail の assurance 表示に反映されます。`--mutation-capability-flag` は preview intent を metadata に記録します。実際の write route は `--enable-ui-mutation` を追加し、さらに `--auth-mode loopback_local --authorization-mode reviewer_declared` が揃った場合にのみ有効化されます。詳細は [ADR-0022](adr/0022-explicit-local-ui-mutation-enable-flag.md) を参照してください。
 
@@ -357,6 +358,15 @@ read-only endpoint:
 - `/api/ai-index-vector`
 - `/api/ai-index-graph-nodes`
 - `/api/ai-index-graph-edges`
+- `/api/graphrag-status`
+
+`--workspace` で有効になる guarded POST endpoint:
+
+- `/api/capture`: メモまたは成果物をChronicle JSONLへ記録
+- `/api/graphrag/rebuild`: JSONLからSQLite vector/graph DBを再構築
+- `/api/graphrag/query`: vector検索、graph近傍展開、OpenAI Responses APIによる回答
+
+対応CLIは `chronicle runtime graphrag-status`, `chronicle runtime graphrag-rebuild`, `chronicle runtime ask <QUESTION>` です。モデルは `CHRONICLE_OPENAI_MODEL`、埋め込みは `CHRONICLE_EMBEDDING_MODEL` で上書きできます。
 
 `chronicle ui-smoke` はサーバーを起動せず、ブラウザも使わず、local UI の read-only データ面だけを検証します。
 
