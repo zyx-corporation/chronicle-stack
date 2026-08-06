@@ -42,5 +42,6 @@ ADRs capture decisions that affect architecture, security boundaries, data contr
 - [ADR-0034: Stage 2 Proposal Surface](0034-stage-2-proposal-surface.md)
 - [ADR-0035: Stage 2 Transport Boundary Skeleton](0035-stage-2-transport-boundary.md)
 - [ADR-0097: Local GraphRAG Workspace with Rebuildable Databases](0097-local-graphrag-workspace.md)
+- [ADR-0098: Local `act` as the Primary CI Execution Surface](0098-local-act-as-primary-ci-execution-surface.md)
 - [ADR-001: T-RDE, TDD, and Design-Pattern Principles](ADR-001-t-rde-tdd-and-design-patterns.md)
 - [ADR-002: i18n and Language Selection](ADR-002-i18n-and-language-selection.md)
