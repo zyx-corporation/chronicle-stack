@@ -110,3 +110,21 @@ do not rewrite prior history to make the project appear cleaner.
   implementation names.
 - Re-evaluate when: Chronicle Cloud, a hosted service surface, or a user-facing app needs a
   product name distinct from the technical architecture.
+
+## 2026-08-07 - Chronicle Yard Product Family Milestones
+
+- Task: Recheck the roadmap after defining Chronicle Yard and set milestone-level planning.
+- Baseline: The overall roadmap still described Chronicle Stack implementation tracks, but did
+  not yet include Yard as a product-family lane spanning Stack, CSG-RAG, EQ, API, Cloud, and
+  Federation.
+- Changed: Added `docs/roadmaps/chronicle-yard-product-family-milestones.md` and updated the
+  overall roadmap, roadmap index, root roadmap map, and docs index.
+- Preserved: Chronicle Stack remains the core preservation mechanism; CSG-RAG and
+  `chronicle-external-query` remain related products rather than responsibilities absorbed into
+  Stack core.
+- Why: Yard needs milestone governance so product-family language does not become vague brand
+  language or accidental monorepo/runtime consolidation.
+- Next: Start CY-1 / CY-2 by drafting the Stack / CSG-RAG / EQ responsibility matrix and
+  reviewing handoff/export contract gaps.
+- Re-evaluate when: API contracts, Chronicle Cloud authority labels, or Yard-family governance
+  move from planning into implementation.

@@ -15,6 +15,9 @@ documents under `docs/roadmaps/` and `docs/stage-2/`.
   planned local resident service, Chronicle-native API, agent-runtime integration, and
   Chronicle Cloud expansion path, while keeping Chronicle Stack out of cloud AI memory
   positioning.
+- [Chronicle Yard Product Family Milestones](docs/roadmaps/chronicle-yard-product-family-milestones.md):
+  milestone lane for Chronicle Yard as the umbrella over Chronicle Stack and related products
+  such as CSG-RAG and chronicle-external-query.
 - [Stage 2 Roadmap](docs/stage-2/roadmap.md): current Stage 2 implementation sequence.
 - [Stage 2 Milestones](docs/stage-2/milestones.md): milestone-level execution map.
 - [Release Operations](docs/releases/operations/README.md): release operation procedures and
@@ -27,10 +30,13 @@ documents under `docs/roadmaps/` and `docs/stage-2/`.
 3. Read [Chronicle Daemon and API Roadmap](docs/roadmaps/chronicle-daemon-api-roadmap.md)
    before planning resident services, tool-facing APIs, Kazane/agent runtime integration, or
    Chronicle Cloud.
-4. Read [Stage 2 Roadmap](docs/stage-2/roadmap.md) for the active implementation lane.
-5. Check [ADR Index](docs/adr/README.md) before changing architecture, storage, runtime,
+4. Read [Chronicle Yard Product Family Milestones](docs/roadmaps/chronicle-yard-product-family-milestones.md)
+   before coordinating Chronicle Stack with CSG-RAG, chronicle-external-query, Chronicle Cloud,
+   Chronicle API, or other Yard-family products.
+5. Read [Stage 2 Roadmap](docs/stage-2/roadmap.md) for the active implementation lane.
+6. Check [ADR Index](docs/adr/README.md) before changing architecture, storage, runtime,
    security, review, federation, or documentation governance.
-6. Check [Chronicles](docs/chronicles/README.md) for task-specific maintenance history.
+7. Check [Chronicles](docs/chronicles/README.md) for task-specific maintenance history.
 
 ## Boundary
 
