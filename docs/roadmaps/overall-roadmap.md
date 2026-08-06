@@ -10,6 +10,7 @@ Related:
 - `docs/roadmaps/roadmap-v0.5.md`
 - `docs/federation/requirements.md`
 - `docs/roadmaps/federation-implementation-roadmap.md`
+- `docs/roadmaps/chronicle-daemon-api-roadmap.md`
 - `docs/future/README.md`
 
 ## 1. 目的
@@ -80,7 +81,7 @@ Related:
 
 ## 3. 統合判断
 
-個別ロードマップを統合すると、Chronicle Stack の発展は次の四つの主系列に整理できる。
+個別ロードマップを統合すると、Chronicle Stack の発展は次の五つの主系列に整理できる。
 
 第一に、Core / Local-first Track である。これは JSONL一次記録、Context、Artifact、Decision、RDE、Boundary、Audit、Lifecycle、Review、Export、UI を安定させる主系列である。
 
@@ -90,7 +91,9 @@ Related:
 
 第四に、Federation / Context SNS Track である。これは federation package、signed manifest、context boundary enforcement、Chronicle object expansion、federation message、trust model、Context SNS surface、networked federation を扱う。
 
-この四系列は並列ではなく、依存関係を持つ。Federation / Context SNS Track は、Security / Boundary Track と Core / Local-first Track の上に載る。AI / Retrieval Track は、Security / Boundary Track と RDE の上に載る。
+第五に、Daemon / API / Cloud Track である。これは Chronicle Stack をクロニクルの保管機構として保ったまま、明示起動の resident service と、AI番頭、Kotone、Obsidian、Git、ブラウザ拡張、Kazane、エージェント実行基盤、業務アプリから使う構造化 API を扱う。さらに後続段階では、ローカルに保持・エクスポート可能な Chronicle 記録の権威を保ちながら cloud sync、team sharing、organizational audit、permission management、backup を担う Chronicle Cloud を扱う。ただし、この API / Cloud は正本を保管する cloud AI memory や generic log ingestion ではなく、問い、判断、根拠、成果物、差分、承認、保留、撤回を Chronicle-native に扱う service layer として扱う。
+
+この五系列は並列ではなく、依存関係を持つ。Federation / Context SNS Track は、Security / Boundary Track と Core / Local-first Track の上に載る。AI / Retrieval Track は、Security / Boundary Track と RDE の上に載る。Daemon / API / Cloud Track は、Core / Local-first Track と Security / Boundary Track を前提にし、AI / Retrieval Track と Federation / Context SNS Track への接続面として扱う。順序は「ローカル Chronicle 記録 → 常駐API → エージェント連携 → クラウド同期/共同利用 → フェデレーション」を原則とし、どの段階でも Chronicle Stack をクラウド型AIメモリとして扱わない。
 
 ## 4. 全体ロードマップ
 
@@ -133,6 +136,26 @@ Related:
 完了条件は、外部AIへ送る文脈が明示的に確認され、AI応答がユーザー発言や事実記録と混ざらず、AI推測が恒久属性化されず、RDE Diff Record または Delta Chronicle として意味変化が再構成可能であることである。
 
 非対象は、特定AI事業者への固定接続、AIの正しさ保証、自動人格推定、無制限の文脈投入である。
+
+### Stage D2: Resident Daemon and Chronicle-Native API Planning
+
+主題は、Chronicle Stack をクロニクルの保管機構として保ったまま、外部ツールやAIエージェントが構造化された記録・照会・差分確認を行える API 層を計画することである。
+
+対象は、Chronicle Daemon / Resident Service、Chronicle API、`POST /events`、`GET /context`、`POST /diffs`、`GET /timeline`、`POST /assertions`、`GET /boundaries`、API contract skeleton、idempotency、auth/session boundary、audit insertion、connector prototype である。
+
+完了条件は、daemon が hidden/autostart ではなく明示起動の local process として定義され、API write が JSONL-backed Core services を通り、API response が truth proof や permission grant と誤解されず、公開文言が「将来構想」を超えて実装済み API と誤読されないことである。
+
+非対象は、hosted API、remote multi-user authorization、generic log API、正本を保管する cloud AI memory provider、外部公開 endpoint、daemon state の second source-of-truth 化である。
+
+### Stage D3: Agent Runtime and Chronicle Cloud Planning
+
+主題は、Kazane などのエージェント実行基盤と Chronicle API を接続し、その後にクラウド同期、チーム共有、監査、権限管理、バックアップを担う Chronicle Cloud を計画することである。
+
+対象は、Agent Runtime / Kazane integration contract、tool capability scope、agent-originated record metadata、Chronicle Cloud concept、local/cloud authority model、sync/conflict problem statement、team permission model、backup/export/recovery guarantees、cloud audit trail、cloud/federation boundary である。
+
+完了条件は、Kazane / agent runtime が Chronicle の所有者ではなく実行層として定義され、Chronicle Cloud が正本を保管するクラウド型AIメモリではなく sync/share/audit/permission/backup のサービス層として定義され、local exportability と reconstructability が維持されることである。
+
+非対象は、即時の hosted multi-tenant implementation、cloud-first primary record、unbounded agent memory、team sharing と external federation の混同、backup/sync の publication 化である。
 
 ### Stage E: Federation Package Foundation
 

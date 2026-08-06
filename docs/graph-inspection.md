@@ -85,4 +85,4 @@ The v0.4 implementation exposes these commands as `chronicle-graph` rather than 
 - [GraphRAG Boundary](graphrag-boundary.md)
 - [Storage Format](storage-format.md)
 - [CLI Reference](cli-reference.md)
-- [v0.4 Roadmap](roadmap-v0.4.md)
+- [v0.4 Roadmap](roadmaps/roadmap-v0.4.md)

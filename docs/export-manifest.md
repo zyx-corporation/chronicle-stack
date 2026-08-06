@@ -63,4 +63,4 @@ Markdown exportは人間向けreportであり、このPhaseではmanifest埋め�
 - [CLI Reference](cli-reference.md)
 - [Interface Contracts](interface-contracts.md)
 - [Storage Format](storage-format.md)
-- [v0.4 Roadmap](roadmap-v0.4.md)
+- [v0.4 Roadmap](roadmaps/roadmap-v0.4.md)

@@ -79,4 +79,4 @@ Doctor は次を行いません。
 
 - [CLI Reference](cli-reference.md)
 - [Interface Contracts](interface-contracts.md)
-- [v0.4 Roadmap](roadmap-v0.4.md)
+- [v0.4 Roadmap](roadmaps/roadmap-v0.4.md)
