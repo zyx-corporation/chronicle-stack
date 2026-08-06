@@ -88,3 +88,25 @@ do not rewrite prior history to make the project appear cleaner.
   API, agent-runtime, or cloud features.
 - Re-evaluate when: Chronicle Cloud storage, replica authority labels, or agent memory contracts
   are designed.
+
+## 2026-08-07 - Chronicle Yard Naming Note
+
+- Task: Preserve the discussion that Chronicle Yard should be treated as an umbrella name for
+  Chronicle Stack and related products.
+- Baseline: The repository used Chronicle Stack consistently for implementation, architecture,
+  CLI, and documentation, but did not have a place to separate user-facing product metaphor from
+  technical architecture name.
+- Changed: Added `docs/future/chronicle-yard-naming-note.md` and linked it from the product
+  overview and future concepts index, then refined the note so Yard names the product family
+  rather than merely replacing Stack.
+- Added: Listed `csg-rag` and `chronicle-external-query` as concrete examples of related
+  Chronicle Yard products: local governed GraphRAG runtime and downstream query/evaluation
+  workspace.
+- Preserved: No package, CLI, repository, API, or release artifact was renamed.
+- Why: Yard expresses the place-like product family better than Stack alone: records are
+  generated, placed, sorted, maintained, inspected, and connected to later work across related
+  surfaces.
+- Next: Revisit the naming split before drafting public product pages or changing any concrete
+  implementation names.
+- Re-evaluate when: Chronicle Cloud, a hosted service surface, or a user-facing app needs a
+  product name distinct from the technical architecture.

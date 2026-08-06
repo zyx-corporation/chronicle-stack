@@ -6,6 +6,8 @@
 
 ## Documents
 
+- [Chronicle Yard Naming Note](chronicle-yard-naming-note.md): future naming concept that
+  frames Chronicle Yard as a possible umbrella name for Chronicle Stack and related products.
 - [Chronicle Stack for Music: Music Context Sovereignty](chronicle-stack-for-music.md)
 
 ## Status

@@ -17,6 +17,8 @@ This directory contains the stable documentation surface for Chronicle Stack.
 - [Chronicle Daemon and API Roadmap](roadmaps/chronicle-daemon-api-roadmap.md): planned
   local resident service, tool-facing API, agent-runtime integration, and Chronicle Cloud track
   under the rule that Chronicle Stack is Chronicle preservation, not cloud AI memory.
+- [Future Concepts](future/README.md): speculative product concepts, including the Chronicle
+  Yard naming note.
 - [Release Docs](releases/README.md): release notes, readiness, status, and operations.
 
 ## Role
