@@ -1,0 +1,132 @@
+name: Work item
+about: Track Chronicle Stack work with Issue-first / Kanban-derived workflow metadata.
+title: ""
+labels: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this template for Prototype, MVP, Research Spike, Demo, Production Candidate, Bug, Docs, ADR, Security / Boundary, RDE Review, Maintenance, or Release work.
+
+        The Issue is the planning source of truth. Kanban state is a derived view.
+
+  - type: dropdown
+    id: work_type
+    attributes:
+      label: Work Type
+      description: Classify the work product.
+      options:
+        - Prototype
+        - MVP
+        - Research Spike
+        - Demo
+        - Production Candidate
+        - Bug
+        - Docs
+        - ADR
+        - Security / Boundary
+        - RDE Review
+        - Maintenance
+        - Release
+    validations:
+      required: true
+
+  - type: textarea
+    id: originating_question
+    attributes:
+      label: Originating question
+      description: What question, defect, request, or opportunity does this Issue answer?
+      placeholder: "What unknown, user need, defect, or decision is being addressed?"
+    validations:
+      required: true
+
+  - type: textarea
+    id: hypothesis
+    attributes:
+      label: Hypothesis or expected value
+      description: For Prototype/MVP/Research Spike work, state the hypothesis. For other work, state expected value or outcome.
+      placeholder: "If we do X, we expect to learn or achieve Y."
+    validations:
+      required: false
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: What must be true for this Issue to move to Done?
+      placeholder: |
+        - ...
+        - ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: non_goals
+    attributes:
+      label: Non-goals / boundary
+      description: What is intentionally out of scope?
+      placeholder: |
+        - ...
+        - ...
+    validations:
+      required: false
+
+  - type: dropdown
+    id: rde_required
+    attributes:
+      label: RDE required?
+      description: Select Yes when the work affects architecture, context boundaries, AI behavior, methodology, security boundaries, product direction, or public-facing semantics.
+      options:
+        - "No"
+        - "Yes"
+        - Completed
+    validations:
+      required: true
+
+  - type: dropdown
+    id: target_stage
+    attributes:
+      label: Target roadmap stage
+      description: Optional mapping to docs/roadmaps/overall-roadmap.md.
+      options:
+        - Not specified
+        - "Stage A: Core Baseline Preservation"
+        - "Stage B: Operational Readiness Baseline"
+        - "Stage C: Security and Boundary Baseline"
+        - "Stage D: AI / Retrieval Boundary Expansion"
+        - "Stage E: Federation Package Foundation"
+        - "Stage F: Signed Manifest and Integrity"
+        - "Stage G: Chronicle Object Expansion"
+        - "Stage H: Federation Message MVP"
+        - "Stage I: Node Trust Model"
+        - "Stage J: Context SNS Surface"
+        - "Stage K: Networked Federation"
+        - "Stage L: Future Concept Graduation"
+    validations:
+      required: false
+
+  - type: textarea
+    id: links
+    attributes:
+      label: Links
+      description: Link related ADRs, PRs, documents, or Chronicle records.
+      placeholder: |
+        - ADR:
+        - PR:
+        - Docs:
+    validations:
+      required: false
+
+  - type: textarea
+    id: rde_review
+    attributes:
+      label: Initial RDE review
+      description: Optional at Issue creation, required before closing when RDE is required.
+      placeholder: |
+        Preserved:
+        Transformed:
+        Completed:
+        Unresolved:
+        Deviation risks:
+    validations:
+      required: false
