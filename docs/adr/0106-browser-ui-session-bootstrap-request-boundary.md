@@ -80,7 +80,7 @@ to same-origin client memory. The client must not place them in HTML or `session
 
 ### Host, Origin, POST, and preflight rules
 
-Every supported GET, POST, and OPTIONS request must carry exactly one accepted `Host` header for
+Every parsed HTTP request, including unknown methods, must carry exactly one accepted `Host` header for
 the actual bound port. The current accepted authorities are the configured loopback bind authority
 and the local aliases `127.0.0.1` and `localhost`, each with that exact port. Foreign, missing,
 duplicated, or wrong-port Host values fail before route handling.
@@ -271,3 +271,10 @@ metadata.
 `Accept for the foreground single-operator local UI boundary`. The implemented request and
 bootstrap controls materially close the browser-originated P0 path, with same-UID isolation and the
 browser-opener handoff explicitly left outside the claim.
+
+## CY-1 method dispatch clarification (2026-09-15)
+
+The shared HTTP handler validates Host and Origin before method dispatch (ADR-0104).
+GET may omit Origin; all other methods require the exact local Origin. Validated unsupported
+methods, including OPTIONS, return 405 and `Allow: GET, POST`; HEAD has no response body.
+Malformed HTTP syntax remains a standard-parser rejection. No CORS permission is emitted.

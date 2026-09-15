@@ -26,6 +26,7 @@ from chronicle.api.contracts import (
     EventWriteRequest,
     TimelineQueryRequest,
 )
+from chronicle.http_boundary import LoopbackRequestHandler
 from chronicle.models.event import Actor, EventType
 from chronicle.errors import UIHostNotLoopbackError
 from chronicle.services.api_adapter_service import ApiAdapterService
@@ -158,15 +159,13 @@ def create_daemon_handler(
     )
     adapter = ApiAdapterService(root_path)
 
-    class ChronicleDaemonRequestHandler(BaseHTTPRequestHandler):
+    class ChronicleDaemonRequestHandler(LoopbackRequestHandler):
         server_version = "ChronicleDaemonLocal/0.1"
 
         def log_message(self, format: str, *args: object) -> None:  # noqa: A002
             return
 
         def do_GET(self) -> None:  # noqa: N802
-            if not self._request_boundary_allowed():
-                return
             parsed = urlparse(self.path)
             query = parse_qs(parsed.query)
             if parsed.path == "/health":
@@ -223,8 +222,6 @@ def create_daemon_handler(
                 )
 
         def do_POST(self) -> None:  # noqa: N802
-            if not self._request_boundary_allowed():
-                return
             parsed = urlparse(self.path)
             if parsed.path not in {"/events", "/diffs", "/assertions"}:
                 self._send_json(
@@ -279,39 +276,6 @@ def create_daemon_handler(
         def _authorized(self) -> bool:
             supplied_token = str(self.headers.get(DAEMON_AUTH_HEADER, "") or "")
             return secrets.compare_digest(supplied_token, metadata.session_token)
-
-        def _request_boundary_allowed(self) -> bool:
-            if not self._host_header_allowed():
-                self._send_json(
-                    {
-                        "status": "error",
-                        "error": "invalid_host",
-                        "detail": "Host header is not allowed for this loopback daemon.",
-                    },
-                    status=HTTPStatus.MISDIRECTED_REQUEST,
-                )
-                return False
-            if self.headers.get("Origin") is not None:
-                self._send_json(
-                    {
-                        "status": "error",
-                        "error": "origin_not_allowed",
-                        "detail": "Browser-originated requests are not accepted by this daemon.",
-                    },
-                    status=HTTPStatus.FORBIDDEN,
-                )
-                return False
-            return True
-
-        def _host_header_allowed(self) -> bool:
-            host_headers = self.headers.get_all("Host") or []
-            if len(host_headers) != 1:
-                return False
-            server_port = int(self.server.server_address[1])
-            allowed = {
-                f"{hostname}:{server_port}" for hostname in DAEMON_ALLOWED_REQUEST_HOSTS
-            }
-            return host_headers[0].strip().lower() in allowed
 
         def _send_json(self, body: dict[str, Any], *, status: HTTPStatus = HTTPStatus.OK) -> None:
             payload = json.dumps(body, ensure_ascii=False, indent=2).encode("utf-8")
