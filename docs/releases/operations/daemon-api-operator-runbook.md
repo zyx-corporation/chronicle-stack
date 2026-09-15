@@ -26,7 +26,15 @@ contract, read adapter behavior, and dry-run write behavior.
 chronicle daemon start --host 127.0.0.1 --port 8776
 ```
 
-The command prints a local session token. Read and write endpoints require:
+The daemon creates `<root>/.chronicle/daemon.token` with mode 0600 and prints only its path.
+Use `--token-file /private/directory/new.token` to choose another new output file. Existing files,
+symlinks and non-0600 creation are rejected; files are never reused or overwritten. The removed
+`--session-token` option must not be used. `--json` returns non-secret metadata only and does not
+start the server or create a credential.
+
+Clients read the file into process memory and send its value in the header below. Do not expand
+its contents into shell commands, process arguments, logs, or copied diagnostic output.
+Read and write endpoints require:
 
 ```text
 X-Chronicle-Daemon-Token: <session-token>
@@ -57,7 +65,10 @@ requests carrying an `Origin` header and is not a browser/CORS endpoint.
 ## Stop
 
 Use `Ctrl-C` in the foreground process. The daemon has no autostart path and should not be run
-as a background sync service without a later ADR.
+as a background sync service without a later ADR. Normal shutdown, Ctrl-C, SIGTERM and startup
+failures remove the newly created token file. SIGKILL/power loss can leave a stale file. Verify the
+old daemon has stopped before manually removing a stale credential. Cleanup never deletes a
+replacement file. These permissions do not isolate hostile processes running as the same user.
 
 ## Backup / Restore
 
@@ -76,6 +87,8 @@ JSONL-backed Core services as CLI commands, so restore remains file-level and lo
 - `403 origin_not_allowed`: request carried an `Origin` header and was rejected before route logic.
 - `421 invalid_host`: request Host was missing, duplicated, foreign, or used the wrong port.
 - `400 validation_error`: request body failed API contract validation or service validation.
+- `405 method_not_allowed`: unsupported HTTP method, including OPTIONS, after Host/Origin checks;
+  `Allow: GET, POST`. No CORS headers are emitted.
 - `405 write_endpoint_not_implemented`: endpoint is outside the local daemon MVP.
 - Duplicate idempotency keys return the existing event/RDE/assertion reference when possible.
 

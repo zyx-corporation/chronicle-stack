@@ -31,14 +31,14 @@ This review covers the explicit local daemon and API contract surface:
 
 | Risk | Current mitigation | Follow-up |
 |---|---|---|
-| Local token disclosure on shared machines | Token appears only in explicit startup output and never in `/health` | Harden process, terminal, and shared-machine guidance before broader release |
+| Local token disclosure on shared machines | Generated token is stored only in an exclusive 0600 file; no argv/startup/health disclosure | Same-UID access and abrupt-termination stale files remain outside the guarantee |
 | No full RBAC/ABAC | Scope is local session token, not multi-user auth | Defer remote/multi-user claims |
 | No transport-neutral API authorization | Origin and capability metadata are descriptive, not grants | Add one service-level authorization policy before MCP or connector release |
 | Read selectors are not yet an authorization boundary | Session token currently grants the daemon's full local read capability | Validate selector enforcement and content-scope policy before release |
 | Request validation still broad for event payloads | Structured contracts require origin/idempotency and audit | Add endpoint-specific payload policy if needed |
 | Connector simulator mistaken for production | `production_surface=false` and docs warnings | Keep prototypes out of public integration claims |
 | Prompt injection in captured text | Stored as data; no automatic execution | Add connector-specific sanitizer checks before production connectors |
-| Browser-based local UI has a separate request boundary | Daemon rejects all Origin-bearing requests; UI cannot use that rule unchanged | Audit UI Host/Origin/CSRF behavior as a separate security task |
+| Browser-based local UI has a separate request boundary | Daemon rejects all Origin-bearing requests; UI cannot use that rule unchanged | ADR-0106 now gates UI reads and writes with bootstrap/cookie/mutation credentials |
 
 ## Security Non-Claims
 

@@ -46,3 +46,10 @@ This draft frames the first local API risks before any daemon implementation.
 - Complete RBAC/ABAC.
 - Generic log ingestion.
 - Prompt-injection prevention guarantees.
+
+## CY-1 transport closure
+
+ADR-0104 applies the shared boundary before all method dispatch. Unsupported methods return 405
+with `Allow: GET, POST`; no CORS is enabled. ADR-0107 replaces argv/startup token disclosure with
+generated private files. ADR-0106 governs the separate browser bootstrap/session boundary.
+Transport-neutral operation and resource authorization remain CY-2 work.

@@ -436,7 +436,6 @@ def test_daemon_startup_metadata_json_shape(tmp_path):
         host="127.0.0.1",
         port=8776,
         root=tmp_path,
-        session_token="shape-token",
     ).to_dict()
     for key in [
         "host",
@@ -448,7 +447,7 @@ def test_daemon_startup_metadata_json_shape(tmp_path):
         "read_only",
         "auth_mode",
         "auth_header",
-        "session_token",
+        "token_file",
         "schema_version",
         "endpoints",
         "write_endpoints",

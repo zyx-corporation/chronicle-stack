@@ -38,13 +38,13 @@ def daemon_start_cmd(
     host: Annotated[str, typer.Option("--host", help="Bind host. Loopback only.")] = DEFAULT_DAEMON_HOST,
     port: Annotated[int, typer.Option("--port", help="Bind port for the local API daemon.")] = DEFAULT_DAEMON_PORT,
     root: Annotated[Path, typer.Option("--root", help="Chronicle root. Defaults to current working directory.")] = Path("."),
-    session_token: Annotated[
-        str | None,
-        typer.Option("--session-token", help="Local daemon session token. Generated when omitted."),
+    token_file: Annotated[
+        Path | None,
+        typer.Option("--token-file", help="New private token output file; defaults to .chronicle/daemon.token."),
     ] = None,
     json_output: Annotated[bool, typer.Option("--json", help="Print startup metadata as JSON and exit.")] = False,
 ) -> None:
-    """Start the foreground read-only local Chronicle API daemon."""
+    """Start the foreground local Chronicle API daemon."""
     try:
         validate_daemon_root(root)
         validate_daemon_host(host)
@@ -52,7 +52,7 @@ def daemon_start_cmd(
             host=host,
             port=port,
             root=root,
-            session_token=session_token,
+            token_file=token_file,
         )
         if json_output:
             typer.echo(metadata.to_json())
@@ -62,11 +62,11 @@ def daemon_start_cmd(
         typer.echo(f"Serving: {metadata.url}")
         typer.echo(f"Bind scope: {metadata.bind_scope}")
         typer.echo(f"Auth header: {metadata.auth_header}")
-        typer.echo(f"Session token: {metadata.session_token}")
+        typer.echo(f"Token file: {metadata.token_file}")
         typer.echo("Mode: read endpoints plus POST /events, POST /diffs, and POST /assertions")
         typer.echo("Boundary: explicit loopback-local daemon; Chronicle JSONL remains authoritative")
         typer.echo("Press Ctrl-C to stop.")
-        serve_daemon(host=host, port=port, root=root, session_token=metadata.session_token)
+        serve_daemon(host=host, port=port, root=root, token_file=Path(metadata.token_file))
     except ChronicleError as exc:
         handle_error(exc, json_output)
 
