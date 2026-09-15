@@ -323,18 +323,43 @@ graph surface は単純 adjacency です。graph DB ではありません。
 Related: `docs/adr/0018-local-ui-read-only-navigation-boundary.md`
 
 ```bash
-chronicle ui
-chronicle ui --workspace
-chronicle ui --host 127.0.0.1 --port 8765
-chronicle ui --mutation-capability-flag
-chronicle ui --mutation-capability-flag --enable-ui-mutation --auth-mode loopback_local --authorization-mode reviewer_declared
-chronicle ui --auth-mode loopback_local --authorization-mode reviewer_declared
+chronicle ui --open
+chronicle ui --workspace --open
+chronicle ui --host 127.0.0.1 --port 8765 --open
+chronicle ui --mutation-capability-flag --open
+chronicle ui --mutation-capability-flag --enable-ui-mutation --auth-mode loopback_local --authorization-mode reviewer_declared --open
+chronicle ui --auth-mode loopback_local --authorization-mode reviewer_declared --open
 chronicle ui --json
 chronicle ui-smoke
 chronicle ui-smoke --json
 ```
 
 `chronicle ui` は明示起動型 foreground local web UI です。既定は read-only です。`chronicle ui --workspace` は既存のloopback/auth/authz/session-token条件をまとめて有効化し、メモ・成果物の保存とGraphRAG質問を利用できる日常用モードです。daemon、autostart、hosted serviceにはなりません。
+
+ブラウザでデータ面を使う場合は `--open` を指定します。サーバーは短時間・一回限りの
+bootstrap secret を URL fragment として既定ブラウザへ渡し、クライアントは fragment を
+直ちに消して同一 origin で session cookie へ交換します。secret は startup metadata、
+`--json`、stdout、HTML には含まれません。`--open` なしで表示されたベース URL を手動で
+開くと、Chronicle title / root / data / credential を含まない locked shell だけが表示されます。
+
+session cookie は host-only (`Domain` なし)、`HttpOnly`、`SameSite=Strict`、`Path=/` です。
+local UI は plain `http://` のため `Secure` と、それを必須とする `__Host-` prefix は使いません。
+cookie token と mutation header token は別の credential です。Chronicle-derived GET と
+review console は cookie を要求し、
+non-bootstrap POST は cookie と exact Origin を要求します。有効な write route はさらに
+mutation header token、mutation session id、one-use request id を要求します。すべての HTTP
+メソッドは actual port を含む exact Host を検証します。CORS は許可せず、OPTIONS 等の
+未対応メソッドは境界検査後に 405 と `Allow: GET, POST` を返します。
+
+`--workspace` は loopback/auth/authz/browser-session 条件をまとめて有効化し、ローカル保存と
+GraphRAG 質問の作業面を開きます。write route は fail-closed で、`--enable-ui-mutation` と
+`--auth-mode loopback_local --authorization-mode reviewer_declared` が揃う場合にだけ有効です。
+
+これは same-UID process や shared-machine isolation の保証ではありません。`--open` の
+fragment-bearing URL は `webbrowser` と OS/browser の opener 経路を通るため、短い露出窓が
+残ります。詳細は ADR-0106 と local operator validation guide を参照してください。
+
+
 
 現段階でも bind host は loopback (`127.0.0.1`, `localhost`, `::1`) のみ許可されます。`--auth-mode` と `--authorization-mode` は boundary config であり、UI review detail の assurance 表示に反映されます。`--mutation-capability-flag` は preview intent を metadata に記録します。実際の write route は `--enable-ui-mutation` を追加し、さらに `--auth-mode loopback_local --authorization-mode reviewer_declared` が揃った場合にのみ有効化されます。詳細は [ADR-0022](adr/0022-explicit-local-ui-mutation-enable-flag.md) を参照してください。
 
@@ -779,3 +804,12 @@ chronicle index rebuild
 `chronicle.jsonl` から派生インデックスを再生成します。
 
 `indexes/` は一次記録ではありません。破棄しても `chronicle index rebuild` で再生成可能です。
+
+## Local daemon credentials
+
+`chronicle daemon start` generates a private 0600 `.chronicle/daemon.token` file.
+`--token-file PATH` selects a new output file; `--session-token` has been removed. Existing files
+and symlinks are rejected. Clients read the credential from the file into memory. Startup output
+and `--json` never contain its value; `--json` only inspects metadata and issues no credential.
+See [Daemon operator runbook](releases/operations/daemon-api-operator-runbook.md) and
+[ADR-0107](adr/0107-daemon-private-token-file.md) for shutdown and stale-file recovery.

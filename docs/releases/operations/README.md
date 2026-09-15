@@ -13,6 +13,7 @@
 - local web UI manual walkthrough evidence example: `local-web-ui-operator-validation-evidence-2026-06-30-manual-walkthrough.md`
 - local web UI detail-entry follow-up evidence example: `local-web-ui-operator-validation-evidence-2026-06-30-detail-entry-followup.md`
 - local web UI review-queue detail-path fix evidence example: `local-web-ui-operator-validation-evidence-2026-06-30-review-queue-detail-path-fix.md`
+- daemon API operator runbook: `daemon-api-operator-runbook.md`
 - release tag policy: `release-tag-policy.md`
 
 ## Quick Start
@@ -26,6 +27,7 @@
 7. manual walkthrough の実例を見るなら `local-web-ui-operator-validation-evidence-2026-06-30-manual-walkthrough.md`
 8. detail-entry fix 後の follow-up を見るなら `local-web-ui-operator-validation-evidence-2026-06-30-detail-entry-followup.md`
 9. review-queue detail-path fix 後の browser walkthrough を見るなら `local-web-ui-operator-validation-evidence-2026-06-30-review-queue-detail-path-fix.md`
+10. daemon/API のローカル運用を見るなら `daemon-api-operator-runbook.md`
 
 ## Historical / Versioned Operations Docs
 

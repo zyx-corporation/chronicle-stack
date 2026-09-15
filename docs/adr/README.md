@@ -42,5 +42,8 @@ ADRs capture decisions that affect architecture, security boundaries, data contr
 - [ADR-0034: Stage 2 Proposal Surface](0034-stage-2-proposal-surface.md)
 - [ADR-0035: Stage 2 Transport Boundary Skeleton](0035-stage-2-transport-boundary.md)
 - [ADR-0097: Local GraphRAG Workspace with Rebuildable Databases](0097-local-graphrag-workspace.md)
+- [ADR-0104: Loopback Daemon Request Boundary](0104-loopback-daemon-request-boundary.md)
+- [ADR-0106: Browser UI Session Bootstrap and Request Boundary](0106-browser-ui-session-bootstrap-request-boundary.md)
+- [ADR-0107: Private Daemon Token File Lifecycle](0107-daemon-private-token-file.md)
 - [ADR-001: T-RDE, TDD, and Design-Pattern Principles](ADR-001-t-rde-tdd-and-design-patterns.md)
 - [ADR-002: i18n and Language Selection](ADR-002-i18n-and-language-selection.md)
