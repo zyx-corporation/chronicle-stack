@@ -5,7 +5,9 @@
 ## Documents
 
 - [Overall Roadmap](overall-roadmap.md): `docs/` 配下の個別ロードマップを精査して統合した全体ロードマップ。
+- [Chronicle Yard Product Family Milestones](chronicle-yard-product-family-milestones.md): Chronicle Yard を Chronicle Stack と関連製品群の総称として扱い、Stack / CSG-RAG / chronicle-external-query / API / Cloud / Federation の責務とマイルストーンを整理する文書。
 - [Federation Implementation Roadmap](federation-implementation-roadmap.md): 分散連合拡張の実装フェーズ、CLI候補、受け入れ条件、非対象を整理したロードマップ。
+- [Chronicle Daemon and API Implementation Roadmap](chronicle-daemon-api-roadmap.md): Chronicle Stack をクロニクルの保管機構として保ったまま、常駐サービス、構造化API、Kazane/agent runtime 連携、Chronicle Cloud へ進むための段階計画。
 - [Local UI Implementation Roadmap](local-ui-implementation-roadmap-2026-07.md): final UI spec、Kazane handoff、i18n / light-theme 要件を実装順序へ落とした local UI 専用ロードマップ。
 - [Local UI Validation Checklist](../ui-local-validation-checklist.ja.md): 現行 local UI の shell、overview、workbench、workspace、boundary を短時間で確認する実施チェック。
 - [Local UI Phase 4 Closeout](../ui-phase-4-closeout.md): Review、Runtime/Retrieval、Federation workspace の summary-first renderer と自動検証証跡。

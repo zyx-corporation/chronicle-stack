@@ -79,4 +79,4 @@ Redaction-aware export は次を提供しません。
 - [CLI Reference](cli-reference.md)
 - [Export Manifest](export-manifest.md)
 - [Storage Format](storage-format.md)
-- [v0.4 Roadmap](roadmap-v0.4.md)
+- [v0.4 Roadmap](roadmaps/roadmap-v0.4.md)

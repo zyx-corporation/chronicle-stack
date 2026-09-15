@@ -26,6 +26,22 @@ Chronicle Stack は、人間側が自分の文脈、問い、判断、生成物�
 - **Source Provenance**: 出所を記録する
 - **Boundary Rules**: 文脈の扱いに注意点と境界を与える
 
+## 名称レイヤーの検討
+
+将来の総称として、`Chronicle Yard` という呼称を検討対象として保持しています。
+`Chronicle Yard` は、`Chronicle Stack` と関連製品群を束ねる名前です。問い、判断、
+根拠、成果物、人、組織、AIエージェントが出入りし、クロニクル記録が置かれ、
+整えられ、次の仕事へ接続される「場」を表します。
+
+現時点では正式改名ではありません。`Chronicle Stack` は引き続き、この製品群の中核にある
+クロニクル保管機構・技術構成名として扱います。`Chronicle Cloud`、`Chronicle API`、
+Kazane連携、将来の利用者向けアプリに加えて、`csg-rag` や
+`chronicle-external-query` のような下流ランタイム、検索、検証ワークスペースも、
+`Chronicle Yard` 配下の関連製品または接続面として整理できます。
+
+概要は [Chronicle Yard Overview](./yard/overview.ja.md) を参照してください。名称検討の詳細は
+[Chronicle Yard Naming Note](./future/chronicle-yard-naming-note.md) を参照してください。
+
 ## Chronicle Stack ではないもの
 
 Chronicle Stack は、汎用ベクトルデータベース、hosted / multi-user GraphRAG、正しさを自動判定する仕組み、クラウド型AIメモリサービス、LLMエージェント実行基盤、常駐Dashboardサーバーではありません。

@@ -79,6 +79,10 @@ v0.3以降でInjectionPlanを記録する場合は、次を追加する方針で
 ### payload互換性
 
 - 新しいEventTypeを追加しても、既存EventTypeのpayload意味を破壊してはなりません。
+- EventType追加が既存readerに対して非breakingなのは、そのreaderが未知EventTypeを保持または
+  明示的なunknown値として扱える場合だけです。現行のclosed enum readerは未知EventTypeを
+  validation errorとして扱い、通常読取りでは当該行を読み飛ばすため、reader更新を伴わない
+  EventType追加を後方互換とはみなしません。
 - 既存payloadに任意フィールドを追加することは可能です。
 - 既存payloadの必須フィールドを削除、改名、意味変更する場合はbreaking changeです。
 - `payload` は自由dictではなく、EventTypeに対応する構造化領域として扱います。
@@ -332,8 +336,9 @@ v0.xでは破壊的変更の可能性があります。ただし、Chronicle Sta
 
 ### 非breakingまたは軽微変更
 
-- 新しいEventTypeの追加
-- 新しい任意フィールドの追加
+- 対象となる旧readerが未知値を保持またはunknownへ縮退できる場合の、新しいEventType追加
+- 新しい任意フィールドの追加。ただし、旧modelが未知フィールドを捨てる場合、そのmodelを
+  通した再シリアライズや派生exportはround-trip互換ではありません
 - 新しいCLIオプションの追加
 - human-facing出力の文言変更
 - derived index形式の変更。ただしrebuild可能であること

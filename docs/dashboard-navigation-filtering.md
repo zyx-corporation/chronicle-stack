@@ -73,4 +73,4 @@ Filterは表示補助です。Chronicle records、JSONL、indexes、export内容
 - [Storage Format](storage-format.md)
 - [Export Manifest](export-manifest.md)
 - [Redaction-aware Export](redaction-aware-export.md)
-- [v0.4 Roadmap](roadmap-v0.4.md)
+- [v0.4 Roadmap](roadmaps/roadmap-v0.4.md)

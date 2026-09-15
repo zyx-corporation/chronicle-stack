@@ -1,10 +1,23 @@
 # Chronicle Stack CLI Reference
 
-Chronicle Stack v0.6 の CLI コマンド一覧です。
+Chronicle Stack の現行 CLI 参照です。文書例では primary CLI である
+`chronicle ...` を優先します。互換目的の補助 CLI (`chronicle-context`,
+`chronicle-export`, `chronicle-package`, `chronicle-graph`) は維持されていますが、
+新しい利用例では primary alias を使ってください。
 
-CLIの通常出力は人間向けです。機械処理を行う場合は、利用可能なコマンドでは `--json` を使用してください。CLI JSON出力の安定性については [インターフェース契約](interface-contracts.md) を参照してください。
+CLI の通常出力は人間向けです。機械処理する場合は、対応コマンドで `--json` を
+指定してください。JSON 出力の安定性は [Interface Contracts](interface-contracts.md)、
+primary/auxiliary CLI の境界は
+[ADR-0017](adr/0017-auxiliary-cli-integration-boundary.md) を参照してください。
 
-v0.6 以降の文書例では primary CLI alias を優先します。補助CLIである `chronicle-context`, `chronicle-export`, `chronicle-package`, `chronicle-graph` は互換目的で維持されています。詳細は [ADR-0017](adr/0017-auxiliary-cli-integration-boundary.md) を参照してください。
+## 基本原則
+
+- `.chronicle/chronicle.jsonl` が一次記録です。
+- `indexes/`, export, graph, AI index, runtime output は派生面です。
+- visibility hint は redaction やアクセス制御ではありません。
+- runtime / AI / federation / package 系コマンドは、明示オプションなしに外部送信や
+  provider 実行を行いません。
+- review-required の出力は判断材料であり、信頼済み記録ではありません。
 
 ## グローバル
 
@@ -13,314 +26,489 @@ chronicle --help
 chronicle --version
 ```
 
-`chronicle --version` はインストール済みpackage metadataからversionを表示します。
+`chronicle --version` はインストール済み package metadata と内部 version を照合し、
+`chronicle <version>` を表示します。
 
-## chronicle init
+## コマンド一覧
+
+| コマンド | 用途 |
+|---|---|
+| `init` | `.chronicle/` を初期化する |
+| `doctor` | read-only 診断を実行する |
+| `record` | 任意の Chronicle Event を記録する |
+| `show` | Chronicle 概要を表示する |
+| `search` | Event / Context / Artifact などを検索する |
+| `add-context` | Context record を追加する |
+| `artifact` | Artifact と Version を管理する |
+| `decision` | 判断記録を追加する |
+| `rde` | RDE Diff Record を記録・下書きする |
+| `index` | 派生 index を再構築する |
+| `boundary` | Context 利用境界 rule を管理する |
+| `injection` | Context injection plan を作る |
+| `export` | YAML / Markdown / graph-json / HTML export を作る |
+| `context` | Context 利用チェックと提案適用を行う |
+| `plan` | preview-first operation plan を扱う |
+| `summary` | local summary draft job を扱う |
+| `runtime` | 明示 runtime / GraphRAG / provider contract を扱う |
+| `ai-index` | local placeholder vector / graph index を扱う |
+| `ai-boundary` | 外部 AI 利用境界を preview する |
+| `package` | controlled integration package を扱う |
+| `audit` | local audit event を記録・確認する |
+| `lifecycle` | advisory lifecycle marker を記録・確認する |
+| `graph` | graph-json 派生 export を検査する |
+| `review` | append-only review workflow を扱う |
+| `object` | explicit Chronicle object を記録・確認する |
+| `reaction` | Chronicle object への意味的 reaction を記録・確認する |
+| `federation` | federation package / message を preview-first に扱う |
+| `trust` | node profile と trust relation を扱う |
+| `ui` | local foreground UI を起動する |
+| `ui-smoke` | local UI の read-only smoke check を実行する |
+
+## 初期化・診断
 
 ```bash
 chronicle init --title "Project Title"
-```
-
-`.chronicle/` ディレクトリ、`chronicle.jsonl`、`metadata.yaml` を作成します。
-
-`chronicle.jsonl` が唯一の一次記録です。`indexes/` は再構築可能な派生データです。
-
-## chronicle doctor
-
-```bash
 chronicle doctor
 chronicle doctor --json
+chronicle show
+chronicle show --json
 ```
 
-現在のChronicle projectをread-onlyで診断します。
-
-主な確認項目:
-
-- `.chronicle/` の存在
-- `chronicle.jsonl` の存在とparse可否
-- `metadata.yaml` の存在とparse可否
-- known EventType
-- derived index の存在
-- Artifact file の存在
-- recorded InjectionPlanが参照するContext
-- graph-json export生成可否
-- HTML dashboard export生成可否
-
-`doctor` はJSONLやindexを変更しません。indexが欠損していても自動rebuildは行わず、`chronicle index rebuild` を推奨するwarningを返します。
+`init` は `.chronicle/`, `chronicle.jsonl`, `metadata.yaml` を作成します。
+`doctor` は read-only で storage, metadata, known event type, index, artifact file,
+injection plan, export 生成可否などを確認します。index が欠損していても自動 rebuild
+はせず、必要に応じて `chronicle index rebuild` を促します。
 
 Exit code:
 
-| status | exit code |
+| doctor status | exit code |
 |---|---|
 | `ok` | 0 |
 | `warning` | 0 |
 | `error` | non-zero |
 
-`doctor --json` は `status`, `chronicle_id`, `checks` を含むJSONを返します。
-
-## chronicle record
+## Event と Context
 
 ```bash
-chronicle record --type user_input --actor user --summary "Summary"
-chronicle record --type assistant_output --actor assistant --summary "Summary" --source-tool chatgpt
-```
+chronicle record --type user_input --actor user --summary "Initial request"
+chronicle record --type assistant_output --actor assistant --summary "Draft created" --source-tool chatgpt
 
-任意のChronicle Eventを記録します。source metadataは出所記録であり、真実性の証明ではありません。
-
-## chronicle add-context
-
-```bash
 chronicle add-context \
   --title "Private Task Context" \
   --source-type conversation \
   --scope task \
   --visibility private \
   --summary "Only for this task"
+
+chronicle search "keyword"
+chronicle search "keyword" --json
 ```
 
-`--scope` は正式な ContextScope を受け付けます。
+`add-context --scope` は `global`, `project`, `session`, `task`, `artifact`,
+`temporary`, `unknown` を受け付けます。`--visibility` は `public`, `private`,
+`sensitive`, `unknown` です。
 
-```text
-global / project / session / task / artifact / temporary / unknown
-```
-
-`--visibility` は可視性ヒントを指定します。
-
-```text
-public / private / sensitive / unknown
-```
-
-Visibility Hint はアクセス制御やredactionではありません。
-
-## chronicle artifact
-
-| サブコマンド | 説明 |
-|---|---|
-| `create` | Artifactを作成する |
-| `update` | Artifactを更新し、新しいVersionを作成する |
-| `history` | Artifactの履歴を表示する |
-| `list` | Artifact一覧を表示する |
-
-例:
+## Artifact
 
 ```bash
 chronicle artifact create --title "Spec" --type specification --file docs/spec.md --visibility private
 chronicle artifact update --artifact art_xxx --file docs/spec.md --summary "Update spec"
 chronicle artifact history --artifact art_xxx
 chronicle artifact history --artifact art_xxx --json
+chronicle artifact list
+chronicle artifact list --json
 ```
 
-`artifact update` では `--file` の指定が必須です。指定しない場合 `ARTIFACT_CONTENT_MISSING` エラーが発生します。
-
-### chronicle artifact propose-update / apply-proposal
+| サブコマンド | 用途 |
+|---|---|
+| `create` | Artifact と初期 Version を作成する |
+| `update` | 新しい Version を作成する |
+| `history` | Artifact の Version 履歴を表示する |
+| `list` | Artifact 一覧を表示する |
+| `propose-update` | Artifact 更新 proposal event を作る |
+| `apply-proposal` | 承認済み proposal を適用する |
 
 ```bash
-chronicle artifact propose-update \
-  --artifact art_xxx \
-  --summary "Propose title/body change" \
-  --content "proposed body"
-
+chronicle artifact propose-update --artifact art_xxx --summary "Proposal" --content "proposed body"
 chronicle artifact apply-proposal --event evt_xxx
 ```
 
-`apply-proposal` は承認済み proposal event のみを受け付け、同じ proposal の二重 apply は拒否されます。
+`artifact update` は `--file` が必要です。proposal apply は承認済み proposal event のみ
+受け付け、同じ proposal の二重 apply を拒否します。
 
-## chronicle decision record
+## Decision と RDE
 
 ```bash
 chronicle decision record \
   --artifact art_xxx \
   --type accepted \
-  --reason "v0.3 として採用" \
+  --reason "Adopt as v0.3" \
   --alternative "Option B" \
   --notes "Revisit after v0.4"
+
+chronicle rde record --artifact art_xxx --from ver_aaa --to ver_bbb --summary "Meaning shift" \
+  --preserved "Original intent" \
+  --transformed "Expanded details" \
+  --supplemented "New examples" \
+  --unresolved "Terminology" \
+  --deviation-risk "Scope creep" \
+  --next-update-policy "Quarterly review"
+
+chronicle rde draft --artifact art_xxx --from ver_aaa --to ver_bbb --summary "Draft RDE"
 ```
 
-採用、棄却、保留などの判断を記録します。
+RDE Diff Record は意味変化の構造化記録であり、正しさの証明ではありません。6 sections
+(`preserved`, `transformed`, `supplemented`, `unresolved`, `deviation_risks`,
+`next_update_policy`) は空の場合 `(none)` として表示されます。
 
-## chronicle rde record
-
-```bash
-chronicle rde record --artifact art_xxx --from ver_aaa --to ver_bbb --summary "Summary" \
-  --preserved "元の意図" \
-  --transformed "詳細セクション追加" \
-  --supplemented "新しい例" \
-  --unresolved "用語の統一" \
-  --deviation-risk "スコープ拡大の可能性" \
-  --next-update-policy "四半期レビュー"
-```
-
-RDE Diff Recordは意味変化の構造化記録であり、正しさを証明するものではありません。
-
-## chronicle boundary
-
-Boundary Rulesは文脈利用に関する助言的分類です。アクセス制御や強制削除の仕組みではありません。
-
-### chronicle boundary add
+## Index と Boundary
 
 ```bash
+chronicle index rebuild
+
 chronicle boundary add \
   --type warn \
   --field visibility \
   --operator equals \
   --value sensitive \
   --reason "Sensitive context should be reviewed"
-```
 
-`--type`:
-
-```text
-include / exclude / warn
-```
-
-`--field`:
-
-```text
-scope / visibility / source_type / source_tool / source_session / source_model / tag
-```
-
-`--operator`:
-
-```text
-equals / not_equals / in / contains
-```
-
-### chronicle boundary list
-
-```bash
 chronicle boundary list
 chronicle boundary list --json
-```
-
-### chronicle boundary check
-
-```bash
 chronicle boundary check --context ctx_xxx
 chronicle boundary check --context ctx_xxx --json
 ```
 
-指定したContextに対してBoundary Ruleを評価します。
+Boundary rule は context 利用の助言的分類です。アクセス制御や強制削除ではありません。
 
-## chronicle injection plan
+| option | values |
+|---|---|
+| `--type` | `include`, `exclude`, `warn` |
+| `--field` | `scope`, `visibility`, `source_type`, `source_tool`, `source_session`, `source_model`, `tag` |
+| `--operator` | `equals`, `not_equals`, `in`, `contains` |
 
-```bash
-chronicle injection plan --task "Draft v0.3 release notes"
-chronicle injection plan --task "Draft v0.3 release notes" --json
-chronicle injection plan --task "Draft v0.3 release notes" --record
-chronicle injection plan --task "Draft v0.3 release notes" --record --json
-```
-
-Boundary Rule評価に基づいてContextを `selected` / `warned` / `excluded` に分類する文脈選択案を生成します。
-
-重要:
-
-- LLMへの自動注入は行いません。
-- デフォルトでは `chronicle.jsonl` に永続化しません。
-- `--record` を指定した場合のみ `injection_plan_recorded` Eventとして記録します。
-- `--json` 出力は `plan`, `recorded`, `event_id` を含みます。
-
-## chronicle search
+## Injection Plan
 
 ```bash
-chronicle search "keyword"
-chronicle search "keyword" --json
+chronicle injection plan --task "Draft release notes"
+chronicle injection plan --task "Draft release notes" --record
+chronicle injection plan --task "Draft release notes" --record --json
 ```
 
-イベント、Artifact、Decision、Context、RDE、Boundary Ruleなどを検索します。
+`injection plan` は Boundary rule に基づき Context を `selected`, `warned`, `excluded`
+へ分類する dry-run です。LLM への自動注入は行いません。`--record` を指定した場合のみ
+`injection_plan_recorded` Event として保存します。
 
-## chronicle show
-
-```bash
-chronicle show
-chronicle show --json
-```
-
-Chronicle概要を表示します。
-
-## chronicle export
+## Export
 
 ```bash
 chronicle export --format yaml
 chronicle export --format markdown -o output.md
 chronicle export --format graph-json -o graph.json
 chronicle export --format html -o chronicle-dashboard.html
-```
 
-対応形式:
-
-| format | 契約レベル | 説明 |
-|---|---|---|
-| `yaml` | Semi-public | 機械可読snapshot。top-level `export_manifest` を含む |
-| `markdown` | Human-facing | 人間向けreport。manifest埋め込み対象外 |
-| `graph-json` | Semi-public / derived | GraphRAG接続準備用のnode/edge export。top-level `export_manifest` を含む |
-| `html` | Human-facing | 静的・読み取り専用Dashboard。Export Manifest sectionを含む |
-
-### chronicle export profile
-
-```bash
 chronicle export profile --format yaml --profile public-review
 chronicle export profile --format yaml --profile restricted-summary --output export.yaml --json
 chronicle export profile --format html --profile public-review --output dashboard.html
 ```
 
-Security-aware export profile を使った派生exportです。`chronicle-export profile ...` と同じ実装を共有する primary CLI alias です。
+| format | 契約レベル | 用途 |
+|---|---|---|
+| `yaml` | Semi-public | 機械可読 snapshot。`export_manifest` を含む |
+| `markdown` | Human-facing | 人間向け report |
+| `graph-json` | Semi-public / derived | GraphRAG 接続準備用 node / edge export |
+| `html` | Human-facing | 静的 read-only dashboard |
 
-注意:
+Security-aware export profile は派生 export です。公開承認、アクセス制御、暗号学的証明では
+ありません。
 
-- exportは派生ビューです。
-- JSONLを変更しません。
-- Export Manifestは来歴メタデータであり、暗号学的証明ではありません。
-- `graph-json` はGraphRAGエンジンではありません。
+## Context
 
-## chronicle ai-index
+```bash
+chronicle context check --target local --purpose "internal review"
+chronicle context check --target external --purpose "draft public summary" --json
 
-`ai-index` は local file-backed placeholder vector / graph surface です。一次記録ではなく、補助的な派生面です。
+chronicle context classification missing
+chronicle context classification show --context ctx_xxx
+chronicle context classification set --context ctx_xxx --layer internal --sensitivity internal
 
-境界:
+chronicle context propose-update --context ctx_xxx --summary "Proposal" --body "Updated summary"
+chronicle context apply-proposal --event evt_xxx
+```
 
-- LLM は呼びません
-- embedding provider は呼びません
-- vector DB は呼びません
-- graph DB は呼びません
-- GraphRAG runtime は呼びません
-- external service は呼びません
-- 検索結果は assistive であり、正しさの証明ではありません
-- `.chronicle/chronicle.jsonl` が引き続き正本です
+`context check` は model-facing context として使う前の dry-run check です。外部モデル API は
+呼びません。`context apply-proposal` は承認済み proposal を append-only の新しい Context
+snapshot として適用します。
 
-### chronicle ai-index status
+## Operation Plan
+
+```bash
+chronicle plan artifact-update-preview \
+  --artifact art_xxx \
+  --summary "Plan update" \
+  --content "Replacement content" \
+  --source-ref evt_xxx \
+  --record
+
+chronicle plan artifact-update-proposal --artifact art_xxx --summary "Proposal" --content "Body"
+chronicle plan list
+chronicle plan list --json
+chronicle plan show --id plan_xxx
+```
+
+Operation plan は preview-first です。preview, proposal, review, apply は分離されます。
+
+## Summary
+
+```bash
+chronicle summary create --title "Draft summary" --text "Summary body" --source event:evt_xxx
+chronicle summary list
+chronicle summary show --id sum_xxx
+
+chronicle summary run --id sum_xxx
+chronicle summary run --id sum_xxx --operation rewrite --param tone=concise
+chronicle summary run --id sum_xxx --execute-configured-provider --record
+
+chronicle summary invoke-plan --id sum_xxx
+chronicle summary invoke-plan --id sum_xxx --operation summarize --record --json
+```
+
+`summary create` は AI runtime を呼ばない local draft job を作ります。`summary run` は明示
+runtime boundary 経由で draft を再実行します。configured provider 実行には
+`--execute-configured-provider` が必要です。
+
+## Runtime
+
+```bash
+chronicle runtime status
+chronicle runtime status --json
+
+chronicle runtime graphrag-status
+chronicle runtime graphrag-rebuild
+chronicle runtime ask "What changed in the release plan?"
+
+chronicle runtime summarize --text "Source text" --max-sentences 2
+chronicle runtime summarize --text "Source text" --draft-title "Runtime Draft" --record
+
+chronicle runtime retrieve-plan --query "release context" --limit 3 --record --json
+
+chronicle runtime invoke-plan --text "Source text" --operation summarize --record
+chronicle runtime execute-plan --event evt_xxx --execute-configured-provider --record
+
+chronicle runtime invoke --text "Source text" --operation rewrite --execute-configured-provider
+chronicle runtime invoke --text "Source text" --operation rewrite --source event:evt_xxx --param tone=concise
+```
+
+Runtime は explicit local runtime boundary です。configured provider execution は
+`--execute-configured-provider` が無い限り fail closed します。生成物は review-required の
+派生 output です。
+
+### Runtime Config
+
+```bash
+chronicle runtime config show
+chronicle runtime config show --json
+chronicle runtime config set-local --model local-placeholder
+chronicle runtime config set-http \
+  --base-url https://runtime.example.invalid/v1 \
+  --model manual-http-model \
+  --api-key-env OPENAI_API_KEY \
+  --allow-network
+chronicle runtime config disable
+```
+
+`set-http` は provider contract を `.chronicle/runtime.yaml` に保存します。その場では
+network call を行いません。外部 context を渡す運用では `--allow-external-context` も必要です。
+
+### Runtime Capability
+
+```bash
+chronicle runtime capability list
+chronicle runtime capability list --json
+chronicle runtime capability show --id cap_xxx
+```
+
+Static capability registry の read-only inspection です。
+
+## AI Index
 
 ```bash
 chronicle ai-index status
 chronicle ai-index status --json
-```
 
-`.chronicle/ai_indexes/vector_index.json` と `.chronicle/ai_indexes/graph_index.json` の placeholder 状態を表示します。
-
-### chronicle ai-index vector
-
-```bash
 chronicle ai-index vector add --record evt_xxx --text "local placeholder text" --type event
 chronicle ai-index vector add --record evt_xxx --text "local placeholder text" --metadata source=manual --json
 chronicle ai-index vector search --query "placeholder" --limit 5
-chronicle ai-index vector search --query "placeholder" --json
-```
 
-`vector search` は token overlap と substring による placeholder scoring です。本格 embedding ではありません。
-
-### chronicle ai-index graph
-
-```bash
 chronicle ai-index graph add-node --id evt_xxx --label event --property title="Example"
 chronicle ai-index graph add-edge --source evt_xxx --target ctx_xxx --relation references
-chronicle ai-index graph neighbors --id evt_xxx
 chronicle ai-index graph neighbors --id evt_xxx --json
 ```
 
-graph surface は単純 adjacency です。graph DB ではありません。
+`ai-index` は local file-backed placeholder surface です。LLM、embedding provider、vector DB、
+graph DB、GraphRAG runtime、external service は呼びません。
 
-## chronicle ui / chronicle ui-smoke
+## AI Boundary
 
-Related: `docs/adr/0018-local-ui-read-only-navigation-boundary.md`
+```bash
+chronicle ai-boundary preview \
+  --task "External model handoff" \
+  --context ctx_xxx \
+  --model external:placeholder \
+  --prompt "Prompt text" \
+  --no-persist-prompt \
+  --record \
+  --json
+```
+
+外部 AI 利用の保存方針と redaction candidates を preview します。外部送信は行いません。
+`--persist-prompt`, `--persist-response`, `--persist-model-id`, `--persist-runtime`,
+`--persist-timestamp` で保存粒度を制御します。
+
+## Package
+
+```bash
+chronicle package context --purpose "Internal review" --target local
+chronicle package context --purpose "External review" --target external --persist
+chronicle package review --purpose "Review package" --target external
+chronicle package review --package pkg_xxx --json
+
+chronicle package query-engine-adapter --query "release planning context" -o adapter-skeleton.json
+chronicle package query-engine-bundle --query "release planning context" --output-dir handoff-bundle
+chronicle package query-engine-trial-record \
+  --bundle-dir handoff-bundle \
+  --reviewer "operator" \
+  --consumer "downstream-demo" \
+  --sufficient
+chronicle package query-engine-trial-list --json
+chronicle package query-engine-trial-show --event evt_xxx --json
+
+chronicle package list
+chronicle package show --package pkg_xxx
+chronicle package records --package pkg_xxx --json
+```
+
+Package は transport contract であり、外部送信、許可付与、アクセス制御ではありません。
+query-engine 系コマンドは downstream handoff bundle / skeleton をローカルに作るだけで、
+import 実行や hosted runtime は含みません。
+
+## Audit と Lifecycle
+
+```bash
+chronicle audit record --operation export --actor user --purpose "public review" --summary "Exported dashboard"
+chronicle audit list
+chronicle audit show --id aud_xxx --json
+
+chronicle lifecycle record --target ctx_xxx --target-kind context --action seal --reason "Superseded"
+chronicle lifecycle list
+chronicle lifecycle show --id life_xxx --json
+```
+
+Audit event は traceability metadata であり、enforcement や certification ではありません。
+Lifecycle marker は downstream workflow 向けの advisory metadata で、対象 record を直接変更しません。
+
+## Graph
+
+```bash
+chronicle graph summary
+chronicle graph summary --json
+chronicle graph nodes
+chronicle graph nodes --type context --json
+chronicle graph edges --json
+chronicle graph retrieve --query "release planning" --limit 5
+```
+
+Read-only graph export inspection です。`graph-json` は GraphRAG 接続準備用の派生 view であり、
+GraphRAG engine ではありません。
+
+## Review
+
+```bash
+chronicle review queue
+chronicle review queue --include-resolved
+chronicle review queue --json
+
+chronicle review approve --event evt_xxx --reviewer alice
+chronicle review approve --event evt_xxx --reviewer alice --reviewer-kind local_operator --session terminal-1
+chronicle review reject --event evt_xxx --reviewer alice --note "reason"
+chronicle review request-changes --event evt_xxx --reviewer alice --note "revise section 2"
+```
+
+Review workflow は append-only です。target event 自体は直接変更せず、reviewer event と
+`review_decision` audit event を追加します。`request-changes` は pending のまま残ります。
+
+## Object と Reaction
+
+```bash
+chronicle object record --type hypothesis --summary "Core hypothesis" --artifact art_xxx --visibility private
+chronicle object list
+chronicle object list --type hypothesis --json
+chronicle object show --id obj_xxx
+
+chronicle reaction record --type understood --target-object obj_xxx --summary "Reviewed and understood"
+chronicle reaction record --type reference --target-object obj_xxx --source-object obj_yyy --metadata weight=high
+chronicle reaction list
+chronicle reaction show --id react_xxx --json
+```
+
+Object は artifact/context/decision/RDE などを横断する明示的な意味単位です。Reaction は
+object 間や既存 record への意味的関係を append-only に記録します。
+
+## Federation
+
+```bash
+chronicle federation boundary check --purpose "Share context" --target-node node:partner
+
+chronicle federation package create \
+  --purpose "Share context" \
+  --target-node node:partner \
+  --output-dir federation-bundle \
+  --context ctx_xxx \
+  --visibility federated
+chronicle federation package inspect --package-dir federation-bundle
+chronicle federation package verify --package-dir federation-bundle
+chronicle federation package preview --package-dir federation-bundle
+chronicle federation package import-preview --package-dir federation-bundle --json
+
+chronicle federation consent record \
+  --target-node node:partner \
+  --purpose "Share context" \
+  --scope "ctx_xxx" \
+  --granted-by "operator"
+
+chronicle federation message create \
+  --type grant_context \
+  --source-node node:local \
+  --target-node node:partner \
+  --purpose "Preview handoff" \
+  --object-ref ctx_xxx
+chronicle federation inbox inspect
+chronicle federation inbox show --message msg_xxx --json
+chronicle federation outbox inspect
+```
+
+Federation は preview-first local bundle / local queue surface です。自動 import、network sync、
+primary-record mutation は行いません。
+
+## Trust
+
+```bash
+chronicle trust node add --node-id node:partner --subject-id subject:partner --display-name "Partner"
+chronicle trust node list --json
+
+chronicle trust assert \
+  --target-node node:partner \
+  --domain context-sharing \
+  --purpose "Review" \
+  --level limited \
+  --capability read_context
+chronicle trust list
+chronicle trust withdraw --relation trust_xxx --reason "No longer needed"
+```
+
+Trust relation は node / subject / domain / purpose / capability の advisory model です。
+
+## Local UI
 
 ```bash
 chronicle ui --open
@@ -328,13 +516,15 @@ chronicle ui --workspace --open
 chronicle ui --host 127.0.0.1 --port 8765 --open
 chronicle ui --mutation-capability-flag --open
 chronicle ui --mutation-capability-flag --enable-ui-mutation --auth-mode loopback_local --authorization-mode reviewer_declared --open
-chronicle ui --auth-mode loopback_local --authorization-mode reviewer_declared --open
 chronicle ui --json
+
 chronicle ui-smoke
 chronicle ui-smoke --json
 ```
 
-`chronicle ui` は明示起動型 foreground local web UI です。既定は read-only です。`chronicle ui --workspace` は既存のloopback/auth/authz/session-token条件をまとめて有効化し、メモ・成果物の保存とGraphRAG質問を利用できる日常用モードです。daemon、autostart、hosted serviceにはなりません。
+`chronicle ui` は foreground local web UI です。既定は read-only で、daemon / autostart /
+hosted service にはなりません。bind host は loopback (`127.0.0.1`, `localhost`, `::1`) のみ
+許可されます。
 
 ブラウザでデータ面を使う場合は `--open` を指定します。サーバーは短時間・一回限りの
 bootstrap secret を URL fragment として既定ブラウザへ渡し、クライアントは fragment を
@@ -359,432 +549,18 @@ GraphRAG 質問の作業面を開きます。write route は fail-closed で、`
 fragment-bearing URL は `webbrowser` と OS/browser の opener 経路を通るため、短い露出窓が
 残ります。詳細は ADR-0106 と local operator validation guide を参照してください。
 
+`ui-smoke` はサーバーやブラウザを起動せず、local UI の read-only データ面を検証します。
 
+関連 ADR:
 
-現段階でも bind host は loopback (`127.0.0.1`, `localhost`, `::1`) のみ許可されます。`--auth-mode` と `--authorization-mode` は boundary config であり、UI review detail の assurance 表示に反映されます。`--mutation-capability-flag` は preview intent を metadata に記録します。実際の write route は `--enable-ui-mutation` を追加し、さらに `--auth-mode loopback_local --authorization-mode reviewer_declared` が揃った場合にのみ有効化されます。詳細は [ADR-0022](adr/0022-explicit-local-ui-mutation-enable-flag.md) を参照してください。
+- [ADR-0018](adr/0018-local-ui-read-only-navigation-boundary.md)
+- [ADR-0019](adr/0019-local-ui-review-semantics-parity-boundary.md)
+- [ADR-0022](adr/0022-explicit-local-ui-mutation-enable-flag.md)
+- [ADR-0106](adr/0106-browser-ui-session-bootstrap-request-boundary.md)
 
-read-only endpoint:
+## 補助 CLI 互換性
 
-- `/api/overview`
-- `/api/events`
-- `/api/contexts`
-- `/api/artifacts`
-- `/api/decisions`
-- `/api/rde`
-- `/api/boundary`
-- `/api/audit`
-- `/api/lifecycle`
-- `/api/runtime-records`
-- `/api/review-queue`
-- `/api/ui-boundary`
-- `/api/package-review`
-- `/api/graph-summary`
-- `/api/ai-index-status`
-- `/api/ai-index-vector`
-- `/api/ai-index-graph-nodes`
-- `/api/ai-index-graph-edges`
-- `/api/graphrag-status`
-
-`--workspace` で有効になる guarded POST endpoint:
-
-- `/api/capture`: メモまたは成果物をChronicle JSONLへ記録
-- `/api/graphrag/rebuild`: JSONLからSQLite vector/graph DBを再構築
-- `/api/graphrag/query`: vector検索、graph近傍展開、OpenAI Responses APIによる回答
-
-対応CLIは `chronicle runtime graphrag-status`, `chronicle runtime graphrag-rebuild`, `chronicle runtime ask <QUESTION>` です。モデルは `CHRONICLE_OPENAI_MODEL`、埋め込みは `CHRONICLE_EMBEDDING_MODEL` で上書きできます。
-
-`chronicle ui-smoke` はサーバーを起動せず、ブラウザも使わず、local UI の read-only データ面だけを検証します。
-
-`/api/review-queue` は `review_status=needs_review` の record を返します。既定では preview-only ですが、explicit enable 条件が揃うと GUI review mutation route の server-side gate が有効になります。review detail と review queue / summary jobs list の両方で、そのときだけ明示 reviewer context form と action buttons が現れます。workspace table の先頭列には primary `Open Detail` button もあり、review queue / runtime records / summary jobs の各 row から detail に直接入れます。`suggested_cli_family` では引き続き関連 CLI family の目安も表示します。
-
-`/api/ui-boundary` は bind scope, mutation capability flag, explicit mutation enable flag 由来の `mutation_enabled`, auth/authz mode を read-only で返します。`mutation_enabled=true` は `--enable-ui-mutation` と required gate 条件がすべて揃ったときだけ成立します。placeholder / derived config により `auth_mode` / `authorization_mode` / `session_gating` を明示できます。あわせて `auth_boundary_summary` で auth/authz placeholder の derived status / blockers / next steps も返します。overview ではさらに `auth_boundary_overview` / `identity_boundary_summary` により auth warning / reviewer identity / session alignment の集約状態も読めます。
-- 同じ payload には `reviewer_context_requirements` と `mutation_blocker_details` も含まれ、現在の local write-path が要求する reviewer field / accepted reviewer kind / session label requirement を read-only に確認できます。
-- overview の `Mutation Readiness` panel でも、その reviewer field / accepted reviewer kind / session label requirement を read-only に確認できます。
-- write-capable route family は `POST /api/review-actions/<event_id>/<action>` です。`reviewer_label`, `reviewer_kind`, `session_label`, `ui_intent` を JSON body で受け、gate 条件が崩れていれば fail closed で戻ります。
-- 同じ write-route contract には `durable_success_requirements`, `transaction_order`, `failure_families`, `status_code_contract` も含まれ、browser-triggered write の成功条件・実行順序・失敗族・HTTP status の意味を read-only に確認できます。
-- さらに `authorization_contract` も含まれ、`authorization_status`, `required_identity_assurance_status`, `target_pending_required`, `server_side_checks`, `action_authorization_matrix` を通じて `authorization_failed` が外れる条件と action ごとの server-side check を read-only に確認できます。
-- あわせて `target_state_contract` も含まれ、`required_current_review_status`, `resolved_status_code`, `target_state_checks`, `action_target_matrix` を通じて `review_not_pending` との境界や `request-changes` が pending に残る current local review semantics を read-only に確認できます。
-- preview payload / action response には `rollback_status`, `possible_error_codes`, `recovery_path` を含む fail-closed contract metadata も含まれます。
-- `review_not_pending` / `review_target_not_found` 系の failure contract には `target_state_recovery` も含まれ、resolved queue を見るべき理由と canonical command を read-only に確認できます。
-- とくに `review_target_not_found` では `chronicle_state_command` も返り、resolved queue だけでなく current Chronicle state を見直すべきことを read-only に確認できます。
-- local UI shell では `recovery_path` をそのまま copy できる button も表示されます。
-- failure kind に応じて `recovery_commands`、成功時には `follow_up_commands` も返り、UI shell から copy できます。
-- failure payload には `failure_summary` も含まれ、warning/identity 由来の主 blocker を短く確認できます。
-- `authorization_failed` の `failure_summary` では warning code が人間向けの boundary 文言に展開されます。
-- `authorization_failed` の payload には `warning_details` と `identity_assurance_message` も含まれ、read-only UI で境界理由をそのまま表示できます。
-- read-only UI の overview badge / auth readiness detail でも、warning code そのものではなく人向けの boundary label / blocker 文言を表示します。
-- read-only UI の warning badge label は shared copy map から描画され、overview/detail/action-result 間の copy drift を減らします。
-- auth boundary の blocker / next-step 文言も shared helper から生成され、startup metadata・overview・detail の説明を揃えます。
-- detail で使う blocker / warning message の連結表示も shared serializer/helper を通すため、action result と detail drilldown の見え方を揃えます。
-- blocked-route preview / review-action result の contract 表示も shared helper を通すため、recovery path・rollback status・follow-up command の見え方を揃えます。
-- さらに panel 本体も shared render helper を通すため、preview/result 間で action/event/error/identity/failure summary の表示契約を揃えます。
-- review queue / summary jobs の reviewer 入力フォームも shared helper を通すため、local reviewer context 入力 UI の構造を揃えます。
-- review queue / summary jobs の preview summary と action button も shared helper を通すため、preview status と submit/blocked-route button 契約を揃えます。
-- review queue / summary jobs の review/auth/identity badge も shared helper を通すため、list-row 状態表示の label 契約を揃えます。
-- review queue / summary jobs の row 描画も helper を通すため、detail/status/auth/preview 列の構造を list ごとに保ちつつ renderer の重複を減らします。
-- runtime records / review queue / summary jobs の table renderer も endpoint ごとの helper を通し、generic fallback も renderer map に束ねるため、`renderTable` は dispatcher としての責務に揃います。
-- detail view の navigation/runtime/auth/parity/timeline notice も shared helper を通すため、read-only detail contract の copy と構造を各 detail 種別で揃えます。
-- detail view の action preview も shared helper を通すため、recovery CLI・mutation control・action list の表示契約を detail renderer 全体で揃えます。
-- blocked-route preview / review submit / copy feedback の action runtime 補助も shared helper を通すため、POST 応答処理と copy fallback の挙動を JS 補助層で揃えます。
-- view/detail の click/input/change listener も shared helper を通すため、filter/sort/detail-navigation の配線責務を末尾の event binding から分離します。
-- overview の header/counts/runtime/auth/identity/mutation/AI-index panel も shared helper を通すため、read-only overview 前半の表示契約を panel 単位で揃えます。
-- overview の runtime-records/summary-jobs/triage panel も shared helper を通すため、read-only overview 後半の集約・drilldown 契約も panel 単位で揃えます。
-- detailPath resolver と endpoint body 組み立ても shared helper を通すため、endpoint ごとの path/render 分岐責務を lookup/helper 層へ寄せます。
-- detail body 組み立ても shared helper を通すため、navigation option 解決と notice 合成責務を `loadDetail` 本体から切り離します。
-- review queue / summary jobs row の preview/reviewer/identity cell も shared helper を通すため、list-row の preview button 構成と reviewer 表示契約を揃えます。
-- runtime/review/summary list table の reset/empty-state/preview-status/table 骨格も shared helper を通すため、各 list renderer の外枠契約を揃えます。
-- detail related-list button 群も shared helper を通すため、runtime/review/summary/package への drilldown button 構成を detail 種別で揃えます。
-- review/summary sort comparator も shared helper を通すため、reviewer label / target id / summary job id の比較責務を sort 本体から切り離します。
-- runtime/review/summary list の query match 判定も shared helper を通すため、filter predicate ごとの JSON stringify 比較責務を揃えます。
-- filter/sort state lookup も shared helper を通すため、endpoint ごとの target/default 解決責務を state 操作本体から切り離します。
-- filter chip / sort label の state 表示も shared helper を通すため、list state summary の endpoint 別分岐を state 表示 helper へ寄せます。
-- overview/list jump button と panel/notice title wrapper も shared helper を通すため、detail/overview の薄い drilldown 表示責務を共通化します。
-- detail notice の status slice button row も shared helper を通すため、readiness/auth/parity/identity/timeline の重複した action 段落責務を共通化します。
-- detail notice の status/message 本文も shared helper を通すため、readiness/auth/identity/package preview の共通段落責務を共通化します。
-- detail notice renderer 群も registry helper を通すため、detail notice 本体の逐次連結責務を renderer 配列へ寄せます。
-- overview panel 群も registry helper を通すため、overview 本体の逐次連結責務と warning button 生成責務を panel 配列/専用 helper へ寄せます。
-- endpoint/detail shell の heading / pretty JSON 表示も shared helper を通すため、view shell の表示責務を route helper へ寄せます。
-- runtime/review/summary row の detail button / stacked cell 組み立ても shared helper を通すため、row renderer の HTML 連結責務を共通 helper へ寄せます。
-- runtime/review/summary list toolbar も shared helper を通すため、filter/sort/control の共通組み立て責務を toolbar helper へ寄せます。
-- overview triage では `Identity aligned` などの quick slice から reviewer identity / assurance 系の review queue slice に直接 drilldown できますが、これは引き続き read-only filter state のみです。
-- overview の runtime records / summary jobs panel でも matching-review-derived auth readiness の集約状態を read-only で確認できます。
-- overview の summary jobs panel では matching-review-derived identity/session assurance 集約も read-only で確認できます。
-- review queue list では `auth` badge により `Auth advisory` / `Auth aligned` の slice を detail を開かずに辿れます。
-- runtime records list / summary jobs list でも同じ auth readiness badge vocabulary を使い、matching review target がある行だけ advisory/aligned 状態を read-only で辿れます。
-- summary jobs list では reviewer identity / session assurance も matching review target 由来の badge として read-only で確認できます。
-- review queue / runtime records / summary jobs list はいずれも先頭列の primary `Open Detail` button から row detail に直接入れ、隣の JSON button は raw payload inspection を維持します。
-- review detail と review-backed runtime / summary detail では `Review Steps` notice により current step, next action, suggested command, completed steps, remaining steps を read-only に確認できます。
-- review detail と review-backed runtime / summary detail では `Identity Sufficiency` notice により auth status, assurance status, blocker count, blocked-by reasons, next action を read-only に確認できます。
-- review detail / summary detail では `Auth Readiness` notice により current preview auth boundary, reviewer identity assurance, blocker, next step を read-only で確認できます。
-- runtime record detail でも matching review target がある場合は同じ `Auth Readiness` notice を表示します。
-この read-only semantic boundary と CLI parity の扱いは [ADR-0019](adr/0019-local-ui-review-semantics-parity-boundary.md) で固定しています。
-
-## chronicle runtime
-
-`runtime` は explicit local runtime boundary を表す補助CLIです。
-
-### chronicle runtime status
-
-```bash
-chronicle runtime status
-chronicle runtime status --json
-```
-
-status は local placeholder runtime の境界を表示します。
-
-### chronicle runtime summarize
-
-```bash
-chronicle runtime summarize --text "Source text"
-chronicle runtime summarize --text "Source text" --max-sentences 2
-chronicle runtime summarize --text "Source text" --draft-title "Runtime Draft"
-chronicle runtime summarize --text "Source text" --execute-configured-provider
-chronicle runtime summarize --text "Source text" --record
-chronicle runtime summarize --text "Source text" --record --json
-```
-
-方針:
-
-- explicit manual invocation only
-- no LLM call
-- no external runtime call
-- generated output requires review
-- `--record` 指定時のみ `assistant_output` event として記録
-- `--draft-title` 指定時のみ pending-review の summary job / draft artifact としても保存
-- draft provenance には provider kind / model name / invocation mode / external_call_made が含まれる
-- configured HTTP provider を使う場合でも `--execute-configured-provider` が無い限り fail closed で止まる
-- configured HTTP provider 実行時は `allow_network=true`, `base_url`, `model`, `api_key_env`, および対応 env var が揃っている必要がある
-- 現在の configured HTTP summarize contract は `POST <base_url>` に JSON を送り、応答 JSON の `output_text` / `generated_text` / `summary` のいずれかを読む
-
-### chronicle runtime invoke
-
-```bash
-chronicle runtime invoke --text "Source text" --operation rewrite
-chronicle runtime invoke --text "Source text" --operation rewrite --execute-configured-provider
-chronicle runtime invoke --text "Source text" --operation rewrite --execute-configured-provider --record
-chronicle runtime invoke --text "Source text" --operation rewrite --execute-configured-provider --artifact-title "Runtime Output"
-chronicle runtime invoke --text "Source text" --operation summarize --draft-summary-title "Runtime Summary Draft" --execute-configured-provider
-chronicle runtime invoke --text "Source text" --operation rewrite --source event:evt_x --prompt "Rewrite with context" --execute-configured-provider
-chronicle runtime invoke --text "Source text" --operation rewrite --param tone=concise --param audience=operator --execute-configured-provider
-chronicle runtime invoke --text "Source text" --operation summarize --execute-configured-provider --json
-```
-
-方針:
-
-- configured provider 実行専用の explicit text operation path
-- `--execute-configured-provider` が無ければ fail closed
-- current contract は text input を持つ operation 名を provider にそのまま渡す
-- `--record` 指定時のみ `assistant_output` event として記録
-- `--draft-summary-title` 指定時のみ configured-provider output を pending-review summary job としても保存する
-- `--artifact-title` 指定時のみ configured-provider output を draft artifact としても保存する
-- `--artifact-type` でその draft artifact の種別を選べる
-- `--source` を渡す場合は configured provider contract 側で `allow_external_context=true` が必要
-- `--prompt` は configured-provider request payload と persisted runtime metadata に残る
-- `--param key=value` で operation-specific parameter を repeatable に渡せる
-- provider response の `response_id` / `finish_reason` / `usage.*` は structured metadata として保持される
-- summary job と draft artifact に保存した場合も、その structured response metadata は provenance として保持される
-- output は derived / review-required であり authority ではない
-- 現在の HTTP text-operation contract でも応答 JSON の `output_text` / `generated_text` / `summary` のいずれかを読む
-
-### chronicle summary run
-
-```bash
-chronicle summary run --id sum_xxx
-chronicle summary run --id sum_xxx --operation rewrite
-chronicle summary run --id sum_xxx --max-sentences 2
-chronicle summary run --id sum_xxx --draft-title "Runtime Re-draft"
-chronicle summary run --id sum_xxx --artifact-title "Runtime Output"
-chronicle summary run --id sum_xxx --record
-chronicle summary run --id sum_xxx --param tone=concise
-chronicle summary run --id sum_xxx --execute-configured-provider
-chronicle summary run --id sum_xxx --json
-```
-
-方針:
-
-- 既存の pending-review summary job を explicit runtime boundary 経由で再実行する
-- source refs と prompt provenance を runtime-backed draft に引き継ぐ
-- `--operation summarize` のときは summary path、その他の operation は configured-provider/runtime invoke path を使う
-- no external model API
-- no hidden background execution
-- generated output remains pending review
-- 出力は `runtime_manual` provenance を持つ draft summary job / draft artifact として保存される
-- configured provider 実行時は `runtime_http_manual` provenance と `external_call_made=true` を持つ
-- `--record` を付けると review-oriented `assistant_output` event としても保存される
-- non-summarize operation では `--artifact-title` と `--param key=value` も使える
-
-### chronicle summary invoke-plan
-
-```bash
-chronicle summary invoke-plan --id sum_xxx
-chronicle summary invoke-plan --id sum_xxx --operation summarize
-chronicle summary invoke-plan --id sum_xxx --record
-chronicle summary invoke-plan --id sum_xxx --json
-```
-
-方針:
-
-- 既存 summary draft を configured provider contract に接続する dry-run を作る
-- no provider execution
-- no external call performed
-- summary job ID / title / prompt / source-ref count を request preview に含める
-- recorded plan には explicit 再実行用の execution request contract も保持される
-- `--record` 指定時のみ review-oriented `assistant_output` event として記録する
-
-### chronicle runtime retrieve-plan
-
-```bash
-chronicle runtime retrieve-plan --query "release note context"
-chronicle runtime retrieve-plan --query "release note context" --limit 3
-chronicle runtime retrieve-plan --query "release note context" --record
-chronicle runtime retrieve-plan --query "release note context" --json
-```
-
-`retrieve-plan` は local dry-run の retrieval composition を表示します。`--json` では downstream consumer 向けの `query_engine_handoff` example/fixture と同型の契約も確認できます。
-
-対象:
-
-- placeholder vector hits
-- graph export node hits
-- Chronicle search hits
-
-境界:
-
-- dry-run only
-- no LLM call
-- no GraphRAG runtime
-- no external retrieval service
-- `--record` 指定時のみ `assistant_output` event として記録
-- `html` はWebアプリケーションではありません。
-- visibility hintはredactionではないため、デフォルトでは隠蔽されません。
-- profile export は公開承認やアクセス制御ではありません。
-
-### chronicle runtime invoke-plan
-
-```bash
-chronicle runtime invoke-plan --text "Source text"
-chronicle runtime invoke-plan --text "Source text" --operation summarize
-chronicle runtime invoke-plan --text "Source text" --source event:evt_x --prompt "Rewrite with context"
-chronicle runtime invoke-plan --text "Source text" --record
-chronicle runtime invoke-plan --text "Source text" --json
-```
-
-方針:
-
-- stored provider contract を explicit/manual invocation dry-run に接続する
-- no provider execution
-- no external call performed
-- `invocation_ready` は contract boundary 上の ready / blocked を示すだけで、実行完了を意味しない
-- HTTP provider では `allow_network` が false の場合に block reason を返す
-- `--source` / `--prompt` / `--param key=value` を dry-run plan と recorded execution request contract に保持できる
-- `--record` 指定時のみ review-oriented `assistant_output` event として記録する
-- recorded invocation plan detail を local UI で開くと、execution request と downstream CLI を read-only / copyable に確認できる
-
-### chronicle runtime execute-plan
-
-```bash
-chronicle runtime execute-plan --event evt_xxx
-chronicle runtime execute-plan --event evt_xxx --execute-configured-provider
-chronicle runtime execute-plan --event evt_xxx --record --artifact-title "Runtime Output" --execute-configured-provider
-chronicle runtime execute-plan --event evt_xxx --draft-summary-title "Runtime Draft" --execute-configured-provider --json
-```
-
-方針:
-
-- `runtime invoke-plan --record` または `summary invoke-plan --record` で残した event だけを対象にする
-- recorded plan に含まれる execution request contract を使って explicit 再実行する
-- `--execute-configured-provider` が無ければ fail closed
-- no hidden background execution
-- generated output remains review-required derived output
-- `--record` / `--draft-summary-title` / `--artifact-title` は通常の `runtime invoke` と同じ review-oriented persistence contract に従う
-
-### chronicle runtime config show / set-local / set-http / disable
-
-```bash
-chronicle runtime config show
-chronicle runtime config show --json
-chronicle runtime config set-local --model local-placeholder
-chronicle runtime config set-http --base-url https://runtime.example.invalid/v1 --model manual-http-model --api-key-env OPENAI_API_KEY --allow-network
-chronicle runtime config disable
-```
-
-方針:
-
-- provider configuration は `.chronicle/runtime.yaml` に保存される
-- configuration alone does not invoke any model or external runtime
-- `set-http` は downstream contract を保存するだけで、その場で network call はしない
-- `runtime status` は actual local placeholder execution と configured provider contract を分けて表示する
-- generated output は引き続き explicit/manual invocation 後にだけ発生する
-
-## chronicle review
-
-`review` は append-only review workflow の CLI skeleton です。
-
-### chronicle review queue
-
-```bash
-chronicle review queue
-chronicle review queue --include-resolved
-chronicle review queue --json
-```
-
-`queue` は `review_status=needs_review` の target event を派生的に列挙します。approve / reject 済み target はデフォルトでは隠れ、`request-changes` は pending のまま残ります。
-
-### chronicle review approve / reject / request-changes
-
-```bash
-chronicle review approve --event evt_xxx --reviewer alice
-chronicle review approve --event evt_xxx --reviewer alice --reviewer-kind local_operator --session terminal-1
-chronicle review reject --event evt_xxx --reviewer alice --note "reason"
-chronicle review request-changes --event evt_xxx --reviewer alice --note "revise section 2"
-chronicle review approve --event evt_xxx --reviewer alice --json
-```
-
-### chronicle context propose-update / apply-proposal
-
-```bash
-chronicle context propose-update \
-  --context ctx_xxx \
-  --summary "Propose context change" \
-  --body "updated summary"
-
-chronicle context apply-proposal --event evt_xxx
-```
-
-`context apply-proposal` は approval 済み proposal を新しい append-only Context snapshot として適用します。
-
-方針:
-
-- append-only reviewer event を追加する
-- target event 自体は直接変更しない
-- reviewer identity は `label`, `kind`, `session` の構造で保持する
-- `review_decision` audit event も同時に追加する
-- GUI mutation の代わりに CLI parity を先に整える
-- UI review queue はこの reviewer event を読んで pending / resolved を派生表示する
-- UI review queue list は CLI parity badge も派生表示し、detail を開かずに command drift の有無を確認できる
-- overview triage からも `aligned` / `drift_detected` の parity slice へ直接 drilldown できる
-- review queue list は `CLI drift first` sort で parity drift 行を先頭に寄せられる
-- review queue list の warning codes は badge と説明文の両方で派生表示される
-- review queue list の warning badges 自体も clickable で、同じ warning code の slice へその場で絞り込める
-- overview triage からも `ui_auth_not_enabled` など主要 warning slice へ直接 drilldown できる
-- overview triage の warning 集計は priority 順でも整形され、主要 blocker が上に出る
-- overview triage の warning badges は summary 駆動で並び、warning code ごとの review queue filter に直接つながる
-- warning code filter が有効な間は review queue sort もその warning を持つ rows を優先する
-- その状態は active view の sort label にも `warning-first:<code>` として表示される
-- review queue list header には現在の active slice が chip として表示され、その場で clear できる
-- runtime records list header も同じ active slice chip pattern を使う
-- review/runtime の active slice chips は共通 helper で描画され、語彙をそろえている
-- active view summary の `filter=` / `sort=` 表示も同じ helper 群に寄せている
-- overview triage button labels も同じ helper vocabulary に寄せている
-- overview の warning priority badges も同じ helper vocabulary に寄せている
-- review queue list の status / package readiness / CLI parity badges も専用 helper に寄せ、同じ read-only badge vocabulary を維持している
-- overview shortcut buttons と detail notice の `Open ...` / `More ...` actions も helper 化し、list/detail 間の jump 文言 drift を抑えている
-- detail JSON の related link labels も helper 化し、`Open matching ...` / `Open context ...` の語彙を detail payload でも固定している
-- overview panel 見出し / detail notice 見出し / triage summary JSON 行も helper に寄せ、read-only UI の見出し語彙を揃えている
-- detail notice の `Status:` / list joins / JSON summary 行も helper に寄せ、payload 派生テキストの整形 drift を抑えている
-- review queue detail は reviewer / audit timeline を read-only で表示する
-- review queue detail は current UI boundary と reviewer identity を照合した assurance も表示する
-- review queue detail の warning / capability 表示からも related review slices へ戻れる
-- review detail の parity / assurance / package readiness notices からも related review slices へ戻れる
-- review detail の action preview notice からも capability/parity の related review slices へ戻れる
-- review queue list でも preview 列から blocked review route を read-only で試せ、常に `403` と CLI fallback contract だけを返す
-- review timeline の各履歴行からも disposition / identity-assurance の related review slices へ戻れる
-- review queue は current boundary での capability/warning surface も表示する
-- local UI shell は capability / assurance を notice と badge で目立つ形に描画する
-- warning codes are expanded into user-facing explanation text in the local UI
-
-## chronicle package
-
-```bash
-chronicle package context --purpose "Sayane review" --target local
-chronicle package context --purpose "External review" --target external --persist
-chronicle package query-engine-adapter --query "release planning context"
-chronicle package query-engine-adapter --query "graph context" -o adapter-skeleton.json
-chronicle package query-engine-bundle --query "release planning context" --output-dir handoff-bundle
-chronicle package query-engine-trial-record --bundle-dir handoff-bundle --reviewer "operator" --consumer "downstream-demo" --sufficient
-chronicle package query-engine-trial-list --json
-chronicle package query-engine-trial-show --event evt_xxx --json
-chronicle package list
-chronicle package show --package pkg_xxx
-chronicle package records --package pkg_xxx --json
-```
-
-Controlled integration package を生成・永続化・検査します。`chronicle-package ...` と同じ実装を共有する primary CLI alias です。
-
-Package は transport contract であり、外部送信、許可付与、アクセス制御ではありません。
-`query-engine-adapter` は downstream import adapter の descriptive skeleton を現在の retrieval dry-run handoff から再生成するだけで、import 実行・hosted query engine・外部 runtime は含みません。
-`query-engine-bundle` は handoff / adapter skeleton / graph-json export / bundle manifest / acceptance checklist / trial report template をローカル directory に書き出すだけで、downstream import 実行や hosted runtime は含みません。
-`query-engine-trial-record` は real downstream trial の結果を `assistant_output` event として残すだけで、downstream import 実行や hosted runtime は含みません。
-`query-engine-trial-list` と `query-engine-trial-show` は recorded downstream trial の read-only inspection だけを行います。
-
-## chronicle context
-
-```bash
-chronicle context check --target local --purpose "internal review"
-chronicle context check --target external --purpose "draft public summary" --json
-```
-
-Context records を model-facing context として使う前の dry-run check です。`chronicle-context ...` と同じ実装を共有する primary CLI alias です。
-
-このコマンドは外部モデルAPIを呼びません。
-
-## chronicle graph
-
-```bash
-chronicle graph summary
-chronicle graph summary --json
-chronicle graph nodes --json
-chronicle graph nodes --type context
-chronicle graph edges --json
-```
-
-Read-only graph export inspection です。`chronicle-graph ...` と同じ実装を共有する primary CLI alias です。
-
-`graph-json` はGraphRAG接続準備用の派生viewであり、GraphRAG engine ではありません。
-
-## Auxiliary CLI compatibility
-
-v0.6 では以下の補助CLIも互換目的で維持されています。
+以下の補助 CLI は互換目的で維持されています。
 
 ```bash
 chronicle-context check ...
@@ -793,17 +569,9 @@ chronicle-package context ...
 chronicle-graph summary
 ```
 
-文書例では primary CLI alias を優先しますが、補助CLIを削除・非推奨化するものではありません。primary/auxiliary の挙動差分は Observation E2E の観測対象であり、semantic correctness certification ではありません。
-
-## chronicle index rebuild
-
-```bash
-chronicle index rebuild
-```
-
-`chronicle.jsonl` から派生インデックスを再生成します。
-
-`indexes/` は一次記録ではありません。破棄しても `chronicle index rebuild` で再生成可能です。
+文書例では primary CLI alias を優先しますが、補助 CLI を削除・非推奨化するものでは
+ありません。primary / auxiliary の挙動差分は Observation E2E の観測対象であり、
+semantic correctness certification ではありません。
 
 ## Local daemon credentials
 

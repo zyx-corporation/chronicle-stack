@@ -41,7 +41,7 @@ Chronicle Stack は、問いの発端、判断過程、反論、保留、意味�
 
 v0.5以降の設計は、次のADRを基準にします。
 
-- [ADR-0001: Treat Chronicle Records as Context Assets](adr/0001-context-assets-security.md)
+- [ADR-0001: Treat Chronicle Records as Context Assets](../adr/0001-context-assets-security.md)
 
 このADRにより、Chronicle Stack records は単なるinformation assetsではなくcontext assetsとして扱います。
 

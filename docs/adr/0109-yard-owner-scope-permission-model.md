@@ -98,8 +98,9 @@ AI番頭の士業／顧問先モデルを、本モデルへの当てはめとし
 提供文書の外部ノート参照名は `chronicle-yard`、`chronicle-stack`、`ai-bantou`、
 `model-routing-governance`。本作業ではこれらのノート本文や士業側の規約を独立に確認していない。
 具体例中の同意規約は提供文書の検証ケースとして保存する。
-Event Origin ADR案（ADR-0105）は今回の登録時点で元の作業場所に未コミットであり、
-本ADRと一緒には取り込まない。actor／originと認証済みメンバーの対応は別途確認する。
+Event Originの設計契約は[ADR-0105](0105-chronicle-event-origin-attribution-contract.md)に記録されている。
+ADR-0109の初回登録時には未コミットだったが、その後の文書統合で登録された。
+実装とcutoverは未実施であり、actor／originと認証済みメンバーの対応は別途確認する。
 
 ## 影響
 
