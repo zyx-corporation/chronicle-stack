@@ -1,6 +1,7 @@
 # Chronicle Stack Local Web UI Operator Validation v1.0
 
-Related: `release-operator-guide.md`, `local-web-ui-operator-validation-report-template.md`, `../../cli-reference.md`
+Related: `release-operator-guide.md`, `local-web-ui-operator-validation-report-template.md`,
+`../../cli-reference.md`, `../../adr/0106-browser-ui-session-bootstrap-request-boundary.md`
 
 Status: draft operator validation guide  
 Scope: manual validation checklist for the current local web UI
@@ -8,9 +9,10 @@ Scope: manual validation checklist for the current local web UI
 ## Quick Start
 
 1. preconditions のコマンドを実行する
-2. validation mode を 1 つ選んで `chronicle ui` を起動する
-3. checklist を順に確認する
-4. 結果は `local-web-ui-operator-validation-report-template.md` に記録する
+2. `--open` なしの locked-shell check を行う
+3. validation mode を 1 つ選んで `chronicle ui --open` を起動する
+4. checklist を順に確認する
+5. 結果は `local-web-ui-operator-validation-report-template.md` に記録する
 
 ## Purpose
 
@@ -43,6 +45,7 @@ This guide does not certify:
 - security audit completeness
 - legal/governance sign-off
 - external runtime correctness
+- same-UID process isolation or shared-machine safety
 
 This guide assumes local operator use against a local Chronicle root.
 
@@ -63,19 +66,29 @@ Expected:
 - `pytest -q` passes
 - `chronicle ui-smoke --json` reports `passed: true`
 - `chronicle ui --json` returns loopback-local startup metadata without starting a long-lived server
+  and contains no `chronicle-bootstrap`, session cookie value, or mutation token
 
 ## Recommended Start Modes
 
-Read-only baseline:
+Locked-shell boundary check:
 
 ```bash
 chronicle ui --host 127.0.0.1 --port 8765
 ```
 
+Manually open the printed base URL. It must remain locked and must not expose Chronicle title, root,
+records, or credentials. Stop the server before starting one of the following modes.
+
+Read-only baseline:
+
+```bash
+chronicle ui --host 127.0.0.1 --port 8765 --open
+```
+
 Preview-capability boundary visibility:
 
 ```bash
-chronicle ui --host 127.0.0.1 --port 8765 --mutation-capability-flag
+chronicle ui --host 127.0.0.1 --port 8765 --mutation-capability-flag --open
 ```
 
 Explicit gated local write-path validation:
@@ -87,7 +100,8 @@ chronicle ui \
   --mutation-capability-flag \
   --enable-ui-mutation \
   --auth-mode loopback_local \
-  --authorization-mode reviewer_declared
+  --authorization-mode reviewer_declared \
+  --open
 ```
 
 ## Validation Checklist
@@ -95,9 +109,26 @@ chronicle ui \
 ### 1. Startup / Boundary
 
 - confirm the UI binds only to loopback-local host values
+- confirm startup stdout and `--json` show only the base URL/non-secret metadata, never the
+  fragment bootstrap or session/mutation credentials
+- confirm the unauthenticated root is a generic shell with no Chronicle title, root path, record
+  data, mutation token, or session id
+- confirm `--open` removes `#chronicle-bootstrap=...` from the address bar immediately and then
+  loads the overview
+- confirm manual base-URL opening without `--open` stays locked
+- confirm cookie-less sensitive GETs, including `/api/session`, `/api/overview`, and
+  `/review-console`, return `401`
+- confirm the bootstrap is one-time, expires after 60 seconds, and cannot be replayed
+- confirm the session cookie omits `Domain`, includes `Path=/; HttpOnly; SameSite=Strict`, and omits
+  `Secure` and the `__Host-` prefix only because this local origin is plain `http://`
+- confirm the cookie credential differs from the mutation-header token
+- confirm exact Host validation; GET Origin is optional but exact when present; POST/OPTIONS Origin
+  is required and exact
+- confirm no response has `Access-Control-Allow-*` and exact-origin OPTIONS returns `405`
 - confirm overview loads without requiring any external runtime or browser extension
 - confirm the UI clearly remains read-only unless explicit gated mutation flags are enabled
 - confirm `UI Boundary`, `Auth Boundary`, and `Mutation Readiness` panels expose current boundary state without implying hidden background execution
+- confirm `shared_machine_safe=false` and no same-UID process-isolation claim appears
 
 ### 2. Overview Operator Picture
 
@@ -151,6 +182,11 @@ chronicle ui \
 
 - in read-only mode, confirm action previews explain why routes are blocked and what CLI fallback/recovery path applies
 - in explicit gated mode, confirm reviewer/session fields appear only when expected
+- confirm every non-bootstrap POST requires the session cookie and exact Origin
+- confirm an enabled write additionally requires the independent mutation header token, matching
+  mutation session id, and one-use mutation request id
+- confirm foreign/missing Origin, missing cookie, or invalid mutation credential is rejected before
+  body/domain work and leaves `.chronicle/chronicle.jsonl` bytes unchanged
 - confirm mutation enablement detail sections explain:
   - readiness status
   - operational readiness
@@ -316,6 +352,10 @@ For a validation pass, record:
 - any misleading boundary copy
 - any mismatch between overview/list/detail state
 - any case where CLI fallback guidance is missing or unclear
+- whether the fragment disappeared immediately and whether startup output remained credential-free
+- the acknowledged residual risk that `--open` passes a fragment-bearing URL through
+  `webbrowser` and platform/browser opener plumbing
+- confirmation that same-UID/shared-machine safety was not claimed
 
 Recommended evidence format:
 

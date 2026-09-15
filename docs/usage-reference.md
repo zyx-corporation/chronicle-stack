@@ -55,7 +55,7 @@ chronicle artifact apply-proposal --event <PROPOSAL_EVENT_ID>
 chronicle context apply-proposal --event <PROPOSAL_EVENT_ID>
 chronicle ui-smoke
 chronicle ui-smoke --json
-chronicle ui
+chronicle ui --open
 chronicle graph summary
 chronicle context check --target local --purpose "internal review"
 chronicle show
@@ -64,8 +64,18 @@ chronicle show
 ## UI と運用境界
 
 - `chronicle ui` は明示起動型の foreground local web UI です
-- デフォルトでは `127.0.0.1:8765` に bind し、read-only で現在の Chronicle root を表示します
-- auth/authz 未実装のため loopback host (`127.0.0.1`, `localhost`, `::1`) のみ許可します
+- デフォルトでは `127.0.0.1:8765` に bind し、read-only です。ブラウザで Chronicle-derived
+  data を読む場合は `chronicle ui --open` を使います
+- `--open` は短時間・一回限りの URL fragment bootstrap を既定ブラウザへ渡します。
+  fragment は直ちに削除され、host-only `HttpOnly; SameSite=Strict` cookie へ交換されます
+- `--open` なしでベース URL を手動表示しても title / root / data / credential のない
+  locked shell のままです。bootstrap secret は startup metadata、stdout、HTML には出ません
+- sensitive GET と review console は cookie、non-bootstrap POST は cookie と exact Origin、
+  write はさらに独立した mutation token / session / request-id を必要とします
+- GET / POST / OPTIONS で exact Host を検査し、CORS は許可せず OPTIONS は拒否します。
+  plain local HTTP のため cookie に `Secure` と、それを必須とする `__Host-` prefix は設定しません
+- loopback/session boundary は same-UID process や shared-machine safety を保証しません。
+  `webbrowser` opener に fragment-bearing URL を渡す短い残余リスクがあります
 - `chronicle ui-smoke` はサーバーを起動せず、ブラウザも使わず、ローカル UI の read-only データ面を検証します
 
 ## 重要な動作仕様
