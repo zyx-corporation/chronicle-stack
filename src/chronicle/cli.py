@@ -26,6 +26,7 @@ from chronicle.interfaces.cli.artifact import artifact_app
 from chronicle.interfaces.cli.boundary import boundary_app
 from chronicle.interfaces.cli.common import handle_error
 from chronicle.interfaces.cli.core import register_core_commands
+from chronicle.interfaces.cli.daemon import daemon_app
 from chronicle.interfaces.cli.decision import decision_app
 from chronicle.interfaces.cli.doctor import register_doctor_command
 from chronicle.interfaces.cli.export import register_export_command
@@ -240,6 +241,7 @@ app.add_typer(audit_app, name="audit")
 app.add_typer(lifecycle_app, name="lifecycle")
 app.add_typer(graph_app, name="graph")
 app.add_typer(ai_index_app, name="ai-index")
+app.add_typer(daemon_app, name="daemon")
 app.add_typer(runtime_app, name="runtime")
 app.add_typer(summary_app, name="summary")
 app.add_typer(review_app, name="review")

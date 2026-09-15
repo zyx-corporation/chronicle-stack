@@ -6,10 +6,12 @@ import os
 import re
 import threading
 from pathlib import Path
+from urllib.parse import parse_qs, urlparse
 
 import pytest
 from typer.testing import CliRunner
 
+import chronicle.ui_server as ui_server_module
 from chronicle.cli import app
 from chronicle.models.artifact import ArtifactType
 from chronicle.models.audit import AuditOperation, AuditSeverity, AuditTargetEnvironment
@@ -76,12 +78,53 @@ def test_ui_server_avoids_new_inline_localize_text_value_literals():
     assert inline_literals <= allowed_literals
 
 
-def _http_get(host: str, port: int, path: str) -> tuple[int, str]:
+def _http_get(
+    host: str,
+    port: int,
+    path: str,
+    *,
+    headers: dict[str, str] | None = None,
+) -> tuple[int, str]:
     connection = http.client.HTTPConnection(host, port, timeout=5)
     try:
-        connection.request("GET", path)
+        connection.request("GET", path, headers=headers or {})
         response = connection.getresponse()
         return response.status, response.read().decode("utf-8")
+    finally:
+        connection.close()
+
+
+def _http_get_with_headers(
+    host: str,
+    port: int,
+    path: str,
+    *,
+    headers: dict[str, str] | None = None,
+) -> tuple[int, str, list[tuple[str, str]]]:
+    connection = http.client.HTTPConnection(host, port, timeout=5)
+    try:
+        connection.request("GET", path, headers=headers or {})
+        response = connection.getresponse()
+        return response.status, response.read().decode("utf-8"), response.getheaders()
+    finally:
+        connection.close()
+
+
+def _http_raw_request(
+    host: str,
+    port: int,
+    method: str,
+    path: str,
+    headers: list[tuple[str, str]],
+) -> tuple[int, str, list[tuple[str, str]]]:
+    connection = http.client.HTTPConnection(host, port, timeout=5)
+    try:
+        connection.putrequest(method, path, skip_host=True)
+        for name, value in headers:
+            connection.putheader(name, value)
+        connection.endheaders()
+        response = connection.getresponse()
+        return response.status, response.read().decode("utf-8"), response.getheaders()
     finally:
         connection.close()
 
@@ -93,11 +136,14 @@ def _http_post(
     body: dict | None = None,
     *,
     headers: dict[str, str] | None = None,
+    include_origin: bool = True,
 ) -> tuple[int, str]:
     connection = http.client.HTTPConnection(host, port, timeout=5)
     try:
         payload = json.dumps(body or {}).encode("utf-8")
         request_headers = {"Content-Type": "application/json", "Content-Length": str(len(payload))}
+        if include_origin:
+            request_headers["Origin"] = f"http://{host}:{port}"
         if headers:
             request_headers.update(headers)
         connection.request(
@@ -119,11 +165,14 @@ def _http_post_raw(
     body: str,
     *,
     headers: dict[str, str] | None = None,
+    include_origin: bool = True,
 ) -> tuple[int, str]:
     connection = http.client.HTTPConnection(host, port, timeout=5)
     try:
         payload = body.encode("utf-8")
         request_headers = {"Content-Type": "application/json", "Content-Length": str(len(payload))}
+        if include_origin:
+            request_headers["Origin"] = f"http://{host}:{port}"
         if headers:
             request_headers.update(headers)
         connection.request(
@@ -138,20 +187,57 @@ def _http_post_raw(
         connection.close()
 
 
-def _http_mutation_token(host: str, port: int) -> str:
-    status, html = _http_get(host, port, "/")
-    assert status == 200
-    match = re.search(r'window\.__chronicleMutationToken = "([^"]+)";', html)
-    assert match is not None
-    return match.group(1)
+def _http_bootstrap_session(server) -> tuple[str, str, str, str]:
+    host, port = server.server_address
+    bootstrap_url = str(getattr(server, "_chronicle_bootstrap_url"))
+    bootstrap_values = parse_qs(urlparse(bootstrap_url).fragment).get("chronicle-bootstrap", [])
+    assert len(bootstrap_values) == 1
+    bootstrap_token = bootstrap_values[0]
 
-
-def _http_mutation_session_id(host: str, port: int) -> str:
-    status, html = _http_get(host, port, "/")
+    status, shell = _http_get(host, port, "/")
     assert status == 200
-    match = re.search(r'window\.__chronicleMutationSessionId = "([^"]+)";', html)
-    assert match is not None
-    return match.group(1)
+    assert bootstrap_token not in shell
+
+    connection = http.client.HTTPConnection(host, port, timeout=5)
+    try:
+        body = json.dumps({"bootstrap_token": bootstrap_token}).encode("utf-8")
+        connection.request(
+            "POST",
+            "/api/session/bootstrap",
+            body=body,
+            headers={
+                "Content-Type": "application/json",
+                "Content-Length": str(len(body)),
+                "Origin": f"http://{host}:{port}",
+            },
+        )
+        response = connection.getresponse()
+        response_body = response.read().decode("utf-8")
+        assert response.status == 200
+        cookie = str(response.getheader("Set-Cookie") or "")
+    finally:
+        connection.close()
+
+    payload = json.loads(response_body)
+    assert payload["ok"] is True
+    cookie_parts = [part.strip() for part in cookie.split(";")]
+    cookie_header, cookie_attributes = cookie_parts[0], cookie_parts[1:]
+    cookie_attribute_names = {
+        attribute.partition("=")[0].lower() for attribute in cookie_attributes
+    }
+    assert "Path=/" in cookie_attributes
+    assert "HttpOnly" in cookie_attributes
+    assert "SameSite=Strict" in cookie_attributes
+    assert "domain" not in cookie_attribute_names
+    assert "secure" not in cookie_attribute_names
+    assert not cookie_header.startswith("__Host-")
+    assert cookie_header.partition("=")[2] != payload["mutation_token"]
+    return (
+        payload["mutation_token"],
+        payload["mutation_session_id"],
+        cookie_header,
+        bootstrap_token,
+    )
 
 
 def _populate(root):
@@ -569,6 +655,44 @@ def test_startup_metadata(tmp_path):
     ]
 
 
+def test_serve_ui_bootstrap_secret_only_reaches_explicit_browser_open(
+    tmp_path,
+    monkeypatch,
+    capsys,
+):
+    ChronicleService(tmp_path).init("Browser Bootstrap")
+    bootstrap_url = (
+        "http://127.0.0.1:8765/"
+        "#chronicle-bootstrap=secret-that-must-not-reach-output"
+    )
+
+    class FakeServer:
+        _chronicle_bootstrap_url = bootstrap_url
+
+        def serve_forever(self):
+            return None
+
+        def server_close(self):
+            return None
+
+    monkeypatch.setattr(ui_server_module, "make_server", lambda **_kwargs: FakeServer())
+    opened: list[str] = []
+    monkeypatch.setattr(ui_server_module.webbrowser, "open", opened.append)
+
+    metadata = ui_server_module.serve_ui(root=tmp_path, open_browser=False)
+    captured = capsys.readouterr()
+    assert opened == []
+    assert "secret-that-must-not-reach-output" not in captured.out
+    assert "secret-that-must-not-reach-output" not in captured.err
+    assert "secret-that-must-not-reach-output" not in metadata.to_json()
+
+    ui_server_module.serve_ui(root=tmp_path, open_browser=True)
+    captured = capsys.readouterr()
+    assert opened == [bootstrap_url]
+    assert "secret-that-must-not-reach-output" not in captured.out
+    assert "secret-that-must-not-reach-output" not in captured.err
+
+
 def test_startup_metadata_with_configured_auth_mode(tmp_path):
     metadata = build_startup_metadata(
         host="127.0.0.1",
@@ -642,6 +766,14 @@ def test_startup_metadata_with_enabled_ui_mutation(tmp_path):
     assert payload["ui_boundary"]["reviewer_enforcement_summary"]["status"] == "enforced_local_session"
     assert payload["ui_boundary"]["reviewer_validation_gate_summary"]["status"] == "local_route_enforced"
     assert payload["ui_boundary"]["mutation_blockers"] == []
+    assert payload["ui_boundary"]["shared_machine_safe"] is False
+    assert payload["ui_boundary"]["auth_boundary_summary"]["shared_machine_safe"] is False
+    assert "shared_machine_session_unhardened" in payload["ui_boundary"][
+        "auth_boundary_summary"
+    ]["blockers"]
+    assert "single-operator browser request boundary" in payload["ui_boundary"][
+        "mutation_readiness_message"
+    ]
 
 
 def test_mutation_readiness_summary_can_reach_enablement_ready(tmp_path):
@@ -2793,9 +2925,13 @@ def test_summary_jobs_list_exposes_enabled_mutation_state_when_enabled(tmp_path)
 
 
 def test_ui_shell_contains_interactive_local_ui(tmp_path):
-    ChronicleService(tmp_path).init("UI Shell")
+    ChronicleService(tmp_path).init("Private Project Title")
 
-    html = ChronicleUIDataService(tmp_path).html_shell()
+    html = ChronicleUIDataService(
+        tmp_path,
+        mutation_session_token="secret-ui-mutation-token",
+        mutation_session_id="msn-secret-session-id",
+    ).html_shell()
 
     assert "Chronicle Stack ローカルUI" in html
     assert "読み取り専用の前景ローカルUIです。" in html
@@ -2803,8 +2939,24 @@ def test_ui_shell_contains_interactive_local_ui(tmp_path):
     assert "white-space: nowrap;" in html
     assert "#detail { position: sticky;" in html
     assert "@media (max-width: 980px)" in html
-    assert "window.__chronicleMutationToken =" in html
-    assert "window.__chronicleMutationSessionId =" in html
+    assert str(tmp_path.resolve()) not in html
+    assert "Private Project Title" not in html
+    assert "secret-ui-mutation-token" not in html
+    assert "msn-secret-session-id" not in html
+    assert "window.__chronicleMutationToken = '';" in html
+    assert "window.__chronicleMutationSessionId = '';" in html
+    assert "fragment.get('chronicle-bootstrap')" in html
+    assert "window.history.replaceState" in html
+    assert "'/api/session/bootstrap'" in html
+    assert "'/api/session'" in html
+    assert "A stale/replayed fragment must not lock an otherwise valid cookie session." in html
+    fragment_read = html.index("fragment.get('chronicle-bootstrap')")
+    fragment_removed = html.index("window.history.replaceState")
+    bootstrap_exchange = html.index("response = await fetch('/api/session/bootstrap'")
+    cookie_fallback = html.index("response = await fetch('/api/session'")
+    assert fragment_read < fragment_removed < bootstrap_exchange < cookie_fallback
+    assert "sessionStorage" not in html
+    assert "--open" in html
     assert "headers['X-Chronicle-UI-Mutation-Token'] = window.__chronicleMutationToken;" in html
     assert "mutation_request_id: 'mrq-' + sessionId" in html
     assert '<div class="shell-grid">' in html
@@ -3626,6 +3778,19 @@ def test_http_root_and_read_only_endpoints(tmp_path):
         assert "Declared identity only" in html
         assert "Session label required" in html
         assert "Declared Identity Only" in html
+        assert str(tmp_path.resolve()) not in html
+        assert "UI Test" not in html
+
+        status, body = _http_get(host, port, "/api/overview")
+        assert status == 401
+        assert json.loads(body)["error"] == "session_required"
+
+        status, body = _http_get(host, port, "/review-console")
+        assert status == 401
+        assert json.loads(body)["error"] == "session_required"
+
+        _token, _session_id, session_cookie, _bootstrap_token = _http_bootstrap_session(server)
+        session_headers = {"Cookie": session_cookie}
 
         expected_keys = {
             "/api/overview": "counts",
@@ -3656,7 +3821,7 @@ def test_http_root_and_read_only_endpoints(tmp_path):
             "/api/ai-index-graph-edges": "graph_edges",
         }
         for endpoint, key in expected_keys.items():
-            status, body = _http_get(host, port, endpoint)
+            status, body = _http_get(host, port, endpoint, headers=session_headers)
             assert status == 200, endpoint
             payload = json.loads(body)
             assert key in payload, endpoint
@@ -3697,6 +3862,7 @@ def test_http_root_and_read_only_endpoints(tmp_path):
             host,
             port,
             f"/api/federation-package-preview?package_dir={package_dir}",
+            headers=session_headers,
         )
         assert status == 200
         payload = json.loads(body)
@@ -3724,18 +3890,24 @@ def test_http_root_and_read_only_endpoints(tmp_path):
             f"/api/ai-index/graph-edges/{ids['event_id']}/references/{ids['context_id']}",
         ]
         for endpoint in detail_paths:
-            status, body = _http_get(host, port, endpoint)
+            status, body = _http_get(host, port, endpoint, headers=session_headers)
             assert status == 200, endpoint
             payload = json.loads(body)
             assert "record" in payload, endpoint
 
-        status, _body = _http_get(host, port, "/api/contexts/missing")
+        status, _body = _http_get(
+            host,
+            port,
+            "/api/contexts/missing",
+            headers=session_headers,
+        )
         assert status == 404
 
         status, body = _http_post(
             host,
             port,
             f"/api/review-actions/{ids['runtime_summary_event_id']}/approve",
+            headers=session_headers,
         )
         assert status == 403
         payload = json.loads(body)
@@ -3781,6 +3953,7 @@ def test_http_root_and_read_only_endpoints(tmp_path):
             host,
             port,
             f"/api/review-actions/{ids['runtime_summary_event_id']}/request-changes",
+            headers=session_headers,
         )
         assert status == 403
         payload = json.loads(body)
@@ -3800,9 +3973,325 @@ def test_http_root_and_read_only_endpoints(tmp_path):
             f"chronicle review request-changes --event {ids['runtime_summary_event_id']}"
         )
 
-        status, review_console = _http_get(host, port, "/review-console")
+        status, review_console = _http_get(
+            host,
+            port,
+            "/review-console",
+            headers=session_headers,
+        )
         assert status == 200
         assert "Chronicle Stack Review Console" in review_console
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=5)
+
+
+def test_http_ui_bootstrap_and_request_boundary_fail_closed(tmp_path):
+    ids = _populate(tmp_path)
+    try:
+        server = make_server(
+            host="127.0.0.1",
+            port=0,
+            root=tmp_path,
+            mutation_capability_flag=True,
+            enable_ui_mutation=True,
+            auth_mode=UIAuthMode.LOOPBACK_LOCAL,
+            authorization_mode=UIAuthorizationMode.REVIEWER_DECLARED,
+            workspace_enabled=True,
+        )
+    except PermissionError as exc:
+        pytest.skip(f"local socket bind unavailable in this environment: {exc}")
+    host, port = server.server_address
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        status, shell, response_headers = _http_get_with_headers(host, port, "/")
+        assert status == 200
+        assert str(tmp_path.resolve()) not in shell
+        assert "UI Test" not in shell
+        assert not any(name.lower().startswith("access-control-") for name, _ in response_headers)
+        assert ("Content-Security-Policy", "frame-ancestors 'none'") in response_headers
+        assert ("X-Frame-Options", "DENY") in response_headers
+
+        status, body = _http_get(
+            host,
+            port,
+            "/",
+            headers={"Host": f"attacker.example:{port}"},
+        )
+        assert status == 421
+        assert json.loads(body)["error"] == "invalid_host"
+
+        status, body = _http_get(
+            host,
+            port,
+            "/",
+            headers={"Host": f"127.0.0.1:{port + 1}"},
+        )
+        assert status == 421
+        assert json.loads(body)["error"] == "invalid_host"
+
+        status, body = _http_get(
+            host,
+            port,
+            "/",
+            headers={"Origin": "https://attacker.example"},
+        )
+        assert status == 403
+        assert json.loads(body)["error"] == "origin_not_allowed"
+
+        status, body, _headers = _http_raw_request(
+            host,
+            port,
+            "OPTIONS",
+            "/api/overview",
+            [
+                ("Host", f"127.0.0.1:{port}"),
+                ("Origin", f"http://127.0.0.1:{port}"),
+                ("Origin", "https://attacker.example"),
+            ],
+        )
+        assert status == 403
+        assert json.loads(body)["error"] == "origin_not_allowed"
+
+        status, _body = _http_get(
+            host,
+            port,
+            "/",
+            headers={
+                "Host": f"localhost:{port}",
+                "Origin": f"http://localhost:{port}",
+            },
+        )
+        assert status == 200
+
+        status, body, _headers = _http_raw_request(host, port, "GET", "/", [])
+        assert status == 421
+        assert json.loads(body)["error"] == "invalid_host"
+
+        status, body, _headers = _http_raw_request(
+            host,
+            port,
+            "GET",
+            "/",
+            [
+                ("Host", f"127.0.0.1:{port}"),
+                ("Host", f"attacker.example:{port}"),
+            ],
+        )
+        assert status == 421
+        assert json.loads(body)["error"] == "invalid_host"
+
+        status, body, options_headers = _http_raw_request(
+            host,
+            port,
+            "OPTIONS",
+            "/api/overview",
+            [
+                ("Host", f"127.0.0.1:{port}"),
+                ("Origin", f"http://127.0.0.1:{port}"),
+            ],
+        )
+        assert status == 405
+        assert json.loads(body)["error"] == "method_not_allowed"
+        assert not any(name.lower().startswith("access-control-") for name, _ in options_headers)
+
+        status, body, _headers = _http_raw_request(
+            host,
+            port,
+            "OPTIONS",
+            "/api/overview",
+            [
+                ("Host", f"127.0.0.1:{port}"),
+                ("Origin", "https://attacker.example"),
+            ],
+        )
+        assert status == 403
+        assert json.loads(body)["error"] == "origin_not_allowed"
+
+        token, mutation_session_id, session_cookie, bootstrap_token = (
+            _http_bootstrap_session(server)
+        )
+
+        status, body = _http_post(
+            host,
+            port,
+            "/api/session/bootstrap",
+            {"bootstrap_token": bootstrap_token},
+        )
+        assert status == 403
+        assert json.loads(body)["error"] == "bootstrap_unavailable"
+
+        status, body = _http_get(
+            host,
+            port,
+            "/api/session",
+            headers={"Cookie": session_cookie},
+        )
+        assert status == 200
+        session_payload = json.loads(body)
+        assert session_payload["mutation_token"] == token
+        assert session_payload["mutation_session_id"] == mutation_session_id
+
+        status, body, authenticated_headers = _http_get_with_headers(
+            host,
+            port,
+            "/api/overview",
+            headers={"Cookie": session_cookie},
+        )
+        assert status == 200
+        assert "counts" in json.loads(body)
+        assert not any(
+            name.lower().startswith("access-control-") for name, _ in authenticated_headers
+        )
+
+        primary_record = tmp_path / ".chronicle" / "chronicle.jsonl"
+        before = primary_record.read_bytes()
+        status, body = _http_post(
+            host,
+            port,
+            f"/api/review-actions/{ids['runtime_summary_event_id']}/approve",
+            {
+                "reviewer_label": "alice",
+                "reviewer_kind": "local_operator",
+                "session_label": "ui-http-boundary-test",
+                "ui_intent": "approve",
+                "mutation_session_id": mutation_session_id,
+                "mutation_request_id": "mrq-ui-http-boundary-missing-cookie",
+            },
+            headers={"X-Chronicle-UI-Mutation-Token": token},
+        )
+        assert status == 401
+        assert json.loads(body)["error"] == "session_required"
+        assert primary_record.read_bytes() == before
+
+        status, body = _http_post(
+            host,
+            port,
+            "/api/capture",
+            {
+                "kind": "note",
+                "content": "must not be captured without the session cookie",
+                "mutation_session_id": mutation_session_id,
+                "mutation_request_id": "mrq-ui-capture-missing-cookie",
+            },
+            headers={"X-Chronicle-UI-Mutation-Token": token},
+        )
+        assert status == 401
+        assert json.loads(body)["error"] == "session_required"
+        assert primary_record.read_bytes() == before
+
+        status, body = _http_post(
+            host,
+            port,
+            "/api/capture",
+            {
+                "kind": "note",
+                "content": "must not be captured from a foreign origin",
+                "mutation_session_id": mutation_session_id,
+                "mutation_request_id": "mrq-ui-capture-foreign-origin",
+            },
+            headers={
+                "Cookie": session_cookie,
+                "X-Chronicle-UI-Mutation-Token": token,
+                "Origin": "https://attacker.example",
+            },
+        )
+        assert status == 403
+        assert json.loads(body)["error"] == "origin_not_allowed"
+        assert primary_record.read_bytes() == before
+
+        status, body = _http_post_raw(
+            host,
+            port,
+            "/api/capture",
+            "{",
+            headers={
+                "Cookie": session_cookie,
+                "X-Chronicle-UI-Mutation-Token": token,
+                "Origin": "https://attacker.example",
+            },
+        )
+        assert status == 403
+        assert json.loads(body)["error"] == "origin_not_allowed"
+        assert primary_record.read_bytes() == before
+
+        status, body = _http_post(
+            host,
+            port,
+            f"/api/review-actions/{ids['runtime_summary_event_id']}/approve",
+            {
+                "reviewer_label": "alice",
+                "reviewer_kind": "local_operator",
+                "session_label": "ui-http-boundary-test",
+                "ui_intent": "approve",
+                "mutation_session_id": mutation_session_id,
+                "mutation_request_id": "mrq-ui-http-boundary-foreign-origin",
+            },
+            headers={
+                "Cookie": session_cookie,
+                "X-Chronicle-UI-Mutation-Token": token,
+                "Origin": "https://attacker.example",
+            },
+        )
+        assert status == 403
+        assert json.loads(body)["error"] == "origin_not_allowed"
+        assert primary_record.read_bytes() == before
+
+        status, body = _http_post(
+            host,
+            port,
+            f"/api/review-actions/{ids['runtime_summary_event_id']}/approve",
+            {
+                "mutation_session_id": mutation_session_id,
+                "mutation_request_id": "mrq-ui-http-boundary-missing-origin",
+            },
+            headers={
+                "Cookie": session_cookie,
+                "X-Chronicle-UI-Mutation-Token": token,
+            },
+            include_origin=False,
+        )
+        assert status == 403
+        assert json.loads(body)["error"] == "origin_required"
+        assert primary_record.read_bytes() == before
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=5)
+
+
+def test_http_ui_bootstrap_expires_before_session_is_issued(tmp_path):
+    ChronicleService(tmp_path).init("Expired UI Bootstrap")
+    try:
+        server = make_server(
+            host="127.0.0.1",
+            port=0,
+            root=tmp_path,
+            bootstrap_ttl_seconds=-1.0,
+        )
+    except PermissionError as exc:
+        pytest.skip(f"local socket bind unavailable in this environment: {exc}")
+    host, port = server.server_address
+    bootstrap_url = str(getattr(server, "_chronicle_bootstrap_url"))
+    bootstrap_token = parse_qs(urlparse(bootstrap_url).fragment)["chronicle-bootstrap"][0]
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        status, body = _http_post(
+            host,
+            port,
+            "/api/session/bootstrap",
+            {"bootstrap_token": bootstrap_token},
+        )
+        assert status == 403
+        assert json.loads(body)["error"] == "bootstrap_unavailable"
+        assert getattr(server, "_chronicle_bootstrap_url") == ""
+
+        status, body = _http_get(host, port, "/api/session")
+        assert status == 401
+        assert json.loads(body)["error"] == "session_required"
     finally:
         server.shutdown()
         server.server_close()
@@ -3827,8 +4316,9 @@ def test_http_review_action_enabled_route_applies_decision(tmp_path):
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
     try:
-        token = _http_mutation_token(host, port)
-        mutation_session_id = _http_mutation_session_id(host, port)
+        token, mutation_session_id, session_cookie, _bootstrap_token = (
+            _http_bootstrap_session(server)
+        )
         status, body = _http_post(
             host,
             port,
@@ -3842,7 +4332,10 @@ def test_http_review_action_enabled_route_applies_decision(tmp_path):
                 "mutation_session_id": mutation_session_id,
                 "mutation_request_id": "mrq-ui-http-test-approve-1",
             },
-            headers={"X-Chronicle-UI-Mutation-Token": token},
+            headers={
+                "Cookie": session_cookie,
+                "X-Chronicle-UI-Mutation-Token": token,
+            },
         )
         assert status == 200
         payload = json.loads(body)
@@ -3890,7 +4383,14 @@ def test_http_review_mutation_mode_does_not_enable_workspace_routes(tmp_path):
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
     try:
-        status, body = _http_post(host, port, "/api/capture", {"content": "blocked"})
+        _token, _session_id, session_cookie, _bootstrap_token = _http_bootstrap_session(server)
+        status, body = _http_post(
+            host,
+            port,
+            "/api/capture",
+            {"content": "blocked"},
+            headers={"Cookie": session_cookie},
+        )
 
         assert status == 403
         assert json.loads(body)["error"] == "workspace_disabled"
@@ -3919,8 +4419,9 @@ def test_http_workspace_route_uses_existing_session_gates(tmp_path):
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
     try:
-        token = _http_mutation_token(host, port)
-        mutation_session_id = _http_mutation_session_id(host, port)
+        token, mutation_session_id, session_cookie, _bootstrap_token = (
+            _http_bootstrap_session(server)
+        )
         status, body = _http_post(
             host,
             port,
@@ -3931,7 +4432,10 @@ def test_http_workspace_route_uses_existing_session_gates(tmp_path):
                 "mutation_session_id": mutation_session_id,
                 "mutation_request_id": "mrq-workspace-capture-1",
             },
-            headers={"X-Chronicle-UI-Mutation-Token": token},
+            headers={
+                "Cookie": session_cookie,
+                "X-Chronicle-UI-Mutation-Token": token,
+            },
         )
 
         payload = json.loads(body)
@@ -3962,6 +4466,7 @@ def test_http_review_action_enabled_route_rejects_missing_mutation_token(tmp_pat
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
     try:
+        _token, _session_id, session_cookie, _bootstrap_token = _http_bootstrap_session(server)
         status, body = _http_post(
             host,
             port,
@@ -3974,6 +4479,7 @@ def test_http_review_action_enabled_route_rejects_missing_mutation_token(tmp_pat
                 "mutation_session_id": "msn-missing",
                 "mutation_request_id": "mrq-ui-http-test-approve-missing-token",
             },
+            headers={"Cookie": session_cookie},
         )
         assert status == 403
         payload = json.loads(body)
@@ -4010,7 +4516,7 @@ def test_http_review_action_enabled_route_rejects_invalid_mutation_session(tmp_p
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
     try:
-        token = _http_mutation_token(host, port)
+        token, _session_id, session_cookie, _bootstrap_token = _http_bootstrap_session(server)
         status, body = _http_post(
             host,
             port,
@@ -4023,7 +4529,10 @@ def test_http_review_action_enabled_route_rejects_invalid_mutation_session(tmp_p
                 "mutation_session_id": "msn-wrong-session",
                 "mutation_request_id": "mrq-ui-http-test-approve-invalid-session",
             },
-            headers={"X-Chronicle-UI-Mutation-Token": token},
+            headers={
+                "Cookie": session_cookie,
+                "X-Chronicle-UI-Mutation-Token": token,
+            },
         )
         assert status == 403
         payload = json.loads(body)
@@ -4053,8 +4562,9 @@ def test_http_review_action_enabled_route_rejects_missing_or_duplicate_request_i
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
     try:
-        token = _http_mutation_token(host, port)
-        mutation_session_id = _http_mutation_session_id(host, port)
+        token, mutation_session_id, session_cookie, _bootstrap_token = (
+            _http_bootstrap_session(server)
+        )
         status, body = _http_post(
             host,
             port,
@@ -4066,7 +4576,10 @@ def test_http_review_action_enabled_route_rejects_missing_or_duplicate_request_i
                 "ui_intent": "approve",
                 "mutation_session_id": mutation_session_id,
             },
-            headers={"X-Chronicle-UI-Mutation-Token": token},
+            headers={
+                "Cookie": session_cookie,
+                "X-Chronicle-UI-Mutation-Token": token,
+            },
         )
         assert status == 400
         payload = json.loads(body)
@@ -4086,7 +4599,10 @@ def test_http_review_action_enabled_route_rejects_missing_or_duplicate_request_i
                 "mutation_session_id": mutation_session_id,
                 "mutation_request_id": request_id,
             },
-            headers={"X-Chronicle-UI-Mutation-Token": token},
+            headers={
+                "Cookie": session_cookie,
+                "X-Chronicle-UI-Mutation-Token": token,
+            },
         )
         assert status == 200
 
@@ -4102,7 +4618,10 @@ def test_http_review_action_enabled_route_rejects_missing_or_duplicate_request_i
                 "mutation_session_id": mutation_session_id,
                 "mutation_request_id": request_id,
             },
-            headers={"X-Chronicle-UI-Mutation-Token": token},
+            headers={
+                "Cookie": session_cookie,
+                "X-Chronicle-UI-Mutation-Token": token,
+            },
         )
         assert status == 409
         payload = json.loads(body)
@@ -4137,8 +4656,9 @@ def test_http_review_action_enabled_route_handles_audit_failure(tmp_path, monkey
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
     try:
-        token = _http_mutation_token(host, port)
-        mutation_session_id = _http_mutation_session_id(host, port)
+        token, mutation_session_id, session_cookie, _bootstrap_token = (
+            _http_bootstrap_session(server)
+        )
         status, body = _http_post(
             host,
             port,
@@ -4152,7 +4672,10 @@ def test_http_review_action_enabled_route_handles_audit_failure(tmp_path, monkey
                 "mutation_session_id": mutation_session_id,
                 "mutation_request_id": "mrq-ui-http-test-approve-audit-failure",
             },
-            headers={"X-Chronicle-UI-Mutation-Token": token},
+            headers={
+                "Cookie": session_cookie,
+                "X-Chronicle-UI-Mutation-Token": token,
+            },
         )
         assert status == 500
         payload = json.loads(body)
@@ -4196,14 +4719,16 @@ def test_http_review_action_rejects_invalid_json_and_non_object_body(tmp_path):
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
     try:
-        token = _http_mutation_token(host, port)
-        _http_mutation_session_id(host, port)
+        token, _session_id, session_cookie, _bootstrap_token = _http_bootstrap_session(server)
         status, body = _http_post_raw(
             host,
             port,
             f"/api/review-actions/{ids['runtime_summary_event_id']}/approve",
             "{",
-            headers={"X-Chronicle-UI-Mutation-Token": token},
+            headers={
+                "Cookie": session_cookie,
+                "X-Chronicle-UI-Mutation-Token": token,
+            },
         )
         assert status == 400
         payload = json.loads(body)
@@ -4215,7 +4740,10 @@ def test_http_review_action_rejects_invalid_json_and_non_object_body(tmp_path):
             port,
             f"/api/review-actions/{ids['runtime_summary_event_id']}/approve",
             "[]",
-            headers={"X-Chronicle-UI-Mutation-Token": token},
+            headers={
+                "Cookie": session_cookie,
+                "X-Chronicle-UI-Mutation-Token": token,
+            },
         )
         assert status == 400
         payload = json.loads(body)
@@ -4595,8 +5123,9 @@ def test_http_review_action_enabled_route_handles_decision_persistence_failure(t
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
     try:
-        token = _http_mutation_token(host, port)
-        mutation_session_id = _http_mutation_session_id(host, port)
+        token, mutation_session_id, session_cookie, _bootstrap_token = (
+            _http_bootstrap_session(server)
+        )
         status, body = _http_post(
             host,
             port,
@@ -4610,7 +5139,10 @@ def test_http_review_action_enabled_route_handles_decision_persistence_failure(t
                 "mutation_session_id": mutation_session_id,
                 "mutation_request_id": "mrq-ui-http-test-approve-persist-failure",
             },
-            headers={"X-Chronicle-UI-Mutation-Token": token},
+            headers={
+                "Cookie": session_cookie,
+                "X-Chronicle-UI-Mutation-Token": token,
+            },
         )
         assert status == 500
         payload = json.loads(body)
