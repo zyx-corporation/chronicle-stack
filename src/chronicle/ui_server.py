@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, quote, unquote, urlparse
 
+from chronicle.http_boundary import LoopbackRequestHandler
 from chronicle.errors import ChronicleError, UIHostNotLoopbackError
 from chronicle.exporters.html_exporter import HtmlDashboardExporter
 from chronicle.models.ai_boundary import AiBoundaryPreview
@@ -14948,12 +14949,16 @@ def create_handler(
         workspace_enabled=workspace_enabled,
     )
 
-    class ChronicleUIRequestHandler(BaseHTTPRequestHandler):
+    allowed_hostnames = set(UI_ALLOWED_REQUEST_HOSTS)
+    if _is_loopback_host(host):
+        allowed_hostnames.add(host.strip().lower())
+
+    class ChronicleUIRequestHandler(LoopbackRequestHandler):
+        request_hostnames = frozenset(allowed_hostnames)
+        browser_requests = True
         server_version = "ChronicleUILocal/0.3"
 
         def do_GET(self) -> None:  # noqa: N802 - stdlib API
-            if not self._request_boundary_allowed(require_origin=False):
-                return
             parsed = urlparse(self.path)
             if parsed.path in ("/", "/index.html"):
                 self._send_html(service.html_shell())
@@ -14977,8 +14982,6 @@ def create_handler(
             )
 
         def do_POST(self) -> None:  # noqa: N802 - stdlib API
-            if not self._request_boundary_allowed(require_origin=True):
-                return
             parsed = urlparse(self.path)
             if parsed.path == UI_BOOTSTRAP_PATH:
                 self._handle_bootstrap_exchange()
@@ -15092,18 +15095,6 @@ def create_handler(
                 status=HTTPStatus.NOT_FOUND,
             )
 
-        def do_OPTIONS(self) -> None:  # noqa: N802 - stdlib API
-            if not self._request_boundary_allowed(require_origin=True):
-                return
-            self._send_json(
-                {
-                    "ok": False,
-                    "error": "method_not_allowed",
-                    "detail": "CORS preflight is not supported by this local UI.",
-                },
-                status=HTTPStatus.METHOD_NOT_ALLOWED,
-            )
-
         def log_message(self, format: str, *args: object) -> None:  # noqa: A002
             return
 
@@ -15188,57 +15179,6 @@ def create_handler(
             return len(header_values) == 1 and secrets.compare_digest(
                 header_values[0].strip(), mutation_session_token
             )
-
-        def _request_boundary_allowed(self, *, require_origin: bool) -> bool:
-            authority = self._validated_authority()
-            if authority is None:
-                self._send_json(
-                    {
-                        "ok": False,
-                        "error": "invalid_host",
-                        "detail": "Host header is not allowed for this loopback UI.",
-                    },
-                    status=HTTPStatus.MISDIRECTED_REQUEST,
-                )
-                return False
-            origin_headers = self.headers.get_all("Origin") or []
-            if not origin_headers:
-                if not require_origin:
-                    return True
-                self._send_json(
-                    {
-                        "ok": False,
-                        "error": "origin_required",
-                        "detail": "Browser write requests require the exact local UI Origin.",
-                    },
-                    status=HTTPStatus.FORBIDDEN,
-                )
-                return False
-            expected_origin = f"http://{authority}"
-            if len(origin_headers) != 1 or origin_headers[0].strip().lower() != expected_origin:
-                self._send_json(
-                    {
-                        "ok": False,
-                        "error": "origin_not_allowed",
-                        "detail": "Origin does not match the exact local UI authority.",
-                    },
-                    status=HTTPStatus.FORBIDDEN,
-                )
-                return False
-            return True
-
-        def _validated_authority(self) -> str | None:
-            host_headers = self.headers.get_all("Host") or []
-            if len(host_headers) != 1:
-                return None
-            server_port = int(self.server.server_address[1])
-            allowed_hostnames = set(UI_ALLOWED_REQUEST_HOSTS)
-            normalized_bind_host = host.strip().lower()
-            if _is_loopback_host(normalized_bind_host):
-                allowed_hostnames.add(normalized_bind_host)
-            allowed = {_ui_authority(hostname, server_port) for hostname in allowed_hostnames}
-            authority = host_headers[0].strip().lower()
-            return authority if authority in allowed else None
 
         def _send_session_required(self) -> None:
             self._send_json(

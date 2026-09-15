@@ -24,7 +24,7 @@ The Chronicle daemon adopts the following request boundary:
 
 1. `GET /health` returns exactly `{"status":"ok"}` and no startup metadata, paths, endpoint
    inventory, or credentials.
-2. Every GET and POST request is rejected before route, authentication, or business logic unless
+2. Every parsed HTTP request, including OPTIONS and unknown methods, is rejected before route, authentication, or business logic unless
    it has exactly one `Host` header equal to `127.0.0.1:<bound-port>` or
    `localhost:<bound-port>`.
 3. Every request carrying an `Origin` header is rejected. The daemon is a non-browser transport;
@@ -85,7 +85,7 @@ Tests must cover:
 - the exact minimal health body;
 - accepted `127.0.0.1:<port>` and `localhost:<port>` authorities;
 - rejected foreign, missing, duplicated, and wrong-port `Host` headers;
-- rejected Origin-bearing GET and POST requests;
+- rejected Origin-bearing requests for all methods;
 - no Chronicle primary-record mutation after a rejected request.
 
 ## T-RDE Notes
@@ -117,3 +117,13 @@ Tests must cover:
 - Reusing the daemon as a browser endpoint by weakening Origin rejection.
 - Duplicating authorization policy independently in future MCP and HTTP transports.
 
+
+## CY-1 method dispatch clarification (2026-09-15)
+
+Both HTTP surfaces use a shared request-boundary handler before method dispatch. Malformed HTTP
+syntax is rejected by the standard parser; every successfully parsed method passes Host/Origin
+validation, including unknown method names. The daemon rejects every Origin; the UI retains
+ADR-0106 same-origin rules. Unsupported methods, including OPTIONS, return 405 with
+`Allow: GET, POST` after validation. HEAD returns no response body. No response enables CORS.
+CORS remains outside the accepted client model; any future change requires a new ADR.
+This shared HTTP boundary does not implement CY-2 service-level authorization.
