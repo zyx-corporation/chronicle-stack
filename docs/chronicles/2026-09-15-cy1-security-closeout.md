@@ -89,3 +89,12 @@ security PR; silently reintroducing credential-disclosing compatibility paths.
 Reassess on every new HTTP route, credential consumer, browser delivery change, multi-user or remote
 transport. Record final integration and remaining capability work in the PR/next task. Do not
 rewrite existing chronicles or migrate authoritative event records as part of this security work.
+
+## 追加記録 — daemon token残留リスクADR
+
+利用者の「これを追加ADRとしてください」という依頼を受け、添付の
+`adr-daemon-token-residual-risk.md`をADR-0108として登録し、ADR一覧へ追加した。
+異常終了時のファイル残留と今後の回収設計を保存したうえで、ADR-0107および実装に合わせ、
+既存ファイル拒否・手動復旧が既定であること、同一UIDへの保護を保証しないこと、
+停止済みdaemonの認証権限とtoken値の残留は別であることを明確化した。
+将来の対応案は検討事項として記録し、今回の依頼による実装変更・自動回収・main統合は行わない。
