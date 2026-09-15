@@ -428,6 +428,109 @@ def test_ui_startup_metadata_json_shape(tmp_path):
         assert key in payload["ui_boundary"], f"Missing key '{key}' in ui boundary metadata"
 
 
+def test_daemon_startup_metadata_json_shape(tmp_path):
+    """chronicle daemon startup metadata builder must expose stable boundary keys."""
+    from chronicle.daemon_server import build_daemon_startup_metadata
+
+    payload = build_daemon_startup_metadata(
+        host="127.0.0.1",
+        port=8776,
+        root=tmp_path,
+        session_token="shape-token",
+    ).to_dict()
+    for key in [
+        "host",
+        "port",
+        "url",
+        "root",
+        "bind_scope",
+        "loopback_only",
+        "read_only",
+        "auth_mode",
+        "auth_header",
+        "session_token",
+        "schema_version",
+        "endpoints",
+        "write_endpoints",
+        "primary_record_path",
+        "write_endpoints_enabled",
+    ]:
+        assert key in payload, f"Missing key '{key}' in daemon startup metadata"
+
+
+def test_daemon_smoke_json_shape(tmp_path):
+    """chronicle daemon smoke --json must expose stable check keys."""
+    runner = _setup_cli(tmp_path)
+    runner.invoke(app, ["init", "--title", "Daemon Smoke Shape"])
+
+    result = runner.invoke(app, ["daemon", "smoke", "--json"])
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    for key in ["root", "passed", "server_started", "external_runtime", "checks"]:
+        assert key in payload, f"Missing key '{key}' in daemon smoke report"
+    for key in ["name", "passed", "message"]:
+        assert key in payload["checks"][0], f"Missing key '{key}' in daemon smoke check"
+
+
+def test_daemon_agent_contract_json_shape(tmp_path):
+    """chronicle daemon agent contract --json must expose stable boundary keys."""
+    runner = _setup_cli(tmp_path)
+
+    result = runner.invoke(app, ["daemon", "agent", "contract", "--json"])
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    for key in [
+        "schema_version",
+        "runtime_name",
+        "allowed_scopes",
+        "writes_through_chronicle_api",
+        "owns_primary_record",
+        "unbounded_memory_dump_allowed",
+        "review_required_for_ai_or_agent_output",
+    ]:
+        assert key in payload, f"Missing key '{key}' in daemon agent contract"
+
+
+def test_daemon_cloud_authority_json_shape(tmp_path):
+    """chronicle daemon cloud authority --json must expose stable authority keys."""
+    runner = _setup_cli(tmp_path)
+
+    result = runner.invoke(app, ["daemon", "cloud", "authority", "--json"])
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    for key in [
+        "schema_version",
+        "cloud_owns_chronicle",
+        "cloud_ai_memory_positioning_allowed",
+        "local_recovery_required",
+        "entries",
+        "unresolved",
+    ]:
+        assert key in payload, f"Missing key '{key}' in daemon cloud authority"
+
+
+def test_daemon_cloud_federation_boundary_json_shape(tmp_path):
+    """chronicle daemon cloud federation-boundary --json exposes stable boundary keys."""
+    runner = _setup_cli(tmp_path)
+
+    result = runner.invoke(app, ["daemon", "cloud", "federation-boundary", "--json"])
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    for key in [
+        "schema_version",
+        "cloud_bypasses_federation_consent",
+        "federation_is_trust_disclosure_layer",
+        "cloud_sync_is_not_publication",
+        "entries",
+        "adr_required_for_cloud_federation_bridge",
+    ]:
+        assert key in payload, f"Missing key '{key}' in daemon cloud federation boundary"
+
+
 def test_review_queue_json_shape(tmp_path):
     """chronicle review queue --json must expose stable review queue keys."""
     from chronicle.services.runtime_service import RuntimeService

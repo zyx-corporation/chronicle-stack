@@ -37,6 +37,7 @@ class RdeService:
         unresolved: list[str] | None = None,
         deviation_risks: list[str] | None = None,
         next_update_policy: list[str] | None = None,
+        api_metadata: dict | None = None,
     ) -> RdeDiffRecord:
         self.chronicle.require_initialized()
         try:
@@ -77,11 +78,14 @@ class RdeService:
         except ValueError:
             actor = Actor.ASSISTANT
 
+        payload = {"rde": record.model_dump(mode="json")}
+        if api_metadata:
+            payload["api"] = api_metadata
         self.chronicle.record_event(
             event_type=EventType.RDE_DIFF_RECORDED,
             actor=actor,
             summary=f"RDE diff recorded: {summary or rde_id}",
-            payload={"rde": record.model_dump(mode="json")},
+            payload=payload,
             artifact_id=artifact_id,
             rde_record_id=rde_id,
         )

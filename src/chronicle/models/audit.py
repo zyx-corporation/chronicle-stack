@@ -14,6 +14,7 @@ class AuditOperation(StrEnum):
     REINTERPRET = "reinterpret"
     REVIEW_DECISION = "review_decision"
     CONSENT_RECORD = "consent_record"
+    API_WRITE = "api_write"
 
 
 class AuditTargetEnvironment(StrEnum):
