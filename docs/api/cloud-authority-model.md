@@ -59,3 +59,13 @@ At commit `717a23bea3d5166262f2cdf9edfa6e4e19e79bfc`, the factory is called by
 exports the model for import. No sync or authorization consumer was found in repository
 source, scripts, or daemon routes. This is a repository-bounded finding, not a claim about
 external clients. See the [audit record](../chronicles/2026-09-15-cy1-preflight-clarifications.md).
+
+## Follow-up before Cloud implementation
+
+Whether Cloud sync or authorization is planned in another repository/service was outside
+the reachability audit; the existence or absence of such a plan has not been established.
+Cloud alignment must identify the implementation location and consumers of these contracts.
+When implementation begins, repeat the data-flow and default-deny review across the actual
+service/repository boundaries, including imports, serialized configuration, and copied policy
+values. Complete that review before operational use. The current repository-only finding
+does not carry forward as approval of future Cloud behavior.
