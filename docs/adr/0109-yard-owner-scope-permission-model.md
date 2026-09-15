@@ -165,8 +165,21 @@ actor／originは来歴、メンバー／principalは所属・認証主体の概
 
 改称方針はADR内の表記だけでなく、`src/chronicle/api/agent_runtime.py`の型・フィールド、
 公開export、CLIの出力契約、関連文書・テストまでを対象とする。
-`cloud_authority.py`の`consent_required`・`trust_scope_required`等はこのAgent改称に
-含めない。Cloud側フィールドの名称・意味はCloud整合整理で別途判断する。
+改称の判定基準はファイル名や`scope`という文字列ではなく、操作種別を表す契約かどうかとする。
+`cloud_authority.py`の既存フィールドは以下の理由で今回のAgent改称の対象外と確定する。
+
+| フィールド例 | 意味の軸 | 対象外の根拠 |
+|---|---|---|
+| `can_be_source_authority`, `cloud_owns_chronicle` | 正本性・正本の帰属境界 | Agentの操作種別でもADR-0109の所有者スコープでもない |
+| `consent_required`, `redaction_preview_required` | 同意・開示前確認 | 操作種別の分類でもgrantでもない |
+| `trust_scope_required` | Federationの信頼・開示範囲の要求 | 所有構造ではなく、修飾された別契約のscopeである |
+| `belongs_to_cloud`, `belongs_to_federation` | 機能の担当境界 | メンバーの所属や権限付与を表さない |
+
+Cloudファイル全体を「正本性だけ」と扱うこともしない。機械的な一括置換は禁止し、
+Agent改称の変更対象一覧で型・フィールド・参照先を限定する。
+この対象外判定はCloud契約の将来の変更を禁止するものではない。
+Cloud固有の意味・名称を変更する必要が生じた場合は、Agent改称に混ぜず、
+利用箇所・意味差分・互換性を示す独立した契約変更としてレビューする。
 
 外部消費者について、Sayane MCP Server向け露出ポリシー・対応表を含め、
 他リポジトリのコード／文書が旧型名・旧JSONキーを参照するかを実装前に確認する。

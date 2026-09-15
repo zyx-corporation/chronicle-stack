@@ -60,12 +60,32 @@ exports the model for import. No sync or authorization consumer was found in rep
 source, scripts, or daemon routes. This is a repository-bounded finding, not a claim about
 external clients. See the [audit record](../chronicles/2026-09-15-cy1-preflight-clarifications.md).
 
-## Follow-up before Cloud implementation
+## Cloud implementation entry gate (blocking)
 
-Whether Cloud sync or authorization is planned in another repository/service was outside
-the reachability audit; the existence or absence of such a plan has not been established.
-Cloud alignment must identify the implementation location and consumers of these contracts.
-When implementation begins, repeat the data-flow and default-deny review across the actual
-service/repository boundaries, including imports, serialized configuration, and copied policy
-values. Complete that review before operational use. The current repository-only finding
-does not carry forward as approval of future Cloud behavior.
+Status: **BLOCKED — prerequisites not verified**.
+
+Do not begin operational Cloud sync, sharing, or authorization implementation until every
+item below is satisfied. Planning, repository discovery, contract review, and the agreed
+containment/grant schema-only work may proceed within their own prerequisites; they do not
+clear this gate or authorize connecting the draft to an operational path.
+
+- [ ] Identify implementation repositories/services and their responsible maintainers.
+  Record actual and planned consumers, including external code, imports, serialized
+  configuration, and copied policy values. Whether an external implementation is planned
+  was outside the previous audit and remains unverified.
+- [ ] Trace existing and proposed data flows across those boundaries. Demonstrate that
+  `team_sync.consent_required=False`, same-organization status, and authority labels cannot
+  substitute for an explicit grant or bypass default-deny. For code not yet written, review
+  the proposed wiring and acceptance cases; do not claim runtime verification.
+- [ ] Specify permission and consent separately, resolving the draft fields' operational
+  meaning and any required contract changes. Apply the semantic rename boundary in
+  [ADR-0109](../adr/0109-yard-owner-scope-permission-model.md).
+- [ ] The implementation owner supplies repository/revision or design references, findings,
+  unresolved risks, and acceptance cases in the implementation issue/PR. A human reviewer
+  records clearance of all prerequisites there, linked from this gate. Unknown consumers
+  or unresolved bypass paths keep the gate blocked.
+
+No clearance record exists yet. The current repository-only finding is not gate clearance.
+This is an explicit review/process gate, not an automated CI restriction. Before operational
+use, validate the implemented paths and negative authorization cases. Reopen the review if
+the implementation location, consumers, or policy wiring changes.
