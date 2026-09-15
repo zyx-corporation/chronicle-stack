@@ -12,6 +12,8 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 from pathlib import Path
 import secrets
+import signal
+import threading
 from typing import Any
 from urllib.parse import parse_qs, urlparse
 
@@ -28,7 +30,8 @@ from chronicle.api.contracts import (
 )
 from chronicle.http_boundary import LoopbackRequestHandler
 from chronicle.models.event import Actor, EventType
-from chronicle.errors import UIHostNotLoopbackError
+from chronicle.errors import ChronicleError, UIHostNotLoopbackError
+from chronicle.daemon_credentials import daemon_token_file, validate_daemon_token
 from chronicle.services.api_adapter_service import ApiAdapterService
 from chronicle.services.chronicle_service import ChronicleService
 from chronicle.ui_server import DEFAULT_UI_HOST, _is_loopback_host
@@ -50,11 +53,12 @@ class DaemonStartupMetadata:
     read_only: bool
     auth_mode: str
     auth_header: str
-    session_token: str
+    token_file: str
     schema_version: str
     endpoints: list[str]
     write_endpoints: list[str]
     primary_record_path: str
+    startup_schema_version: str = "chronicle-daemon-startup/v2"
     primary_record_authoritative: bool = True
     write_endpoints_enabled: bool = True
     autostart: bool = False
@@ -103,10 +107,9 @@ def build_daemon_startup_metadata(
     host: str = DEFAULT_DAEMON_HOST,
     port: int = DEFAULT_DAEMON_PORT,
     root: Path | None = None,
-    session_token: str | None = None,
+    token_file: Path | None = None,
 ) -> DaemonStartupMetadata:
     root_path = (root or Path.cwd()).resolve()
-    token = session_token or secrets.token_urlsafe(24)
     return DaemonStartupMetadata(
         host=host,
         port=port,
@@ -117,7 +120,7 @@ def build_daemon_startup_metadata(
         read_only=False,
         auth_mode="loopback_session_token",
         auth_header=DAEMON_AUTH_HEADER,
-        session_token=token,
+        token_file=str((token_file or root_path / ".chronicle" / "daemon.token").absolute()),
         schema_version=API_SCHEMA_VERSION,
         endpoints=[
             "GET /health",
@@ -151,11 +154,8 @@ def create_daemon_handler(
     session_token: str | None = None,
 ) -> type[BaseHTTPRequestHandler]:
     root_path = root or Path.cwd()
-    metadata = build_daemon_startup_metadata(
-        host=host,
-        port=port,
-        root=root_path,
-        session_token=session_token,
+    token = validate_daemon_token(
+        secrets.token_urlsafe(32) if session_token is None else session_token
     )
     adapter = ApiAdapterService(root_path)
 
@@ -274,8 +274,8 @@ def create_daemon_handler(
                 )
 
         def _authorized(self) -> bool:
-            supplied_token = str(self.headers.get(DAEMON_AUTH_HEADER, "") or "")
-            return secrets.compare_digest(supplied_token, metadata.session_token)
+            values = self.headers.get_all(DAEMON_AUTH_HEADER) or []
+            return len(values) == 1 and secrets.compare_digest(values[0].encode(), token.encode())
 
         def _send_json(self, body: dict[str, Any], *, status: HTTPStatus = HTTPStatus.OK) -> None:
             payload = json.dumps(body, ensure_ascii=False, indent=2).encode("utf-8")
@@ -314,24 +314,36 @@ def serve_daemon(
     host: str = DEFAULT_DAEMON_HOST,
     port: int = DEFAULT_DAEMON_PORT,
     root: Path | None = None,
-    session_token: str | None = None,
+    token_file: Path | None = None,
 ) -> DaemonStartupMetadata:
     root_path = root or Path.cwd()
     validate_daemon_root(root_path)
     validate_daemon_host(host)
     metadata = build_daemon_startup_metadata(
-        host=host,
-        port=port,
-        root=root_path,
-        session_token=session_token,
+        host=host, port=port, root=root_path, token_file=token_file,
     )
-    server = make_daemon_server(host=host, port=port, root=root_path, session_token=metadata.session_token)
+    on_main_thread = threading.current_thread() is threading.main_thread()
+    previous_sigterm = None
+
+    def stop(signum, frame):
+        raise KeyboardInterrupt
+
+    if on_main_thread:
+        previous_sigterm = signal.signal(signal.SIGTERM, stop)
     try:
-        server.serve_forever()
-    except KeyboardInterrupt:  # pragma: no cover - interactive shutdown path
-        pass
+        with daemon_token_file(Path(metadata.token_file)) as token:
+            server = make_daemon_server(host=host, port=port, root=root_path, session_token=token)
+            try:
+                server.serve_forever()
+            except KeyboardInterrupt:
+                pass
+            finally:
+                server.server_close()
+    except OSError as exc:
+        raise ChronicleError("DAEMON_START_FAILED", "Cannot start or serve the local daemon.") from exc
     finally:
-        server.server_close()
+        if on_main_thread:
+            signal.signal(signal.SIGTERM, previous_sigterm)
     return metadata
 
 
@@ -362,7 +374,6 @@ def run_daemon_smoke(
             host=host,
             port=port,
             root=root_path,
-            session_token="smoke-token",
         )
         checks.append(
             DaemonSmokeCheck(

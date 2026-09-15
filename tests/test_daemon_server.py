@@ -86,7 +86,6 @@ def test_daemon_startup_metadata_shape(tmp_path) -> None:
         host="127.0.0.1",
         port=8776,
         root=tmp_path,
-        session_token="test-token",
     )
     payload = metadata.to_dict()
 
@@ -113,7 +112,7 @@ def test_daemon_cli_json_shape(tmp_path) -> None:
 
     result = runner.invoke(
         app,
-        ["daemon", "start", "--session-token", "shape-token", "--json"],
+        ["daemon", "start", "--json"],
     )
 
     assert result.exit_code == 0
@@ -127,12 +126,13 @@ def test_daemon_cli_json_shape(tmp_path) -> None:
         "read_only",
         "write_endpoints",
         "auth_header",
-        "session_token",
+        "token_file",
         "endpoints",
         "primary_record_path",
     ]:
         assert key in payload
-    assert payload["session_token"] == "shape-token"
+    assert "session_token" not in payload
+    assert payload["token_file"].endswith(".chronicle/daemon.token")
 
 
 def test_daemon_smoke_checks_without_starting_server(tmp_path) -> None:
@@ -191,7 +191,7 @@ def test_daemon_health_context_timeline_boundaries_and_write_event(tmp_path) -> 
             host="127.0.0.1",
             port=0,
             root=tmp_path,
-            session_token="daemon-test-token",
+            session_token="abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_",
         )
     except OSError as exc:
         pytest.skip(f"local socket bind unavailable in this environment: {exc}")
@@ -207,7 +207,7 @@ def test_daemon_health_context_timeline_boundaries_and_write_event(tmp_path) -> 
         assert status == 401
         assert json.loads(body)["error"] == "unauthorized"
 
-        headers = {DAEMON_AUTH_HEADER: "daemon-test-token"}
+        headers = {DAEMON_AUTH_HEADER: "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_"}
         status, body = _http_get(
             host,
             port,
@@ -343,7 +343,7 @@ def test_daemon_rejects_untrusted_host_and_browser_origin_before_route_logic(tmp
             host="127.0.0.1",
             port=0,
             root=tmp_path,
-            session_token="daemon-boundary-token",
+            session_token="ZYXWVUTSRQPONMLKJIHGFEDCBAabcdefghijklmnopqrstuvwxyz9876543210_-",
         )
     except OSError as exc:
         pytest.skip(f"local socket bind unavailable in this environment: {exc}")
@@ -405,7 +405,7 @@ def test_daemon_rejects_untrusted_host_and_browser_origin_before_route_logic(tmp
             port,
             "/context",
             headers={
-                DAEMON_AUTH_HEADER: "daemon-boundary-token",
+                DAEMON_AUTH_HEADER: "ZYXWVUTSRQPONMLKJIHGFEDCBAabcdefghijklmnopqrstuvwxyz9876543210_-",
                 "Origin": "https://attacker.example",
             },
         )
@@ -430,7 +430,7 @@ def test_daemon_rejects_untrusted_host_and_browser_origin_before_route_logic(tmp
                 "summary": "Must not be recorded",
             },
             headers={
-                DAEMON_AUTH_HEADER: "daemon-boundary-token",
+                DAEMON_AUTH_HEADER: "ZYXWVUTSRQPONMLKJIHGFEDCBAabcdefghijklmnopqrstuvwxyz9876543210_-",
                 "Origin": "https://attacker.example",
             },
         )

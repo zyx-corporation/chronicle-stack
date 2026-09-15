@@ -39,3 +39,11 @@ Before leaving draft status, any breaking change must either:
 
 - increment `schema_version`; or
 - provide a compatibility adapter and contract test for the old shape.
+
+## CY-1 security cut (ADR-0107)
+
+The unreleased daemon startup contract changes to `chronicle-daemon-startup/v2`, exposed as
+`startup_schema_version`. It removes `session_token` and adds `token_file`; `--session-token` is
+removed in favor of generated-file delivery. There is intentionally no credential-disclosing
+compatibility adapter. The `schema_version` field continues to identify the unchanged API payload
+contract, `chronicle-api/v0.1-draft`. Consumers of startup metadata must migrate explicitly.
