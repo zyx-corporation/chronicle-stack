@@ -39,7 +39,8 @@ Kazane連携、将来の利用者向けアプリに加えて、`csg-rag` や
 `chronicle-external-query` のような下流ランタイム、検索、検証ワークスペースも、
 `Chronicle Yard` 配下の関連製品または接続面として整理できます。
 
-詳細は [Chronicle Yard Naming Note](./future/chronicle-yard-naming-note.md) を参照してください。
+概要は [Chronicle Yard Overview](./yard/overview.ja.md) を参照してください。名称検討の詳細は
+[Chronicle Yard Naming Note](./future/chronicle-yard-naming-note.md) を参照してください。
 
 ## Chronicle Stack ではないもの
 

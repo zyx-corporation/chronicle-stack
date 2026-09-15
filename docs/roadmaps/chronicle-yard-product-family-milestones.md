@@ -87,10 +87,10 @@ CY-7 — Federation and Product-Family Governance
 
 | ID | Status | Current note |
 |---|---|---|
-| CY-0 | In progress | Yard naming note exists; roadmap references added; no implementation rename performed |
-| CY-1 | Next | Review Stack handoff/export contracts against EQ and CSG-RAG needs |
-| CY-2 | Next | Draft Stack / CSG-RAG / EQ responsibility matrix |
-| CY-3 | Pending | Wait for API contract skeleton before daemon implementation |
+| CY-0 | Complete for current boundary cut | Yard naming note and `docs/yard/README.md` define product-family vocabulary without implementation rename |
+| CY-1 | In progress | `docs/yard/handoff-contracts.md` starts Stack handoff/export contract review against EQ and CSG-RAG needs |
+| CY-2 | In progress | `docs/yard/responsibility-matrix.md` starts Stack / CSG-RAG / EQ responsibility mapping |
+| CY-3 | In progress | `docs/api/README.md` and `src/chronicle/api/contracts.py` provide the first API contract skeleton before daemon implementation |
 | CY-4 | Pending | Wait for CY-2/CY-3 contract clarity |
 | CY-5 | Pending | Wait for operator journey across Stack, CSG-RAG, and EQ |
 | CY-6 | Pending | Wait for Cloud authority labels and local recovery guarantees |

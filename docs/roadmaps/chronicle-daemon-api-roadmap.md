@@ -82,6 +82,21 @@ error contract, audit insertion, and tests before implementation.
 
 ## 5. Implementation Phases
 
+### Current Implementation Status
+
+| Phase | Status | Evidence |
+|---|---|---|
+| Phase 0 | In progress | ADR-0101 accepted; API threat model and connector priority drafts exist under `docs/api/` |
+| Phase 1 | In progress | `src/chronicle/api/contracts.py` defines the six minimum transport-free request contracts |
+| Phase 2 | In progress | `src/chronicle/services/api_adapter_service.py` provides dry-run write previews and read adapters without HTTP |
+| Phase 3 | In progress | `chronicle daemon start` exposes loopback-only read endpoints with session-token auth |
+| Phase 4 | In progress | `POST /events`, `POST /diffs`, and `POST /assertions` committed write paths are available with idempotency metadata and audit insertion |
+| Phase 5 | In progress | Local connector prototype simulator covers Obsidian, Git, browser, agent, and business fact shapes without external integration |
+| Phase 6 | In progress | `chronicle daemon smoke`, operator runbook, readiness, compatibility policy, and security review drafts exist |
+| Phase 7 | In progress | Draft executable agent runtime contract and CLI inspection surface exist; no real Kazane integration yet |
+| Phase 8 | In progress | Draft executable cloud authority model and CLI inspection surface exist; no cloud implementation |
+| Phase 9 | In progress | Draft executable Cloud/Federation boundary matrix and CLI inspection surface exist |
+
 ### Phase 0: Manifest and Boundary Lock
 
 Purpose: Turn the API idea into a bounded implementation problem.

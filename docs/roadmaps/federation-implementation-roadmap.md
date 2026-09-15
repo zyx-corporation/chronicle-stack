@@ -56,6 +56,21 @@ Sayane 連携は、外部AI接続の利便性ではなく、文脈の持ち出�
 | Phase 8 | Context SNS Surface | 問いフォロー、反論、再審、購読UIを追加する |
 | Phase 9 | Networked Federation | ノード間の実通信と同期を導入する |
 
+### 3.1 Current Implementation Status
+
+| Phase | Status | Evidence |
+|---|---|---|
+| Phase 0 | Complete for current alignment cut | Existing Core / Boundary / Package Review surfaces are mapped in this roadmap |
+| Phase 1 | Implemented for local bundle scope | `chronicle federation package create`, `inspect`, `preview`, `import-preview` |
+| Phase 2 | Implemented for local-dev signature scope | package manifest file hashes, unsigned/signed/mismatch/expired/revoked verification |
+| Phase 3 | Implemented for preflight/advisory scope | `chronicle federation boundary check`, `chronicle federation consent record` |
+| Phase 4 | Implemented for initial object model scope | Chronicle object models cover question, conversation, decision, artifact, delta, objection, hypothesis, and decay |
+| Phase 5 | Implemented for local message MVP scope | federation message envelope, inbox/outbox storage, preview-only semantics |
+| Phase 6 | Implemented for initial local trust scope | local trust service and trust CLI remain context-scoped and advisory |
+| Phase 7 | Pending | No Sayane / external AI adapter integration is fixed here |
+| Phase 8 | Pending | No full Context SNS surface is implemented |
+| Phase 9 | Pending | No networked federation transport is implemented |
+
 ## 4. Phase 0: Baseline Alignment
 
 ### 4.1 目的

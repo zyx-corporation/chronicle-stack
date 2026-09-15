@@ -276,6 +276,11 @@ Stage M Chronicle Yard Product Family Milestones は全段階を横断する製�
 ## 6. 優先順位
 
 短期優先は、Stage C までの整合確認と、Stage E / F の package + Manifest foundation である。
+2026-08-07 時点では、Stage C は closeout 済みであり、Stage E / F は local bundle、
+inspect/preview/import-preview、Manifest hash verification、local-dev signature status の
+範囲で実装済みである。次の実装優先は、Chronicle Yard の CY-1 / CY-2 契約整理、
+Daemon/API Phase 0-2 の contract-first adapter、そして Daemon/API Phase 3 以降へ進む前
+の auth/session/bind 方針である。
 
 理由は、Chronicle Stack はすでに local-first の記録基盤、export、UI、runtime surface を持っているため、次に必要なのは「外へ出す前の安全な境界」である。GraphRAG query engine や networked federation を急ぐより、package、Manifest、redaction、consent、verify、preview を先に固める方が、文脈主権に忠実である。
 

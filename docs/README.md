@@ -6,6 +6,8 @@ This directory contains the stable documentation surface for Chronicle Stack.
 
 - [Architecture](architecture.md): system structure and major boundaries.
 - [Interface Contracts](interface-contracts.md): CLI and data contract expectations.
+- [Chronicle Event Origin Contract](specs/chronicle-event-origin-contract-v1.md): stable design
+  contract for claim/generation attribution, append-only cutover, and derived-surface fidelity.
 - [CLI Reference](cli-reference.md): current command reference for the `chronicle` CLI.
 - [Data Model](data-model.md): model-level overview.
 - [Testing Strategy](testing-strategy.md): test and validation expectations.
@@ -18,6 +20,10 @@ This directory contains the stable documentation surface for Chronicle Stack.
   planned daemon/API track.
 - [API Connector Prototype Simulator](api/connector-prototypes.md): local simulator for
   Phase 5 connector prototype evaluation without external app integration.
+- [Chronicle Yard Product Map](yard/README.md): product-family boundary map for Stack,
+  API, Cloud, CSG-RAG, chronicle-external-query, and Kazane.
+- [Chronicle Yard Overview](yard/overview.ja.md): Japanese overview of the Yard concept,
+  operator flow, product-family roles, and non-goals.
 - [Chronicle Daemon and API Roadmap](roadmaps/chronicle-daemon-api-roadmap.md): planned
   local resident service, tool-facing API, agent-runtime integration, and Chronicle Cloud track
   under the rule that Chronicle Stack is Chronicle preservation, not cloud AI memory.
