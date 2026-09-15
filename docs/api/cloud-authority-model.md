@@ -84,8 +84,22 @@ clear this gate or authorize connecting the draft to an operational path.
   unresolved risks, and acceptance cases in the implementation issue/PR. A human reviewer
   records clearance of all prerequisites there, linked from this gate. Unknown consumers
   or unresolved bypass paths keep the gate blocked.
+- [ ] Before clearing this gate, decide whether technical enforcement is needed for the
+  actual implementation repositories. Record the decision, rationale, responsible owner,
+  and any remaining risk; implement the selected control before operational implementation
+  begins if enforcement is required. This decision does not mandate a particular mechanism.
 
 No clearance record exists yet. The current repository-only finding is not gate clearance.
 This is an explicit review/process gate, not an automated CI restriction. Before operational
 use, validate the implemented paths and negative authorization cases. Reopen the review if
 the implementation location, consumers, or policy wiring changes.
+
+### Recorded debt: a procedural gate can be overlooked
+
+An implementer or reviewer can miss this document and proceed despite BLOCKED status.
+Writing a procedure does not ensure it is followed, as the PR #391 diff-classification
+failure illustrated. Technical enforcement is deferred, not considered unnecessary.
+Reassess it at Cloud implementation entry using the checklist above. Options to evaluate
+include CI warnings on relevant path changes and required review mechanisms; warnings alone
+are not a blocking control, and repository boundaries must be included in the assessment.
+No such automation is implemented by this documentation change.
