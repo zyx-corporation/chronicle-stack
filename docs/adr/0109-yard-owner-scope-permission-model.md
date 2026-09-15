@@ -140,3 +140,23 @@ ADR-0109の初回登録時には未コミットだったが、その後の文書
   新たなプロダクトの所有構造・ロール要件が明らかになった時点で再評価する。
 
 出所: 利用者提供の `chronicle-yard-adr-scope-permission-model.md`。
+
+## 2026-09-15補足: 操作種別と所有者スコープの命名方針
+
+Agent側の操作区分は`AgentCapabilityScope`から`AgentCapabilityKind`へ改称する方針とする。
+関連する`capability_scope`は`capability_kind`、`allowed_scopes`は
+`allowed_capability_kinds`を移行先とする。これらは操作種別の宣言であり、grantの存在や
+実際の認可成功を意味しない。所有構造と操作区分を文脈だけで読み分け続ける方式は採らない。
+
+この設計領域の新しい語彙では、修飾なしの「スコープ」を所有者構造に予約する。
+既存のcontext scope、Federation trust scopeや外部規約は別契約であり、一括改名しない。
+これらの境界では修飾語と定義を明示する。
+
+改称は未実装。公開import、CLI表示、JSONフィールド、文書、テストを一緒に移行する。
+`read_context`等の列挙値と`agent.read_context`等のcapability IDは維持する。
+JSONの契約バージョンと旧名の移行期間・廃止条件を実装前に定め、無告知で旧契約を変更しない。
+互換エイリアスを採る場合も移行専用とし、新しい正規契約に二つの呼称を恒久的に残さない。
+
+actor／originは来歴、メンバー／principalは所属・認証主体の概念であり、同一ではない。
+文字列一致から主体の同一性を推定したり、originからgrantを導出したりしない。
+検証済み主体との対応方法は引き続き実装仕様化時の未決事項とする。

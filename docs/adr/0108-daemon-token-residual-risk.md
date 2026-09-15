@@ -89,6 +89,10 @@ SIGKILLによる強制終了や停電などでは、token fileがファイルシ
 
 ## 関連
 
+2026-09-15補足: 自動回収の安全条件設計は共通認可を待たず独立して進める。
+Codexが同日のタスク内で[設計初版](../security/daemon-token-recovery-design.md)を作成した。
+方式の採否・実装開始日は未確定であり、本ADRの既存ファイル拒否を変更しない。
+
 - [daemon token fileのライフサイクル](0107-daemon-private-token-file.md)
 - [daemon API運用手順](../releases/operations/daemon-api-operator-runbook.md)
 - [2026-09-15 CY-1作業履歴](../chronicles/2026-09-15-cy1-security-closeout.md)

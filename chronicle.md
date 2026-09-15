@@ -128,3 +128,10 @@ do not rewrite prior history to make the project appear cleaner.
   reviewing handoff/export contract gaps.
 - Re-evaluate when: API contracts, Chronicle Cloud authority labels, or Yard-family governance
   move from planning into implementation.
+
+## 2026-09-15: PR分離時の内容確認を必須化
+
+PR #391ではコミット単位の分類だけでtask 0内部の異種変更を分離できなかった。
+再発防止としてAGENTS.mdに、実diffによる分類の再確認、混在コミットの内容単位の分割、
+必要依存・除外内容の記録、移植後の最終差分確認を追加した。
+確認と設計方針の記録は[CY-1後続着手前の確認](docs/chronicles/2026-09-15-cy1-preflight-clarifications.md)を参照。
