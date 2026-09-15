@@ -258,6 +258,10 @@ Acceptance criteria:
 
 ### Phase 8: Chronicle Cloud Planning
 
+Operational Cloud implementation is blocked until the
+[Cloud implementation entry gate](../api/cloud-authority-model.md#cloud-implementation-entry-gate-blocking)
+is cleared with linked review evidence. Planning progress does not clear this gate.
+
 Purpose: Define cloud sync and team-sharing without turning Chronicle Cloud into cloud AI memory
 or moving Chronicle authority into the cloud by default.
 

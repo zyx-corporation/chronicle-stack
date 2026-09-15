@@ -99,6 +99,10 @@ local `act` is the primary Core CI execution surface; GitHub Actions remains the
 
 - Commit messages follow concise prefix conventions: `fix:`, `feat:`, `test:`, `ci:`, `docs:`.
 - Pull requests must pass CI (ruff + pytest) before merging.
+- When splitting work, verify each commit's classification against its actual diff, not its
+  title or task number. Record included changes, excluded changes, and required dependencies.
+  Split mixed commits by content before replaying them; do not silently include unrelated
+  changes as dependencies. Review the final diff against the target branch after cherry-picking.
 
 ## Documentation Rules
 

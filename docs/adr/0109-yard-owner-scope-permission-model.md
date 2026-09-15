@@ -140,3 +140,49 @@ ADR-0109の初回登録時には未コミットだったが、その後の文書
   新たなプロダクトの所有構造・ロール要件が明らかになった時点で再評価する。
 
 出所: 利用者提供の `chronicle-yard-adr-scope-permission-model.md`。
+
+## 2026-09-15補足: 操作種別と所有者スコープの命名方針
+
+Agent側の操作区分は`AgentCapabilityScope`から`AgentCapabilityKind`へ改称する方針とする。
+関連する`capability_scope`は`capability_kind`、`allowed_scopes`は
+`allowed_capability_kinds`を移行先とする。これらは操作種別の宣言であり、grantの存在や
+実際の認可成功を意味しない。所有構造と操作区分を文脈だけで読み分け続ける方式は採らない。
+
+この設計領域の新しい語彙では、修飾なしの「スコープ」を所有者構造に予約する。
+既存のcontext scope、Federation trust scopeや外部規約は別契約であり、一括改名しない。
+これらの境界では修飾語と定義を明示する。
+
+改称は未実装。公開import、CLI表示、JSONフィールド、文書、テストを一緒に移行する。
+`read_context`等の列挙値と`agent.read_context`等のcapability IDは維持する。
+JSONの契約バージョンと旧名の移行期間・廃止条件を実装前に定め、無告知で旧契約を変更しない。
+互換エイリアスを採る場合も移行専用とし、新しい正規契約に二つの呼称を恒久的に残さない。
+
+actor／originは来歴、メンバー／principalは所属・認証主体の概念であり、同一ではない。
+文字列一致から主体の同一性を推定したり、originからgrantを導出したりしない。
+検証済み主体との対応方法は引き続き実装仕様化時の未決事項とする。
+
+### 改称実装前の確認対象
+
+改称方針はADR内の表記だけでなく、`src/chronicle/api/agent_runtime.py`の型・フィールド、
+公開export、CLIの出力契約、関連文書・テストまでを対象とする。
+改称の判定基準はファイル名や`scope`という文字列ではなく、操作種別を表す契約かどうかとする。
+`cloud_authority.py`の既存フィールドは以下の理由で今回のAgent改称の対象外と確定する。
+
+| フィールド例 | 意味の軸 | 対象外の根拠 |
+|---|---|---|
+| `can_be_source_authority`, `cloud_owns_chronicle` | 正本性・正本の帰属境界 | Agentの操作種別でもADR-0109の所有者スコープでもない |
+| `consent_required`, `redaction_preview_required` | 同意・開示前確認 | 操作種別の分類でもgrantでもない |
+| `trust_scope_required` | Federationの信頼・開示範囲の要求 | 所有構造ではなく、修飾された別契約のscopeである |
+| `belongs_to_cloud`, `belongs_to_federation` | 機能の担当境界 | メンバーの所属や権限付与を表さない |
+
+Cloudファイル全体を「正本性だけ」と扱うこともしない。機械的な一括置換は禁止し、
+Agent改称の変更対象一覧で型・フィールド・参照先を限定する。
+この対象外判定はCloud契約の将来の変更を禁止するものではない。
+Cloud固有の意味・名称を変更する必要が生じた場合は、Agent改称に混ぜず、
+利用箇所・意味差分・互換性を示す独立した契約変更としてレビューする。
+
+外部消費者について、Sayane MCP Server向け露出ポリシー・対応表を含め、
+他リポジトリのコード／文書が旧型名・旧JSONキーを参照するかを実装前に確認する。
+Suggested等の設計状態と実際の利用状態を区別し、MCP未実装という記録だけから
+外部消費者なしと結論しない。参照先と利用状況に基づいて契約バージョン、互換措置の要否、
+移行期間を決める。今回の補足は確認項目の登録であり、外部調査完了を意味しない。
