@@ -48,10 +48,13 @@ chronicle artifact create --title "Basic Spec" --type specification --file docs/
 chronicle decision record --artifact <ARTIFACT_ID> --type accepted --reason "採用理由"
 chronicle export --format yaml
 chronicle ui-smoke --json
-chronicle ui --workspace
+chronicle ui --workspace --open
 ```
 
-`--workspace` は loopback-local のセッショントークン境界内で、メモ・成果物の保存とGraphRAG質問を有効にします。OpenAIキーはリポジトリのignore対象 `.env` に `OPENAI_API_KEY` として置きます。
+`--workspace` は loopback-local のセッション境界内で、メモ・成果物の保存とGraphRAG質問を
+有効にします。新しいブラウザセッションは `--open` が渡す短時間・一回限りの bootstrap
+から開始します。表示されたベース URL を手で開くだけでは、データを含まない locked shell
+のままです。OpenAIキーはリポジトリのignore対象 `.env` に `OPENAI_API_KEY` として置きます。
 
 ```bash
 chronicle runtime graphrag-rebuild

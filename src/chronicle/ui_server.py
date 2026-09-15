@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
-import html
 import ipaddress
 import json
 import re
 import secrets
+import threading
+import time
 import webbrowser
 from dataclasses import asdict, dataclass
 from http import HTTPStatus
@@ -71,6 +72,12 @@ SESSION_LABEL_PATTERN = re.compile(r"^[a-z0-9][a-z0-9._-]{1,63}$")
 MUTATION_TOKEN_HEADER = "X-Chronicle-UI-Mutation-Token"
 MUTATION_REQUEST_ID_PATTERN = re.compile(r"^[a-z0-9][a-z0-9._:-]{7,127}$")
 MUTATION_SESSION_ID_PATTERN = re.compile(r"^[a-z0-9][a-z0-9._:-]{7,127}$")
+UI_ALLOWED_REQUEST_HOSTS = frozenset({"127.0.0.1", "localhost"})
+UI_BOOTSTRAP_FRAGMENT_KEY = "chronicle-bootstrap"
+UI_BOOTSTRAP_PATH = "/api/session/bootstrap"
+UI_BOOTSTRAP_TTL_SECONDS = 60.0
+UI_SESSION_COOKIE = "chronicle_ui_session"
+UI_SESSION_PATH = "/api/session"
 
 
 class UIAuthMode:
@@ -2148,11 +2155,12 @@ def build_ui_boundary_metadata(
         session_gating=auth_mode == UIAuthMode.LOOPBACK_LOCAL,
         session_gating_summary_key=_boolean_summary_payload(bool(auth_mode == UIAuthMode.LOOPBACK_LOCAL))[0],
         session_gating_summary=_boolean_summary_payload(bool(auth_mode == UIAuthMode.LOOPBACK_LOCAL))[1],
-        shared_machine_safe=mutation_enabled,
+        shared_machine_safe=False,
         mutation_blockers=tuple(blockers),
         mutation_readiness_status="enabled" if mutation_enabled else "preview_only",
         mutation_readiness_message=(
-            "GUI mutation is explicitly enabled for loopback-local reviewer-declared actions."
+            "GUI mutation is explicitly enabled inside the single-operator browser request "
+            "boundary; same-user processes and direct file access remain outside this boundary."
             if mutation_enabled
             else (
                 "GUI mutation remains disabled; capability flag records preview intent only until session enablement, auth, authorization, reviewer identity, and session proof all align."
@@ -8545,13 +8553,8 @@ class ChronicleUIDataService:
         )
 
     def html_shell(self) -> str:
-        metadata = self.chronicle.require_initialized()
-        title = html.escape(metadata.title)
-        root = html.escape(str(self.root.resolve()))
         review_warning_labels_json = json.dumps(REVIEW_WARNING_LABELS, ensure_ascii=False)
         ui_i18n_catalog_json = json.dumps(UI_I18N_CATALOG, ensure_ascii=False)
-        mutation_token_json = json.dumps(self.mutation_session_token, ensure_ascii=False)
-        mutation_session_id_json = json.dumps(self.mutation_session_id, ensure_ascii=False)
         mutation_enabled = self.ui_boundary()["ui_boundary"]["mutation_enabled"]
         workspace_enabled = self.workspace_enabled
         return f"""<!DOCTYPE html>
@@ -8559,7 +8562,7 @@ class ChronicleUIDataService:
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Chronicle Stack ローカルUI — {title}</title>
+<title>Chronicle Stack ローカルUI</title>
 <style>
 :root {{
   --chronicle-font-scale: 100%;
@@ -8830,8 +8833,7 @@ th {{ position: sticky; top: 0; background: #f7f2e7; color: var(--chronicle-neut
 <div class="shell-header">
   <div class="shell-heading">
     <h1 id="shell-title">Chronicle Stack ローカルUI</h1>
-    <p><strong>{title}</strong></p>
-    <p><span id="shell-root-label">ルート</span>: <span class="id">{root}</span></p>
+    <p id="shell-session-status">セッションを確認しています...</p>
   </div>
   <div class="utility-bar">
     <div class="utility-group">
@@ -9125,7 +9127,7 @@ function applyDynamicAttributeTranslations(root) {{
   root.querySelectorAll('input[id$=\"-reviewer-session-label\"]').forEach(input => input.setAttribute('placeholder', t('placeholder.session')));
 }}
 function applyShellTranslations() {{
-  document.title = t('shell.title') + ' — ' + {json.dumps(metadata.title, ensure_ascii=False)};
+  document.title = t('shell.title');
   document.documentElement.lang = currentLocale();
   const localeLabel = document.getElementById('locale-label');
   if (localeLabel) localeLabel.textContent = t('label.language');
@@ -13366,7 +13368,7 @@ async function responseJsonOrEmpty(response) {{
   }}
 }}
 async function postJson(path, body = undefined) {{
-  const options = {{ method: 'POST' }};
+  const options = {{ method: 'POST', credentials: 'same-origin' }};
   const headers = {{}};
   if (window.__chronicleMutationToken) {{
     headers['{MUTATION_TOKEN_HEADER}'] = window.__chronicleMutationToken;
@@ -14697,7 +14699,7 @@ async function loadEndpoint(endpoint) {{
     applyLocaleToPage();
     return;
   }}
-  const response = await fetch(endpoint);
+  const response = await fetch(endpoint, {{ credentials: 'same-origin' }});
   const payload = await response.json();
   document.getElementById('view').innerHTML = endpointBody(endpoint, payload);
   applyLocaleToPage();
@@ -14707,7 +14709,7 @@ async function loadDetail(endpoint) {{
     window.__chronicleDetailTrail.push(window.__chronicleLastDetail);
   }}
   window.__chronicleLastDetail = endpoint;
-  const response = await fetch(endpoint);
+  const response = await fetch(endpoint, {{ credentials: 'same-origin' }});
   if (!response.ok) {{
     document.getElementById('detail').innerHTML = '<h2>' + esc(uiLabel('Detail')) + '</h2><p>' + esc(t('status.not_found')) + '</p>';
     applyLocaleToPage();
@@ -14791,6 +14793,7 @@ async function postWorkspace(path, payload, prefix) {{
   }});
   const response = await fetch(path, {{
     method: 'POST',
+    credentials: 'same-origin',
     headers: {{
       'Content-Type': 'application/json',
       'X-Chronicle-UI-Mutation-Token': window.__chronicleMutationToken || '',
@@ -14844,8 +14847,8 @@ window.__chronicleSorts = {{ runtimeRecords: 'latest', reviewQueue: 'attention',
 window.__chronicleDetailTrail = [];
 window.__chronicleLocale = initialLocale();
 window.__chronicleFontScale = initialFontScale();
-window.__chronicleMutationToken = {mutation_token_json};
-window.__chronicleMutationSessionId = {mutation_session_id_json};
+window.__chronicleMutationToken = '';
+window.__chronicleMutationSessionId = '';
 window.__chronicleMutationRequestSequence = 0;
 document.getElementById('capture-form').addEventListener('submit', handleCapture);
 document.getElementById('assistant-form').addEventListener('submit', handleAssistant);
@@ -14856,7 +14859,54 @@ document.getElementById('locale-select').addEventListener('change', event => set
 document.getElementById('font-scale-select').addEventListener('change', event => applyFontScale(event.target.value));
 applyFontScale(window.__chronicleFontScale);
 applyLocaleToPage();
-loadEndpoint('/api/overview');
+function applySessionPayload(payload) {{
+  const mutationToken = String(payload.mutation_token || '');
+  const mutationSessionId = String(payload.mutation_session_id || '');
+  if (!mutationToken || !mutationSessionId) return false;
+  window.__chronicleMutationToken = mutationToken;
+  window.__chronicleMutationSessionId = mutationSessionId;
+  document.getElementById('shell-session-status').textContent = 'ローカルセッション接続済み';
+  return true;
+}}
+function lockShellForBootstrap() {{
+  document.getElementById('shell-session-status').textContent = 'セッション未接続';
+  document.getElementById('view').innerHTML = '<p>安全なセッションを開始できませんでした。サーバーを停止し、chronicle ui --open で再起動してください。</p>';
+  document.querySelectorAll('button[data-endpoint]').forEach(button => {{ button.disabled = true; }});
+}}
+async function establishChronicleSession() {{
+  const fragment = new URLSearchParams(window.location.hash.slice(1));
+  const bootstrapToken = fragment.get('{UI_BOOTSTRAP_FRAGMENT_KEY}') || '';
+  if (window.location.hash) {{
+    window.history.replaceState(null, '', window.location.pathname + window.location.search);
+  }}
+  let response;
+  if (bootstrapToken) {{
+    response = await fetch('{UI_BOOTSTRAP_PATH}', {{
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: {{ 'Content-Type': 'application/json' }},
+      body: JSON.stringify({{ bootstrap_token: bootstrapToken }}),
+    }});
+  }}
+  if (!bootstrapToken || !response.ok) {{
+    // A stale/replayed fragment must not lock an otherwise valid cookie session.
+    response = await fetch('{UI_SESSION_PATH}', {{ credentials: 'same-origin' }});
+  }}
+  if (!response.ok) return false;
+  return applySessionPayload(await responseJsonOrEmpty(response));
+}}
+async function initializeChronicleUI() {{
+  try {{
+    if (await establishChronicleSession()) {{
+      await loadEndpoint('/api/overview');
+      return;
+    }}
+  }} catch (_error) {{
+    // The locked shell below is intentionally credential- and data-free.
+  }}
+  lockShellForBootstrap();
+}}
+initializeChronicleUI();
 </script>
 </body>
 </html>"""
@@ -14874,10 +14924,18 @@ def create_handler(
     auth_mode: str = UIAuthMode.NOT_ENABLED,
     authorization_mode: str = UIAuthorizationMode.NOT_ENABLED,
     workspace_enabled: bool = False,
+    bootstrap_token: str | None = None,
+    bootstrap_ttl_seconds: float = UI_BOOTSTRAP_TTL_SECONDS,
 ) -> type[BaseHTTPRequestHandler]:
+    bootstrap_secret = bootstrap_token or secrets.token_urlsafe(32)
+    bootstrap_created_at = time.monotonic()
+    bootstrap_lock = threading.Lock()
+    bootstrap_consumed = False
+    ui_session_token = secrets.token_urlsafe(24)
     mutation_session_token = secrets.token_urlsafe(24)
     mutation_session_id = f"msn-{secrets.token_hex(8)}"
     mutation_request_ids_seen: set[str] = set()
+    mutation_request_ids_lock = threading.Lock()
     service = ChronicleUIDataService(
         root,
         host=host,
@@ -14894,9 +14952,17 @@ def create_handler(
         server_version = "ChronicleUILocal/0.3"
 
         def do_GET(self) -> None:  # noqa: N802 - stdlib API
+            if not self._request_boundary_allowed(require_origin=False):
+                return
             parsed = urlparse(self.path)
             if parsed.path in ("/", "/index.html"):
                 self._send_html(service.html_shell())
+                return
+            if not self._session_authorized():
+                self._send_session_required()
+                return
+            if parsed.path == UI_SESSION_PATH:
+                self._send_json(self._session_payload())
                 return
             if parsed.path == "/review-console":
                 self._send_html(service.static_review_console())
@@ -14905,14 +14971,36 @@ def create_handler(
             if payload is not None:
                 self._send_json(payload)
                 return
-            self.send_error(HTTPStatus.NOT_FOUND, "Not found")
+            self._send_json(
+                {"ok": False, "error": "not_found", "detail": "Unknown UI endpoint."},
+                status=HTTPStatus.NOT_FOUND,
+            )
 
         def do_POST(self) -> None:  # noqa: N802 - stdlib API
+            if not self._request_boundary_allowed(require_origin=True):
+                return
             parsed = urlparse(self.path)
+            if parsed.path == UI_BOOTSTRAP_PATH:
+                self._handle_bootstrap_exchange()
+                return
+            if not self._session_authorized():
+                self._send_session_required()
+                return
+
             boundary = service.ui_boundary()["ui_boundary"]
-            review_write = parsed.path.startswith("/api/review-actions/")
-            workspace_write = parsed.path == "/api/capture" or parsed.path.startswith("/api/graphrag/")
+            review_write = self._is_review_write_path(parsed.path)
+            workspace_write = parsed.path in {
+                "/api/capture",
+                "/api/graphrag/query",
+                "/api/graphrag/rebuild",
+            }
             guarded_write = review_write or workspace_write
+            if not guarded_write:
+                self._send_json(
+                    {"ok": False, "error": "not_found", "detail": "Unknown UI endpoint."},
+                    status=HTTPStatus.NOT_FOUND,
+                )
+                return
             if workspace_write and not service.workspace_enabled:
                 self._send_json(
                     {"ok": False, "error": "workspace_disabled", "detail": "Start the loopback UI with --workspace."},
@@ -14925,31 +15013,29 @@ def create_handler(
                     status=HTTPStatus.FORBIDDEN,
                 )
                 return
-            if guarded_write and boundary.get("mutation_enabled", False):
-                supplied_token = str(self.headers.get(MUTATION_TOKEN_HEADER, "") or "")
-                if supplied_token != mutation_session_token:
-                    self._send_json(
-                        service._review_action_failure_payload(
-                            error_code="invalid_mutation_token",
-                            mutation_enabled=True,
-                            reviewer_context_requirements=boundary.get("reviewer_context_requirements", {}),
-                            reviewer_enforcement_summary=boundary.get("reviewer_enforcement_summary", {}),
-                            reviewer_validation_gate_summary=boundary.get("reviewer_validation_gate_summary", {}),
-                            write_route_contract=boundary.get("write_route_contract", {}),
-                            success_contract=service._review_action_success_contract(),
-                            failure_contract=service._review_action_failure_contract(
-                                mutation_enabled=True,
-                                error_code="invalid_mutation_token",
-                            ),
-                        ),
-                        status=HTTPStatus.FORBIDDEN,
-                    )
+            if review_write and not boundary.get("mutation_enabled", False):
+                result = service.review_action_blocked_response(parsed.path)
+                if result is not None:
+                    status, payload = result
+                    self._send_json(payload, status=status)
                     return
-            content_length = int(self.headers.get("Content-Length", "0") or 0)
-            raw_body = self.rfile.read(content_length) if content_length > 0 else b"{}"
+            if guarded_write and boundary.get("mutation_enabled", False) and not self._mutation_token_allowed():
+                self._send_review_failure("invalid_mutation_token", HTTPStatus.FORBIDDEN, boundary)
+                return
             try:
-                body = json.loads(raw_body.decode("utf-8"))
-            except json.JSONDecodeError:
+                body = self._read_json_body()
+            except TypeError:
+                self._send_json(
+                    service._review_action_failure_payload(
+                        error_code="invalid_request_body",
+                        mutation_enabled=service.ui_boundary()["ui_boundary"][
+                            "mutation_enabled"
+                        ],
+                    ),
+                    status=HTTPStatus.BAD_REQUEST,
+                )
+                return
+            except (UnicodeDecodeError, json.JSONDecodeError, ValueError):
                 self._send_json(
                     service._review_action_failure_payload(
                         error_code="invalid_json",
@@ -14962,91 +15048,31 @@ def create_handler(
                     status=HTTPStatus.BAD_REQUEST,
                 )
                 return
-            if not isinstance(body, dict):
-                self._send_json(
-                    service._review_action_failure_payload(
-                        error_code="invalid_request_body",
-                        mutation_enabled=service.ui_boundary()["ui_boundary"]["mutation_enabled"],
-                    ),
-                    status=HTTPStatus.BAD_REQUEST,
-                )
-                return
             if guarded_write and boundary.get("mutation_enabled", False):
-                mutation_session_id = str(body.get("mutation_session_id", "") or "").strip()
+                supplied_session_id = str(body.get("mutation_session_id", "") or "").strip()
                 mutation_request_id = str(body.get("mutation_request_id", "") or "").strip()
-                if mutation_session_id != service.mutation_session_id:
-                    self._send_json(
-                        service._review_action_failure_payload(
-                            error_code="invalid_mutation_session",
-                            mutation_enabled=True,
-                            reviewer_context_requirements=boundary.get("reviewer_context_requirements", {}),
-                            reviewer_enforcement_summary=boundary.get("reviewer_enforcement_summary", {}),
-                            reviewer_validation_gate_summary=boundary.get("reviewer_validation_gate_summary", {}),
-                            write_route_contract=boundary.get("write_route_contract", {}),
-                            success_contract=service._review_action_success_contract(),
-                            failure_contract=service._review_action_failure_contract(
-                                mutation_enabled=True,
-                                error_code="invalid_mutation_session",
-                            ),
-                        ),
-                        status=HTTPStatus.FORBIDDEN,
+                if not secrets.compare_digest(supplied_session_id, service.mutation_session_id):
+                    self._send_review_failure(
+                        "invalid_mutation_session", HTTPStatus.FORBIDDEN, boundary
                     )
                     return
                 if not mutation_request_id:
-                    self._send_json(
-                        service._review_action_failure_payload(
-                            error_code="mutation_request_id_required",
-                            mutation_enabled=True,
-                            reviewer_context_requirements=boundary.get("reviewer_context_requirements", {}),
-                            reviewer_enforcement_summary=boundary.get("reviewer_enforcement_summary", {}),
-                            reviewer_validation_gate_summary=boundary.get("reviewer_validation_gate_summary", {}),
-                            write_route_contract=boundary.get("write_route_contract", {}),
-                            success_contract=service._review_action_success_contract(),
-                            failure_contract=service._review_action_failure_contract(
-                                mutation_enabled=True,
-                                error_code="mutation_request_id_required",
-                            ),
-                        ),
-                        status=HTTPStatus.BAD_REQUEST,
+                    self._send_review_failure(
+                        "mutation_request_id_required", HTTPStatus.BAD_REQUEST, boundary
                     )
                     return
                 if not MUTATION_REQUEST_ID_PATTERN.fullmatch(mutation_request_id):
-                    self._send_json(
-                        service._review_action_failure_payload(
-                            error_code="invalid_mutation_request_id",
-                            mutation_enabled=True,
-                            reviewer_context_requirements=boundary.get("reviewer_context_requirements", {}),
-                            reviewer_enforcement_summary=boundary.get("reviewer_enforcement_summary", {}),
-                            reviewer_validation_gate_summary=boundary.get("reviewer_validation_gate_summary", {}),
-                            write_route_contract=boundary.get("write_route_contract", {}),
-                            success_contract=service._review_action_success_contract(),
-                            failure_contract=service._review_action_failure_contract(
-                                mutation_enabled=True,
-                                error_code="invalid_mutation_request_id",
-                            ),
-                        ),
-                        status=HTTPStatus.BAD_REQUEST,
+                    self._send_review_failure(
+                        "invalid_mutation_request_id", HTTPStatus.BAD_REQUEST, boundary
                     )
                     return
-                if mutation_request_id in mutation_request_ids_seen:
-                    self._send_json(
-                        service._review_action_failure_payload(
-                            error_code="duplicate_mutation_request",
-                            mutation_enabled=True,
-                            reviewer_context_requirements=boundary.get("reviewer_context_requirements", {}),
-                            reviewer_enforcement_summary=boundary.get("reviewer_enforcement_summary", {}),
-                            reviewer_validation_gate_summary=boundary.get("reviewer_validation_gate_summary", {}),
-                            write_route_contract=boundary.get("write_route_contract", {}),
-                            success_contract=service._review_action_success_contract(),
-                            failure_contract=service._review_action_failure_contract(
-                                mutation_enabled=True,
-                                error_code="duplicate_mutation_request",
-                            ),
-                        ),
-                        status=HTTPStatus.CONFLICT,
-                    )
-                    return
-                mutation_request_ids_seen.add(mutation_request_id)
+                with mutation_request_ids_lock:
+                    if mutation_request_id in mutation_request_ids_seen:
+                        self._send_review_failure(
+                            "duplicate_mutation_request", HTTPStatus.CONFLICT, boundary
+                        )
+                        return
+                    mutation_request_ids_seen.add(mutation_request_id)
             if parsed.path == "/api/capture":
                 status, payload = service.capture_response(body)
                 self._send_json(payload, status=status)
@@ -15061,24 +15087,234 @@ def create_handler(
                 status, payload = result
                 self._send_json(payload, status=status)
                 return
-            self.send_error(HTTPStatus.NOT_FOUND, "Not found")
+            self._send_json(
+                {"ok": False, "error": "not_found", "detail": "Unknown UI endpoint."},
+                status=HTTPStatus.NOT_FOUND,
+            )
 
-        def log_message(self, format: str, *args: object) -> None:
+        def do_OPTIONS(self) -> None:  # noqa: N802 - stdlib API
+            if not self._request_boundary_allowed(require_origin=True):
+                return
+            self._send_json(
+                {
+                    "ok": False,
+                    "error": "method_not_allowed",
+                    "detail": "CORS preflight is not supported by this local UI.",
+                },
+                status=HTTPStatus.METHOD_NOT_ALLOWED,
+            )
+
+        def log_message(self, format: str, *args: object) -> None:  # noqa: A002
             return
+
+        @staticmethod
+        def _is_review_write_path(path: str) -> bool:
+            parts = [unquote(part) for part in path.strip("/").split("/")]
+            return (
+                len(parts) == 4
+                and parts[0] == "api"
+                and parts[1] == "review-actions"
+                and parts[3] in {"approve", "reject", "request-changes"}
+            )
+
+        def _handle_bootstrap_exchange(self) -> None:
+            nonlocal bootstrap_consumed
+            try:
+                body = self._read_json_body()
+            except (UnicodeDecodeError, json.JSONDecodeError, TypeError, ValueError):
+                self._send_json(
+                    {"ok": False, "error": "invalid_json", "detail": "Expected a JSON object."},
+                    status=HTTPStatus.BAD_REQUEST,
+                )
+                return
+            supplied_token = str(body.get("bootstrap_token", "") or "")
+            with bootstrap_lock:
+                expired = time.monotonic() - bootstrap_created_at > bootstrap_ttl_seconds
+                if bootstrap_consumed or expired:
+                    if expired:
+                        bootstrap_consumed = True
+                        setattr(self.server, "_chronicle_bootstrap_url", "")
+                    self._send_json(
+                        {
+                            "ok": False,
+                            "error": "bootstrap_unavailable",
+                            "detail": "The one-time UI bootstrap is unavailable or expired.",
+                        },
+                        status=HTTPStatus.FORBIDDEN,
+                    )
+                    return
+                if not secrets.compare_digest(supplied_token, bootstrap_secret):
+                    self._send_json(
+                        {
+                            "ok": False,
+                            "error": "invalid_bootstrap",
+                            "detail": "The UI bootstrap credential is invalid.",
+                        },
+                        status=HTTPStatus.FORBIDDEN,
+                    )
+                    return
+                bootstrap_consumed = True
+                setattr(self.server, "_chronicle_bootstrap_url", "")
+            self._send_json(
+                self._session_payload(),
+                extra_headers={
+                    "Set-Cookie": (
+                        f"{UI_SESSION_COOKIE}={ui_session_token}; "
+                        "Path=/; HttpOnly; SameSite=Strict"
+                    )
+                },
+            )
+
+        def _session_payload(self) -> dict[str, Any]:
+            return {
+                "ok": True,
+                "mutation_token": mutation_session_token,
+                "mutation_session_id": mutation_session_id,
+            }
+
+        def _session_authorized(self) -> bool:
+            cookie_values: list[str] = []
+            for cookie_header in self.headers.get_all("Cookie") or []:
+                for item in cookie_header.split(";"):
+                    name, separator, value = item.strip().partition("=")
+                    if separator and name == UI_SESSION_COOKIE:
+                        cookie_values.append(value)
+            return len(cookie_values) == 1 and secrets.compare_digest(
+                cookie_values[0], ui_session_token
+            )
+
+        def _mutation_token_allowed(self) -> bool:
+            header_values = self.headers.get_all(MUTATION_TOKEN_HEADER) or []
+            return len(header_values) == 1 and secrets.compare_digest(
+                header_values[0].strip(), mutation_session_token
+            )
+
+        def _request_boundary_allowed(self, *, require_origin: bool) -> bool:
+            authority = self._validated_authority()
+            if authority is None:
+                self._send_json(
+                    {
+                        "ok": False,
+                        "error": "invalid_host",
+                        "detail": "Host header is not allowed for this loopback UI.",
+                    },
+                    status=HTTPStatus.MISDIRECTED_REQUEST,
+                )
+                return False
+            origin_headers = self.headers.get_all("Origin") or []
+            if not origin_headers:
+                if not require_origin:
+                    return True
+                self._send_json(
+                    {
+                        "ok": False,
+                        "error": "origin_required",
+                        "detail": "Browser write requests require the exact local UI Origin.",
+                    },
+                    status=HTTPStatus.FORBIDDEN,
+                )
+                return False
+            expected_origin = f"http://{authority}"
+            if len(origin_headers) != 1 or origin_headers[0].strip().lower() != expected_origin:
+                self._send_json(
+                    {
+                        "ok": False,
+                        "error": "origin_not_allowed",
+                        "detail": "Origin does not match the exact local UI authority.",
+                    },
+                    status=HTTPStatus.FORBIDDEN,
+                )
+                return False
+            return True
+
+        def _validated_authority(self) -> str | None:
+            host_headers = self.headers.get_all("Host") or []
+            if len(host_headers) != 1:
+                return None
+            server_port = int(self.server.server_address[1])
+            allowed_hostnames = set(UI_ALLOWED_REQUEST_HOSTS)
+            normalized_bind_host = host.strip().lower()
+            if _is_loopback_host(normalized_bind_host):
+                allowed_hostnames.add(normalized_bind_host)
+            allowed = {_ui_authority(hostname, server_port) for hostname in allowed_hostnames}
+            authority = host_headers[0].strip().lower()
+            return authority if authority in allowed else None
+
+        def _send_session_required(self) -> None:
+            self._send_json(
+                {
+                    "ok": False,
+                    "error": "session_required",
+                    "detail": "Open this UI through its one-time local bootstrap session.",
+                },
+                status=HTTPStatus.UNAUTHORIZED,
+            )
+
+        def _send_review_failure(
+            self,
+            error_code: str,
+            status: HTTPStatus,
+            boundary: dict[str, Any],
+        ) -> None:
+            self._send_json(
+                service._review_action_failure_payload(
+                    error_code=error_code,
+                    mutation_enabled=True,
+                    reviewer_context_requirements=boundary.get(
+                        "reviewer_context_requirements", {}
+                    ),
+                    reviewer_enforcement_summary=boundary.get(
+                        "reviewer_enforcement_summary", {}
+                    ),
+                    reviewer_validation_gate_summary=boundary.get(
+                        "reviewer_validation_gate_summary", {}
+                    ),
+                    write_route_contract=boundary.get("write_route_contract", {}),
+                    success_contract=service._review_action_success_contract(),
+                    failure_contract=service._review_action_failure_contract(
+                        mutation_enabled=True,
+                        error_code=error_code,
+                    ),
+                ),
+                status=status,
+            )
+
+        def _read_json_body(self) -> dict[str, Any]:
+            content_length = int(self.headers.get("Content-Length", "0") or 0)
+            raw_body = self.rfile.read(content_length) if content_length > 0 else b"{}"
+            body = json.loads(raw_body.decode("utf-8"))
+            if not isinstance(body, dict):
+                raise TypeError("Expected a JSON object")
+            return body
 
         def _send_html(self, body: str) -> None:
             payload = body.encode("utf-8")
             self.send_response(HTTPStatus.OK)
             self.send_header("Content-Type", "text/html; charset=utf-8")
             self.send_header("Content-Length", str(len(payload)))
+            self.send_header("Cache-Control", "no-store")
+            self.send_header("Content-Security-Policy", "frame-ancestors 'none'")
+            self.send_header("Referrer-Policy", "no-referrer")
+            self.send_header("X-Frame-Options", "DENY")
+            self.send_header("X-Content-Type-Options", "nosniff")
             self.end_headers()
             self.wfile.write(payload)
 
-        def _send_json(self, body: dict[str, Any], *, status: HTTPStatus = HTTPStatus.OK) -> None:
+        def _send_json(
+            self,
+            body: dict[str, Any],
+            *,
+            status: HTTPStatus = HTTPStatus.OK,
+            extra_headers: dict[str, str] | None = None,
+        ) -> None:
             payload = json.dumps(body, ensure_ascii=False, indent=2).encode("utf-8")
             self.send_response(status)
             self.send_header("Content-Type", "application/json; charset=utf-8")
             self.send_header("Content-Length", str(len(payload)))
+            self.send_header("Cache-Control", "no-store")
+            self.send_header("X-Content-Type-Options", "nosniff")
+            for name, value in (extra_headers or {}).items():
+                self.send_header(name, value)
             self.end_headers()
             self.wfile.write(payload)
 
@@ -15095,8 +15331,10 @@ def make_server(
     auth_mode: str = UIAuthMode.NOT_ENABLED,
     authorization_mode: str = UIAuthorizationMode.NOT_ENABLED,
     workspace_enabled: bool = False,
+    bootstrap_ttl_seconds: float = UI_BOOTSTRAP_TTL_SECONDS,
 ) -> ThreadingHTTPServer:
-    return ThreadingHTTPServer(
+    bootstrap_token = secrets.token_urlsafe(32)
+    server = ThreadingHTTPServer(
         (host, port),
         create_handler(
             root,
@@ -15106,8 +15344,17 @@ def make_server(
             auth_mode=auth_mode,
             authorization_mode=authorization_mode,
             workspace_enabled=workspace_enabled,
+            bootstrap_token=bootstrap_token,
+            bootstrap_ttl_seconds=bootstrap_ttl_seconds,
         ),
     )
+    server_port = int(server.server_address[1])
+    bootstrap_url = (
+        f"http://{_ui_authority(host, server_port)}/"
+        f"#{UI_BOOTSTRAP_FRAGMENT_KEY}={quote(bootstrap_token, safe='')}"
+    )
+    setattr(server, "_chronicle_bootstrap_url", bootstrap_url)
+    return server
 
 
 def serve_ui(
@@ -15146,7 +15393,7 @@ def serve_ui(
         workspace_enabled=workspace_enabled,
     )
     if open_browser:
-        webbrowser.open(metadata.url)
+        webbrowser.open(str(getattr(server, "_chronicle_bootstrap_url")))
     try:
         server.serve_forever()
     except KeyboardInterrupt:  # pragma: no cover - interactive shutdown path
@@ -15171,6 +15418,13 @@ def validate_ui_host(host: str) -> None:
 
 def _bind_scope(host: str) -> str:
     return "loopback-only" if _is_loopback_host(host) else "non-loopback"
+
+
+def _ui_authority(host: str, port: int) -> str:
+    normalized = host.strip().lower()
+    if ":" in normalized and not normalized.startswith("["):
+        normalized = f"[{normalized}]"
+    return f"{normalized}:{port}"
 
 
 def _is_loopback_host(host: str) -> bool:
