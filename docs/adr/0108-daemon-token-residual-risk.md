@@ -3,7 +3,8 @@
 Status: Accepted
 Date: 2026-09-15
 Scope: daemon token fileの異常終了時の残留、復旧手順、および保護範囲
-Related: [ADR-0107](0107-daemon-private-token-file.md)、[PR #390](https://github.com/zyx-corporation/chronicle-stack/pull/390)
+Related: [ADR-0107](0107-daemon-private-token-file.md)、[PR #391](https://github.com/zyx-corporation/chronicle-stack/pull/391)
+Original draft: [PR #390](https://github.com/zyx-corporation/chronicle-stack/pull/390)
 
 ## 背景
 
