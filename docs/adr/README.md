@@ -48,5 +48,8 @@ ADRs capture decisions that affect architecture, security boundaries, data contr
 - [ADR-0101: Resident Daemon and Chronicle-Native API Layer Boundary](0101-resident-daemon-api-layer-boundary.md)
 - [ADR-0102: Chronicle Cloud and Agent Runtime Boundary](0102-chronicle-cloud-and-agent-runtime-boundary.md)
 - [ADR-0103: Chronicle Preservation Mechanism, Not Cloud AI Memory](0103-chronicle-preservation-not-cloud-ai-memory.md)
+- [ADR-0104: Loopback Daemon Request Boundary](0104-loopback-daemon-request-boundary.md)
+- [ADR-0106: Browser UI Session Bootstrap and Request Boundary](0106-browser-ui-session-bootstrap-request-boundary.md)
+- [ADR-0107: Private Daemon Token File Lifecycle](0107-daemon-private-token-file.md)
 - [ADR-001: T-RDE, TDD, and Design-Pattern Principles](ADR-001-t-rde-tdd-and-design-patterns.md)
 - [ADR-002: i18n and Language Selection](ADR-002-i18n-and-language-selection.md)

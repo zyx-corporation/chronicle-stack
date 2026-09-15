@@ -511,11 +511,11 @@ Trust relation は node / subject / domain / purpose / capability の advisory m
 ## Local UI
 
 ```bash
-chronicle ui
-chronicle ui --workspace
-chronicle ui --host 127.0.0.1 --port 8765
-chronicle ui --mutation-capability-flag
-chronicle ui --mutation-capability-flag --enable-ui-mutation --auth-mode loopback_local --authorization-mode reviewer_declared
+chronicle ui --open
+chronicle ui --workspace --open
+chronicle ui --host 127.0.0.1 --port 8765 --open
+chronicle ui --mutation-capability-flag --open
+chronicle ui --mutation-capability-flag --enable-ui-mutation --auth-mode loopback_local --authorization-mode reviewer_declared --open
 chronicle ui --json
 
 chronicle ui-smoke
@@ -526,9 +526,28 @@ chronicle ui-smoke --json
 hosted service にはなりません。bind host は loopback (`127.0.0.1`, `localhost`, `::1`) のみ
 許可されます。
 
-`--workspace` は loopback/auth/authz/session-token 条件をまとめて有効化し、ローカル保存と
+ブラウザでデータ面を使う場合は `--open` を指定します。サーバーは短時間・一回限りの
+bootstrap secret を URL fragment として既定ブラウザへ渡し、クライアントは fragment を
+直ちに消して同一 origin で session cookie へ交換します。secret は startup metadata、
+`--json`、stdout、HTML には含まれません。`--open` なしで表示されたベース URL を手動で
+開くと、Chronicle title / root / data / credential を含まない locked shell だけが表示されます。
+
+session cookie は host-only (`Domain` なし)、`HttpOnly`、`SameSite=Strict`、`Path=/` です。
+local UI は plain `http://` のため `Secure` と、それを必須とする `__Host-` prefix は使いません。
+cookie token と mutation header token は別の credential です。Chronicle-derived GET と
+review console は cookie を要求し、
+non-bootstrap POST は cookie と exact Origin を要求します。有効な write route はさらに
+mutation header token、mutation session id、one-use request id を要求します。すべての HTTP
+メソッドは actual port を含む exact Host を検証します。CORS は許可せず、OPTIONS 等の
+未対応メソッドは境界検査後に 405 と `Allow: GET, POST` を返します。
+
+`--workspace` は loopback/auth/authz/browser-session 条件をまとめて有効化し、ローカル保存と
 GraphRAG 質問の作業面を開きます。write route は fail-closed で、`--enable-ui-mutation` と
 `--auth-mode loopback_local --authorization-mode reviewer_declared` が揃う場合にだけ有効です。
+
+これは same-UID process や shared-machine isolation の保証ではありません。`--open` の
+fragment-bearing URL は `webbrowser` と OS/browser の opener 経路を通るため、短い露出窓が
+残ります。詳細は ADR-0106 と local operator validation guide を参照してください。
 
 `ui-smoke` はサーバーやブラウザを起動せず、local UI の read-only データ面を検証します。
 
@@ -537,6 +556,7 @@ GraphRAG 質問の作業面を開きます。write route は fail-closed で、`
 - [ADR-0018](adr/0018-local-ui-read-only-navigation-boundary.md)
 - [ADR-0019](adr/0019-local-ui-review-semantics-parity-boundary.md)
 - [ADR-0022](adr/0022-explicit-local-ui-mutation-enable-flag.md)
+- [ADR-0106](adr/0106-browser-ui-session-bootstrap-request-boundary.md)
 
 ## 補助 CLI 互換性
 
@@ -552,3 +572,12 @@ chronicle-graph summary
 文書例では primary CLI alias を優先しますが、補助 CLI を削除・非推奨化するものでは
 ありません。primary / auxiliary の挙動差分は Observation E2E の観測対象であり、
 semantic correctness certification ではありません。
+
+## Local daemon credentials
+
+`chronicle daemon start` generates a private 0600 `.chronicle/daemon.token` file.
+`--token-file PATH` selects a new output file; `--session-token` has been removed. Existing files
+and symlinks are rejected. Clients read the credential from the file into memory. Startup output
+and `--json` never contain its value; `--json` only inspects metadata and issues no credential.
+See [Daemon operator runbook](releases/operations/daemon-api-operator-runbook.md) and
+[ADR-0107](adr/0107-daemon-private-token-file.md) for shutdown and stale-file recovery.
