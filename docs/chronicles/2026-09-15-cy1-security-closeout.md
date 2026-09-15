@@ -106,3 +106,22 @@ conflicts, not runtime changes. References in earlier history to pending ADR-009
 as provenance, not treated as newly adopted policy on main. The separate PR records the new
 commit identities and fresh tests/lint/local CI; previous CI evidence applies only to its original
 commit. Main merge awaits approval of the replacement PR, as explicitly required by the user.
+
+## Approved security integration and residual-risk ADR placement
+
+The operator explicitly approved PR #391. It merged into main as
+`1b58ca9aaa65da3a9be3296666649498541aec22` after fresh validation of the isolated
+head `19bff0cb4327a9b1d438764f2d9b0e817d81d780`: 582 native tests, Ruff, canonical
+local act (582 tests and UI smoke), and GitHub CI run `34927747242` all passed.
+PR #390 was closed without merging, and its original branch was retained.
+
+The seven excluded documentation commits are preserved on `codex/docs-pending-review` at
+`ad2b9e2c`; none entered main through #391. Original uncommitted Event Origin/Yard edits
+remain in the original workspace. Source, tests and workflow in the separated security
+head matched the original security tree exactly, including the daemon/API baseline and hotfix.
+
+Following the requested order, ADR-0108 is now placed alongside existing ADRs at
+`docs/adr/0108-daemon-token-residual-risk.md` in a separate documentation change based on
+the merged main. Its text is recovered from `f7a46ada`, with the related PR link updated to
+#391 while retaining #390 as the original draft. The index is updated. No automatic stale-token
+cleanup, token reuse, code changes or deferred documentation adoption accompany this placement.
